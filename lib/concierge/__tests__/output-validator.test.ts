@@ -218,6 +218,17 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { family: "application/project denied", text: "Your denied grant application can be revised.", reason: "application-denied" },
     { family: "application/project denied", text: "The application denied last cycle can be resubmitted.", reason: "application-denied" },
     { family: "application/project denied", text: "Denial of your SBIF grant application is not final.", reason: "application-denied" },
+    // S34: co-occurrence rule — plural nominals, plural possessives,
+    // progressive, agentive, hyphenated compounds
+    { family: "application/project denied", text: "Application denials are common.", reason: "application-denied" },
+    { family: "application/project denied", text: "Rejections of applications are common.", reason: "application-denied" },
+    { family: "application/project denied", text: "The applications' denial can be appealed.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application was ultimately denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application is being denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "The agency is denying your application.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your denied small-business application can be revised.", reason: "application-denied" },
+    // Formerly a safe near-miss; over-blocks by design under co-occurrence.
+    { family: "application/project denied", text: "Other applications were denied last cycle for missing paperwork.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {
@@ -246,7 +257,11 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { label: "'qualify' describing the program category, not the reader", text: "This program does not qualify as a direct cash grant — it is a tax credit." },
     { label: "'appears' used descriptively, no eligibility claim", text: "The parcel appears to be zoned for commercial use." },
     { label: "'denied' in an unrelated, non-determination context", text: "Access to the online portal was denied due to a login error." },
-    { label: "third-party application, not the reader's own", text: "Other applications were denied last cycle for missing paperwork." },
+    // "Other applications were denied last cycle..." moved to the rejected
+    // FAMILY_PHRASES list under the S34 co-occurrence ruling: it contains
+    // both a family noun and a denial word, so it over-blocks by design
+    // (accepted default-deny cost — subject-scoping for this family was
+    // deleted after three rounds of bypass).
   ];
 
   for (const { label, text } of SAFE_NEAR_MISSES) {

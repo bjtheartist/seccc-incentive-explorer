@@ -179,19 +179,17 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   //      review. Every carve-out this file has ever added for this
   //      family has been bypassed within one to two review rounds.
   //      Removing the carve-out removes the bypass surface entirely.
-  { pattern: /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
-  // Adjectival form of the same family, allowing compound nouns ("denied
-  // applications", "your denied grant application"). Same default-deny
-  // rationale.
-  { pattern: /\b(?:denied|rejected)\s+(?:\w+\s+){0,2}?(?:application|project|request)s?\b/i, reason: "application-denied" },
-  // Nominal and possessive forms ("application denial", "your
-  // application's denial", "request rejection").
-  { pattern: /\b(?:application|project|request)s?(?:['’]s)?\s+(?:denial|rejection)\b/i, reason: "application-denied" },
-  // "denial/rejection of the (grant) application" — nominal with
-  // interposed determiner and up to three modifier words.
-  { pattern: /\b(?:denial|rejection)\s+of\s+(?:\w+\s+){0,3}?(?:application|project|request)s?\b/i, reason: "application-denied" },
-  // Reduced relative clause ("the application denied last cycle").
-  { pattern: /\b(?:application|project|request)s?\s+(?:denied|rejected)\b/i, reason: "application-denied" },
+  // S32/S33/S34 escalation ended in a second coordinator ruling: syntactic
+  // enumeration (passive, adjectival, nominal, possessive, compound,
+  // reduced-relative, progressive, plural...) provably does not converge —
+  // three consecutive review rounds each produced new escapes. The family
+  // is therefore defined by sentence-level CO-OCCURRENCE, not shape: any
+  // sentence containing both a family noun (application/project/request,
+  // any inflection or possessive) and a denial-family word (deny/denial/
+  // rejected/rejection, any inflection) is an unconditional hit. There is
+  // no morphology left to enumerate. Over-match (e.g. "denial of service
+  // requests") is the accepted default-deny cost per the Round-9 ruling.
+  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?)\b)/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
