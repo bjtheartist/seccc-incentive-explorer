@@ -232,6 +232,19 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     // S36: outcome synonyms
     { family: "application/project denied", text: "Your application was declined.", reason: "application-denied" },
     { family: "application/project denied", text: "The agency turned down your application.", reason: "application-denied" },
+    // S37: false-split evasions (abbreviation, awkward abbreviation, colon-newline)
+    { family: "application/project denied", text: "Your application to the U.S. Small Business Administration was denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application e.g. was denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Application outcome:\nDenied.", reason: "application-denied" },
+    // S38: separable phrasal verb
+    { family: "application/project denied", text: "The agency turned your application down.", reason: "application-denied" },
+    { family: "application/project denied", text: "The agency is turning your application down.", reason: "application-denied" },
+    // S39: refused / not-approved / unsuccessful lexemes
+    { family: "application/project denied", text: "Your application was refused.", reason: "application-denied" },
+    { family: "application/project denied", text: "Refusal of your application is final.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application was not approved.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application wasn't approved.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application was unsuccessful.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

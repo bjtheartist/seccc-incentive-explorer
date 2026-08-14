@@ -189,7 +189,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
   // rejected/rejection, any inflection) is an unconditional hit. There is
   // no morphology left to enumerate. Over-match (e.g. "denial of service
   // requests") is the accepted default-deny cost per the Round-9 ruling.
-  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|turn(?:s|ed|ing)?\s+down)\b)/i, reason: "application-denied", perSentence: true },
+  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*(?:\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|refus(?:e|es|ed|ing|al|als)|unsuccessful)\b|\bturn(?:s|ed|ing)?\b[^.!?\n]*?\bdown\b|\b(?:not|never)\s+(?:be\s+|been\s+|yet\s+)?approved\b|n['’]t\s+(?:be\s+|been\s+|yet\s+)?approved\b))/i, reason: "application-denied", perSentence: true },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
@@ -197,6 +197,48 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
  *  whitespace, and on hard newlines (a model's own paragraph/list breaks),
  *  so a multi-paragraph answer is checked paragraph-by-paragraph and
  *  sentence-by-sentence within each. */
+/**
+ * review15 S37: conservative splitter for the perSentence co-occurrence
+ * check ONLY. The naive splitter can cut ONE determination sentence into
+ * two fragments (after "U.S.", "e.g.", or a colon-then-newline), and a
+ * false SPLIT here is a false PASS — the opposite of the default-deny
+ * bias. This splitter joins ambiguous boundaries instead: a newline only
+ * ends a sentence when the previous line ends with terminal punctuation,
+ * and a period preceded by a known abbreviation (or a single capital
+ * letter) does not split. Over-joining can only over-block, which the
+ * S29–S34 rulings accept; under-splitting-in-reverse (a false pass)
+ * cannot happen from joining. The authority-routing check keeps the
+ * naive splitter — its semantics are settled and reviewed.
+ */
+function splitIntoSentencesConservative(text: string): string[] {
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const blocks: string[] = [];
+  for (const line of lines) {
+    const prev = blocks[blocks.length - 1];
+    if (prev !== undefined && !/[.!?]$/.test(prev)) {
+      blocks[blocks.length - 1] = `${prev} ${line}`;
+    } else {
+      blocks.push(line);
+    }
+  }
+  const ABBREV_END =
+    /(?:\b(?:U\.S|U\.S\.A|e\.g|i\.e|etc|vs|Inc|Corp|Dept|No|Nos|approx|St|Ave|Dr|Mr|Mrs|Ms)\.|\b[A-Z]\.)$/;
+  const out: string[] = [];
+  for (const block of blocks) {
+    const fragments: string[] = [];
+    for (const part of block.split(/(?<=[.!?])\s+/)) {
+      const prev = fragments[fragments.length - 1];
+      if (prev !== undefined && ABBREV_END.test(prev)) {
+        fragments[fragments.length - 1] = `${prev} ${part}`;
+      } else {
+        fragments.push(part);
+      }
+    }
+    out.push(...fragments);
+  }
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+
 function splitIntoSentences(text: string): string[] {
   return text
     .split(/\n+|(?<=[.!?])\s+/)
@@ -252,7 +294,7 @@ export function validateConciergeOutput(rawText: string): ConciergeValidationRes
   // review14 S35: co-occurrence patterns are sentence-scoped — "your
   // application" in one sentence and an unrelated "denied" in another must
   // not trip. Word-local patterns keep whole-text matching.
-  const sentences = splitIntoSentences(rawText);
+  const sentences = splitIntoSentencesConservative(rawText);
   for (const { pattern, reason, perSentence } of PROHIBITED_PATTERNS) {
     const hit = perSentence
       ? sentences.some((s) => pattern.test(s))
