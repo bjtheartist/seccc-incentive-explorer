@@ -12,23 +12,28 @@
  * the catalog can never silently diverge — a rendered-output test is what
  * actually proves it (see e.g. lib/__tests__/answers-data.test.ts).
  *
- * A build-time static import (not `getProgramsSync()`'s fs read) so this
+ * review5 S1 (CRITICAL): this module used to statically import
+ * data/programs-internal.json (the full internal catalog, including
+ * whoQualifies, benefits, requiredDocs, etc.) into every client bundle that
+ * transitively imports it — app/faq/page.tsx is "use client". It now
+ * imports public/data/programs-public.json (PR1's committed, sanitized DTO
+ * envelope) instead, and `programFact()`'s selector type is restricted to
+ * `PublicProgramView` fields — a call site cannot reach an internal-only
+ * field even by accident, because the underlying data literally does not
+ * carry one. A build-time static import (not a runtime fetch) so this
  * module works from BOTH server modules (lib/answers-data.ts,
  * lib/quiz-bank-extension.ts) AND the client-rendered app/faq/page.tsx
- * ("use client") without a server/client split — same bundling
- * characteristic already accepted for ProgramsCatalog and survey-engine.ts
- * (see docs/eligibility-claims-acceptance.md).
+ * without a server/client split.
  */
-import catalog from "@/data/programs-internal.json";
-import type { Program } from "./types";
+import catalog from "@/public/data/programs-public.json";
 import { toPublicProgramView, type PublicProgramView } from "./program-public";
 
-const PROGRAMS = catalog as unknown as Program[];
+const PROGRAMS = catalog.programs as unknown as PublicProgramView[];
 const BY_ID = new Map(PROGRAMS.map((p) => [p.id, p]));
 
-/** Look up one internal catalog record by id. Throws on an unknown id —
+/** Look up one program's public projection by id. Throws on an unknown id —
  *  a typo here should fail loudly at test time, never render silently blank. */
-export function programRecord(programId: string): Program {
+export function programRecord(programId: string): PublicProgramView {
   const program = BY_ID.get(programId);
   if (!program) {
     throw new Error(`programFact: unknown program id "${programId}"`);
@@ -36,22 +41,33 @@ export function programRecord(programId: string): Program {
   return program;
 }
 
-/** Pull one fact off a catalog record via a typed selector, e.g.
- *  `programFact("nof", (p) => p.benefitRange)`. */
-export function programFact<T>(programId: string, selector: (program: Program) => T): T {
+/** Pull one fact off a program's PUBLIC projection via a typed selector,
+ *  e.g. `programFact("nof", (p) => p.benefit.summary)`. The selector type
+ *  is `PublicProgramView`, not the internal `Program` — an internal-only
+ *  field (whoQualifies, benefits[], requiredDocs, ...) is not reachable
+ *  here even by a careless call site. */
+export function programFact<T>(programId: string, selector: (program: PublicProgramView) => T): T {
   return selector(programRecord(programId));
 }
 
 /** The structured public view (status, qualifier, published criteria) for
  *  one catalog record — the same DTO every other public surface renders
- *  from. `asOf` defaults to the record's own `statusAsOf`. */
-export function programView(programId: string, asOf?: string): PublicProgramView {
-  const program = programRecord(programId);
-  return toPublicProgramView(program, asOf ?? program.statusAsOf ?? new Date().toISOString());
+ *  from. Re-projects through toPublicProgramView is unnecessary here (the
+ *  committed artifact already IS the projection); kept as a thin alias so
+ *  existing call sites (`programView(id)`) don't need to change shape. */
+export function programView(programId: string): PublicProgramView {
+  return programRecord(programId);
 }
 
 /** The one binding qualifier sentence for a program's benefit terms
- *  (lib/program-public.ts's benefitQualifier, via the DTO). */
+ *  (lib/program-public.ts's benefitQualifier, baked into the DTO at export
+ *  time). */
 export function programQualifier(programId: string): string {
   return programView(programId).benefit.qualifier;
 }
+
+// toPublicProgramView is re-exported only so lib/__tests__/program-fact.test.ts
+// can cross-check this module's DTO values against a fresh projection of the
+// same catalog record without importing the internal catalog itself in a
+// test that exists to prove the CLIENT-SAFE path is correct.
+export { toPublicProgramView };

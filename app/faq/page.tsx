@@ -104,7 +104,7 @@ export const FAQ_ITEMS = [
     // renamed CNRP — a homeownership down-payment program, not the
     // storefront-improvement grant this answer previously described.
     // Derived from the catalog so this can't drift again.
-    a: `The program formerly known as the Micro Market Recovery Program is now the ${programFact("microMarketRecovery", (p) => p.name)}. ${programFact("microMarketRecovery", (p) => p.summary)} ${programQualifier("microMarketRecovery")}`,
+    a: `The program formerly known as the Micro Market Recovery Program is now the ${programFact("microMarketRecovery", (p) => p.name)}, a homeownership program administered by the Department of Housing (${programFact("microMarketRecovery", (p) => p.benefit.summary)}). ${programQualifier("microMarketRecovery")}`,
   },
   {
     q: "What is the Cook County Class 7a incentive?",

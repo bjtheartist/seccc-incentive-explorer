@@ -17,7 +17,7 @@ function find(id: number) {
 
 describe("quiz-bank-extension — catalog-matched facts (F9)", () => {
   it("§48D credit rate matches the catalog (35%), and 35% is an actual choice", () => {
-    const catalogRate = programFact("chips48d", (p) => p.benefitRange);
+    const catalogRate = programFact("chips48d", (p) => p.benefit.summary);
     expect(catalogRate).toContain("35%");
     const q = find(22);
     expect(q.choices).toContain("35%");
@@ -26,7 +26,7 @@ describe("quiz-bank-extension — catalog-matched facts (F9)", () => {
   });
 
   it("EDA Build to Scale explanation does not invent an announced NOFO date the catalog says doesn't exist", () => {
-    const nextWindow = programFact("edaBuildToScale", (p) => p.nextWindow);
+    const nextWindow = programFact("edaBuildToScale", (p) => p.intake.nextWindow);
     expect(nextWindow?.expected).toBeNull();
     const q = QUIZ_QUESTIONS_EXTENSION.find((item) =>
       item.question.includes("EDA Build to Scale grants"),
@@ -36,7 +36,7 @@ describe("quiz-bank-extension — catalog-matched facts (F9)", () => {
   });
 
   it("MMRP/CNRP down-payment figure matches the catalog ($15,000), not the stale $30K", () => {
-    const catalogRange = programFact("microMarketRecovery", (p) => p.benefitRange);
+    const catalogRange = programFact("microMarketRecovery", (p) => p.benefit.summary);
     expect(catalogRange).toContain("$15,000");
     const mmrpQuestions = QUIZ_QUESTIONS_EXTENSION.filter((q) =>
       q.explanation.includes("MMRP") || q.explanation.includes("Micro Market Recovery"),

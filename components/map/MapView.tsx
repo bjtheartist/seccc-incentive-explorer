@@ -642,11 +642,13 @@ export default function MapView() {
     [],
   );
 
-  // Load programs for snapshot. build-spec.md 2.2 (hard cutover):
-  // public/data/programs.json is deleted; /api/programs already falls back
-  // server-side, so no second client fallback fetch is needed.
+  // Load programs for snapshot. review5 S1: /api/programs now returns the
+  // sanitized PublicProgramView projection; this panel runs
+  // runConfidenceEngine() client-side and needs full record fidelity — see
+  // app/api/programs/engine-source/route.ts's doc comment for why that's a
+  // documented, bounded exception.
   useEffect(() => {
-    cachedFetch<Program[]>("/api/programs")
+    cachedFetch<Program[]>("/api/programs/engine-source")
       .then(setAllPrograms)
       .catch(() => {});
   }, []);

@@ -1,12 +1,17 @@
-// build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted;
-// data/programs-internal.json is the source of truth. scoreSurvey() is a
-// synchronous, client-called function (components/survey/PreQualSurvey.tsx
-// calls it directly on submit), so this stays a build-time static import
-// rather than a runtime fetch — same bundling characteristic as today, no
-// regression. See docs/eligibility-claims-acceptance.md's "Decisions" for
-// why a full async-data-loading rearchitecture of this engine was judged
-// out of scope for this task's time budget.
-import programsData from "@/data/programs-internal.json";
+// review5 S1 (CRITICAL): this module previously statically imported
+// data/programs-internal.json — the full internal catalog, unconditionally
+// bundled into EVERY page that transitively imports this module (any page
+// reachable from /qualify), regardless of whether that visitor ever
+// submits the survey. `scoreSurvey()` genuinely needs full record fidelity
+// (requiredDocs, eligibilityRules, contacts, lastVerifiedAt, sourceUrl) to
+// build its already-safe, structured `PublicMatchExplanation` via
+// buildPublicMatchExplanation() — the DTO does not carry those fields, by
+// PR1 design. Rather than bundle them anyway, scoreSurvey() is now async
+// and fetches /api/programs/engine-source (the same explicitly-scoped,
+// documented route the report engine and map snapshot use) ONLY at the
+// moment a visitor actually submits — never bundled, never fetched
+// speculatively. See app/api/programs/engine-source/route.ts and
+// docs/eligibility-claims-acceptance.md's S1 resolution note.
 import { buildPublicMatchExplanation } from "./match-transparency";
 import { resolveAvailability } from "./program-gating";
 import type {
@@ -165,9 +170,15 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
 
 // ─── Internal Ordering ───────────────────────────────────────────────
 
-const PROGRAM_DETAILS = new Map(
-  (programsData as unknown as Program[]).map((program) => [program.id, program]),
-);
+/** Fetched fresh on each scoreSurvey() call — never bundled, never cached
+ *  across calls (a stale cache could serve pre-correction facts after the
+ *  catalog changes; this endpoint is short/cheap enough that re-fetching
+ *  per submission is not a real cost). */
+async function fetchProgramDetails(): Promise<Map<string, Program>> {
+  const res = await fetch("/api/programs/engine-source");
+  const programs = (await res.json()) as Program[];
+  return new Map(programs.map((program) => [program.id, program]));
+}
 
 /** Short collapsed-row label from a program's intakeStatus (build-spec.md
  *  2.6: status must show BEFORE the card is opened, never only inside). */
@@ -195,11 +206,12 @@ function matchStatus(program: Program): ProgramMatch["status"] {
 }
 
 function toProgramMatch(
+  programDetails: Map<string, Program>,
   programId: string,
   confidence: Confidence,
   reasons: string[],
 ): ProgramMatch | null {
-  const program = PROGRAM_DETAILS.get(programId);
+  const program = programDetails.get(programId);
   if (!program) return null;
   return {
     programId,
@@ -215,7 +227,8 @@ function toProgramMatch(
   };
 }
 
-export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
+export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult> {
+  const programDetails = await fetchProgramDetails();
   const matchMap: Record<string, { confidence: Confidence; reasons: string[] }> = {};
   const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
   // Every answer key the caller actually gave, e.g. "industry", "activities:hiring".
@@ -263,7 +276,7 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
   // ranking decision the user's answers made.
   const smallBizSourceReasons = matchMap.smallBizSource?.reasons ?? [];
   delete matchMap.smallBizSource;
-  const universalMatch = toProgramMatch("smallBizSource", "low", smallBizSourceReasons);
+  const universalMatch = toProgramMatch(programDetails, "smallBizSource", "low", smallBizSourceReasons);
   const universal: ProgramMatch[] = universalMatch ? [universalMatch] : [];
 
   const confidenceOrder: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
@@ -280,10 +293,10 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
   // program-facing surface in the app.
   const today = new Date();
   const matches: ProgramMatch[] = rankedMatches.flatMap((match) => {
-    const program = PROGRAM_DETAILS.get(match.programId);
+    const program = programDetails.get(match.programId);
     if (!program) return [];
     if (resolveAvailability(program, today).state === "expired") return [];
-    const built = toProgramMatch(match.programId, match.confidence, match.reasons);
+    const built = toProgramMatch(programDetails, match.programId, match.confidence, match.reasons);
     return built ? [built] : [];
   });
 

@@ -1,12 +1,36 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import programs from "../../data/programs-internal.json";
 import { scoreSurvey, SURVEY_QUESTIONS } from "../survey-engine";
 import { resolveAvailability } from "../program-gating";
 import type { Program } from "../types";
 
+// review5 S1: scoreSurvey() now fetches /api/programs/engine-source at
+// submit time instead of a build-time static import. Stub fetch to return
+// the SAME internal catalog fixture these tests already import directly —
+// tests are allowed to see the internal catalog (they run in Node, never
+// ship to a browser); this proves the engine's own logic, not the network
+// boundary (that boundary is covered by
+// app/api/programs/engine-source/route.test.ts and the client-transitive-
+// import guard test).
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes("/api/programs/engine-source")) {
+        return new Response(JSON.stringify(programs), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("survey public results", () => {
-  it("keeps private ordering data out of the public result", () => {
-    const result = scoreSurvey({
+  it("keeps private ordering data out of the public result", async () => {
+    const result = await scoreSurvey({
       industry: "manufacturing",
       property: "own",
       activities: ["renovations", "hiring"],
@@ -27,8 +51,8 @@ describe("survey public results", () => {
     }
   });
 
-  it("labels selected facts as user answers and leaves requirements open", () => {
-    const result = scoreSurvey({
+  it("labels selected facts as user answers and leaves requirements open", async () => {
+    const result = await scoreSurvey({
       industry: "hairBeauty",
       property: "own",
       activities: ["renovations"],
@@ -49,8 +73,8 @@ describe("survey public results", () => {
     expect(JSON.stringify(sbif)).not.toMatch(/confirmed/i);
   });
 
-  it("uses only program ids backed by the production catalog", () => {
-    const result = scoreSurvey({
+  it("uses only program ids backed by the production catalog", async () => {
+    const result = await scoreSurvey({
       industry: "nonprofit",
       property: "none",
       activities: ["advice"],
@@ -63,11 +87,11 @@ describe("survey public results", () => {
     expect(result.universal.every((match) => productionIds.has(match.programId))).toBe(true);
   });
 
-  it("keeps every answer path free of public ranking and determination language", () => {
+  it("keeps every answer path free of public ranking and determination language", async () => {
     for (const question of SURVEY_QUESTIONS) {
       for (const option of question.options) {
         const answer = question.type === "multi" ? [option.id] : option.id;
-        const result = scoreSurvey({ [question.id]: answer });
+        const result = await scoreSurvey({ [question.id]: answer });
         const serialized = JSON.stringify(result);
 
         expect(serialized).not.toMatch(
@@ -91,12 +115,12 @@ describe("survey honesty — F12", () => {
     expect(sizeIds).not.toContain("under500k");
   });
 
-  it("an answer value with no catalog rule (inert-only answers) fabricates no matches and is disclosed in unusedAnswers, never silently absorbed", () => {
+  it("an answer value with no catalog rule (inert-only answers) fabricates no matches and is disclosed in unusedAnswers, never silently absorbed", async () => {
     // A value that cannot be selected through the current UI (its option
     // was removed) but exercises the SAME code path a future un-ruled
     // option would hit — proves the disclosure mechanism itself, not just
     // today's absence of inert options.
-    const result = scoreSurvey({ industry: "professional" as never });
+    const result = await scoreSurvey({ industry: "professional" as never });
     expect(result.unusedAnswers).toContain("industry:professional");
     expect(result.usedAnswers).not.toContain("industry:professional");
     // No fabricated match attributed to an answer with zero rules — only
@@ -104,14 +128,14 @@ describe("survey honesty — F12", () => {
     expect(result.matches).toEqual([]);
   });
 
-  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`", () => {
-    const result = scoreSurvey({ activities: ["advice"] });
+  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`", async () => {
+    const result = await scoreSurvey({ activities: ["advice"] });
     expect(result.matches.some((m) => m.programId === "smallBizSource")).toBe(false);
     expect(result.universal.some((m) => m.programId === "smallBizSource")).toBe(true);
   });
 
-  it("every match (including universal) carries a status object with a non-empty label, visible before the card is opened", () => {
-    const result = scoreSurvey({ industry: "manufacturing", activities: ["hiring"] });
+  it("every match (including universal) carries a status object with a non-empty label, visible before the card is opened", async () => {
+    const result = await scoreSurvey({ industry: "manufacturing", activities: ["hiring"] });
     for (const match of [...result.matches, ...result.universal]) {
       expect(match.status).toBeDefined();
       expect(match.status.label.length).toBeGreaterThan(0);
@@ -119,9 +143,9 @@ describe("survey honesty — F12", () => {
     }
   });
 
-  it("a lapsed program never surfaces in matches without its status recorded (catalystGrant, intakeStatus lapsed)", () => {
+  it("a lapsed program never surfaces in matches without its status recorded (catalystGrant, intakeStatus lapsed)", async () => {
     // activities:equipment rules catalystGrant medium confidence.
-    const result = scoreSurvey({ activities: ["equipment"] });
+    const result = await scoreSurvey({ activities: ["equipment"] });
     const catalyst = result.matches.find((m) => m.programId === "catalystGrant");
     if (catalyst) {
       expect(catalyst.status.intakeStatus).toBe("lapsed");
@@ -129,14 +153,14 @@ describe("survey honesty — F12", () => {
     }
   });
 
-  it("expired programs (resolveAvailability) never surface as a survey starting point, for every single-option answer across every question", () => {
+  it("expired programs (resolveAvailability) never surface as a survey starting point, for every single-option answer across every question", async () => {
     const today = new Date();
     const catalogById = new Map((programs as Program[]).map((p) => [p.id, p]));
     let expiredProgramExists = false;
     for (const question of SURVEY_QUESTIONS) {
       for (const option of question.options) {
         const answer = question.type === "multi" ? [option.id] : option.id;
-        const result = scoreSurvey({ [question.id]: answer });
+        const result = await scoreSurvey({ [question.id]: answer });
         for (const match of [...result.matches, ...result.universal]) {
           const record = catalogById.get(match.programId);
           expect(record).toBeDefined();

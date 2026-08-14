@@ -777,12 +777,17 @@ function ReportWizardPage() {
     [compareAddressInput, compareGeoResult?.display_name, compareParcel?.address, compareParcel?.zip]
   );
 
-  // Load programs on mount. build-spec.md 2.2 (hard cutover):
-  // public/data/programs.json is deleted; /api/programs already falls back
-  // to the internal catalog server-side (data/programs-internal.json) if
-  // the DB is unreachable, so no client-side fallback fetch is needed.
+  // Load programs on mount. review5 S1: /api/programs now returns the
+  // sanitized PublicProgramView projection; the client-side report engine
+  // (generateReportData / runConfidenceEngine) needs full record fidelity
+  // (howToApply, requiredDocs, verificationSteps, eligibilityRules, ...) to
+  // synthesize its own already-constrained output, so it fetches the
+  // explicitly-scoped /api/programs/engine-source instead — see that
+  // route's doc comment and docs/eligibility-claims-acceptance.md's S1
+  // resolution note for why this is a documented, bounded exception rather
+  // than a silent gap.
   useEffect(() => {
-    cachedFetch<Program[]>("/api/programs")
+    cachedFetch<Program[]>("/api/programs/engine-source")
       .then(setPrograms)
       .catch(() => {});
   }, []);
