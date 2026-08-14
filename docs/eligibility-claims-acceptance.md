@@ -2765,3 +2765,71 @@ repo `npx eslint .` — 0 errors, the same 5 pre-existing warnings (4 in
 Full `npx vitest run` — **326 test files, 4047 passed, 2 skipped** (up
 from Review 7's 326/4042 — the 5 new tests). `npm run
 programs:public:check` clean.
+
+### S24 (MEDIUM) — the RSC sentinel test scanned rendered HTML, but the boundary leak was in props, not markup
+
+**Finding:** `components/programs/__tests__/ProgramApplicationSection-boundary.test.tsx`'s
+"RSC-response sentinel test" (S17's own, from Review 7) always called
+`toProgramApplicationView(poisoned)` itself before rendering — it could
+never catch a regression where `app/programs/[slug]/page.tsx` stops
+calling that function at its own call site. Worse, even setting that
+aside, the test scanned RENDERED HTML for the sentinel — but
+`ProgramApplicationSection` only ever reads `howToApply`/
+`fastestConfirmingStep`/`sourceUrl`/`url` plus the narrow
+`ProgramAvailabilityFields` in its own JSX; it never touches
+`whoQualifies`/`eligibilityRules`/`contacts`/`requiredDocs`/etc.
+regardless of what object is passed in. The original S17 leak was in the
+RSC/Flight PAYLOAD — every prop serialized for client hydration, whether
+displayed or not — not in visible markup, and `renderToStaticMarkup`
+never reproduces flight serialization (an established, documented limit
+— see `report-page-live-renderer.test.tsx`'s own note on the same
+constraint). The existing test would have passed unchanged even if the
+component secretly received the full raw `Program`.
+
+**Fix:** no source change — `toProgramApplicationView(p)` at the real
+call site (`app/programs/[slug]/page.tsx` line 350) was already correct;
+this closes a test-coverage gap only. Added a new describe block that:
+mocks `@/lib/programs-data` to return a poisoned catalog record, mocks
+`@/components/programs/ProgramApplicationSection` itself to ECHO
+whatever object it receives as the `program` prop into rendered TEXT
+(`<div data-testid="captured-program-prop">{JSON.stringify(props.program)}</div>`
+— a pure function of props, not a captured outside variable mutated
+during render, which `eslint-plugin-react-hooks`'s purity rule
+correctly rejected on a first attempt), then dynamically re-imports and
+calls the REAL `ProgramExplainerPage` server component (`vi.resetModules()`
++ `vi.doMock()` + dynamic `import()`, the established report-page-live-renderer
+technique) and inspects exactly what it captured. This is what actually
+crosses the server/client boundary, exercised through the real page's
+own call site — not a hand-rolled replica of it.
+
+**Tests added:**
+`components/programs/__tests__/ProgramApplicationSection-boundary.test.tsx`
+(extended from 6 to 8 tests):
+- the real page never hands `ProgramApplicationSection` an internal-only
+  field, even for a poisoned catalog record — asserted against ONLY the
+  captured prop's own echoed JSON (extracted via regex from the full
+  page HTML), not the whole-page markup: the page legitimately renders
+  `p.name`/`summary`/`whoQualifies`/`benefits`/`contacts` elsewhere in
+  its own JSX (real content, not a boundary leak), and plain-English key
+  names like "contacts" appear in ordinary page copy ("Official source &
+  contacts") independent of any leak — an early draft that scanned the
+  whole page failed on exactly that false positive, caught before commit;
+- a permanent control test (a "fixture variant," not the real source):
+  the identical echo-capture technique, fed a raw unsanitized record
+  directly (never through `toProgramApplicationView`), proving the
+  detection methodology itself is discriminating — it DOES find the
+  sentinel when the boundary is genuinely bypassed, not vacuously true.
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check —
+same discipline as every prior finding, adapted since this isn't a
+one-line source diff: temporarily changed the real call site from
+`toProgramApplicationView(p)` to `p as unknown as
+ReturnType<typeof toProgramApplicationView>` (reproducing the exact S17
+bug), ran the test file — both the new "real page" test AND the
+pre-existing S17 regex-based "real page wiring" test failed as expected
+(the regex test still independently catches this too), while all other
+6 tests remained unaffected — then reverted the call site back and
+re-ran: all 8 tests passed, `tsc --noEmit` clean. Full repo `npx eslint .`
+— 0 errors, the same 5 pre-existing warnings, unchanged. Full `npx
+vitest run` — **326 test files, 4049 passed, 2 skipped** (up from S23's
+326/4047 — the 2 new tests). `npm run programs:public:check` clean.

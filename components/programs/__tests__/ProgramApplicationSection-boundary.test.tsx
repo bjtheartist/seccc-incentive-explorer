@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { toProgramApplicationView } from "../programAvailability";
 import { ProgramApplicationSection } from "../ProgramApplicationSection";
 import type { Program } from "@/lib/types";
@@ -167,6 +167,121 @@ describe("ProgramApplicationSection rendered output (review7 S17 RSC-boundary se
     expect(html).not.toContain(poisoned.contact);
     expect(html).not.toContain(poisoned.requiredDocs[0]);
     expect(html).not.toContain(poisoned.benefits[0]);
+  });
+});
+
+/**
+ * review8 S24 (MEDIUM) — the two tests above call `toProgramApplicationView`
+ * themselves before rendering, so they can never catch a regression where
+ * `app/programs/[slug]/page.tsx` itself stops calling it (i.e. reverts to
+ * `<ProgramApplicationSection program={p} />`). They also scan RENDERED HTML
+ * for the sentinel — but `ProgramApplicationSection` only ever reads
+ * `howToApply`/`fastestConfirmingStep`/`sourceUrl`/`url` plus the narrow
+ * `ProgramAvailabilityFields`; it never touches `whoQualifies`/
+ * `eligibilityRules`/`contacts`/`requiredDocs`/etc. in its own JSX. That
+ * means a sentinel planted in those fields would never show up in rendered
+ * markup regardless of whether the full raw `Program` or the sanitized DTO
+ * was passed as the prop — the original S17 leak was in the RSC/Flight
+ * PAYLOAD (every prop serialized for client hydration), not in visible
+ * markup, and `renderToStaticMarkup` never reproduces flight serialization
+ * (see report-page-live-renderer.test.tsx's own note on that same limit).
+ *
+ * The fix here is structural, not textual: mock
+ * `@/components/programs/ProgramApplicationSection` to CAPTURE whatever
+ * object is actually handed to it as the `program` prop — that captured
+ * object is exactly what would be serialized into the RSC payload — then
+ * dynamically re-import and call the REAL `app/programs/[slug]/page.tsx`
+ * server component (with only its data source, `@/lib/programs-data`,
+ * mocked to return a poisoned record) and inspect what it actually passed.
+ * This exercises the real call site end-to-end, not a hand-rolled
+ * replica of it.
+ */
+describe("app/programs/[slug]/page.tsx → ProgramApplicationSection prop boundary (review8 S24 RSC-boundary sentinel test)", () => {
+  it("the REAL page never hands ProgramApplicationSection an internal-only field, even for a poisoned catalog record", async () => {
+    vi.resetModules();
+    const poisoned = fullProgramFixture({ status: "active" });
+
+    vi.doMock("@/lib/programs-data", () => ({
+      getProgramBySlug: (slug: string) => (slug === poisoned.id ? poisoned : undefined),
+      getAllPrograms: () => [poisoned],
+      programSlug: (p: Program) => p.id,
+      relatedPrograms: () => [],
+      slugifyProgramName: (name: string) => name.toLowerCase().replace(/\s+/g, "-"),
+      allProgramSlugs: () => [poisoned.id],
+    }));
+    // The page mounts SnapshotCTA → AddressSearch, which calls useRouter()
+    // for its own client-side navigation — unrelated to the boundary this
+    // test is proving, but needed for the real page tree to render at all
+    // outside an actual Next app-router context.
+    vi.doMock("next/navigation", () => ({
+      useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+      usePathname: () => "/programs/test",
+      useSearchParams: () => new URLSearchParams(),
+      notFound: () => {
+        throw new Error("notFound() called unexpectedly");
+      },
+    }));
+    // Echo whatever object is actually handed to the (mocked)
+    // `ProgramApplicationSection` back out as rendered TEXT — that is
+    // exactly what would be serialized into the RSC payload for this
+    // client component. A pure function of props, not a captured
+    // outside variable mutated during render (react-hooks/purity).
+    vi.doMock("@/components/programs/ProgramApplicationSection", () => ({
+      ProgramApplicationSection: (props: { program: unknown }) => (
+        <div data-testid="captured-program-prop">{JSON.stringify(props.program)}</div>
+      ),
+    }));
+
+    const { default: ProgramExplainerPage } = await import(
+      "../../../app/programs/[slug]/page"
+    );
+    const jsx = await ProgramExplainerPage({
+      params: Promise.resolve({ slug: poisoned.id }),
+    });
+    const html = renderToStaticMarkup(jsx);
+
+    vi.doUnmock("@/lib/programs-data");
+    vi.doUnmock("@/components/programs/ProgramApplicationSection");
+    vi.doUnmock("next/navigation");
+    vi.resetModules();
+
+    // Scope the assertion to ONLY the captured prop's own echoed JSON, not
+    // the whole page: the page legitimately renders p.name/summary/
+    // whoQualifies/benefits/contacts elsewhere in its own JSX (that's the
+    // page's real content, not a boundary leak), and plain-English key
+    // names like "name"/"status"/"contacts" appear in ordinary page copy
+    // ("Official source & contacts") regardless of any leak.
+    const capturedMatch = html.match(
+      /<div data-testid="captured-program-prop">([^<]*)<\/div>/,
+    );
+    expect(capturedMatch, "captured-program-prop marker never rendered").toBeTruthy();
+    const capturedJson = capturedMatch![1];
+    for (const key of INTERNAL_ONLY_KEYS) {
+      expect(capturedJson, `leaked key "${key}"`).not.toContain(key === "name" ? `"name"` : key);
+    }
+    expect(capturedJson, "sentinel value must not survive into the captured prop").not.toContain(
+      SENTINEL,
+    );
+  });
+
+  it("control (fixture variant, not the real source): the same capture technique DOES catch a raw Program prop", () => {
+    // Proves the assertion above is discriminating, not vacuously true.
+    // Reproduces the exact vulnerable shape review7 S17 fixed —
+    // `program={p}` instead of `program={toProgramApplicationView(p)}` —
+    // through the identical echo-to-text capture technique used above,
+    // fed a raw, unsanitized fixture directly (never through
+    // `toProgramApplicationView`).
+    const poisoned = fullProgramFixture({ status: "active" });
+    function CaptureProbe(props: { program: unknown }) {
+      return <div data-testid="captured-program-prop">{JSON.stringify(props.program)}</div>;
+    }
+
+    const html = renderToStaticMarkup(<CaptureProbe program={poisoned} />);
+
+    expect(
+      html,
+      "control must demonstrate a detectable leak when the DTO boundary is bypassed",
+    ).toContain(SENTINEL);
   });
 });
 
