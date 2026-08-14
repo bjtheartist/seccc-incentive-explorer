@@ -60,7 +60,9 @@ import {
 import {
   fetchCommunityInvestmentLayer,
   fetchHistoricalRecoveryRecipients,
+  fetchInvestmentRecipientRecord,
   filterInvestmentPointFeatures,
+  zipAggregateOverlaySourceInScope,
   investmentFeatureCollection,
   summarizeCitywideEntries,
   DEFAULT_INVESTMENT_YEAR_RANGE,
@@ -496,6 +498,13 @@ export default function MapView() {
   const countyReliefByZipRef = useRef<CountyReliefZipSummary[]>([]);
   const state2020ReliefByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
   const stateRecoveryByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
+  // Deliverable 2 (audit finding 3 / consult F2): the RAW, unfiltered
+  // Hospitality held-citywide count from the fetch, kept separately from the
+  // displayed state so the state_2020_relief overlay effect can re-scope the
+  // DISPLAYED value to zero when illinois-hospitality-emergency's fixed
+  // 2020/government/programmatic dimensions fall outside the active filter,
+  // without losing the raw count needed to restore it when back in scope.
+  const state2020HospitalityCitywideCountRawRef = useRef(0);
   const countyReliefBoundariesRef = useRef<ZipBoundaryFeatureCollection | null>(null);
   const [stateCapitalPlottedCount, setStateCapitalPlottedCount] = useState(0);
   const [stateCapitalCitywideCount, setStateCapitalCitywideCount] = useState(0);
@@ -2356,10 +2365,39 @@ export default function MapView() {
         "community-investment-federal-restaurant-relief-points",
         (e) => {
           if (!e.features?.length) return;
+          const p = e.features[0].properties || {};
           sharedDotPopup
             .setLngLat(e.lngLat)
-            .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
+            .setHTML(buildInvestmentPopupHtml(p))
             .addTo(map);
+          // Deliverable 1 (audit finding 9 / consult F6 + Q2): RRF's recipient
+          // name is withheld from the bulk payload, so buildInvestmentPopupHtml
+          // renders a "Reveal recipient name" button instead. Wire it to the
+          // lazy, single-record, authenticated fetch — never a bulk reload —
+          // and re-render this SAME popup body with the real name filled in.
+          const revealButton = sharedDotPopup
+            .getElement()
+            ?.querySelector<HTMLButtonElement>("[data-investment-reveal-recipient]");
+          revealButton?.addEventListener(
+            "click",
+            () => {
+              const id = revealButton.dataset.investmentRevealRecipient || String(p.id || "");
+              if (!id) return;
+              revealButton.disabled = true;
+              revealButton.textContent = "Loading…";
+              fetchInvestmentRecipientRecord(id).then((result) => {
+                if (result.status !== "ready") return;
+                sharedDotPopup.setHTML(
+                  buildInvestmentPopupHtml({
+                    ...p,
+                    recipient: result.recipient ?? p.recipient,
+                    logLine: result.logLine ?? p.logLine,
+                  }),
+                );
+              });
+            },
+            { once: true },
+          );
         },
       );
       map.on(
@@ -3337,6 +3375,7 @@ export default function MapView() {
           state2020ReliefByZipRef.current = result.state2020ReliefByZip;
           stateRecoveryByZipRef.current = result.stateRecoveryByZip;
           setStateCapitalCitywideCount(result.stateCapitalCitywideCount);
+          state2020HospitalityCitywideCountRawRef.current = result.state2020HospitalityCitywideCount;
           setState2020HospitalityCitywideCount(
             result.state2020HospitalityCitywideCount,
           );
@@ -3424,9 +3463,31 @@ export default function MapView() {
     loaded,
   ]);
 
+  /**
+   * Deliverable 2 (audit finding 3 / consult F2) — the ONE filter state every
+   * public-investment overlay below reads through matchesInvestmentFilter /
+   * filterInvestmentPointFeatures / zipAggregateOverlaySourceInScope. Built
+   * once per render so all five overlays, their plotted counts, and their
+   * legend captions stay in lockstep with the base Dots layer's year/funder/
+   * purpose controls instead of each re-deriving (or skipping) its own filter.
+   */
+  const investmentFilterState = useMemo(
+    () => ({
+      yearRangeId: investmentYearRange,
+      activeFunderTypes: new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k])),
+      activeGovernmentFundingPurposes: new Set<GovernmentFundingPurpose>(
+        MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter((purpose) => investmentGovernmentFundingPurposes[purpose]),
+      ),
+    }),
+    [investmentYearRange, investmentFunderTypes, investmentGovernmentFundingPurposes],
+  );
+
   /* Additional public-investment overlays. They deliberately render through
      their own mapbox sources so neither Dots/Arcs/Density nor awarded-dollar
-     density calculations can absorb them. */
+     density calculations can absorb them. Each is now threaded through
+     investmentFilterState (deliverable 2) — before this fix they reloaded
+     their complete cached dataset regardless of the year/funder/purpose
+     controls, so selecting a year left every out-of-range record visible. */
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
@@ -3441,7 +3502,21 @@ export default function MapView() {
     if (map.getLayer(layerId)) {
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
-    const features = visible ? stateCapitalFeaturesRef.current : [];
+    // The plotted subset carries real per-record year/funderType/purpose, so
+    // it is filtered exactly like the base Dots source. The held-CITYWIDE
+    // remainder (stateCapitalCitywideCount, set from the fetch below) is a
+    // single server-computed aggregate integer with no per-record breakdown
+    // shipped to the client — unlike the ZIP-aggregate recovery programs
+    // (whose one-time-only historical year is a permanent fact, safe to gate
+    // as a whole), DCEO's appropriation year is a live "current state," not a
+    // constant this client module should hard-code. So it stays UNFILTERED,
+    // and the legend caption below (MapLegendPanel) discloses that the
+    // held-unplotted count does not re-scope with the filters — the
+    // Megaprojects-style disclosed exception the consult allows for a source
+    // whose full remainder genuinely isn't refilterable client-side.
+    const features = visible
+      ? filterInvestmentPointFeatures(stateCapitalFeaturesRef.current, investmentFilterState)
+      : [];
     source?.setData(investmentFeatureCollection(features));
     setStateCapitalPlottedCount(features.length);
   }, [
@@ -3449,6 +3524,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_capital_projects,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3468,7 +3544,9 @@ export default function MapView() {
     if (map.getLayer(layerId)) {
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
-    const features = visible ? federalRestaurantReliefFeaturesRef.current : [];
+    const features = visible
+      ? filterInvestmentPointFeatures(federalRestaurantReliefFeaturesRef.current, investmentFilterState)
+      : [];
     source?.setData(investmentFeatureCollection(features));
     setFederalRestaurantReliefPlottedCount(features.length);
   }, [
@@ -3476,6 +3554,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.federal_restaurant_relief,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3483,11 +3562,18 @@ export default function MapView() {
     const map = mapRef.current;
     if (!map || !loaded) return;
     const source = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): every Cook County 2023
+    // Source Grant record shares the SAME (2023, government, programmatic)
+    // dimensions, so a single scope check re-scopes this overlay exactly as
+    // filtering each record individually would — fixing the reproduction
+    // "select 2024, 2023 Cook records remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("cook-source-2023", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.county_relief_awards;
+      publicInvestmentOverlays.county_relief_awards &&
+      inScope;
 
     for (const layerId of [COUNTY_RELIEF_FILL_LAYER_ID, COUNTY_RELIEF_LINE_LAYER_ID]) {
       if (map.getLayer(layerId)) {
@@ -3536,6 +3622,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.county_relief_awards,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3545,11 +3632,18 @@ export default function MapView() {
     const source = map.getSource(STATE_2020_RELIEF_SOURCE_ID) as
       | mapboxgl.GeoJSONSource
       | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): illinois-big (mapped by
+    // ZIP) and illinois-hospitality-emergency (held citywide — no ZIP) share
+    // the SAME fixed (2020, government, programmatic) dimensions, so one
+    // scope check re-scopes both halves of this overlay together — fixing the
+    // reproduction "select 2024, 2020 BIG records remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("illinois-big", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.state_2020_relief;
+      publicInvestmentOverlays.state_2020_relief &&
+      inScope;
 
     for (const layerId of [
       STATE_2020_RELIEF_FILL_LAYER_ID,
@@ -3559,6 +3653,12 @@ export default function MapView() {
         map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
       }
     }
+    // Hospitality never plots (no ZIP), so its filter is expressed entirely
+    // through this displayed count, re-scoped to zero exactly when the ZIP
+    // polygons above also go out of scope (same shared dimensions).
+    setState2020HospitalityCitywideCount(
+      visible ? state2020HospitalityCitywideCountRawRef.current : 0,
+    );
     if (!visible) {
       source?.setData(EMPTY_FC);
       setState2020ReliefZipCount(0);
@@ -3605,6 +3705,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_2020_relief,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3614,11 +3715,17 @@ export default function MapView() {
     const source = map.getSource(STATE_RECOVERY_SOURCE_ID) as
       | mapboxgl.GeoJSONSource
       | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): every Illinois Back to
+    // Business record shares the SAME (2022, government, programmatic)
+    // dimensions — fixing the reproduction "select 2024, 2022 B2B records
+    // remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("illinois-b2b", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.state_recovery_awards;
+      publicInvestmentOverlays.state_recovery_awards &&
+      inScope;
 
     for (const layerId of [
       STATE_RECOVERY_FILL_LAYER_ID,
@@ -3674,6 +3781,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_recovery_awards,
+    investmentFilterState,
     loaded,
   ]);
 

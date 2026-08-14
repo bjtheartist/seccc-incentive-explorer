@@ -8,6 +8,7 @@ import {
   fetchCommunityInvestmentLayer,
   fetchCountyReliefRecipients,
   fetchHistoricalRecoveryRecipients,
+  fetchInvestmentRecipientRecord,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
@@ -21,9 +22,11 @@ import {
   buildMegaprojectFeatures,
   citywideDevelopmentProjectNames,
   makeMegaprojectRadiusScale,
+  matchesInvestmentFilter,
   megaprojectStatusGroup,
   summarizeMegaprojects,
   truncateMegaprojectLabel,
+  zipAggregateOverlaySourceInScope,
   MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL,
   MEGAPROJECT_LABEL_MAX_CHARS,
   MEGAPROJECT_RADIUS_MAX,
@@ -32,6 +35,7 @@ import {
   MEGAPROJECT_STATUS_GROUP_BY_STATUS,
   type InvestmentPointFeature,
 } from "@/lib/community-investment-layer";
+import type { FunderType } from "@/lib/community-investment";
 
 /**
  * Unit coverage for the client-safe Community Investment map-layer helpers,
@@ -261,6 +265,104 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
       activeGovernmentFundingPurposes: ["programmatic"],
     });
     expect(programmaticOnly).toEqual({ count: 1, totalDollars: 250_000 });
+  });
+});
+
+describe("matchesInvestmentFilter (deliverable 2 — the ONE overlay predicate)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+
+  it("passes a record inside the year window, active funderType, and active purpose", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "2020-2021", activeFunderTypes: allFunderTypes },
+      ),
+    ).toBe(true);
+  });
+
+  it("fails a record outside the active year window", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2020, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "2022-2023", activeFunderTypes: allFunderTypes },
+      ),
+    ).toBe(false);
+  });
+
+  it("fails a record whose funderType checkbox is off", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "all", activeFunderTypes: ["philanthropic", "private_development"] },
+      ),
+    ).toBe(false);
+  });
+
+  it("fails a government record whose purpose checkbox is off, without affecting non-government funderTypes", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "capital_project" },
+        {
+          yearRangeId: "all",
+          activeFunderTypes: allFunderTypes,
+          activeGovernmentFundingPurposes: ["programmatic"],
+        },
+      ),
+    ).toBe(false);
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "philanthropic", governmentFundingPurpose: null },
+        {
+          yearRangeId: "all",
+          activeFunderTypes: allFunderTypes,
+          activeGovernmentFundingPurposes: ["programmatic"],
+        },
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("zipAggregateOverlaySourceInScope (deliverable 2 — Cook/BIG/Hospitality/B2B)", () => {
+  it("is in scope when the active year window includes the program's fixed year", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("cook-source-2023", {
+        yearRangeId: "2022-2023",
+        activeFunderTypes: ["government", "philanthropic", "private_development"],
+      }),
+    ).toBe(true);
+  });
+
+  it("goes OUT of scope the instant the active year window excludes the program's fixed year — audit finding 3's reproduction", () => {
+    // "select 2024 and enable overlays — 2020 BIG, 2021 RRF, 2022 B2B, and 2023
+    // Cook records remain visible" was the exact bug. 2024–2026 must exclude
+    // every ZIP-aggregate/citywide-only source below (none run in that window).
+    const filter2024 = {
+      yearRangeId: "2024-2026",
+      activeFunderTypes: ["government", "philanthropic", "private_development"] as const,
+    };
+    expect(zipAggregateOverlaySourceInScope("cook-source-2023", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-big", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-hospitality-emergency", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-b2b", filter2024)).toBe(false);
+  });
+
+  it("goes out of scope when the government funderType checkbox is off", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("illinois-b2b", {
+        yearRangeId: "all",
+        activeFunderTypes: ["philanthropic", "private_development"],
+      }),
+    ).toBe(false);
+  });
+
+  it("goes out of scope when the programmatic purpose checkbox is off", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("illinois-big", {
+        yearRangeId: "all",
+        activeFunderTypes: ["government", "philanthropic", "private_development"],
+        activeGovernmentFundingPurposes: ["capital_project"],
+      }),
+    ).toBe(false);
   });
 });
 
@@ -653,6 +755,56 @@ describe("fetchCountyReliefRecipients", () => {
     ]);
     expect(result.recipientCount).toBe(1);
     expect(result.sourceLink).toBeNull();
+  });
+});
+
+// ── Deliverable 1 (audit finding 9 / consult F6 + Q2): lazy RRF retrieval ──────
+
+describe("fetchInvestmentRecipientRecord", () => {
+  it("requests exactly one record id and returns its revealed identity", async () => {
+    const fetchImpl = fetchStub(200, {
+      id: "rrf-point",
+      recipient: "Restaurant recipient",
+      logLine: "Legal business: Restaurant Recipient LLC",
+    });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=recipient-record&id=rrf-point`,
+    );
+    expect(result).toEqual({
+      status: "ready",
+      id: "rrf-point",
+      recipient: "Restaurant recipient",
+      logLine: "Legal business: Restaurant Recipient LLC",
+    });
+  });
+
+  it("maps an expired admin session to an empty unauthorized result", async () => {
+    const fetchImpl = fetchStub(401, { error: "Unauthorized" });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+    expect(result.status).toBe("unauthorized");
+    expect(result.recipient).toBeNull();
+  });
+
+  it("maps an unknown/non-lazy id to a not_found result, never a thrown error", async () => {
+    const fetchImpl = fetchStub(404, { error: "Not found" });
+    const result = await fetchInvestmentRecipientRecord("cdg-point", { fetchImpl });
+    expect(result.status).toBe("not_found");
+    expect(result.recipient).toBeNull();
+  });
+
+  it("never fetches without an id — no bulk/blank lookup", async () => {
+    const fetchImpl = fetchStub(200, { recipients: [] });
+    const result = await fetchInvestmentRecipientRecord("", { fetchImpl });
+    expect(result.status).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("treats a malformed response body as unavailable rather than throwing", async () => {
+    const fetchImpl = fetchStub(200, { recipient: 12345 });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+    expect(result.status).toBe("unavailable");
   });
 });
 

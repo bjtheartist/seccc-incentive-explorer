@@ -868,6 +868,22 @@ export default function MapLegendPanel({
                                 : overlay.id === "federal_restaurant_relief"
                                   ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
                                   : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
+                          // Deliverable 2 (audit finding 3 / consult F2, disclosed
+                          // exception): the plotted counts above DO honor year /
+                          // funder / purpose (filterInvestmentPointFeatures). The
+                          // "held unplotted" remainder for these two point-sourced
+                          // overlays is a single server-computed aggregate with no
+                          // per-record year sent to the client, so — unlike Cook /
+                          // BIG / Hospitality / B2B, whose one historical program
+                          // year is a permanent fact safe to gate as a whole — it
+                          // cannot be safely re-scoped client-side and stays as the
+                          // unfiltered total. Disclosed here, Megaprojects-style,
+                          // rather than silently pretending it is filtered.
+                          const unfilteredRemainderCaption =
+                            overlay.id === "federal_restaurant_relief" ||
+                            overlay.id === "state_capital_projects"
+                              ? "Held-unplotted count is not re-filtered by year/funder/purpose"
+                              : null;
                           return (
                             <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
                               <input
@@ -901,6 +917,11 @@ export default function MapLegendPanel({
                                 {checked && (
                                   <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
                                     {countLabel}
+                                  </span>
+                                )}
+                                {checked && unfilteredRemainderCaption && (
+                                  <span className="mt-0.5 block text-[8px] italic leading-relaxed text-[#0C1B33]/35">
+                                    {unfilteredRemainderCaption}
                                   </span>
                                 )}
                               </span>

@@ -120,6 +120,7 @@ const fakeData = {
       funderType: "government",
       governmentFundingPurpose: "programmatic",
       recipient: "Restaurant recipient",
+      logLine: "Legal business: Restaurant Recipient LLC · Published uses: rent",
       geometry: { kind: "point", lat: 41.77, lng: -87.6 },
       amountAwarded: null,
       recovery: { historicalAmount: { value: 80_000 } },
@@ -239,6 +240,12 @@ describe("GET /api/owner-file/investment", () => {
     expect(JSON.stringify(body)).not.toContain("Unplotted restaurant recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted state project");
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
+    // Deliverable 1 (audit finding 9 / consult F6 + Q2): RRF is PLOTTED (it
+    // survives isVisibleInProjectedView, unlike the ZIP-aggregate sources
+    // above) but its recipient business name never reaches the default bulk
+    // payload — neither directly nor smuggled through logLine.
+    expect(JSON.stringify(body)).not.toContain("Restaurant recipient");
+    expect(JSON.stringify(body)).not.toContain("Legal business: Restaurant Recipient LLC");
   });
 
   it("projects each surviving map record down to the fields the map client renders", async () => {
@@ -279,6 +286,69 @@ describe("GET /api/owner-file/investment", () => {
     const rrf = body.records.find((record: { id?: string }) => record.id === "rrf-point");
     expect(rrf.recovery).toEqual({ historicalAmount: { value: 80_000 } });
     expect(rrf.governmentFundingPurpose).toBe("programmatic");
+    // Deliverable 1: RRF's recipient/logLine are withheld (empty/null) in the
+    // default bulk payload, not merely absent — the client keys off the empty
+    // string to render a "Reveal recipient name" action instead of a blank.
+    expect(rrf.recipient).toBe("");
+    expect(rrf.logLine).toBeNull();
+    // Every OTHER field the map/popup need still ships — this is a targeted
+    // identity strip, not a wholesale field removal.
+    expect(rrf.id).toBe("rrf-point");
+    expect(rrf.geometry).toEqual({ kind: "point", lat: 41.77, lng: -87.6 });
+  });
+
+  describe("recipient-record view (deliverable 1 — lazy RRF retrieval)", () => {
+    it("401s unauthenticated, before any data load", async () => {
+      hasSessionMock.mockReturnValue(false);
+      const res = await GET(
+        req("http://localhost/api/owner-file/investment?view=recipient-record&id=rrf-point"),
+      );
+      expect(res.status).toBe(401);
+      expect(loadMock).not.toHaveBeenCalled();
+    });
+
+    it("returns exactly one record's withheld fields, authenticated, no-store", async () => {
+      const res = await GET(
+        req("http://localhost/api/owner-file/investment?view=recipient-record&id=rrf-point"),
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(body).toEqual({
+        id: "rrf-point",
+        recipient: "Restaurant recipient",
+        logLine: "Legal business: Restaurant Recipient LLC · Published uses: rent",
+      });
+    });
+
+    it("404s an unknown id — no bulk prefetch, no enumeration signal", async () => {
+      const res = await GET(
+        req("http://localhost/api/owner-file/investment?view=recipient-record&id=does-not-exist"),
+      );
+      expect(res.status).toBe(404);
+      expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(await res.json()).toEqual({ error: "Not found" });
+    });
+
+    it("404s a record whose source is not enrolled in lazy retrieval (e.g. an ordinary cdg point)", async () => {
+      // Only sources withheld from the bulk payload (LAZY_RECORD_SOURCES) may
+      // be fetched this way — an ordinary record's name is already in the
+      // bulk payload, so exposing it again here would just be a second,
+      // unnecessary identity-fetch surface with a different auth story.
+      const res = await GET(
+        req("http://localhost/api/owner-file/investment?view=recipient-record&id=cdg-point"),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it("requires an id", async () => {
+      const res = await GET(
+        req("http://localhost/api/owner-file/investment?view=recipient-record"),
+      );
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("record id is required");
+    });
   });
 
   it("reduces surviving CITYWIDE records to legend-summary fields — names only on development rows", async () => {
@@ -449,6 +519,7 @@ describe("GET /api/owner-file/investment", () => {
       expect(raw, url).not.toContain("Illinois B2B recipient");
       expect(raw, url).not.toContain("Unplotted restaurant recipient");
       expect(raw, url).not.toContain("Unplotted state project");
+      expect(raw, url).not.toContain("Restaurant recipient");
       expect(
         body.records.some(
           (record: { geometry: { kind: string } }) => record.geometry.kind === "zip_area",

@@ -679,13 +679,63 @@ function toActivePurposeSet(
     : new Set(activePurposes as readonly GovernmentFundingPurpose[]);
 }
 
+/**
+ * Deliverable 2 (audit finding 3 / consult F2) — the ONE predicate every
+ * investment overlay, legend total, citywide count, popup total, and
+ * recipient drilldown must pass through. Before this, state capital / RRF /
+ * Cook / BIG / B2B each reloaded their own complete cached dataset,
+ * independent of the year/funderType/purpose controls — reproducible by
+ * selecting a year and watching an out-of-range BIG/RRF/B2B/Cook record stay
+ * visible. `matchesInvestmentFilter` is the single source of truth those five
+ * overlays, the base Dots/Arcs/Density source, and the legend's citywide
+ * summary all now call. Pure / deterministic.
+ */
+export interface InvestmentFilterState {
+  yearRangeId: string;
+  activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
+  activeGovernmentFundingPurposes?:
+    | ReadonlySet<GovernmentFundingPurpose>
+    | readonly GovernmentFundingPurpose[];
+}
+
+/** The three filterable dimensions of one record/entry — everything
+ * `matchesInvestmentFilter` needs, independent of geometry/shape. */
+export interface InvestmentFilterDimensions {
+  year: number | null;
+  funderType: FunderType | string;
+  /** null for a non-government record; "unclassified" is a real, filterable
+   * value for a government record whose purpose the exporter couldn't assign. */
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
+}
+
 function governmentFundingPurposeActive(
-  feature: InvestmentPointFeature,
+  dims: InvestmentFilterDimensions,
   activeSet: ReadonlySet<GovernmentFundingPurpose> | null,
 ): boolean {
-  if (!activeSet || feature.properties.funderType !== "government") return true;
-  const purpose = feature.properties.governmentFundingPurpose ?? "unclassified";
+  if (!activeSet || dims.funderType !== "government") return true;
+  const purpose = dims.governmentFundingPurpose ?? "unclassified";
   return activeSet.has(purpose);
+}
+
+/**
+ * Whether one record/entry (year, funderType, governmentFundingPurpose)
+ * passes the active year-range / funderType / purpose filter. THE single
+ * predicate — every overlay, legend total, citywide count, popup total, and
+ * recipient drilldown must call this (or its convenience wrappers below)
+ * rather than re-deriving its own filter logic. Pure / deterministic.
+ */
+export function matchesInvestmentFilter(
+  dims: InvestmentFilterDimensions,
+  filter: InvestmentFilterState,
+): boolean {
+  const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === filter.yearRangeId) ?? null;
+  const activeSet = toActiveSet(filter.activeFunderTypes);
+  const activePurposeSet = filter.activeGovernmentFundingPurposes
+    ? toActivePurposeSet(filter.activeGovernmentFundingPurposes)
+    : null;
+  if (!funderTypeActive(dims.funderType, activeSet)) return false;
+  if (!governmentFundingPurposeActive(dims, activePurposeSet)) return false;
+  return yearInRange(dims.year, range);
 }
 
 /**
@@ -694,29 +744,24 @@ function governmentFundingPurposeActive(
  * rebuilds the source data with setData rather than a layer filter. A feature
  * passes when its funderType is active (see funderTypeActive — unknown types
  * follow the "all on" state) AND (the year range is unbounded, or the feature's
- * year falls inside the inclusive window). Pure / deterministic.
+ * year falls inside the inclusive window). Pure / deterministic. Thin wrapper
+ * over matchesInvestmentFilter — kept as its own export because every overlay
+ * effect in MapView.tsx already filters an InvestmentPointFeature array.
  */
 export function filterInvestmentPointFeatures(
   features: readonly InvestmentPointFeature[],
-  opts: {
-    yearRangeId: string;
-    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
-    activeGovernmentFundingPurposes?:
-      | ReadonlySet<GovernmentFundingPurpose>
-      | readonly GovernmentFundingPurpose[];
-  }
+  opts: InvestmentFilterState,
 ): InvestmentPointFeature[] {
-  const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null;
-  const activeSet = toActiveSet(opts.activeFunderTypes);
-  const activePurposeSet = opts.activeGovernmentFundingPurposes
-    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
-    : null;
-  return features.filter((f) => {
-    const p = f.properties;
-    if (!funderTypeActive(p.funderType, activeSet)) return false;
-    if (!governmentFundingPurposeActive(f, activePurposeSet)) return false;
-    return yearInRange(p.year, range);
-  });
+  return features.filter((f) =>
+    matchesInvestmentFilter(
+      {
+        year: f.properties.year,
+        funderType: f.properties.funderType,
+        governmentFundingPurpose: f.properties.governmentFundingPurpose ?? null,
+      },
+      opts,
+    ),
+  );
 }
 
 /** A FeatureCollection wrapper for GeoJSONSource.setData. Pure. */
@@ -812,35 +857,64 @@ export function summarizeCitywideInvestment(
  */
 export function summarizeCitywideEntries(
   entries: readonly CitywideInvestmentEntry[],
-  opts: {
-    yearRangeId: string;
-    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
-    activeGovernmentFundingPurposes?:
-      | ReadonlySet<GovernmentFundingPurpose>
-      | readonly GovernmentFundingPurpose[];
-  } | null
+  opts: InvestmentFilterState | null,
 ): CitywideInvestmentSummary {
-  const range = opts ? INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null : null;
-  const activeSet = opts ? toActiveSet(opts.activeFunderTypes) : null;
-  const activePurposeSet = opts?.activeGovernmentFundingPurposes
-    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
-    : null;
   let count = 0;
   let totalDollars = 0;
   for (const e of entries) {
-    if (activeSet && !funderTypeActive(e.funderType, activeSet)) continue;
     if (
-      activePurposeSet &&
-      e.funderType === "government" &&
-      !activePurposeSet.has(e.governmentFundingPurpose ?? "unclassified")
+      opts &&
+      !matchesInvestmentFilter(
+        { year: e.year, funderType: e.funderType, governmentFundingPurpose: e.governmentFundingPurpose },
+        opts,
+      )
     ) {
       continue;
     }
-    if (!yearInRange(e.year, range)) continue;
     count += 1;
     if (e.amountAwarded != null) totalDollars += e.amountAwarded;
   }
   return { count, totalDollars };
+}
+
+// ── ZIP-aggregate / citywide-only overlay scope (deliverable 2) ────────────────
+
+/**
+ * The fixed (year, funderType, governmentFundingPurpose) of the ZIP-aggregate
+ * and citywide-only historical recovery sources — every record within one of
+ * these sources shares the SAME year/funderType/purpose (verified against the
+ * exporter: scripts/export-community-investment.ts hard-codes one `year` per
+ * program and SOURCE_GOVERNMENT_FUNDING_PURPOSE assigns one purpose per
+ * source). Because the dimensions are homogeneous, a single scope check is
+ * EQUIVALENT to filtering every record individually — this is not a source
+ * that "lacks" a dimension, it is one whose dimension never varies.
+ */
+export const ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE: Readonly<
+  Record<HistoricalRecoveryRecipientSource | "illinois-hospitality-emergency", InvestmentFilterDimensions>
+> = {
+  "cook-source-2023": { year: 2023, funderType: "government", governmentFundingPurpose: "programmatic" },
+  "illinois-big": { year: 2020, funderType: "government", governmentFundingPurpose: "programmatic" },
+  "illinois-hospitality-emergency": {
+    year: 2020,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  },
+  "illinois-b2b": { year: 2022, funderType: "government", governmentFundingPurpose: "programmatic" },
+};
+
+/**
+ * Whether a ZIP-aggregate/citywide-only historical source is IN SCOPE under
+ * the active year/funderType/purpose filter — the gate MapView applies before
+ * rendering that source's ZIP polygons or held-citywide count. Out of scope
+ * means the overlay renders NOTHING (not a stale unfiltered total), fixing
+ * the reproduction the audit gave: selecting 2024 must hide 2020 BIG, 2021
+ * RRF, 2022 B2B, and 2023 Cook entirely. Pure / deterministic.
+ */
+export function zipAggregateOverlaySourceInScope(
+  sourceId: keyof typeof ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE,
+  filter: InvestmentFilterState,
+): boolean {
+  return matchesInvestmentFilter(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE[sourceId], filter);
 }
 
 export type CommunityInvestmentLayerStatus = "ready" | "unauthorized" | "unavailable" | "error";
@@ -1095,6 +1169,57 @@ export async function fetchHistoricalRecoveryRecipients(
         ? data.sourceLink
         : null,
     recipients,
+  };
+}
+
+export type InvestmentRecipientRecordStatus = "ready" | "unauthorized" | "not_found" | "unavailable";
+
+export interface InvestmentRecipientRecordResult {
+  status: InvestmentRecipientRecordStatus;
+  id: string | null;
+  recipient: string | null;
+  logLine: string | null;
+}
+
+/**
+ * Deliverable 1 (audit finding 9 / consult F6 + Q2) — fetch exactly ONE RRF
+ * point's withheld identity (recipient name + logLine), authenticated, after
+ * an admin clicks that specific point. No bulk prefetch: this is called once
+ * per popup open, never eagerly, and the response never grows beyond a single
+ * record no matter how the id is chosen (see the route's `view=recipient-record`
+ * handler, which 404s an id that isn't enrolled in lazy retrieval).
+ */
+export async function fetchInvestmentRecipientRecord(
+  id: string,
+  opts?: { signal?: AbortSignal; fetchImpl?: typeof fetch },
+): Promise<InvestmentRecipientRecordResult> {
+  const emptyResult = (status: Exclude<InvestmentRecipientRecordStatus, "ready">): InvestmentRecipientRecordResult => ({
+    status,
+    id: null,
+    recipient: null,
+    logLine: null,
+  });
+  if (!id) return emptyResult("not_found");
+
+  const doFetch = opts?.fetchImpl ?? fetch;
+  const params = new URLSearchParams({ view: "recipient-record", id });
+  const res = await doFetch(
+    `${COMMUNITY_INVESTMENT_ENDPOINT}?${params.toString()}`,
+    opts?.signal ? { signal: opts.signal } : undefined,
+  );
+  if (res.status === 401) return emptyResult("unauthorized");
+  if (res.status === 404) return emptyResult("not_found");
+  if (!res.ok) return emptyResult("unavailable");
+
+  const data = (await res.json()) as Partial<InvestmentRecipientRecordResult>;
+  if (typeof data.id !== "string" || typeof data.recipient !== "string") {
+    return emptyResult("unavailable");
+  }
+  return {
+    status: "ready",
+    id: data.id,
+    recipient: data.recipient,
+    logLine: typeof data.logLine === "string" ? data.logLine : null,
   };
 }
 
