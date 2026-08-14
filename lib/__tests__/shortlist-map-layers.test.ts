@@ -321,6 +321,7 @@ describe("shortlistPinFeatures", () => {
       candidate({ key: "b", badge: "unresolved", lat: 41.76, lon: -87.61 }),
     ]);
     expect(aligned.properties?.color).toBe(BADGE_PIN_COLORS.aligned.color);
+    expect(aligned.properties?.zoningDistrict).toBe("B3-2");
     expect(aligned.properties?.zoningBadge).toBe("Broad family alignment");
     expect(aligned.properties?.domId).toBe(shortlistCardDomId("a"));
     expect(unresolved.properties?.color).toBe(BADGE_PIN_COLORS.unresolved.color);
@@ -342,6 +343,28 @@ describe("shortlistPinFeatures", () => {
     ]);
     expect(features.map((f) => f.properties?.key)).toEqual(["a", "c"]);
     expect(features.map((f) => f.properties?.markerNumber)).toEqual([1, 3]);
+  });
+
+  it("filters by visible key without compacting original rank numbers", () => {
+    const ranked = [
+      candidate({ key: "a", lat: 41.75, lon: -87.6 }),
+      candidate({ key: "b", lat: 41.76, lon: -87.61 }),
+      candidate({ key: "c", lat: 41.77, lon: -87.62 }),
+    ];
+    const features = shortlistPinFeatures(ranked, new Set(["b", "c"]));
+    expect(features.map((f) => f.properties?.key)).toEqual(["b", "c"]);
+    expect(features.map((f) => f.properties?.markerNumber)).toEqual([2, 3]);
+  });
+
+  it("keeps a filtered coordinate-less record out of the map while preserving later ranks", () => {
+    const ranked = [
+      candidate({ key: "a", lat: 41.75, lon: -87.6 }),
+      candidate({ key: "no-coordinate", lat: null, lon: null }),
+      candidate({ key: "c", lat: 41.77, lon: -87.62 }),
+    ];
+    const features = shortlistPinFeatures(ranked, new Set(["no-coordinate", "c"]));
+    expect(features.map((f) => f.properties?.key)).toEqual(["c"]);
+    expect(features.map((f) => f.properties?.markerNumber)).toEqual([3]);
   });
 
   it("drops non-finite or null coordinates", () => {
@@ -555,6 +578,13 @@ describe("SiteShortlistMap wiring", () => {
   it("draws every overlay beneath the candidate pins", () => {
     expect(source).toContain("map.getLayer(PIN_DISC_LAYER) ? PIN_DISC_LAYER : undefined");
   });
+
+  it("closes a pin popup before a filter updates its GeoJSON source", () => {
+    const popupCloseIndex = source.indexOf("pinPopupRef.current?.remove();", source.indexOf("Keep the pin source"));
+    const setDataIndex = source.indexOf('source?.setData({ type: "FeatureCollection", features: pinFeatures })');
+    expect(popupCloseIndex).toBeGreaterThan(-1);
+    expect(popupCloseIndex).toBeLessThan(setDataIndex);
+  });
 });
 
 describe("SiteShortlistResults wiring", () => {
@@ -592,5 +622,10 @@ describe("SiteShortlistResults wiring", () => {
     // the filter would re-fire the request.
     expect(source).toContain("[ranked]);");
     expect(source).not.toContain("[visible]);");
+  });
+
+  it("passes the same filtered candidate keys to the map without narrowing the CSV", () => {
+    expect(source).toContain("visibleCandidateKeys={visibleCandidateKeys}");
+    expect(source).toContain("shortlistCsv(ranked, facts)");
   });
 });

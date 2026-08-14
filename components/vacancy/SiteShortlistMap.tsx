@@ -92,6 +92,9 @@ function narrowServerSnapshot(): boolean {
 export interface SiteShortlistMapProps {
   zip: string;
   ranked: RankedShortlistCandidate[];
+  /** Candidate keys currently visible after the shared list/map filters.
+   *  `ranked` remains the full run so pin numbers never change. */
+  visibleCandidateKeys: readonly string[];
   /** Simplified ZIP ring + bbox from the vacancy edition; null renders no outline. */
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
@@ -106,6 +109,10 @@ function pinPopupHtml(props: Record<string, unknown>): string {
   const number = Number(props.markerNumber);
   const badge: ZoningBadge = isZoningBadge(props.badge) ? props.badge : "unresolved";
   const address = typeof props.address === "string" ? props.address : "This record";
+  const zoningDistrict =
+    typeof props.zoningDistrict === "string" && props.zoningDistrict.trim().length > 0
+      ? props.zoningDistrict
+      : null;
   const zoningBadge = typeof props.zoningBadge === "string" ? props.zoningBadge : ZONING_BADGE_LABELS.unresolved;
   const domId = typeof props.domId === "string" ? props.domId : "";
   const color = BADGE_PIN_COLORS[badge].color;
@@ -115,6 +122,7 @@ function pinPopupHtml(props: Record<string, unknown>): string {
       ${String(number).padStart(2, "0")}
     </div>
     <div style="font-size:13px;font-weight:600;color:#0C1B33;line-height:1.3">${escapeHtml(address)}</div>
+    <div style="margin-top:4px;font-size:11px;color:#0C1B33;opacity:0.7">${zoningDistrict ? `Zoned ${escapeHtml(zoningDistrict)}` : "Exact zoning district unresolved"}</div>
     <div style="margin-top:8px">
       <span style="display:inline-block;border:1px solid ${color};color:${color};padding:2px 6px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(zoningBadge)}</span>
     </div>
@@ -132,9 +140,16 @@ function overlayPopupHtml(label: string, layerLabel: string, color: string): str
   </div>`;
 }
 
-export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: SiteShortlistMapProps) {
+export default function SiteShortlistMap({
+  zip,
+  ranked,
+  visibleCandidateKeys,
+  boundary,
+  centroid,
+}: SiteShortlistMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const pinPopupRef = useRef<mapboxgl.Popup | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   // Collapsed on narrow viewports, expanded on desktop — but only until the
@@ -151,7 +166,14 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
   const token =
     typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : undefined;
 
-  const pinFeatures = useMemo(() => shortlistPinFeatures(ranked), [ranked]);
+  const visibleKeySet = useMemo(
+    () => new Set(visibleCandidateKeys),
+    [visibleCandidateKeys],
+  );
+  const pinFeatures = useMemo(
+    () => shortlistPinFeatures(ranked, visibleKeySet),
+    [ranked, visibleKeySet],
+  );
   const pinBounds = useMemo(() => shortlistPinBounds(pinFeatures), [pinFeatures]);
 
   /** Fetched overlay payloads, keyed by layer id. One fetch per layer per
@@ -160,7 +182,7 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
   /** Layers whose fetch is in flight, so a double-click cannot double-fetch. */
   const inFlightRef = useRef<Set<InfrastructureLayerId>>(new Set());
 
-  // Latest props for the mount-once init effect, read through a ref so that
+  // Latest props for the map init effect, read through a ref so that
   // effect can stay dependency-free without going stale. Synced in an effect
   // (not during render) and declared BEFORE the init effect, so on mount it
   // has already run by the time the map is built.
@@ -169,9 +191,9 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
     dataRef.current = { boundary, centroid, pinFeatures, pinBounds };
   }, [boundary, centroid, pinFeatures, pinBounds]);
 
-  // ── Map init (mount-once; all data read through dataRef) ──────────────────
+  // ── Map init (once per panel opening; all data read through dataRef) ──────
   useEffect(() => {
-    if (!containerRef.current || !token) return;
+    if (!open || !containerRef.current || !token) return;
 
     const { boundary: bnd, centroid: ctr, pinFeatures: pins, pinBounds: bounds } = dataRef.current;
 
@@ -256,10 +278,15 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
       map.on("click", PIN_DISC_LAYER, (event) => {
         const feature = event.features?.[0];
         if (!feature) return;
+        pinPopupRef.current?.remove();
         const popup = new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
           .setLngLat(event.lngLat)
           .setHTML(pinPopupHtml(feature.properties ?? {}))
           .addTo(map);
+        pinPopupRef.current = popup;
+        popup.on("close", () => {
+          if (pinPopupRef.current === popup) pinPopupRef.current = null;
+        });
 
         const jump = popup.getElement()?.querySelector<HTMLButtonElement>(`[${JUMP_ATTR}]`);
         jump?.addEventListener("click", () => {
@@ -285,20 +312,48 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
     });
 
     return () => {
+      pinPopupRef.current?.remove();
+      pinPopupRef.current = null;
       map.remove();
       mapRef.current = null;
       setLoaded(false);
     };
-    // Mount-once: everything else is read through dataRef; token drives the guard.
-  }, [token]);
+    // Filtering updates the existing GeoJSON source below. Reinitialization is
+    // limited to an explicit close/reopen so a mobile-first collapsed panel
+    // gets a real map when the reader opens it.
+  }, [token, open]);
 
   // ── Keep the pin source in step if the rendered set ever changes ──────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
+    // A popup belongs to the previous rendered set. Closing it before the
+    // source update prevents a stale jump button from targeting a filtered-
+    // out card (and is harmless when the same candidate remains visible).
+    pinPopupRef.current?.remove();
+    pinPopupRef.current = null;
     const source = map.getSource("shortlist-pins") as mapboxgl.GeoJSONSource | undefined;
     source?.setData({ type: "FeatureCollection", features: pinFeatures });
-  }, [pinFeatures, loaded]);
+    if (pinBounds) {
+      map.fitBounds(
+        [
+          [pinBounds[0], pinBounds[1]],
+          [pinBounds[2], pinBounds[3]],
+        ],
+        { padding: 64, duration: 0, maxZoom: 15 },
+      );
+    } else if (boundary) {
+      map.fitBounds(
+        [
+          [boundary.bbox[0], boundary.bbox[1]],
+          [boundary.bbox[2], boundary.bbox[3]],
+        ],
+        { padding: 48, duration: 0 },
+      );
+    } else {
+      map.jumpTo({ center: [centroid.lon, centroid.lat], zoom: 12 });
+    }
+  }, [pinFeatures, pinBounds, boundary, centroid, loaded]);
 
   /**
    * Draw one overlay's layers, wiring a shared hover popup. Called only after
@@ -483,7 +538,7 @@ export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: Si
     badge,
     count: pinFeatures.filter((f) => f.properties?.badge === badge).length,
   }));
-  const unplottable = ranked.length - pinFeatures.length;
+  const unplottable = visibleCandidateKeys.length - pinFeatures.length;
 
   return (
     <section className="mt-8 border border-[#0C1B33]/12 bg-white">
