@@ -1155,3 +1155,51 @@ materially larger and different surface than this finding's "quiz + FAQ
 same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
 3751 passed, 2 skipped** (up from S5's 317/3739); `npm run
 programs:public:check` clean.
+
+### S7 (MEDIUM) — remove the 'advice' option; universal bucket carries no answer-derived reasons
+
+**Finding:** the "advice" (`activities`) survey option's only rule routed
+to `smallBizSource`, which the engine already force-separates into the
+`universal` bucket (never `matches`, confidence hard-coded to `"low"`,
+per the existing "smallBizSource is universal navigation, not an
+answer-derived result" comment). But the REASON TEXT that had accumulated
+for `smallBizSource` in `matchMap` (an answer's option label, e.g. "Pre-
+revenue / startup" or "Seeking advice") was still being read out of
+`matchMap.smallBizSource?.reasons` and passed straight into
+`toProgramMatch(..., "low", smallBizSourceReasons)` — so the "universal"
+card's `explanation.basedOnUserAnswers` could still display answer-
+derived text, directly contradicting the comment sitting right above it
+that claimed it "never implies a ranking decision the user's answers
+made."
+
+**Fix:**
+- "advice" removed from `SURVEY_QUESTIONS`'s `activities` options and
+  from `RULES.activities` — the coordinator's stated preference, and
+  consistent with the same F12 doctrine that already removed the other
+  options with zero remaining observable effect (once the reason-text bug
+  below is fixed, "advice" had none left: it never changed `matches`, and
+  it would no longer be able to change what `universal` displays either).
+- The universal-bucket reason-stripping bug fixed for EVERY remaining
+  path that still routes to `smallBizSource` (`size: "preRevenue"` still
+  has a live rule) — `toProgramMatch` is now called with a hard-coded `[]`
+  for its reasons, never the captured `matchMap` reasons, so the universal
+  bucket is now unconditionally reason-free rather than "usually" so.
+
+**Tests added:** `lib/__tests__/survey-engine.test.ts` — a dedicated
+`describe` block: (1) asserts "advice" is actually gone from the live
+`SURVEY_QUESTIONS` bank, not just unused; (2) the coordinator's exact
+"advice selected vs not" comparison, reframed against the surviving
+smallBizSource-routing answer (`size:preRevenue`, since "advice" no
+longer exists to compare against) — `scoreSurvey({size:"preRevenue"})`
+vs `scoreSurvey({})` produce IDENTICAL (empty) `basedOnUserAnswers` for
+the universal card, plus a direct string-search proving the specific
+label that would have leaked ("Pre-revenue") does not appear anywhere in
+the serialized explanation; (3) confirms `smallBizSource` still never
+appears in `matches`. Two pre-existing tests that used the now-removed
+`activities: ["advice"]` fixture updated to use `"expanding"` instead
+where "advice" was incidental filler, not the property under test.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
+3755 passed, 2 skipped** (up from S6's 318/3751); `npm run
+programs:public:check` clean.

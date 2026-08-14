@@ -83,7 +83,14 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "equipment", label: "Buying equipment / machinery" },
       { id: "capitalGains", label: "Investing capital gains" },
       { id: "expanding", label: "Expanding / relocating" },
-      { id: "advice", label: "Seeking advice" },
+      // "advice" ("Seeking advice") removed (review5 S7). Its only rule
+      // routed to smallBizSource, which is forced into the universal-
+      // navigation bucket regardless of any answer (see below) — so
+      // selecting it never changed `matches`, and after this fix it can
+      // no longer even change what reason text the universal bucket
+      // shows. An option with zero remaining observable effect gets
+      // removed, per the same F12 doctrine that removed the other inert
+      // options above, rather than kept with a fabricated effect.
     ],
   },
   {
@@ -159,7 +166,6 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
     equipment: [{ program: "enterprise", confidence: "medium" }, { program: "catalystGrant", confidence: "medium" }],
     capitalGains: [{ program: "federalOZ", confidence: "high" }, { program: "illinoisOZ", confidence: "high" }],
     expanding: [{ program: "landBank", confidence: "medium" }, { program: "edge", confidence: "medium" }, { program: "enterprise", confidence: "medium" }],
-    advice: [{ program: "smallBizSource", confidence: "high" }],
   },
   size: {
     preRevenue: [{ program: "smallBizSource", confidence: "high" }],
@@ -274,9 +280,18 @@ export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult>
   // answer-derived result — separated from `matches` below regardless of
   // whether an answer ALSO happened to name it, so it never implies a
   // ranking decision the user's answers made.
-  const smallBizSourceReasons = matchMap.smallBizSource?.reasons ?? [];
+  //
+  // review5 S7: the confidence tier was correctly forced to "low" and the
+  // program was correctly pulled out of `matches`, but the REASON TEXT
+  // that accumulated in matchMap.smallBizSource (e.g. an answer's label,
+  // via addMatch's `reason` param) was passed straight through to
+  // toProgramMatch's `basedOnUserAnswers` — so the universal card could
+  // still display "Pre-revenue / startup" or similar as if it were an
+  // answer-derived reason, contradicting the comment right above it. The
+  // universal bucket now NEVER carries answer-derived reasons — deleted
+  // unconditionally, not merely captured-then-forwarded.
   delete matchMap.smallBizSource;
-  const universalMatch = toProgramMatch(programDetails, "smallBizSource", "low", smallBizSourceReasons);
+  const universalMatch = toProgramMatch(programDetails, "smallBizSource", "low", []);
   const universal: ProgramMatch[] = universalMatch ? [universalMatch] : [];
 
   const confidenceOrder: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };

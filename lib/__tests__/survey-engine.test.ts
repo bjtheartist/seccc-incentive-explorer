@@ -77,7 +77,7 @@ describe("survey public results", () => {
     const result = await scoreSurvey({
       industry: "nonprofit",
       property: "none",
-      activities: ["advice"],
+      activities: ["expanding"],
       size: "preRevenue",
     });
     const productionIds = new Set(programs.map((program) => program.id));
@@ -128,10 +128,16 @@ describe("survey honesty — F12", () => {
     expect(result.matches).toEqual([]);
   });
 
-  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`", async () => {
-    const result = await scoreSurvey({ activities: ["advice"] });
+  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`, and is present even with an unrelated answer", async () => {
+    const result = await scoreSurvey({ activities: ["expanding"] });
     expect(result.matches.some((m) => m.programId === "smallBizSource")).toBe(false);
     expect(result.universal.some((m) => m.programId === "smallBizSource")).toBe(true);
+  });
+
+  it("Small Business Source is universal navigation, present even with NO answers at all — it was never actually answer-derived", async () => {
+    const result = await scoreSurvey({});
+    expect(result.universal.some((m) => m.programId === "smallBizSource")).toBe(true);
+    expect(result.matches).toEqual([]);
   });
 
   it("every match (including universal) carries a status object with a non-empty label, visible before the card is opened", async () => {
@@ -175,5 +181,57 @@ describe("survey honesty — F12", () => {
     // catalog someday has zero expired programs reachable by any rule, this
     // just documents that rather than falsely passing on a vacuous check.
     expect(typeof expiredProgramExists).toBe("boolean");
+  });
+});
+
+/**
+ * review5 S7 — "'advice' survey option — remove it (preferred) or give it
+ * a disclosed material effect; universal-navigation bucket must carry no
+ * answer-derived reasons." TEST: advice selected vs not → no
+ * answer-derived explanation in the universal bucket.
+ *
+ * "advice" was removed (the preferred option, per the coordinator and the
+ * same F12 doctrine that already removed the other truly-inert options
+ * above) — see lib/survey-engine.ts's SURVEY_QUESTIONS comment. This
+ * block proves both halves of the finding: the option is genuinely gone
+ * from the live question bank, AND the underlying bug (answer-derived
+ * reason text leaking into the universal bucket) is fixed for every path
+ * that still touches smallBizSource, not just the removed one.
+ */
+describe("survey engine — universal navigation carries no answer-derived reasons (review5 S7)", () => {
+  it("'advice' is gone from the live SURVEY_QUESTIONS bank — not just unused, actually removed", () => {
+    const activitiesQuestion = SURVEY_QUESTIONS.find((q) => q.id === "activities")!;
+    expect(activitiesQuestion.options.some((o) => o.id === "advice")).toBe(false);
+  });
+
+  it("Small Business Source's universal-bucket explanation carries NO answer-derived reasons — 'advice selected vs not' comparison via the surviving smallBizSource-routing answer (size:preRevenue)", async () => {
+    const withAnswer = await scoreSurvey({ size: "preRevenue" });
+    const withoutAnswer = await scoreSurvey({});
+
+    const universalWithAnswer = withAnswer.universal.find((m) => m.programId === "smallBizSource");
+    const universalWithoutAnswer = withoutAnswer.universal.find((m) => m.programId === "smallBizSource");
+    expect(universalWithAnswer).toBeDefined();
+    expect(universalWithoutAnswer).toBeDefined();
+
+    // Selecting the answer that routes to smallBizSource must not add ANY
+    // answer-derived reason text to the universal card — both must carry
+    // the identical (empty) basedOnUserAnswers list.
+    expect(universalWithAnswer!.explanation.basedOnUserAnswers).toEqual([]);
+    expect(universalWithoutAnswer!.explanation.basedOnUserAnswers).toEqual([]);
+    expect(universalWithAnswer!.explanation.basedOnUserAnswers).toEqual(
+      universalWithoutAnswer!.explanation.basedOnUserAnswers,
+    );
+
+    // The label an answer-derived reason WOULD have used, had it leaked
+    // through — proves this isn't a vacuous "empty array" check that would
+    // also pass if the field were renamed or the bug were reintroduced
+    // under a different field name.
+    const fullExplanationJson = JSON.stringify(universalWithAnswer!.explanation);
+    expect(fullExplanationJson).not.toContain("Pre-revenue");
+  });
+
+  it("selecting size:preRevenue still keeps smallBizSource out of `matches` (unchanged from before this fix) — only its reason text was the defect", async () => {
+    const result = await scoreSurvey({ size: "preRevenue" });
+    expect(result.matches.some((m) => m.programId === "smallBizSource")).toBe(false);
   });
 });
