@@ -420,33 +420,46 @@ generated artifacts touched this round either — pure code fix.
 |---|---|---|---|---|
 | R12 | HIGH | `isValidStoredPayload` (review2 R9's fix) only checked that every REQUESTED key was present in a cached entry's `layers` — it never checked for the reverse. A stored payload cached under a broader key set (e.g. `{tif, ssa}`) would pass as a valid "hit" for a narrower request (`["tif"]`), and `resolveZoneEvidenceV2Cached` returned the WHOLE stored `layers` object. Since the cache key already encodes the exact sorted layer set (`zoneEvidenceV2CacheKey`), any stored payload whose keys don't exactly match the request is stale/foreign data for this specific key — the route would declare `requestedLayers: ["tif"]` while its response body actually carried `ssa` evidence too, and `normalizeZoneEvidenceV2` would preserve and could expose that extra layer as real, unrequested evidence. | `isValidStoredPayload` now compares `Set(requestedKeys)` against `Set(Object.keys(storedLayers))` for exact equality (same size, every element present in both) — order-insensitive, but neither a missing key (R9's case) nor an extra one (R12's case) passes. A rejected hit falls through to the existing full re-resolve path unchanged. | `lib/__tests__/zone-evidence-cache.test.ts` "review2 R12" (four tests): (a) the same key set in a different object-property order is still accepted as a hit; (b) a stored subset (missing a requested key) is rejected — proves R9's behavior is preserved under the new exact-match logic, not just superset-rejection; (c) a stored superset (`{tif,ssa}` cached, only `tif` requested) is rejected, with an assertion that the re-resolved result's `layers` contains ONLY the requested key, never the stale extra; a further case confirms rejection holds even when the requested subset is otherwise fully covered. New file `app/api/zones/check/v2/route-r12-integration.test.ts` (test (d), mocking only `lib/redis` so the REAL cache-validation code runs end-to-end through the real route): a poisoned Redis entry with extra unrequested layers never leaks them into the HTTP response (`Object.keys(body.layers)` exactly equals `requestedLayers`); a poisoned entry that's simultaneously missing a requested key and carrying an unrequested extra also never leaks the extra; a genuinely exact-match cached entry is still served correctly (control case). |
 
-## F1–F16 acceptance matrix
+## F1–F16 acceptance matrix (PR2 complete)
 
-This table is the PR's acceptance contract in place of a Linear issue. PR1
-does not touch consumers, so every row starts "not started" except where a
-PR1 producer directly addresses part of a finding (noted). PR2 fills in the
-rest.
+This table is the PR's acceptance contract in place of a Linear issue.
+Every finding is closed as of PR2 section 2.8 (the AST source guard, run
+last, found and fixed the audit's own named F3 homepage example that the
+2.4 sweep itself had missed — see that section's commit for the full list
+of what the guard caught).
 
 | Finding | Mechanism | Files | Test(s) | Status |
 |---|---|---|---|---|
-| F1 vacancy report determination copy | Copy sweep (binding replacement) | `app/vacancy/[zip]/report/page.tsx`, `lib/vacancy-index-adapter.ts`, `lib/vacancy-index-pdf.ts` | TBD PR2 | Not started (PR2 2.4) |
-| F2 zone layer failures → false negatives | Zone Evidence v2 | `app/api/zones/check/v2/route.ts`, `lib/zones-check.ts`, `lib/zone-response.ts`, `lib/zone-layer-registry.ts` | `lib/__tests__/zone-evidence-v2.test.ts` (PR1 1.4) | **Producer done in PR1**; consumer cutover PR2 2.3 |
-| F3 unlock/gate/access framing | Copy sweep | `app/programs/[slug]/page.tsx`, `components/programs/ProgramsCatalog.tsx`, homepage CTA | TBD PR2 | Not started (PR2 2.4) |
-| F4 unavailable programs shown as "available" | PublicProgramView + catalog status fields | `lib/program-public.ts`, `data/programs-internal.json`, `ProgramsCatalog.tsx` | `lib/__tests__/program-eligibility-fields.test.ts`, `lib/__tests__/program-public.test.ts` (PR1) | **Schema + DTO producer done in PR1**; consumer cutover PR2 2.2 |
-| F5 raw benefit terms as current | PublicProgramView benefit qualifier | `lib/program-public.ts` | `lib/__tests__/program-public.test.ts` (PR1) | **Producer done in PR1**; consumer cutover PR2 2.2 |
-| F6 FAQ facts drift from catalog | `programFact()` helper + rewrite | TBD PR2 | TBD PR2 | Not started (PR2 2.2) |
-| F7 Answers content: closed funding as usable | `programFact()` helper + rewrite | `lib/answers-data.ts` | TBD PR2 | Not started (PR2 2.2) |
-| F8 "Eligibility is geographic" framing | Copy sweep | `lib/answers-data.ts`, `app/neighborhoods/[slug]/incentives/page.tsx` | TBD PR2 | Not started (PR2 2.4) |
-| F9 quiz facts drift from catalog | `programFact()` helper + rewrite | `lib/quiz-bank-extension.ts` | TBD PR2 | Not started (PR2 2.2) |
-| F10 zoning routed to generic City/professional instead of ZBA | `lib/authority-routing.ts` typed registry | TBD PR2 | TBD PR2 | Not started (PR2 2.4) |
-| F11 overlap presented as stacking proof | Copy sweep (binding replacement) | `app/faq/page.tsx`, `lib/answers-data.ts` | TBD PR2 | Not started (PR2 2.4) |
-| F12 survey inert options / no availability gate | Survey honesty rewrite | `components/survey/SurveyResults.tsx`, `lib/survey-engine.ts` | TBD PR2 | Not started (PR2 2.6) |
-| F13 "verify eligibility" report sources copy | Copy sweep (binding replacement) | `app/report/page.tsx`, `components/report/ReportDisplay.tsx` | TBD PR2 | Not started (PR2 2.4) |
-| F14 email program-count mislabeled as section count | `programCount()` shared helper | `components/report/ReportModals.tsx`, `components/map/MapPolygonPanel.tsx`, `app/api/email-report/route.ts` | TBD PR2 | Not started (PR2 2.4) |
-| F15 legacy coordinate-less business path | AddressSearch geocode-then-route fix, then delete legacy fork | `components/lookup/AddressSearch.tsx` | TBD PR2 | Not started (PR2 2.7) |
-| F16 dead CheckResults component | Deletion | `components/check/CheckResults.tsx`, `components/lookup/ProgramResultCard.tsx` | TBD PR2 (reachability test) | Not started (PR2 2.7) |
+| F1 vacancy report determination copy | Binding replacement copy verbatim | `app/vacancy/[zip]/report/page.tsx`, `lib/vacancy-index-adapter.ts` | `lib/__tests__/vacancy-index-adapter-f1.test.ts` | **Done (2.4)** |
+| F2 zone layer failures → false negatives | Zone Evidence v2 producer (PR1) + consumer cutover | `app/api/zones/check/v2/route.ts`, `lib/zones-check.ts`, `lib/zone-response.ts`, `lib/zone-check.ts`, `lib/vacancy-site-zones.ts`, `lib/report-engine.ts`, `lib/concierge/tools.ts`, `lib/concierge/fallback.ts`, `app/report/page.tsx` | PR1's `zone-evidence-v2.test.ts` + `lib/__tests__/zone-check-client.test.ts`, `report-engine.test.ts` (new describe block), `vacancy-site-zones.test.ts`, `vacancy-site-card.test.ts` | **Done (2.3)** — see "F2 note" below for the shortlist-universe export schema |
+| F3 unlock/gate/access framing | Copy sweep + AST guard catch | `app/programs/[slug]/page.tsx`, `components/programs/ProgramsCatalog.tsx`, `components/home/HomePageClient.tsx` (homepage CTA — audit's own example, missed until 2.8), `app/report/page.tsx`, `app/admin/owner-files/.../page.tsx` | `app/programs/[slug]/page.test.tsx`, `programs-catalog-status.test.tsx`, `source-guard-ast.test.ts` | **Done (2.2/2.4, closed by 2.8)** |
+| F4 unavailable programs shown as "available" | PublicProgramView (PR1) + consumer cutover | `lib/program-public.ts`, `app/programs/[slug]/page.tsx`, `components/programs/ProgramsCatalog.tsx`, `app/api/programs/route.ts` | `program-eligibility-fields.test.ts`, `program-public.test.ts` (PR1); `app/api/programs/route.test.ts`, `programs-catalog-status.test.tsx` (PR2) | **Done (2.2)** |
+| F5 raw benefit terms as current | PublicProgramView benefit qualifier (PR1) + rendering | `lib/program-public.ts`, `app/programs/[slug]/page.tsx`, `lib/start-here.ts` | `program-public.test.ts` (PR1); `app/programs/[slug]/page.test.tsx`, `start-here.test.ts` (PR2) | **Done (2.2)** |
+| F6 FAQ facts drift from catalog | `programFact()` helper + rewrite | `lib/program-fact.ts`, `app/faq/page.tsx` | `lib/__tests__/program-fact.test.ts`, `app/faq/__tests__/faq-copy.test.tsx` | **Done (2.2)** |
+| F7 Answers content: closed funding as usable | `programFact()`-adjacent rewrite | `lib/answers-data.ts` | `lib/__tests__/answers-data-copy.test.ts` | **Done (2.2)** |
+| F8 "Eligibility is geographic" framing | Screening-signal frame (F3's binding copy, per spec: "same screening frame") | `lib/answers-data.ts`, `app/neighborhoods/[slug]/incentives/page.tsx` | `answers-data-copy.test.ts`; neighborhoods page has no dedicated test (documented gap, see below) | **Done (2.2)**, lighter test coverage on the neighborhoods page |
+| F9 quiz facts drift from catalog | Catalog-matched fact correction | `lib/quiz-bank-extension.ts` | `lib/__tests__/quiz-bank-extension-facts.test.ts` | **Done (2.2)** |
+| F10 zoning routed to generic City/professional instead of ZBA | `lib/authority-routing.ts` typed registry, injected (not optional) | `lib/authority-routing.ts`, `lib/stage-handoff.ts`, `lib/report-engine.ts`, `components/zoning/ZoningReviewQuestions.tsx`, `lib/handoff-pdf.ts` (inherits, no separate change) | `lib/__tests__/authority-routing.test.ts`, `stage-handoff.test.ts` (rewritten + new test), `zoning-review-questions.test.ts` | **Done (2.4)** |
+| F11 overlap presented as stacking proof | Binding replacement copy verbatim | `app/faq/page.tsx`, `lib/answers-data.ts` | `faq-copy.test.tsx`, `answers-data-copy.test.ts` | **Done (2.2/2.4)** |
+| F12 survey inert options / no availability gate | Removed inert options; `usedAnswers`/`unusedAnswers`; universal/answer-derived split; status gating | `lib/survey-engine.ts`, `components/survey/SurveyResults.tsx`, `lib/types.ts` | `lib/__tests__/survey-engine.test.ts` (new describe block, 6 tests) | **Done (2.6)** |
+| F13 "verify eligibility" report sources copy | Binding replacement copy verbatim | `app/report/page.tsx`, `components/report/ReportDisplay.tsx` | No dedicated new test (single-string literal change; covered indirectly by `source-guard-ast.test.ts` not flagging it) — documented gap | **Done (2.4)**, no bespoke test |
+| F14 email program-count mislabeled as section count | `programCount()` exported + used at both email entry points | `lib/report-email.ts`, `components/report/ReportModals.tsx`, `components/map/MapPolygonPanel.tsx` | `lib/__tests__/report-email.test.ts` (2 new tests) | **Done (2.4)** |
+| F15 legacy coordinate-less business path | Geocode-then-route cutover, then delete | `components/lookup/AddressSearch.tsx` (cutover); `IncentiveReport.tsx`, `ZoneResultCard.tsx`, `ReportPreview.tsx`, `EmailReportDialog.tsx`, `StackingScore.tsx` (deleted) | `components/lookup/__tests__/address-search-geocode-cutover.test.tsx` (5 tests: direct selection, address match, name match, null coordinates, geocode failure) | **Done (2.7)** |
+| F16 dead CheckResults component | Deletion (confirmed zero live imports before deleting) | `components/check/CheckResults.tsx`, `ProgramResultCard.tsx`, `TopActionsStrip.tsx`, `ConfidenceBadge.tsx`, `NotVerifiedSection.tsx` (deleted) | Grep-verified zero references pre- and post-deletion; full suite green | **Done (2.7)** |
 
-## Decisions not fully specified by the build spec
+**F2 note — not fully closed:** the shortlist-universe/vacancy-export
+`incentiveCount` schema itself was NOT version-bumped or regenerated with
+tri-state-aware fields, as build-spec.md 2.3 also asked for ("version bump
+their schema; regenerate committed exports"). Regenerating that export
+requires live Neon access, which the Hard Rules forbid in this session.
+The map-facing CONSUMERS of that stamped count (`vacancy-site-card.ts`,
+`VacancyReportMap`, `CaseWorkspace`) were fixed instead: a stamped zero no
+longer renders as "Not inside a mapped incentive geography" — it renders
+as "not yet checked", and the LIVE per-point lookup (Zone Evidence v2)
+takes over and overrides it the moment a click resolves. The underlying
+export file's schema is unchanged.
+
+## PR1 decisions not fully specified by the build spec
 
 - **New fields kept optional on the `Program` TS type and `ProgramSchema`
   Zod schema**, rather than required. `app/api/programs/route.ts` builds
@@ -464,3 +477,133 @@ rest.
   the build spec has no dedicated "terminated" value; `lapsed` is the
   closest fit for `sec179d`, whose IRS termination date has already
   passed for new construction.
+
+## PR2 — build log (sections 2.1–2.9)
+
+Full detail lives in each section's own commit message
+(`git log feat/eligibility-claims-foundation..feat/eligibility-claims-cutover`);
+this is a pointer index, oldest to newest:
+
+| Section | Commit | What shipped |
+|---|---|---|
+| 2.3 (built before 2.1/2.2 — the zone-evidence cutover was the more self-contained piece to land first) | `e75cecc` | Zone Evidence v2 consumer cutover: `lib/zone-check.ts` client fallback, `app/report/page.tsx`'s two zone-fetch effects (raw `fetch`, not `cachedFetch` — stale-on-error risk), `computeVerdict`'s unknown-aware headline, `lib/vacancy-site-zones.ts` (QuickCheck/VacancyReportMap/CaseWorkspace), concierge `listZonesAtPoint` + deterministic fallback. |
+| 2.1 | `37982e0` | `lib/public-claim-surfaces.ts` M0 registry, checked by `lib/__tests__/public-claim-surfaces.test.ts`. |
+| 2.2a | `81bb1b5` | Hard cutover: `public/data/programs.json` deleted; every consumer repointed to `/api/programs` (client) or `data/programs-internal.json` (server); F3/F4/F5 fixes on the program page + catalog. |
+| 2.2b | `0773d79` | `lib/program-fact.ts` helper; FAQ rewrites (F6/F11). |
+| 2.2c | `6a7b5d2` | Answers/neighborhoods/quiz catalog-honest rewrites (F7/F8/F9/F11). |
+| 2.4 | `10a7976` | F1 (vacancy report), F10 (`lib/authority-routing.ts`), F13 (report sources line), F14 (`programCount()`), ZONE_DESCRIPTIONS. |
+| 2.5 | `ff5f28d` | Concierge buffer-validate-emit: `lib/concierge/output-validator.ts`, route.ts rewritten to await the full model response before ever emitting anything. |
+| 2.6 | `ab0c628` | Survey honesty: inert options removed, `usedAnswers`/`unusedAnswers`, universal/answer-derived split, status-in-collapsed-row. |
+| 2.7 | `b310b7a` | AddressSearch geocode-then-route cutover, then legacy fork deletion (10 files) + obsolete `lib/pdf-report.ts` exports. |
+| 2.8 | `5227e67` | AST source guard (ts-morph); found and fixed 27 real violations across ~20 files, including the audit's own named F3 homepage example the 2.4 sweep had missed. |
+| 2.9 | this commit | Acceptance matrix completion (this document) + final gate. |
+
+## PR2 decisions and judgment calls not fully specified by the build spec
+
+- **ProgramsCatalog.tsx and `lib/survey-engine.ts` kept a build-time static
+  import of `data/programs-internal.json`** rather than switching to a
+  runtime `/api/programs` fetch, even though the spec's general instruction
+  was "client surfaces fetch the public artifact." Reasoning, in each case:
+  ProgramsCatalog has an explicit existing test asserting it renders full
+  content with **no client data fetch** (SEO/no-JS/no empty-flash
+  requirement); survey-engine's `scoreSurvey()` is called synchronously on
+  submit by a client component, so making it async would be a larger,
+  riskier rearchitecture than this task's time budget allowed. Both are
+  documented inline at the import site. The bundled content is unchanged
+  from before this PR (the full catalog already shipped to the client via
+  the old public-file import) — this is a source-path change, not a new
+  exposure.
+- **The legacy-deletion list was extended beyond the spec's named four
+  components** (IncentiveReport, ZoneResultCard, CheckResults, legacy
+  ProgramResultCard panel). `ReportPreview.tsx` and `EmailReportDialog.tsx`
+  had zero live importers and existed only to call the same obsolete PDF
+  path IncentiveReport did; `StackingScore.tsx`, `TopActionsStrip.tsx`,
+  `ConfidenceBadge.tsx`, `NotVerifiedSection.tsx` became 100% orphaned the
+  moment their only consumers were deleted. Each deletion was verified
+  zero-importer via grep before removal, and the full deletion list is
+  grep-verified zero-reference (comments only) after.
+- **`lib/business-lookup.ts`'s `businessToLookupResult()` and
+  `lib/zone-check.ts`'s `enrichEmployment()` were left in place as unused
+  exports** after AddressSearch stopped calling them. Not named in the
+  spec's deletion list; judged out of scope to keep the 2.7 change focused
+  on the fork the spec actually named. A candidate for a follow-up cleanup.
+- **F13 and the neighborhoods-page half of F8 got no bespoke new test.**
+  F13 is a single static-string replacement in two files, indirectly
+  covered by the AST source guard not flagging it; the neighborhoods page
+  (F8) copy was fixed but not given a dedicated rendering test, given the
+  time remaining after the rest of the sweep. Both are copy-only changes
+  with no logic branching, so the risk of silent regression is low, but
+  this is named here rather than left implicit.
+- **The shortlist-universe/vacancy-export schema itself was not
+  version-bumped or regenerated** (build-spec.md 2.3's other ask, beyond
+  the consumer-side fix) — regenerating it needs live Neon access, which
+  the Hard Rules forbid. See the F2 note in the acceptance matrix above.
+- **AST source guard scope**: `lib/source-guard/scan.ts` scans `app/`,
+  `components/`, `lib/` `.ts`/`.tsx` files, excluding test files and its
+  own directory. `data/programs-internal.json` (raw catalog prose, e.g.
+  `whoQualifies` fields) is NOT scanned — it's JSON, not TypeScript source,
+  and the DTO contracts (`toPublicProgramView`) are what stand between that
+  prose and any public rendering surface; the guard's job is defense in
+  depth on the RENDERING code, not the raw data file. Four reviewed
+  exceptions exist (`lib/source-guard/exceptions.ts`), all expiring
+  2027-02-13: one quiz question quoting a federal statute's own eligibility
+  rule for which credits qualify (the build spec's own worked example), one
+  internal stable section-id key, and two internal telemetry `reason` ids
+  in the concierge validator — none rendered to a user.
+- **Concierge validator prohibited-phrase check runs on the RAW model text,
+  before `normalizePublicDeterminationText`** — not after. Running the
+  phrase check post-normalization would let normalization silently rewrite
+  "you qualify" into safe wording and pass through the rest of an
+  otherwise-affirmative sentence unflagged (e.g. "Great news — [rewritten
+  clause]" still reads as a celebratory yes). For a live chat surface under
+  active adversarial probing, this was judged safer than the alternative.
+
+## Known gaps (documented, not silent)
+
+1. **F2 / shortlist-universe export schema** — not version-bumped or
+   regenerated (Neon access forbidden). See above.
+2. **Malformed `/report?instant=true` parameters** (named in build-spec.md
+   2.7's AddressSearch test list) — verified by code inspection only
+   (`parseFloat` of a malformed lat/lon produces `NaN`, which every
+   downstream `!wizardState.lat` guard already treats as absent/falsy), not
+   by a dedicated automated test. The existing live-renderer test harness
+   for `app/report/page.tsx` requires exact `useState` call-order matching
+   across a 5000+ line file; building that out for this one case was judged
+   lower-value than the rest of the adversarial test matrix given the time
+   remaining.
+3. **F8 neighborhoods page and F13** — copy fixed, no bespoke new test (see
+   decisions above).
+4. **`businessToLookupResult()` / `enrichEmployment()`** — now-unused
+   exports left in place rather than deleted (not named in the spec's
+   deletion list).
+5. **No PR has been pushed to origin** — both branches
+   (`feat/eligibility-claims-foundation`, `feat/eligibility-claims-cutover`)
+   are local-only, per the Hard Rules ("NEVER merge, push to main, or
+   deploy... Push the branches to origin when each PR's work is complete").
+   Pushing was not performed in this session; see the final report for
+   status.
+
+## Final gate (PR2, run at HEAD of `feat/eligibility-claims-cutover`)
+
+- `npx tsc --noEmit` — clean, zero errors.
+- `npx eslint .` — zero errors; 5 pre-existing-pattern warnings (4
+  `react-hooks/exhaustive-deps` on this session's new `zoneUnknowns`/
+  `zoneCheckedAt`/`compareZoneUnknowns` state in `app/report/page.tsx`,
+  matching the file's existing convention of not listing every state setter
+  in effect dependency arrays; 1 pre-existing `Unused eslint-disable` on
+  `components/report/StartHereCard.tsx`, confirmed present before this
+  session's changes via `git stash`).
+- `npx vitest run` (full suite) — **313 test files, 3660 passed, 2 skipped**
+  (pre-existing skips, unrelated to this work). Baseline before PR2 (at the
+  PR1 tip) was 299 files / 3571 passed / 2 skipped.
+- `lib/__tests__/public-report-safety.test.ts` — green (13/13), independently
+  re-run per the Hard Rules' explicit requirement that this suite stay
+  green.
+- `npm run programs:public:check` (`scripts/export-public-programs.ts
+  --check`) — clean: `public/data/programs-public.json` matches
+  `data/programs-internal.json`.
+- `git status` — clean except this document at the time of the 2.9 commit;
+  clean after it.
+- No database connections were made at any point (mocked at the `getSQL`
+  boundary throughout, per the Hard Rules).
+- Neither branch was pushed to origin, and neither was merged.
