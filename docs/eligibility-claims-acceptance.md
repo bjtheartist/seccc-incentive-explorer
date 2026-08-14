@@ -1886,3 +1886,105 @@ on the changed files; full `npx vitest run` — **324 test files, 3965
 passed, 2 skipped** (up from S13's 324/3922); `npm run
 programs:public:check` clean (unaffected — concierge output validation
 only, no catalog changes).
+
+---
+
+### S15 (MEDIUM) — source-guard exceptions now bind to an AST-context fingerprint + text hash, not just text+filePath
+
+**Finding:** review5 S8 bound every `SOURCE_GUARD_EXCEPTIONS` entry to a
+`context` (human-readable AST-location prose) and a `textHash` field,
+but `isViolationExcepted` — the actual match predicate — never checked
+either one; it only compared `text`, `filePath`, and expiry. The gap S8
+itself documented as future work: the SAME literal recurring at a
+DIFFERENT position within the SAME already-reviewed file (a different
+object property, a different array element) was still silently covered
+by an exception reviewed for a completely different occurrence.
+
+**Fix:**
+- **`lib/source-guard/scan.ts`**: `SourceGuardViolation` gains two new
+  fields, computed for every real violation the scanner finds:
+  `context` (`computeAstContextFingerprint`, new function) — walks the
+  violating node's ancestor chain recording each IDENTIFYING step
+  (object-property name, array index, JSX attribute/tag, the nearest
+  named declaration) into a path like `"PROHIBITED_PATTERNS[10].reason"`
+  or `"SECTION_IDS.whatAFundedVersionUnlocks"` — and `textHash`
+  (`sha256(text)`, computed directly by the scanner). Deliberately NOT a
+  byte-offset/line-column position — those shift on any unrelated edit
+  above the node (a new import, a blank line), which would spuriously
+  expire an exception on a totally unrelated change; a property/index/
+  declaration path only changes when the violation's own structural
+  position actually changes.
+- **`lib/source-guard/exceptions.ts`**: `isViolationExcepted` now also
+  requires `exception.context === violation.context` and
+  `exception.textHash === violation.textHash` (the latter is logically
+  implied by `text` matching, since the hash is a pure function of the
+  text, but checked explicitly per the coordinator's directive — it does
+  catch the specific case of `exception.textHash` being hand-edited out
+  of sync with `exception.text`). The `context` field's role changed
+  from freeform reviewer prose to a PRE-COMPUTED, pasted-as-a-literal
+  fingerprint (the same tamper-evidence treatment `textHash` already
+  had) — the old human-readable location descriptions were folded into
+  each entry's `rationale` instead, prefixed "Location: ...", so nothing
+  was lost.
+- **All 4 existing exceptions updated** with their REAL computed
+  fingerprints, obtained by actually running the scanner against the
+  real files (not hand-typed): `QUIZ_QUESTIONS_EXTENSION[83].question`,
+  `SECTION_IDS.whatAFundedVersionUnlocks`, `PROHIBITED_PATTERNS[10].reason`,
+  `PROHIBITED_PATTERNS[11].reason`. The two `PROHIBITED_PATTERNS` indices
+  reflect the array's CURRENT length after review6 S14's grammar
+  expansion (committed earlier in this same review pass) — computed
+  against the file as it stands now, not a stale pre-S14 snapshot.
+
+**Judgment call — verification method:** a standalone Node/tsx script
+to dump the real fingerprints failed silently (ts-morph's CJS/ESM
+interop broke under plain `tsx`, `scan.ts` resolved as `{ default:
+... }` with no named exports) — rather than debug an unrelated tooling
+quirk, used a temporary vitest test file (the same module-resolution
+path already proven correct by the full suite) to scan the 3 real
+exception files and print each computed `{context, textHash}`, then
+deleted it after transcribing the real values into
+`exceptions.ts`. This is the SAME "verify against the real thing, not a
+derivation" discipline used elsewhere in this pass (e.g. S13's
+`git stash` regression check) — the 4 fingerprints are exactly what the
+scanner computes today, not a hand-guess.
+
+**Tests added:** `lib/__tests__/source-guard-ast.test.ts` extended from
+23 to 32 tests:
+- A new "context fingerprint" describe block exercises the REAL scanner
+  (not a hand-constructed test double) against synthetic fixtures: two
+  array entries with identical text produce different fingerprints
+  (different index AND different property name); the same node scanned
+  twice produces an identical fingerprint (stability, not
+  random/time-based); every violation's `textHash` is exactly
+  `sha256(text)`; two same-shaped properties under two DIFFERENT
+  top-level `const` declarations produce different fingerprints tied to
+  each declaration's own name.
+- The existing "path-scoped matching" describe block's hand-constructed
+  `violation` objects now pull their `context`/`textHash` directly from
+  the REAL `SOURCE_GUARD_EXCEPTIONS` entries (via `.find(...)`, never
+  re-typed by hand) so they can never silently drift out of sync with
+  the exceptions file — satisfies "identical literal at the reviewed
+  node passes" and "the existing different-file test still passes"
+  (both already-passing S8 tests, now type-correct and exercised against
+  the real values).
+- A new nested describe block is the coordinator's TEST requirement,
+  read literally: identical text+filePath but a DIFFERENT context (the
+  same literal elsewhere in that same file) fails; a nonsense/unrelated
+  context string fails; correct text+filePath+context but a
+  TAMPERED textHash fails; both altered together still fails; the same
+  check applied to the quiz exception (proving it's not
+  concierge-validator-specific).
+- The real-codebase "every reviewed exception is actually USED" check
+  now also requires `v.context === exception.context` (previously only
+  text+filePath) — a stale/wrong `context` on a future exception edit
+  is caught the same way a stale filePath already was.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors
+on the changed files; full `npx vitest run` — **324 test files, 3974
+passed, 2 skipped** (up from S14's 324/3965 — the file's own count went
+23→32, so +9, matching); the "finds zero determination-phrase violations
+outside the reviewed exceptions file" and "every reviewed exception is
+actually USED" real-codebase tests both pass, confirming the 4
+regenerated fingerprints are exactly correct for the current state of
+the 3 reviewed files; `npm run programs:public:check` clean (unaffected
+— source-guard scanning only, no catalog changes).
