@@ -51,7 +51,7 @@ export interface ConciergeValidationResult {
  * regardless of which way it points; reject both, at the raw-text stage,
  * before normalization can soften either into something that slips past.
  */
-const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
+const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: boolean }[] = [
   // Positive determinations.
   { pattern: /\byou(?:'re| are)\s+eligible\b/i, reason: "you-are-eligible" },
   { pattern: /\bappears?\s+(?:to\s+be\s+)?eligible\b/i, reason: "appears-eligible" },
@@ -189,7 +189,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   // rejected/rejection, any inflection) is an unconditional hit. There is
   // no morphology left to enumerate. Over-match (e.g. "denial of service
   // requests") is the accepted default-deny cost per the Round-9 ruling.
-  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?)\b)/i, reason: "application-denied" },
+  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|turn(?:s|ed|ing)?\s+down)\b)/i, reason: "application-denied", perSentence: true },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
@@ -249,8 +249,15 @@ export function validateConciergeOutput(rawText: string): ConciergeValidationRes
   // denied" and "the X was denied" application-denied families — see
   // the review10 S29/S30/S31 comment above the latter entry for why the
   // definite-article form no longer carries a reported-speech exemption.
-  for (const { pattern, reason } of PROHIBITED_PATTERNS) {
-    if (pattern.test(rawText)) {
+  // review14 S35: co-occurrence patterns are sentence-scoped — "your
+  // application" in one sentence and an unrelated "denied" in another must
+  // not trip. Word-local patterns keep whole-text matching.
+  const sentences = splitIntoSentences(rawText);
+  for (const { pattern, reason, perSentence } of PROHIBITED_PATTERNS) {
+    const hit = perSentence
+      ? sentences.some((s) => pattern.test(s))
+      : pattern.test(rawText);
+    if (hit) {
       return { text: rawText, hit: true, reason };
     }
   }

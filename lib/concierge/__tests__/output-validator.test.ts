@@ -229,6 +229,9 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { family: "application/project denied", text: "Your denied small-business application can be revised.", reason: "application-denied" },
     // Formerly a safe near-miss; over-blocks by design under co-occurrence.
     { family: "application/project denied", text: "Other applications were denied last cycle for missing paperwork.", reason: "application-denied" },
+    // S36: outcome synonyms
+    { family: "application/project denied", text: "Your application was declined.", reason: "application-denied" },
+    { family: "application/project denied", text: "The agency turned down your application.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {
@@ -257,6 +260,10 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { label: "'qualify' describing the program category, not the reader", text: "This program does not qualify as a direct cash grant — it is a tax credit." },
     { label: "'appears' used descriptively, no eligibility claim", text: "The parcel appears to be zoned for commercial use." },
     { label: "'denied' in an unrelated, non-determination context", text: "Access to the online portal was denied due to a login error." },
+    // S35: co-occurrence is per-sentence — family noun and denial word in
+    // SEPARATE sentences must not trip.
+    { label: "cross-sentence co-occurrence (period)", text: "Your application is complete. Access to the online portal was denied due to a login error." },
+    { label: "cross-sentence co-occurrence (newline)", text: "Your application is complete.\nAccess was denied due to a login error." },
     // "Other applications were denied last cycle..." moved to the rejected
     // FAMILY_PHRASES list under the S34 co-occurrence ruling: it contains
     // both a family noun and a denial word, so it over-blocks by design
