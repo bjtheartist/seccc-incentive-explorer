@@ -208,6 +208,9 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { family: "application/project denied", text: "Your application was rejected.", reason: "application-denied" },
     { family: "application/project denied", text: "The application was denied.", reason: "application-denied" },
     { family: "application/project denied", text: "The project has been rejected.", reason: "application-denied" },
+    // S32: adjectival forms of the family
+    { family: "application/project denied", text: "Denied applications may be resubmitted next round.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your denied application may be resubmitted.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

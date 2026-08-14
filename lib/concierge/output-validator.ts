@@ -180,6 +180,9 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   //      family has been bypassed within one to two review rounds.
   //      Removing the carve-out removes the bypass surface entirely.
   { pattern: /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
+  // Adjectival form of the same family ("denied applications may be
+  // resubmitted", "your denied application"). Same default-deny rationale.
+  { pattern: /\b(?:denied|rejected)\s+(?:application|project|request)s?\b/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
