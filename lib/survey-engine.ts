@@ -8,7 +8,9 @@
 // out of scope for this task's time budget.
 import programsData from "@/data/programs-internal.json";
 import { buildPublicMatchExplanation } from "./match-transparency";
+import { resolveAvailability } from "./program-gating";
 import type {
+  IntakeStatus,
   Program,
   ProgramMatch,
   SurveyAnswers,
@@ -18,6 +20,14 @@ import type {
 
 // ─── Question Definitions ────────────────────────────────────────────
 
+// build-spec.md 2.6 (audit F12; consult item 10): the industry options
+// retail, professional, construction, healthcare, and other were INERT —
+// no rule in RULES.industry below ever used them to order programs, so
+// answering one of them cost the user effort for zero effect while the
+// results screen still read as if every answer mattered. Removed rather
+// than retained-with-disclosure, per the spec's primary instruction ("do
+// not invent new matching rules"): none of the five had a defensible
+// non-ranking purpose to disclose.
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
     id: "industry",
@@ -30,10 +40,6 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "semiconductor", label: "Semiconductor" },
       { id: "dataCenter", label: "Data Center / Cloud" },
       { id: "manufacturing", label: "Manufacturing" },
-      { id: "retail", label: "Retail / Restaurant / Service" },
-      { id: "professional", label: "Professional Services" },
-      { id: "construction", label: "Construction / Trades" },
-      { id: "healthcare", label: "Healthcare / Wellness" },
       { id: "tech", label: "Tech / Software" },
       { id: "nonprofit", label: "Nonprofit" },
       { id: "hairBeauty", label: "Hair Care & Beauty" },
@@ -43,7 +49,6 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "fitness", label: "Fitness & Recreation" },
       { id: "homeServices", label: "Home Services" },
       { id: "petServices", label: "Pet Services" },
-      { id: "other", label: "Other" },
     ],
   },
   {
@@ -82,9 +87,10 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     title: "How big is your business?",
     subtitle: "Annual revenue range",
     type: "single",
+    // under500k removed (build-spec.md 2.6 / audit F12) — no rule in
+    // RULES.size ever used it.
     options: [
       { id: "preRevenue", label: "Pre-revenue / startup" },
-      { id: "under500k", label: "Under $500K / year" },
       { id: "500kTo10m", label: "$500K – $10M / year" },
       { id: "over10m", label: "Over $10M / year" },
     ],
@@ -163,9 +169,58 @@ const PROGRAM_DETAILS = new Map(
   (programsData as unknown as Program[]).map((program) => [program.id, program]),
 );
 
+/** Short collapsed-row label from a program's intakeStatus (build-spec.md
+ *  2.6: status must show BEFORE the card is opened, never only inside). */
+function statusLabel(intakeStatus: IntakeStatus): string {
+  switch (intakeStatus) {
+    case "open":
+      return "Open";
+    case "rolling":
+      return "Rolling";
+    case "closed":
+      return "Closed";
+    case "lapsed":
+      return "Lapsed";
+    case "pending":
+      return "Pending";
+    case "unknown":
+    default:
+      return "Status not established";
+  }
+}
+
+function matchStatus(program: Program): ProgramMatch["status"] {
+  const intakeStatus: IntakeStatus = program.intakeStatus ?? "unknown";
+  return { intakeStatus, label: statusLabel(intakeStatus) };
+}
+
+function toProgramMatch(
+  programId: string,
+  confidence: Confidence,
+  reasons: string[],
+): ProgramMatch | null {
+  const program = PROGRAM_DETAILS.get(programId);
+  if (!program) return null;
+  return {
+    programId,
+    program: {
+      name: program.name,
+      short: PROGRAMS[programId]?.short ?? program.name,
+      level: program.level,
+    },
+    explanation: buildPublicMatchExplanation(program, {
+      basedOnUserAnswers: reasons,
+    }),
+    status: matchStatus(program),
+  };
+}
+
 export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
   const matchMap: Record<string, { confidence: Confidence; reasons: string[] }> = {};
   const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
+  // Every answer key the caller actually gave, e.g. "industry", "activities:hiring".
+  const usedAnswers: string[] = [];
+  const unusedAnswers: string[] = [];
 
   const addMatch = (programId: string, confidence: Confidence, reason?: string) => {
     if (!matchMap[programId]) {
@@ -187,19 +242,29 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
       for (const optionId of answer) {
         const matches = questionRules[optionId] || [];
         const label = question.options.find((o) => o.id === optionId)?.label || optionId;
+        const key = `${question.id}:${optionId}`;
+        if (matches.length > 0) usedAnswers.push(key);
+        else unusedAnswers.push(key);
         for (const m of matches) addMatch(m.program, m.confidence, label);
       }
     } else if (typeof answer === "string") {
       const matches = questionRules[answer] || [];
       const label = question.options.find((o) => o.id === answer)?.label || answer;
+      const key = `${question.id}:${answer}`;
+      if (matches.length > 0) usedAnswers.push(key);
+      else unusedAnswers.push(key);
       for (const m of matches) addMatch(m.program, m.confidence, label);
     }
   }
 
-  // smallBizSource always matches
-  if (!matchMap.smallBizSource) {
-    addMatch("smallBizSource", "low");
-  }
+  // build-spec.md 2.6: smallBizSource is universal navigation, not an
+  // answer-derived result — separated from `matches` below regardless of
+  // whether an answer ALSO happened to name it, so it never implies a
+  // ranking decision the user's answers made.
+  const smallBizSourceReasons = matchMap.smallBizSource?.reasons ?? [];
+  delete matchMap.smallBizSource;
+  const universalMatch = toProgramMatch("smallBizSource", "low", smallBizSourceReasons);
+  const universal: ProgramMatch[] = universalMatch ? [universalMatch] : [];
 
   const confidenceOrder: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
   const rankedMatches = Object.entries(matchMap)
@@ -210,22 +275,17 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
     }))
     .sort((a, b) => confidenceOrder[a.confidence] - confidenceOrder[b.confidence]);
 
+  // build-spec.md 2.6: gate through resolveAvailability — an expired
+  // program never surfaces as a "starting point", matching every other
+  // program-facing surface in the app.
+  const today = new Date();
   const matches: ProgramMatch[] = rankedMatches.flatMap((match) => {
     const program = PROGRAM_DETAILS.get(match.programId);
     if (!program) return [];
-
-    return [{
-      programId: match.programId,
-      program: {
-        name: program.name,
-        short: PROGRAMS[match.programId]?.short ?? program.name,
-        level: program.level,
-      },
-      explanation: buildPublicMatchExplanation(program, {
-        basedOnUserAnswers: match.reasons,
-      }),
-    }];
+    if (resolveAvailability(program, today).state === "expired") return [];
+    const built = toProgramMatch(match.programId, match.confidence, match.reasons);
+    return built ? [built] : [];
   });
 
-  return { matches };
+  return { matches, universal, usedAnswers, unusedAnswers };
 }

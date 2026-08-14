@@ -12,6 +12,7 @@ const results: SurveyResult = {
         short: "Sample",
         level: "City",
       },
+      status: { intakeStatus: "open", label: "Open" },
       explanation: {
         whyItAppears: ["Your project details overlap with the published program focus."],
         knownFromPublicData: ["Program information was last reviewed on 2026-07-10."],
@@ -33,6 +34,9 @@ const results: SurveyResult = {
       },
     },
   ],
+  universal: [],
+  usedAnswers: ["activities:renovations"],
+  unusedAnswers: [],
 };
 
 describe("survey results transparency", () => {
