@@ -5023,7 +5023,7 @@ function ReportDisplay({
                 </div>
                 <hr className="border-[#0C1B33]/8 mb-5" />
                 <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-5 max-w-prose">
-                  This report draws on the following data sources to verify eligibility and provide location context.
+                  This report cites the sources used to show mapped screening signals and location context.
                 </p>
                 <ul className="space-y-3">
                   {report.dataSources.map((src) => (

@@ -5,6 +5,7 @@ import { ArrowRight, ClipboardCheck, ExternalLink, Info, Landmark } from "lucide
 import { PreparationCostBadge } from "@/components/report/PreparationCostBadge";
 import { StageHandoffButton } from "@/components/zoning/StageHandoffButton";
 import { trackEvent } from "@/lib/analytics-events";
+import { authorityReferenceLine } from "@/lib/authority-routing";
 import {
   buildZoningReviewNotes,
   getDistrictUseTableLink,
@@ -238,7 +239,7 @@ export function ZoningReviewQuestions({
             </div>
             <ol className="space-y-1.5 text-[11px] text-[#0C1B33]/55 leading-relaxed list-decimal pl-4">
               <li>Confirm the published district and any site-specific ordinance.</li>
-              <li>Ask the City or a zoning professional to identify the exact Title 17 use category.</li>
+              <li>Ask the {authorityReferenceLine("zoning")} to identify the exact Title 17 use category — zoning classification and use-permission questions route there, not to a generic City contact.</li>
               <li>Review that category&rsquo;s row, use standards, parking, licensing, and permit requirements.</li>
             </ol>
 

@@ -85,6 +85,7 @@ import {
   SUPPORT_ORGANIZATIONS_SECTION_TITLE,
 } from "./support-organization-copy";
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
+import { authorityReferenceLine } from "./authority-routing";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -4864,7 +4865,7 @@ export function generateReportData(
         report.sections.unshift({
           id: SECTION_IDS.zoningUseStartingPoint,
           title: "Zoning & Use Starting Point",
-          description: "Start here before committing to a lease, design, or construction scope. The report shows the published district and cited City case records; it does not classify the proposed activity or determine that a use is permitted. Define the exact activity, then verify the controlling ordinance and current process with the City or a zoning professional.",
+          description: `Start here before committing to a lease, design, or construction scope. The report shows the published district and cited City case records; it does not classify the proposed activity or determine that a use is permitted. Define the exact activity, then verify the controlling ordinance and current process with the ${authorityReferenceLine("zoning")}.`,
           items: zoningContextItems,
         });
       }
@@ -5028,7 +5029,7 @@ export function generateReportData(
       ? {
           tier: "do-this-week",
           label: `Define the exact activity and verify its use category for ${cityZoning.zoneClass}`,
-          description: "List every primary and accessory activity at the site, then ask the City or a zoning professional to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+          description: `List every primary and accessory activity at the site, then ask the ${authorityReferenceLine("zoning")} to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.`,
         }
       : {
           tier: "do-this-week",

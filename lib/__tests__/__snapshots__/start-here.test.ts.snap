@@ -296,7 +296,7 @@ exports[`legacy action structures are unchanged by the StartHere refactor > site
   "actionRoadmap": [
     {
       "callScript": undefined,
-      "description": "List every primary and accessory activity at the site, then ask the City or a zoning professional to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+      "description": "List every primary and accessory activity at the site, then ask the Chicago Zoning Board of Appeals (ZBA) to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
       "label": "Define the exact activity and verify its use category for B3-2",
       "tier": "do-this-week",
     },
