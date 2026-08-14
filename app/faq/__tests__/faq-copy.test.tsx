@@ -9,7 +9,7 @@
  * FAQ_ITEMS content array rather than driving the accordion.
  */
 import { describe, expect, it } from "vitest";
-import { FAQ_ITEMS } from "../page";
+import { FAQ_ITEMS } from "../faq-items";
 
 const allAnswers = FAQ_ITEMS.map((item) => item.a).join("\n");
 

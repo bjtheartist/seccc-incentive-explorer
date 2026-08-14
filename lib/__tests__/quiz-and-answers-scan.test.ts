@@ -30,7 +30,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { QUIZ_QUESTIONS } from "../quiz-data";
-import { FAQ_ITEMS } from "@/app/faq/page";
+import { FAQ_ITEMS } from "@/app/faq/faq-items";
 import { ANSWER_PAGES } from "../answers-data";
 
 // ── Shared detectors ────────────────────────────────────────────────────────
