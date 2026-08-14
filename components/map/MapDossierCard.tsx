@@ -45,6 +45,12 @@ export interface MapDossierCardProps {
   snapshotPrograms: ProgramCheckResult[];
   snapshotTifFinance: TifFinanceContext | null;
   snapshotContextSummary?: LocationContextMapSummary | null;
+  /** review5 S2/S3: non-null when one or more Zone Evidence v2 layers
+   *  could not be resolved for this location. Must render ALONGSIDE
+   *  snapshotPrograms (known positives), regardless of how many programs
+   *  matched — never suppressed by a nonzero match count, and never the
+   *  reason a zero-match state silently reads as a confirmed negative. */
+  snapshotZoneCoverageNote?: string | null;
   tifFinanceLoading: boolean;
   zoningInfo: string | null;
   isGeneratingSnapshot: boolean;
@@ -403,6 +409,7 @@ export default function MapDossierCard({
   snapshotPrograms,
   snapshotTifFinance,
   snapshotContextSummary,
+  snapshotZoneCoverageNote,
   tifFinanceLoading,
   zoningInfo,
   isGeneratingSnapshot,
@@ -451,7 +458,11 @@ export default function MapDossierCard({
       areaStats.districtsLoading,
   );
   const hasProgramsAndZones = Boolean(
-    contextPrograms.length > 0 || zoningInfo || contextTifFinance || tifFinanceLoading,
+    contextPrograms.length > 0 ||
+      zoningInfo ||
+      contextTifFinance ||
+      tifFinanceLoading ||
+      snapshotZoneCoverageNote,
   );
 
   return (
@@ -545,6 +556,17 @@ export default function MapDossierCard({
           badge={contextPrograms.length > 0 ? `${contextPrograms.length} mapped` : "location context"}
         >
           {zoningInfo ? <FactRow label="Zoning" value={zoningInfo} /> : null}
+
+          {/* review5 S2/S3: rendered unconditionally alongside any known
+              positives below — this is a coverage caveat, not a
+              replacement, and must never be hidden just because programs
+              also matched or the match count is nonzero. */}
+          {snapshotZoneCoverageNote ? (
+            <div className="mb-3 flex gap-2 border-l-2 border-[#B45309] bg-[#FFFBEB] px-3 py-2 text-[10px] leading-relaxed text-[#78350F]">
+              <CircleAlert aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p>{snapshotZoneCoverageNote}</p>
+            </div>
+          ) : null}
 
           {contextPrograms.length > 0 ? (
             <div className="space-y-3">

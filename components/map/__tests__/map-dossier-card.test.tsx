@@ -48,6 +48,7 @@ function renderPanel(
   selection?: MapDossierSelection | null,
   areaStats: AreaStats = BASE_STATS,
   snapshotPrograms: ProgramCheckResult[] = [],
+  snapshotZoneCoverageNote: string | null = null,
 ): string {
   const activeSelection: MapDossierSelection = selection ?? {
     kind: "address",
@@ -63,6 +64,7 @@ function renderPanel(
       snapshotLon={-87.55024}
       snapshotPrograms={snapshotPrograms}
       snapshotTifFinance={null}
+      snapshotZoneCoverageNote={snapshotZoneCoverageNote}
       tifFinanceLoading={false}
       zoningInfo={null}
       isGeneratingSnapshot={false}
@@ -197,6 +199,37 @@ describe("MapDossierCard", () => {
     expect(html).toContain("Chicago Public Library");
     expect(html).toContain("9055 S Houston Ave");
     expect(html).toContain("Select an address or parcel");
+  });
+
+  it("review5 S2/S3: renders a zone-coverage caveat ALONGSIDE known-positive mapped programs — never suppressed by a nonzero match count", () => {
+    const html = renderPanel(
+      undefined,
+      BASE_STATS,
+      [INTERNAL_PROGRAM_RESULT],
+      "1 incentive-geography layer could not be verified for this location; results here may be incomplete.",
+    );
+
+    // The known positive is still fully present...
+    expect(html).toContain("Small Business Improvement Fund");
+    expect(html).toContain("Mapped programs to review");
+    // ...and the coverage caveat renders too, not replaced by it.
+    expect(html).toContain("could not be verified for this location");
+  });
+
+  it("review5 S2/S3: renders the zone-coverage caveat even with ZERO matched programs — a failed layer must never read as a silent, unexplained '0 mapped'", () => {
+    const html = renderPanel(
+      undefined,
+      BASE_STATS,
+      [],
+      "2 incentive-geography layers could not be verified for this location; results here may be incomplete.",
+    );
+
+    expect(html).toContain("2 incentive-geography layers could not be verified");
+  });
+
+  it("omits the zone-coverage caveat entirely when every layer resolved (null note) — no phantom caveat text", () => {
+    const html = renderPanel(undefined, BASE_STATS, [INTERNAL_PROGRAM_RESULT], null);
+    expect(html).not.toMatch(/could not be verified/i);
   });
 
   it("labels stale selections and preserves their source date", () => {

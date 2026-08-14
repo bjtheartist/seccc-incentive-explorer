@@ -139,12 +139,29 @@ const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
 ];
 
 /** Each active overlay's own feature name where the source published one
- *  (Finding 12) — "SSA: Greater Chatham", not just "SSA". */
-function overlaysText(overlays: CandidateOverlays): string {
+ *  (Finding 12) — "SSA: Greater Chatham", not just "SSA".
+ *
+ * review5 S2: "None mapped" is a confirmed-absence claim — it must never
+ * be the string shown when a layer simply couldn't be checked
+ * (overlays[key].unknown === true). Known positives (`present`) always
+ * render, regardless of how many other layers are unknown; an unknown
+ * layer is disclosed, never silently folded into "none". */
+export function overlaysText(overlays: CandidateOverlays): string {
   const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
     const name = overlays[overlay.key].name;
     return name ? `${overlay.label}: ${name}` : overlay.label;
   });
+  const unknown = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].unknown).map(
+    (overlay) => overlay.label,
+  );
+
+  if (active.length === 0 && unknown.length === OVERLAY_LABELS.length) {
+    return "Not checked";
+  }
+  if (unknown.length > 0) {
+    const base = active.length > 0 ? active.join(" · ") : "None confirmed";
+    return `${base} (${unknown.join(", ")} not checked)`;
+  }
   return active.length > 0 ? active.join(" · ") : "None mapped";
 }
 

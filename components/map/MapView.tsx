@@ -11,7 +11,8 @@ import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, VACANT_COL
 import { OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
+import { bridgeZoneEvidenceV2ToBooleanMap, zoneCoverageCaveat } from "@/lib/zone-evidence-bridge";
 import type { Program, ProgramCheckResult, ParcelData, DistrictData, ZoningLookupResponse } from "@/lib/types";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
@@ -217,6 +218,11 @@ export default function MapView() {
   // Preset state
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [locationZones, setLocationZones] = useState<Record<string, boolean> | null>(null);
+  // review5 S2/S3: Zone Evidence v2's per-layer "unknown" state, bridged
+  // to a caveat sentence rendered ALONGSIDE known positives — never used
+  // to suppress them, and never silently dropped when a match also
+  // exists. See lib/zone-evidence-bridge.ts's doc comment.
+  const [locationZoneCoverageNote, setLocationZoneCoverageNote] = useState<string | null>(null);
 
   // Inspect zoning mode
   const [inspectMode, setInspectMode] = useState(false);
@@ -831,8 +837,14 @@ export default function MapView() {
       setCopiedLink(false);
       setTifFinanceLoading(true);
       try {
+        // review5 S2: /api/zones/check/v2 instead of the v1 route — v1
+        // silently defaults an omitted/unresolved layer to `false`
+        // (indistinguishable from a genuine non-match once normalized),
+        // which could make a program whose zone layer failed to resolve
+        // silently vanish from the click panel's program list with no
+        // indication anything went wrong.
         const [data, parcelData, tifFinanceData, zoningLookup] = await Promise.all([
-          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`).catch(() => null),
+          cachedFetch(`/api/zones/check/v2?lat=${lat}&lon=${lon}`).catch(() => null),
           cachedFetch<ParcelData>(
             `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
           ).catch(() => null),
@@ -852,15 +864,21 @@ export default function MapView() {
             setZoningInfo("Published zoning temporarily unavailable — select the location again to retry");
           }
         }
-        const normalized = normalizeZoneCheckResponse(data);
-        if (!normalized) throw new Error("Unexpected zone check response");
+        const evidence = normalizeZoneEvidenceV2(data);
+        if (!evidence) throw new Error("Unexpected zone check response");
 
-        const { zones, zoneNames } = normalized;
+        const { zones, zoneNames, unknownKeys } = bridgeZoneEvidenceV2ToBooleanMap(evidence);
         setLocationZones(zones);
         setLocationZoneNames(zoneNames);
+        setLocationZoneCoverageNote(zoneCoverageCaveat(unknownKeys));
         setSnapshotParcelData(parcelData ?? null);
         setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
         // Compute the internal ranking client-side (including parcel context).
+        // NOTE: `zones` bridges v2's "unknown" state to `false` (the engine
+        // has no third state) — a program mapped to an unknown layer is
+        // still filtered out of this positives-only list. locationZoneCoverageNote
+        // (rendered by MapDossierCard alongside whatever DID match) is what
+        // keeps that omission from reading as a confirmed "not here".
         if (allPrograms.length > 0) {
           const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
           setSnapshotPrograms(
@@ -869,6 +887,7 @@ export default function MapView() {
         }
       } catch {
         setLocationZoneNames(null);
+        setLocationZoneCoverageNote(null);
         setSnapshotParcelData(null);
         setSnapshotTifFinance(null);
       } finally {
@@ -3946,6 +3965,7 @@ export default function MapView() {
       snapshotPrograms={snapshotPrograms}
       snapshotTifFinance={snapshotTifFinance}
       snapshotContextSummary={snapshotContextSummary}
+      snapshotZoneCoverageNote={locationZoneCoverageNote}
       tifFinanceLoading={tifFinanceLoading}
       zoningInfo={zoningInfo}
       isGeneratingSnapshot={isGeneratingSnapshot}

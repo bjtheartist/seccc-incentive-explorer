@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { GET as geocodeGET } from "@/app/api/geocode/route";
-import { GET as zonesCheckGET } from "@/app/api/zones/check/route";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { GET as zonesCheckV2GET } from "@/app/api/zones/check/v2/route";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
+import { bridgeZoneEvidenceV2ToBooleanMap, zoneCoverageCaveat } from "@/lib/zone-evidence-bridge";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { getProgramsSync } from "@/lib/programs-data";
 
@@ -50,8 +51,13 @@ async function geocodeAddressInProcess(address: string): Promise<{ lat: number; 
 }
 
 async function checkZonesInProcess(lat: number, lon: number): Promise<unknown> {
-  const res = await zonesCheckGET(
-    new NextRequest(`http://localhost/api/zones/check?lat=${lat}&lon=${lon}`)
+  // review5 S2: v2 in-process route, not v1 — v1 cannot distinguish "this
+  // layer failed to resolve" from "this layer genuinely does not match",
+  // which is exactly how this file used to justify emitting "No mapped
+  // incentive zones matched this address" on outreach letters for
+  // addresses where a relevant layer simply never resolved.
+  const res = await zonesCheckV2GET(
+    new NextRequest(`http://localhost/api/zones/check/v2?lat=${lat}&lon=${lon}`)
   );
   if (!res.ok) return null;
   return res.json();
@@ -90,8 +96,8 @@ export async function resolveParcelProgramContext(addresses: string[]): Promise<
       }
 
       const zoneData = await checkZonesInProcess(geo.lat, geo.lon);
-      const normalized = normalizeZoneCheckResponse(zoneData);
-      if (!normalized) {
+      const evidence = normalizeZoneEvidenceV2(zoneData);
+      if (!evidence) {
         results.push({
           address,
           lat: geo.lat,
@@ -102,9 +108,22 @@ export async function resolveParcelProgramContext(addresses: string[]): Promise<
         continue;
       }
 
-      const matched = runConfidenceEngine(programs, normalized.zones, normalized.zoneNames).filter(
+      const { zones, zoneNames, unknownKeys } = bridgeZoneEvidenceV2ToBooleanMap(evidence);
+      const matched = runConfidenceEngine(programs, zones, zoneNames).filter(
         (result) => result.relevance !== "not_mapped_at_location"
       );
+
+      // review5 S2: never claim "No mapped incentive zones matched" when
+      // the reason the list is empty might be that a layer FAILED to
+      // resolve rather than genuinely not matching — the exact false
+      // negative this finding named. Only assert absence when every
+      // requested layer actually resolved.
+      const resolutionNote =
+        matched.length > 0
+          ? null
+          : unknownKeys.length > 0
+            ? `${zoneCoverageCaveat(unknownKeys)} No confirmed incentive-zone match either way for this address.`
+            : "No mapped incentive zones matched this address.";
 
       results.push({
         address,
@@ -117,7 +136,7 @@ export async function resolveParcelProgramContext(addresses: string[]): Promise<
           url: result.program.url,
           summary: result.program.summary,
         })),
-        resolutionNote: matched.length === 0 ? "No mapped incentive zones matched this address." : null,
+        resolutionNote,
       });
     } catch (err) {
       console.error("resolveParcelProgramContext: parcel lookup failed for", address, err);

@@ -64,7 +64,7 @@ import {
   resolveDistrictAtPoint,
   type ZoningSnapshot,
 } from "../lib/zoning-snapshot";
-import { checkStaticZoneKeys } from "../lib/zones-check";
+import { resolveCandidateOverlays } from "../lib/shortlist-overlays";
 import {
   RANKING_INPUTS_VERSION,
   SHORTLIST_UNIVERSE_SCHEMA_VERSION,
@@ -458,11 +458,16 @@ async function main() {
       if (site.lotSqft != null || site.buildingSqft != null) withMeasuredArea += 1;
 
       let zoningRow: ShortlistUniverseRow["zoning"] = { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null };
+      // review5 S2: a site with no coordinates cannot be checked against
+      // any overlay layer — genuinely unknown, not a confirmed absence.
+      // resolveCandidateOverlays(null, null) returns this same
+      // all-unknown shape; set directly here to avoid an unnecessary
+      // async call for the (common) no-coordinates case.
       let overlays: ShortlistUniverseRow["overlays"] = {
-        ssa: { present: false, name: null },
-        ccsa: { present: false, name: null },
-        tif: { present: false, name: null },
-        nof: { present: false, name: null },
+        ssa: { present: false, name: null, unknown: true },
+        ccsa: { present: false, name: null, unknown: true },
+        tif: { present: false, name: null, unknown: true },
+        nof: { present: false, name: null, unknown: true },
       };
 
       if (site.lat != null && site.lon != null) {
@@ -480,18 +485,14 @@ async function main() {
         }
         if (zoningRow.status === "resolved") withZoning += 1;
 
-        // checkStaticZoneKeys already returns each match's feature name
-        // (ZoneMatch { key, name }) — Finding 12 restores that name onto
-        // the exported row instead of discarding it down to a bare boolean.
-        // An unnamed source feature keeps `name: null`, never a placeholder.
-        const zoneMatches = await checkStaticZoneKeys(site.lat, site.lon, OVERLAY_KEYS);
-        const nameByKey = new Map(zoneMatches.map((m) => [m.key, m.name?.trim() || null]));
-        overlays = {
-          ssa: { present: nameByKey.has("ssa"), name: nameByKey.get("ssa") ?? null },
-          ccsa: { present: nameByKey.has("ccsa"), name: nameByKey.get("ccsa") ?? null },
-          tif: { present: nameByKey.has("tif"), name: nameByKey.get("tif") ?? null },
-          nof: { present: nameByKey.has("nof"), name: nameByKey.get("nof") ?? null },
-        };
+        // review5 S2: resolveCandidateOverlays (lib/shortlist-overlays.ts)
+        // instead of the old direct checkStaticZoneKeys call — that
+        // helper swallowed every per-layer failure via `.catch(() =>
+        // null)`, indistinguishable from a genuine non-match. The new
+        // resolver marks a failed layer `unknown: true` instead. Feature
+        // names are still carried through unchanged (Finding 12); an
+        // unnamed source feature keeps `name: null`, never a placeholder.
+        overlays = await resolveCandidateOverlays(site.lat, site.lon);
       }
 
       const ownerConfidence: ShortlistUniverseRow["ownerConfidence"] = site.pin

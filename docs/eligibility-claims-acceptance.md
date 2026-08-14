@@ -749,3 +749,135 @@ the closed/lapsed status badge and removing the now-dead `linkHealth`
 fetch entirely, rather than leaving unused code); full `npx vitest run` —
 **314 test files, 3670 passed, 2 skipped** (up from PR2's 313/3660);
 `npm run programs:public:check` clean.
+
+### S2 (CRITICAL) — MapView, owner-file-letter-context, SiteShortlistResults, shortlist-engine, MapDossierCard → v2 zone evidence
+
+**Finding:** all five named consumers derived program/overlay matches from
+v1-shaped boolean zone data (or its export-time equivalent), which cannot
+represent "this layer could not be checked" — an unresolved layer silently
+reads as `false`, indistinguishable from a confirmed non-match. Two
+concrete instances the review named directly: `lib/owner-file-letter-
+context.ts` could emit "No mapped incentive zones matched this address" on
+an outreach letter when the true reason for zero matches was a failed
+layer, not a confirmed absence; the Site Shortlist export pipeline
+(`scripts/export-shortlist-universe.ts`) unconditionally set all four
+overlay flags (SSA/CCSA/TIF/NOF) to `present: false` for any site with no
+coordinates, and silently swallowed (`.catch(() => null)`) any per-layer
+static-file failure into the same `false`.
+
+**Shared fix — `lib/zone-evidence-bridge.ts` (new):** a bridge from Zone
+Evidence v2's tri-state (`matched`/`not_matched`/`unknown`) to the boolean
+`Record<string, boolean>` shape `runConfidenceEngine()` still requires
+(rewriting that engine's signature — and every one of its many other
+callers — to natively carry tri-state evidence is a materially larger
+change than this pass's scope). `unknown` bridges to `false` for matching
+purposes (the conservative direction: it can under-show an eligible
+program, never falsely claim one is present), but the bridge ALSO returns
+`unknownKeys`/`hasUnknown`, and every consumer using it is required to
+check that before rendering any negative/absence claim. A companion
+`zoneCoverageCaveat(unknownKeys)` produces the shared disclosure sentence
+("N incentive-geography layer(s) could not be verified for this location;
+results here may be incomplete.") — never an absence claim itself.
+
+**MapView.tsx / MapDossierCard.tsx:** the click-anywhere-on-the-map
+snapshot handler now fetches `/api/zones/check/v2` (was v1) and normalizes
+via `normalizeZoneEvidenceV2` + the new bridge. A new
+`locationZoneCoverageNote` piece of state (derived via
+`zoneCoverageCaveat`) is threaded into `MapDossierCard` as
+`snapshotZoneCoverageNote` and rendered inside the "Programs and zones"
+section UNCONDITIONALLY alongside any matched programs (S3's own
+requirement — "known positives AND an unavailable-layer notice must BOTH
+render regardless of match count" — applied here too, since this is the
+same render path): `hasProgramsAndZones` now also triggers on a non-null
+coverage note, and the caveat block always renders above the matched-
+programs list rather than only in a zero-match branch.
+
+**owner-file-letter-context.ts:** `checkZonesInProcess` now calls the v2
+in-process route (`app/api/zones/check/v2/route.ts`'s `GET`, was v1's).
+`resolveParcelProgramContext`'s `resolutionNote` logic changed from "empty
+match list -> hard-coded absence sentence" to: matches present -> `null`
+(unchanged); matches empty AND `unknownKeys.length > 0` -> a caveat
+sentence ("N layer(s) could not be verified... No confirmed incentive-zone
+match either way for this address"), NEVER the flat "No mapped incentive
+zones matched" claim; matches empty AND every layer genuinely resolved ->
+the original sentence, now actually true every time it's shown.
+
+**shortlist-engine.ts / SiteShortlistResults.tsx / shortlist-csv.ts /
+scripts/export-shortlist-universe.ts:** `shortlist-engine.ts` itself does
+no scoring/badging on overlay presence (it passes `row.overlays` straight
+through), so its own fix is the type change: `OverlayMembership` gained an
+`unknown: boolean` field (`lib/shortlist-universe-schema.ts`'s
+`OverlayMembershipSchema` correspondingly gained `.default(false)` for
+backward-compatible parsing of already-committed export files — see the
+KNOWN GAP below). New `lib/shortlist-overlays.ts`'s
+`resolveCandidateOverlays(lat, lon)` replaces the export script's prior
+direct `checkStaticZoneKeys` call: built on `resolveZoneEvidenceV2` forced
+to its static-only path (`sql: null`, matching the script's existing
+behavior of never DB-querying these four layers per-point), it marks a
+layer `unknown: true` instead of `present: false` both when a site has no
+coordinates at all and when a layer's source file fails to load/parse —
+one bad layer's failure (per `resolveZoneEvidenceV2`'s own per-key
+try/catch) never affects a sibling layer's result. `overlaysText()`
+(`SiteShortlistResults.tsx`) and `overlaysCell()` (`shortlist-csv.ts`,
+mirrored) no longer print "None mapped" for an unknown-only or partially-
+unknown overlay set — they print "Not checked" (all four unknown) or
+`"<known positives> (<unknown labels> not checked)"` (mixed), preserving
+every known positive and disclosing every unknown, never silently folding
+one into the other. Both helper functions exported specifically so they
+have direct unit coverage, not just indirect coverage through full
+component/CSV rendering.
+
+**KNOWN GAP, explicitly flagged (Hard Rule: no DB connections):**
+`scripts/export-shortlist-universe.ts` requires a live Neon branch to run
+at all (it syncs vacant-property, parcel, and ownership data from
+Postgres) — this session could not execute it, so the ALREADY-COMMITTED
+export files (`data/exports/shortlist-universe/*.json`, and whatever
+`public/data/site-matchmaker-context/` derives from them) were **not**
+regenerated and still carry the pre-fix overlay data (no real `unknown`
+distinction — every already-computed `present: false` in those committed
+files is exactly as ambiguous as it was before this fix). The FIX is real,
+committed, and unit-tested at the function/schema/rendering level
+(`lib/__tests__/shortlist-overlays.test.ts` injects a failed layer via
+`resolveZoneEvidenceV2`'s `loadZoneFile` test hook and asserts a sibling
+known positive survives untouched); DATA regeneration requires a
+disposable Neon branch and is out of reach this session — the next export
+run picks up the fix automatically. Separately, `incentiveCount` on
+shortlist rows and vacancy-pin `incentiveGeographyCount` (rendered by
+`MapDossierCard`'s "vacancy" selection case) are populated by a DIFFERENT,
+deeper DB-query pipeline (`incidence_count`/`incentive_count` SQL columns
+this session could not access or audit) — NOT the `checkStaticZoneKeys`/
+`resolveCandidateOverlays` code path this fix touches, so that specific
+number's unknown-vs-zero distinction remains unaudited and is a separate,
+un-scoped follow-up, not silently claimed fixed here.
+
+**Tests added:**
+- `lib/__tests__/zone-evidence-bridge.test.ts` — the bridge's boolean
+  mapping, `unknownKeys`/`hasUnknown` accuracy, and `zoneCoverageCaveat`'s
+  singular/plural phrasing and never-asserts-absence property.
+- `lib/__tests__/owner-file-letter-context.test.ts` — rewritten for the v2
+  mock target; two new cases: a wholly-unknown layer never produces "No
+  mapped incentive zones matched" (asserts the caveat wording instead),
+  and a known TIF positive survives untouched when a sibling NOF layer is
+  unknown for the same address.
+- `components/map/__tests__/map-dossier-card.test.tsx` — three new cases:
+  the coverage caveat renders alongside a matched program, renders with
+  zero matched programs (never a silent "0 mapped"), and is fully absent
+  (no phantom text) when the note is `null`.
+- `lib/__tests__/shortlist-overlays.test.ts` (new) — the S2 TEST
+  requirement verbatim: a `loadZoneFile` failure injected for one layer
+  (`nof`) leaves a sibling layer's real match (`tif`) fully intact and
+  correctly `present`, while the failed layer resolves `unknown`, never a
+  negative; plus the no-coordinates-at-all case and the "empty collection
+  is unknown, not a confirmed non-match" case (per `resolveZoneLayerEvidence`'s
+  own documented rule).
+- `lib/__tests__/shortlist-csv.test.ts` / `components/vacancy/__tests__/
+  SiteShortlistResults.test.tsx` — direct + component-level coverage that
+  "None mapped" never appears for an unknown-containing overlay set, that
+  known positives and unknown disclosures render together on the same
+  card/cell, and that "None mapped" still appears (correctly) when every
+  layer is genuinely checked and empty.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors, same
+5 pre-existing warnings as S1 (unrelated files/lines); full `npx vitest
+run` — **316 test files, 3691 passed, 2 skipped** (up from S1's 314/3670);
+`npm run programs:public:check` clean.

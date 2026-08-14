@@ -61,12 +61,27 @@ const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
 ];
 
 /** Each active overlay's own name where the source published one (Finding
- *  12) — "SSA: Greater Chatham", not just "SSA". */
-function overlaysCell(overlays: CandidateOverlays): string {
+ *  12) — "SSA: Greater Chatham", not just "SSA".
+ *
+ * review5 S2: mirrors SiteShortlistResults.tsx's overlaysText() — "None
+ * mapped" must never be printed for a layer that was `unknown`
+ * (uncheckable), only for a genuinely confirmed absence. */
+export function overlaysCell(overlays: CandidateOverlays): string {
   const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
     const name = overlays[overlay.key].name;
     return name ? `${overlay.label}: ${name}` : overlay.label;
   });
+  const unknown = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].unknown).map(
+    (overlay) => overlay.label,
+  );
+
+  if (active.length === 0 && unknown.length === OVERLAY_LABELS.length) {
+    return "Not checked";
+  }
+  if (unknown.length > 0) {
+    const base = active.length > 0 ? active.join("; ") : "None confirmed";
+    return `${base} (${unknown.join(", ")} not checked)`;
+  }
   return active.length > 0 ? active.join("; ") : "None mapped";
 }
 

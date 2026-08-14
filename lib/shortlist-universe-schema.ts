@@ -100,10 +100,27 @@ const RowZoningSchema = z.object({
  * and — when it is — the feature's own name (Finding 12). `name` is
  * `null` both when `present` is false AND when the source geometry
  * carries no name for a present match (an unnamed feature is a real,
- * honest state, never coerced to a placeholder string). */
+ * honest state, never coerced to a placeholder string).
+ *
+ * review5 S2: `unknown` distinguishes "the export process could not
+ * determine membership for this layer" (no coordinates to check against,
+ * a missing/unreadable source file, a malformed feature) from a genuine
+ * `present: false`. Before this field existed, both collapsed into the
+ * same `present: false`, indistinguishable from a confirmed non-match —
+ * exactly the v1 anti-pattern this finding targets. `.default(false)` for
+ * backward compatibility with already-committed export files that predate
+ * this field (data/exports/shortlist-universe/*.json) — those files
+ * cannot be regenerated in this session (the export script requires a
+ * live DB connection, forbidden by the Hard Rules), so old rows parse as
+ * `unknown: false` rather than failing closed. KNOWN, DOCUMENTED
+ * LIMITATION: a genuinely-uncheckable layer in an ALREADY-COMMITTED file
+ * still reads as a confirmed non-match until the export is re-run against
+ * a live DB branch; new exports carry the real value from the day the
+ * export script is next run. */
 const OverlayMembershipSchema = z.object({
   present: z.boolean(),
   name: z.string().nullable(),
+  unknown: z.boolean().default(false),
 });
 
 const RowOverlaysSchema = z.object({

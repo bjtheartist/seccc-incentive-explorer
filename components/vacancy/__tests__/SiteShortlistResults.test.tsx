@@ -27,10 +27,10 @@ import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
 
 function noOverlays(): CandidateOverlays {
   return {
-    ssa: { present: false, name: null },
-    ccsa: { present: false, name: null },
-    tif: { present: false, name: null },
-    nof: { present: false, name: null },
+    ssa: { present: false, name: null, unknown: false },
+    ccsa: { present: false, name: null, unknown: false },
+    tif: { present: false, name: null, unknown: false },
+    nof: { present: false, name: null, unknown: false },
   };
 }
 
@@ -326,5 +326,66 @@ describe("SiteShortlistResults — adversarial enrichment changes card FACTS but
     // valuable record on the page by every enrichment fact, and it is
     // still rendered LAST.
     expect(cardOrder()).toEqual(["1 First St", "2 Second St", "3 Third St"]);
+  });
+});
+
+// ── review5 S2: overlay unknown-vs-absent must actually reach the DOM ──────
+
+describe("SiteShortlistResults — overlay coverage disclosure (review5 S2)", () => {
+  it("renders a known positive overlay AND discloses a different unknown layer on the SAME card — never 'None mapped'", () => {
+    vi.stubGlobal("fetch", neverResolvingFetchMock());
+    render(
+      <SiteShortlistResults
+        zip="60619"
+        criteria={baseCriteria()}
+        scored={true}
+        source={null}
+        buildId="build-1"
+        ranked={[
+          candidate({
+            overlays: {
+              ssa: { present: true, name: "Greater Chatham", unknown: false },
+              ccsa: { present: false, name: null, unknown: false },
+              tif: { present: false, name: null, unknown: true },
+              nof: { present: false, name: null, unknown: false },
+            },
+          }),
+        ]}
+        boundary={null}
+        centroid={{ lat: 41.75, lon: -87.605 }}
+      />,
+    );
+
+    expect(screen.getByText(/SSA: Greater Chatham/)).toBeTruthy();
+    expect(screen.getByText(/TIF not checked/)).toBeTruthy();
+    expect(screen.queryByText(/none mapped/i)).toBeNull();
+  });
+
+  it("renders 'Not checked' — not 'None mapped' — when every overlay layer is unknown", () => {
+    vi.stubGlobal("fetch", neverResolvingFetchMock());
+    render(
+      <SiteShortlistResults
+        zip="60619"
+        criteria={baseCriteria()}
+        scored={true}
+        source={null}
+        buildId="build-1"
+        ranked={[
+          candidate({
+            overlays: {
+              ssa: { present: false, name: null, unknown: true },
+              ccsa: { present: false, name: null, unknown: true },
+              tif: { present: false, name: null, unknown: true },
+              nof: { present: false, name: null, unknown: true },
+            },
+          }),
+        ]}
+        boundary={null}
+        centroid={{ lat: 41.75, lon: -87.605 }}
+      />,
+    );
+
+    expect(screen.getByText(/Not checked/)).toBeTruthy();
+    expect(screen.queryByText(/none mapped/i)).toBeNull();
   });
 });

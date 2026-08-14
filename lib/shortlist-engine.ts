@@ -147,6 +147,13 @@ export interface ShortlistEngineInputs {
 export interface OverlayMembership {
   present: boolean;
   name: string | null;
+  /** review5 S2: true when this layer could not be resolved (no
+   *  coordinates, missing/unreadable source, malformed geometry) —
+   *  distinct from a confirmed `present: false`. See
+   *  lib/shortlist-overlays.ts and lib/shortlist-universe-schema.ts's
+   *  OverlayMembershipSchema doc comment for the full rationale and the
+   *  known limitation on already-committed export files. */
+  unknown: boolean;
 }
 
 export interface CandidateOverlays {
