@@ -251,6 +251,9 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     // S41: auxiliary chains in the not-approved form
     { family: "application/project denied", text: "Your application has not yet been approved.", reason: "application-denied" },
     { family: "application/project denied", text: "Your application hasn't yet been approved.", reason: "application-denied" },
+    // S42: negation anywhere before 'approved' within the sentence
+    { family: "application/project denied", text: "Your application has not yet been formally approved.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application has not, as of yet, been approved.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

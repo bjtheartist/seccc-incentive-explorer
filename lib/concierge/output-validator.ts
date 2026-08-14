@@ -189,7 +189,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
   // rejected/rejection, any inflection) is an unconditional hit. There is
   // no morphology left to enumerate. Over-match (e.g. "denial of service
   // requests") is the accepted default-deny cost per the Round-9 ruling.
-  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*(?:\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|refus(?:e|es|ed|ing|al|als)|unsuccessful)\b|\bturn(?:s|ed|ing)?\b[^.!?\n]*?\bdown\b|\b(?:not|never)(?:\s+\w+){0,2}\s+approved\b|n['’]t(?:\s+\w+){0,2}\s+approved\b))/i, reason: "application-denied", perSentence: true },
+  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*(?:\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|refus(?:e|es|ed|ing|al|als)|unsuccessful)\b|\bturn(?:s|ed|ing)?\b[^.!?\n]*?\bdown\b|\b(?:not|never)\b[^.!?\n]*?\bapproved\b|n['’]t\b[^.!?\n]*?\bapproved\b))/i, reason: "application-denied", perSentence: true },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
