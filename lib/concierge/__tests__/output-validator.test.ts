@@ -211,6 +211,13 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     // S32: adjectival forms of the family
     { family: "application/project denied", text: "Denied applications may be resubmitted next round.", reason: "application-denied" },
     { family: "application/project denied", text: "Your denied application may be resubmitted.", reason: "application-denied" },
+    // S33: nominal, possessive, compound-adjectival, reduced-relative forms
+    { family: "application/project denied", text: "Application denial is common in the first round.", reason: "application-denied" },
+    { family: "application/project denied", text: "Denial of the application ends the process.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application's denial can be appealed.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your denied grant application can be revised.", reason: "application-denied" },
+    { family: "application/project denied", text: "The application denied last cycle can be resubmitted.", reason: "application-denied" },
+    { family: "application/project denied", text: "Denial of your SBIF grant application is not final.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

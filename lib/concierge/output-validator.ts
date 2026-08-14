@@ -180,9 +180,18 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   //      family has been bypassed within one to two review rounds.
   //      Removing the carve-out removes the bypass surface entirely.
   { pattern: /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
-  // Adjectival form of the same family ("denied applications may be
-  // resubmitted", "your denied application"). Same default-deny rationale.
-  { pattern: /\b(?:denied|rejected)\s+(?:application|project|request)s?\b/i, reason: "application-denied" },
+  // Adjectival form of the same family, allowing compound nouns ("denied
+  // applications", "your denied grant application"). Same default-deny
+  // rationale.
+  { pattern: /\b(?:denied|rejected)\s+(?:\w+\s+){0,2}?(?:application|project|request)s?\b/i, reason: "application-denied" },
+  // Nominal and possessive forms ("application denial", "your
+  // application's denial", "request rejection").
+  { pattern: /\b(?:application|project|request)s?(?:['’]s)?\s+(?:denial|rejection)\b/i, reason: "application-denied" },
+  // "denial/rejection of the (grant) application" — nominal with
+  // interposed determiner and up to three modifier words.
+  { pattern: /\b(?:denial|rejection)\s+of\s+(?:\w+\s+){0,3}?(?:application|project|request)s?\b/i, reason: "application-denied" },
+  // Reduced relative clause ("the application denied last cycle").
+  { pattern: /\b(?:application|project|request)s?\s+(?:denied|rejected)\b/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
