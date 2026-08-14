@@ -601,7 +601,11 @@ function joinLabels(labels: readonly string[]): string {
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
-function normalizePublicDeterminationText(value: string): string {
+// Exported (build-spec.md 2.5) so the concierge output validator
+// (lib/concierge/output-validator.ts) can run the SAME determination-
+// phrase normalizer over model-generated text before it is ever shown to
+// a visitor — one vocabulary, not a second copy tuned separately for chat.
+export function normalizePublicDeterminationText(value: string): string {
   return value
     .replace(/eligible incentive programs/gi, CONFIRMED_PROGRAMS_SECTION_TITLE)
     .replace(/other programs tied to this address/gi, OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE)

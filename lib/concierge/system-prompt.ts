@@ -84,3 +84,13 @@ export const CONCIERGE_RESTING_MESSAGE =
 
 export const CONCIERGE_DISABLED_MESSAGE =
   "The concierge isn't available right now. You can still explore the map, browse programs, and build a report directly.";
+
+/**
+ * build-spec.md 2.5 (audit "F-rail"; consult item 7): shown ONLY when the
+ * buffered model response fails output validation
+ * (lib/concierge/output-validator.ts). The route substitutes this text
+ * outright — never the raw model text, not even a scrubbed version of it —
+ * so this must stand alone as a genuinely useful answer, not an apology.
+ */
+export const CONCIERGE_VALIDATOR_FALLBACK_MESSAGE =
+  "I can't confidently answer that from published sources right now. You can browse [programs](/programs), check a specific address on the [report builder](/report), or ask about one program by name.";
