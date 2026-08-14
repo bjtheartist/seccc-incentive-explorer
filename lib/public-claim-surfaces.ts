@@ -231,12 +231,10 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     ],
   },
 
-  // ── Legacy (pre-2.7-deletion) ─────────────────────────────────────────
-  {
-    id: "legacy-lookup-fork",
-    description: "The dormant coordinate-less-business lookup fork (deleted in 2.7 once the geocode-then-route fix lands).",
-    contracts: ["PublicProgramView", "ZoneEvidence"],
-    files: ["components/lookup/AddressSearch.tsx", "components/lookup/IncentiveReport.tsx", "components/lookup/ZoneResultCard.tsx"],
-    findings: ["F15"],
-  },
+  // build-spec.md 2.7: the legacy-lookup-fork entry (IncentiveReport,
+  // ZoneResultCard) that lived here through the geocode-then-route fix has
+  // been removed along with the deleted files themselves — F15 is closed;
+  // AddressSearch now routes every match (coordinate-bearing or
+  // geocoded-on-demand) through /report, the same "report-live-route" entry
+  // above already covers.
 ] as const;
