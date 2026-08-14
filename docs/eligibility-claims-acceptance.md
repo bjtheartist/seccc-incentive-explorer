@@ -1087,3 +1087,71 @@ internally consistent), plus:
 same 5 pre-existing warnings; full `npx vitest run` — **317 test files,
 3739 passed, 2 skipped** (up from S4's 317/3733); `npm run
 programs:public:check` clean.
+
+### S6 (HIGH) — stale quiz fact, F8/F11 language gaps, comprehensive scan
+
+**Finding:** the existing regression test for the §48D CHIPS credit rate
+(`lib/__tests__/quiz-bank-extension-facts.test.ts`) only ever checked
+`QUIZ_QUESTIONS_EXTENSION.find((q) => q.id === 22)` — a single hand-picked
+ID. Quiz id 92's explanation independently repeated the same fact and
+still said "25%" (catalog: 35%) because the fix that corrected id 22
+never touched id 92. Separately, two F8/F11 copy gaps had survived the
+earlier PR2 fix pass: `app/programs/[slug]/page.tsx` and
+`lib/answers-data.ts` still implied the tool determines "exact
+eligibility" for a reader's specific address, and `lib/answers-data.ts`'s
+own F11-locked entry had an ADJACENT bullet (not covered by the "do not
+weaken, do not strengthen" comment guarding the `answer` field) that still
+used "designed to work together" — an unauthorized paraphrase of the
+exact audit-banned "designed to combine with each other" phrase, sitting
+right next to the correct fix and undermining it.
+
+**Fix:**
+- Quiz id 92's explanation: "§48D (25% chip credit)" → a shared
+  `QUIZ_48D_CREDIT_RATE = "35%"` constant, exported from
+  `lib/quiz-bank-extension.ts` and used in BOTH id 22 and id 92 (choices
+  array and explanation) — "repeated program facts sourced centrally," so
+  a future rate change is one edit instead of a grep-and-hope.
+- `app/programs/[slug]/page.tsx`: "so exact eligibility always depends on
+  the specific address" → reframed as mapped-zone-coverage language
+  ("whether a specific address falls inside a mapped zone... mapped
+  coverage is a location signal, not an eligibility determination").
+- `lib/answers-data.ts`'s NMTC answer description (F8 metadata): "...check
+  your address eligibility" → "...check whether your address sits in an
+  eligible tract."
+- `lib/answers-data.ts`'s stacking-answer bullet (F11): "some are designed
+  to work together, others are not" → "each have their own separate
+  combination rules — do not assume any two apply together; confirm with
+  the administering agency."
+- `app/faq/page.tsx`'s NMTC answer (F11): "...can be combined with
+  Historic Tax Credits and Opportunity Zone benefits" (an unconditional
+  claim) → reframed as "worth comparing... but each has its own separate
+  eligibility, timing, and approval rules to confirm before assuming they
+  combine."
+
+**Tests added:** `lib/__tests__/quiz-and-answers-scan.test.ts` (new) —
+the explicit "scan EVERY quiz item + ALL rendered FAQ/Answers
+metadata/JSON-LD (not selected IDs)" requirement. Four detectors
+(§48D-rate-drift, "designed to combine" claims, unconditional combination
+claims, exact-eligibility claims), each proven against the real pre-fix
+sentence shape in a dedicated adversarial self-test before trusting the
+real-content result, then run against the FULL population of three
+source arrays: `QUIZ_QUESTIONS` (the actual merged 100-item bank the live
+quiz renders — question/explanation/choices, not a hand-picked subset),
+`FAQ_ITEMS` (`app/faq/page.tsx`), and `ANSWER_PAGES`
+(`lib/answers-data.ts` — description/answer/bullets), plus a dedicated
+test reconstructing the EXACT JSON-LD payload shape
+`app/answers/[slug]/page.tsx` emits (`buildFaqJsonLd`'s
+`{question, answer}` mainEntity) and scanning that serialized form
+directly. **Documented boundary, not silently skipped:**
+`app/programs/[slug]/page.tsx` and
+`app/neighborhoods/[slug]/incentives/page.tsx` also emit FAQPage JSON-LD,
+but theirs is built at request time from catalog fields and dynamic
+org-name lists rather than a static hand-authored array — scanning that
+would mean scanning the full internal catalog's prose fields, a
+materially larger and different surface than this finding's "quiz + FAQ
++ Answers" copy scope.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
+3751 passed, 2 skipped** (up from S5's 317/3739); `npm run
+programs:public:check` clean.

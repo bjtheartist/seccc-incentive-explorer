@@ -403,7 +403,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "What is the New Markets Tax Credit?",
     title: "What Is the New Markets Tax Credit (NMTC)?",
     description:
-      "The New Markets Tax Credit funds large projects in low-income census tracts through certified CDEs. Learn how it works and check your address eligibility.",
+      "The New Markets Tax Credit funds large projects in low-income census tracts through certified CDEs. Learn how it works and check whether your address sits in an eligible tract.",
     answer:
       "The New Markets Tax Credit (NMTC) attracts private investment into low-income communities by giving investors a 39% federal tax credit over seven years on equity invested through a certified Community Development Entity (CDE). It typically backs larger projects of $5M or more.",
     bullets: [
@@ -559,7 +559,14 @@ export const ANSWER_PAGES: AnswerPage[] = [
     bullets: [
       "A mapped boundary is a location signal for the programs that reference it; each program's own eligibility, timing, and approval rules still apply separately.",
       "Example worth comparing: SBIF (city/TIF), Class 7a property tax relief (county), and an Enterprise Zone material exemption (state) — but confirm eligible-cost and approval rules for each before assuming they combine.",
-      "Federal credits like NMTC, historic, and Opportunity Zone have their own combination rules — some are designed to work together, others are not; confirm with the administering agency for the specific project.",
+      // review5 S6 (F11): was "...some are designed to work together, others
+      // are not" — an unauthorized paraphrase of the exact banned "designed
+      // to combine with each other" claim the F11 minimal fix removed
+      // elsewhere on this same page, undermining that fix by sitting right
+      // next to it. Rewritten to state only what is verifiably true (each
+      // credit has its own separate rules) without asserting knowledge of
+      // which combinations were "designed" to work.
+      "Federal credits like NMTC, historic, and Opportunity Zone each have their own separate combination rules — do not assume any two apply together; confirm with the administering agency for the specific project.",
       "Stacking rules and caps vary — confirm with each administering agency before assuming two programs combine.",
     ],
     relatedProgramSlugs: [

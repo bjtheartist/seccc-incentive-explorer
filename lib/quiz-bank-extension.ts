@@ -1,5 +1,14 @@
 import type { QuizQuestion } from "./quiz-data";
 
+// review5 S6: the §48D CHIPS Investment Tax Credit rate was stated
+// correctly (35%) in quiz id 22 but stayed stale at "25%" in id 92's
+// explanation (the two questions were written at different times and
+// never cross-checked). data/programs-internal.json's "chips48d" record
+// agrees with 35% (summary, benefits[0], and benefitRange all say it).
+// A single shared constant — used everywhere this quiz bank repeats the
+// fact — means a future rate change is one edit, not a grep-and-hope.
+export const QUIZ_48D_CREDIT_RATE = "35%";
+
 export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
   // ---------- FEDERAL (18) — ids 11-28 ----------
   {
@@ -135,10 +144,9 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     id: 22,
     topic: "Federal",
     question: "What is the credit rate of the CHIPS Investment Tax Credit (§48D)?",
-    choices: ["20%", "25%", "30%", "35%"],
+    choices: ["20%", "25%", "30%", QUIZ_48D_CREDIT_RATE],
     correctIndex: 3,
-    explanation:
-      "§48D provides a 35% credit for qualifying semiconductor manufacturing facilities or specialized equipment placed in service after 2025, with direct-pay eligibility.",
+    explanation: `§48D provides a ${QUIZ_48D_CREDIT_RATE} credit for qualifying semiconductor manufacturing facilities or specialized equipment placed in service after 2025, with direct-pay eligibility.`,
   },
   {
     id: 23,
@@ -998,7 +1006,11 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 3,
     explanation:
-      "There is no 'Federal Storefront Activation Voucher.' §48D (25% chip credit), HUD Section 108 (FY 2026 fee 0.58%), and SSBCI ($354.6M to Illinois) are all real federal programs. Chicago's storefront-activation program is CCSA — that one's a CITY program.",
+      // review5 S6: was "25%" — stale; the catalog (data/programs-internal.json
+      // id "chips48d") and quiz id 22's own explanation both say 35%. Two
+      // conflicting rates for the same credit in the same quiz bank is
+      // exactly what QUIZ_48D_CREDIT_RATE below exists to prevent.
+      `There is no 'Federal Storefront Activation Voucher.' §48D (${QUIZ_48D_CREDIT_RATE} chip credit), HUD Section 108 (FY 2026 fee 0.58%), and SSBCI ($354.6M to Illinois) are all real federal programs. Chicago's storefront-activation program is CCSA — that one's a CITY program.`,
   },
   {
     id: 93,

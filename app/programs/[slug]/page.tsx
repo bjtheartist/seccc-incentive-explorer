@@ -287,9 +287,11 @@ export default async function ProgramExplainerPage({
               )}
             </p>
             <p className="text-[#0C1B33]/60">
-              Boundaries are precise and change over time, so exact eligibility
-              always depends on the specific address. The fastest way to know is
-              to run a free snapshot for the parcel you have in mind.
+              Boundaries are precise and change over time, so whether a
+              specific address falls inside a mapped zone always depends on
+              that exact address. The fastest way to check is to run a free
+              snapshot for the parcel you have in mind — mapped coverage is
+              a location signal, not an eligibility determination.
             </p>
             {p.boundaryDisclaimer && (
               <div className="border border-slate-200 bg-slate-50 rounded-lg p-4 flex gap-3">

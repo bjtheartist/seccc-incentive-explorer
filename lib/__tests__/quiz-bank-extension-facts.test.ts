@@ -4,6 +4,14 @@
  * Build to Scale invented a specific "late summer 2026" NOFO date the
  * catalog explicitly says is not announced, and MMRP/CNRP's down-payment
  * figure was quizzed as $30K (catalog: $15,000).
+ *
+ * review5 S6: this file only ever checked hand-picked IDs (`find(22)`), so
+ * a SECOND, independent §48D-rate-drift at id 92 sat undetected as long as
+ * this file existed — the exact "not selected IDs" gap the coordinator
+ * named. Kept as-is (still a real, still-passing regression guard for
+ * these three specific facts), but the actual "no drift anywhere" property
+ * is now covered by lib/__tests__/quiz-and-answers-scan.test.ts, which
+ * scans EVERY item in the full QUIZ_QUESTIONS bank, not selected IDs.
  */
 import { describe, expect, it } from "vitest";
 import { QUIZ_QUESTIONS_EXTENSION } from "../quiz-bank-extension";

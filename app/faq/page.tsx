@@ -84,7 +84,11 @@ export const FAQ_ITEMS = [
   },
   {
     q: "What are New Markets Tax Credits (NMTC)?",
-    a: "NMTC is a federal program that provides a 39% tax credit over 7 years to investors who make qualified equity investments through Community Development Entities (CDEs) in low-income census tracts. It's typically used for larger projects ($5M+) and can be combined with Historic Tax Credits and Opportunity Zone benefits.",
+    // review5 S6 (F11): was "...can be combined with Historic Tax Credits and
+    // Opportunity Zone benefits" — an unconditional combination claim.
+    // Rewritten so overlap with those programs is described as worth
+    // comparing, not established as combinable.
+    a: "NMTC is a federal program that provides a 39% tax credit over 7 years to investors who make qualified equity investments through Community Development Entities (CDEs) in low-income census tracts. It's typically used for larger projects ($5M+). Historic Tax Credits and Opportunity Zone benefits are worth comparing for the same project, but each has its own separate eligibility, timing, and approval rules to confirm before assuming they combine.",
   },
   {
     q: "What are Qualified Census Tracts (QCTs)?",
