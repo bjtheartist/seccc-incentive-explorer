@@ -758,6 +758,119 @@ export function investmentPopupOutOfScope(
 }
 
 /**
+ * The subset of mapboxgl.Popup's interface InvestmentPopupTracker needs —
+ * just `.once("close", …)`. Kept minimal and structural (not imported from
+ * "mapbox-gl") so this module never pulls the mapbox-gl package into a
+ * non-map bundle, and so a test can supply a plain object without importing
+ * the real library either.
+ */
+export interface InvestmentPopupLike {
+  once(event: "close", handler: () => void): void;
+}
+
+/**
+ * Sol gate round 2, finding 1 — the Mapbox popup-REUSE lifecycle hole.
+ * Reusing a shared mapboxgl.Popup calls `.addTo(map)` on an ALREADY-open
+ * instance, which mapbox-gl implements as `remove()` (firing "close")
+ * followed by re-attaching. That stale "close" fires AFTER a click handler
+ * has already assigned the NEW popup's content/dims, so a single un-gated
+ * "close" listener would wipe the fresh state for the popup actually on
+ * screen — the replacement popup would then never close on a filter change,
+ * and its own later reveal fetch would never abort.
+ *
+ * This class is the single source of truth for that lifecycle, extracted so
+ * it is unit-testable against a minimal, faithful emulation of mapbox-gl's
+ * addTo()/remove()/close semantics rather than a synthetic dims literal.
+ * Every popup open is tagged with a monotonically increasing token; each
+ * open registers its OWN one-shot "close" listener capturing that token in
+ * closure, and the listener clears state ONLY when the tracker's current
+ * token still matches its own — i.e. only for a GENUINE close of the
+ * currently active popup, never a stale side-effect of a later reuse. This
+ * holds in any event order because the token is bumped synchronously, before
+ * the caller ever invokes `.addTo()`.
+ */
+export class InvestmentPopupTracker {
+  private token = 0;
+  private active: { token: number; dims: InvestmentFilterDimensions | null } | null = null;
+  private reveal: { token: number; controller: AbortController } | null = null;
+
+  constructor(private readonly popup: InvestmentPopupLike) {}
+
+  /**
+   * Call at the START of every popup open — dims is null for non-filter-
+   * scoped content (owner-cluster, Megaprojects — exempt by design). Returns
+   * the token this open was tagged with, for a reveal handler to key its
+   * in-flight fetch to.
+   */
+  open(dims: InvestmentFilterDimensions | null): number {
+    const token = ++this.token;
+    // A NEW popup opening always invalidates whatever reveal was in flight
+    // for the PREVIOUS popup. Abort it HERE, unconditionally, rather than
+    // relying on the close event — during a reuse the close event's ordering
+    // relative to this assignment cannot be trusted, but "a new popup is
+    // opening now" is always true at this exact point.
+    if (this.reveal) {
+      this.reveal.controller.abort();
+      this.reveal = null;
+    }
+    this.active = { token, dims };
+    this.popup.once("close", () => {
+      if (this.token !== token) return; // stale reuse close — a newer open already owns the state
+      this.active = null;
+      if (this.reveal?.token === token) {
+        this.reveal.controller.abort();
+        this.reveal = null;
+      }
+    });
+    return token;
+  }
+
+  /** The filter dimensions of whatever is CURRENTLY the active popup, or null. */
+  getActiveDims(): InvestmentFilterDimensions | null {
+    return this.active?.dims ?? null;
+  }
+
+  /** Whether `token` still identifies the currently active popup (not replaced/closed). */
+  isActiveToken(token: number): boolean {
+    return this.active?.token === token;
+  }
+
+  /** Begin tracking an in-flight reveal fetch, tagged to `token`. */
+  startReveal(token: number, controller: AbortController): void {
+    if (this.reveal) this.reveal.controller.abort();
+    this.reveal = { token, controller };
+  }
+
+  /** Stop tracking a reveal once it settles — a no-op if it was superseded. */
+  finishReveal(token: number, controller: AbortController): void {
+    if (this.reveal?.token === token && this.reveal.controller === controller) {
+      this.reveal = null;
+    }
+  }
+
+  hasInFlightReveal(): boolean {
+    return this.reveal !== null;
+  }
+
+  /**
+   * Close the active popup (via the caller-supplied `remove`) and abort its
+   * in-flight reveal, ONLY when its dims are out of the given filter's
+   * scope. Returns whether it closed. Called from the out-of-scope closing
+   * effect on every filter change.
+   */
+  closeIfOutOfScope(filter: InvestmentFilterState, remove: () => void): boolean {
+    if (!investmentPopupOutOfScope(this.getActiveDims(), filter)) return false;
+    if (this.reveal) {
+      this.reveal.controller.abort();
+      this.reveal = null;
+    }
+    remove();
+    this.active = null;
+    return true;
+  }
+}
+
+/**
  * Client-side filter over already-built point features, mirroring the vacancy
  * distress-filter pattern (components/vacancy/VacancyReportMap.tsx) that
  * rebuilds the source data with setData rather than a layer filter. A feature

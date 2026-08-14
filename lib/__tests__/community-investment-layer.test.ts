@@ -25,6 +25,7 @@ import {
   investmentRevealButtonLoadingState,
   investmentRevealButtonOutOfScopeState,
   investmentRevealButtonStateForResult,
+  InvestmentPopupTracker,
   makeMegaprojectRadiusScale,
   matchesInvestmentFilter,
   megaprojectStatusGroup,
@@ -39,6 +40,7 @@ import {
   MEGAPROJECT_STATUS_GROUP_BY_STATUS,
   type InvestmentFilterDimensions,
   type InvestmentPointFeature,
+  type InvestmentPopupLike,
   type InvestmentRecipientRecordStatus,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
@@ -418,6 +420,199 @@ describe("investmentPopupOutOfScope (Sol gate blocker 1 — open popup/panel ret
     expect(
       investmentPopupOutOfScope(null, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
     ).toBe(false);
+  });
+});
+
+/**
+ * Sol gate round 2, finding 1 — the Mapbox popup-REUSE lifecycle hole.
+ * `MockMapboxPopup` is a minimal, FAITHFUL emulation of the real
+ * mapbox-gl-js `Popup` class's addTo()/remove()/close semantics — verified
+ * directly against node_modules/mapbox-gl/dist/mapbox-gl-unminified.js:
+ *
+ *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); }
+ *   remove() { if (this._map) { this._map = undefined; ...; fire('close'); } }
+ *
+ * The load-bearing behavior under test: calling `.addTo()` on an
+ * ALREADY-attached popup instance calls `remove()` FIRST (synchronously
+ * firing "close" for whatever was previously showing) and only THEN
+ * re-attaches — i.e. reusing the shared popup for a new feature fires
+ * "close" for the OLD content as a side effect of opening the NEW one. A
+ * `.once()` listener registered for the OLD popup, still pending at that
+ * moment, fires and must be able to tell "this is my own close" apart from
+ * "an unrelated future close of whatever replaced me."
+ */
+class MockMapboxPopup implements InvestmentPopupLike {
+  private attached = false;
+  private closeHandlers: Array<() => void> = [];
+
+  once(event: "close", handler: () => void): void {
+    if (event !== "close") return;
+    const wrapped = () => {
+      this.closeHandlers = this.closeHandlers.filter((h) => h !== wrapped);
+      handler();
+    };
+    this.closeHandlers.push(wrapped);
+  }
+
+  /** Mirrors real mapbox-gl-js Popup.addTo(): remove() FIRST if already attached. */
+  addTo(): this {
+    if (this.attached) this.remove();
+    this.attached = true;
+    return this;
+  }
+
+  /** Mirrors real mapbox-gl-js Popup.remove(): fires "close" only if attached. */
+  remove(): this {
+    if (this.attached) {
+      this.attached = false;
+      const handlers = this.closeHandlers;
+      this.closeHandlers = [];
+      for (const handler of handlers) handler();
+    }
+    return this;
+  }
+
+  isAttached(): boolean {
+    return this.attached;
+  }
+}
+
+describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse lifecycle)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+  const ALL_FILTER = { yearRangeId: "all", activeFunderTypes: allFunderTypes };
+  const FILTER_2024_2026 = { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes };
+
+  // An ACTUAL 2021 RRF feature's dimensions (mirrors a real sba-rrf point:
+  // funderType always "government", governmentFundingPurpose always
+  // "programmatic" per SOURCE_GOVERNMENT_FUNDING_PURPOSE — only `year` varies
+  // per record, from the published approval date).
+  const RRF_2021: InvestmentFilterDimensions = {
+    year: 2021,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  };
+  const RRF_2022: InvestmentFilterDimensions = {
+    year: 2022,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  };
+
+  it("REPRODUCES the caller's correct sequence (addTo THEN open — MapView.tsx's actual order) and confirms it does NOT self-consume", () => {
+    // This is the reuse sequence MapView.tsx now uses at every popup-opening
+    // call site: call .addTo() (which fires the reuse's own stale close)
+    // BEFORE tracker.open() registers the NEW popup's own close listener —
+    // so that listener is never exposed to the close event that opened it.
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker(popup);
+
+    popup.addTo(); // first-ever open — no prior popup, no close fires
+    const tokenA = tracker.open(RRF_2021);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+
+    // Reuse: open B on the SAME popup instance. addTo() fires "close" for A
+    // BEFORE B's tracker.open() runs — reproducing the exact Mapbox ordering.
+    popup.addTo(); // <-- fires "close" for A here, synchronously
+    const tokenB = tracker.open(RRF_2022);
+
+    expect(tokenB).not.toBe(tokenA);
+    // (i) After the A→B reuse, the ref still holds B's dims — not wiped by
+    // A's stale close, and not self-consumed by B's own registration either.
+    expect(tracker.getActiveDims()).toEqual(RRF_2022);
+    expect(tracker.isActiveToken(tokenB)).toBe(true);
+    expect(tracker.isActiveToken(tokenA)).toBe(false);
+  });
+
+  it("(ii) a filter change that excludes B's record closes it and aborts B's in-flight reveal", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker(popup);
+
+    popup.addTo();
+    tracker.open(RRF_2021); // A
+    popup.addTo(); // reuse — A's stale close fires here
+    const tokenB = tracker.open(RRF_2022); // B, year 2022
+
+    // B has an in-flight reveal fetch.
+    const controllerB = new AbortController();
+    tracker.startReveal(tokenB, controllerB);
+    expect(tracker.hasInFlightReveal()).toBe(true);
+    expect(controllerB.signal.aborted).toBe(false);
+
+    // A 2024–2026 filter excludes B's 2022 record.
+    const closed = tracker.closeIfOutOfScope(FILTER_2024_2026, () => popup.remove());
+    expect(closed).toBe(true);
+    expect(popup.isAttached()).toBe(false);
+    expect(controllerB.signal.aborted).toBe(true);
+    expect(tracker.hasInFlightReveal()).toBe(false);
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("(iii) THE ORIGINAL REPRO: a real 2021 RRF popup, replaced via reuse then filtered by 2024–2026, ends closed with no reveal completion", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker(popup);
+
+    // Open the 2021 RRF popup (A).
+    popup.addTo();
+    tracker.open(RRF_2021);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+
+    // Replaced via reuse by a different RRF point, B — also 2021, so it
+    // stays in scope under "All" (proves the reuse itself doesn't spuriously
+    // close anything survivable).
+    popup.addTo();
+    const tokenB = tracker.open(RRF_2021);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+    expect(tracker.isActiveToken(tokenB)).toBe(true);
+
+    // B's admin starts a reveal fetch.
+    const controllerB = new AbortController();
+    let revealCompleted = false;
+    tracker.startReveal(tokenB, controllerB);
+    controllerB.signal.addEventListener("abort", () => {
+      // Simulates the real .then() guard: `if (controller.signal.aborted) return;`
+      revealCompleted = false;
+    });
+
+    // The admin selects 2024–2026 — excludes B's 2021 record.
+    const closed = tracker.closeIfOutOfScope(FILTER_2024_2026, () => popup.remove());
+
+    expect(closed).toBe(true);
+    expect(popup.isAttached()).toBe(false);
+    expect(controllerB.signal.aborted).toBe(true);
+    // The reveal never lands — its .then() would see signal.aborted and bail.
+    expect(revealCompleted).toBe(false);
+    expect(tracker.hasInFlightReveal()).toBe(false);
+    expect(tracker.getActiveDims()).toBeNull();
+    // And re-opening under "All" again confirms the tracker is in a clean
+    // state, not stuck from the prior sequence.
+    popup.addTo();
+    const tokenC = tracker.open(RRF_2021);
+    expect(investmentPopupOutOfScope(tracker.getActiveDims(), ALL_FILTER)).toBe(false);
+    expect(tracker.isActiveToken(tokenC)).toBe(true);
+  });
+
+  it("a GENUINE close (no replacement — e.g. the user's own X button) still clears state correctly", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker(popup);
+    popup.addTo();
+    tracker.open(RRF_2021);
+    popup.remove(); // genuine close, not a reuse
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("a THIRD reuse (A→B→C) never lets a stale close from A or B corrupt C's state", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker(popup);
+    const DIMS_C: InvestmentFilterDimensions = { year: 2023, funderType: "government", governmentFundingPurpose: "programmatic" };
+
+    popup.addTo();
+    tracker.open(RRF_2021); // A
+    popup.addTo(); // A's stale close
+    tracker.open(RRF_2022); // B
+    popup.addTo(); // B's stale close
+    const tokenC = tracker.open(DIMS_C); // C
+
+    expect(tracker.getActiveDims()).toEqual(DIMS_C);
+    expect(tracker.isActiveToken(tokenC)).toBe(true);
   });
 });
 
