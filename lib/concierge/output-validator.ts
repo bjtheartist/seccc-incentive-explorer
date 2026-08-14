@@ -134,6 +134,52 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   // model might reasonably produce. "your X" has no article ambiguity —
   // always a reader claim, safe as a plain regex here.
   { pattern: /\byour\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
+  // "the application/project/request was denied" (a DEFINITE article,
+  // not "your") — same reason string as the entry above; kept as its
+  // own regex only because the article differs.
+  //
+  // review10 S29/S30/S31 (coordinator's binding design ruling, replacing
+  // review7 S19(b) through review9 S28): this used to carry a
+  // "reported-speech exemption" — skip the violation if a marker verb
+  // like "said"/"reports"/"notes" appeared earlier in the sentence, on
+  // the theory that "the application" (no "your") is ambiguous between
+  // the reader's own submission and a third party's, relayed in reported
+  // speech ("Jane said the application was denied last cycle").
+  //
+  // Three consecutive review rounds (S19(b) → S25 → S28 → S29/S30/S31)
+  // each closed one bypass shape in that exemption's grammar and a new
+  // one was found the very next round: missing present-tense verb
+  // inflections (S25), missing subject-awareness letting first-party/
+  // product-owned sources and imperative constructions through (S28),
+  // then first-person "I heard", multi-word product-owned subjects
+  // across punctuation, and "according to our records" (S29/S30), while
+  // the subject-scoping fix ITSELF newly broke genuine nested third-
+  // party attribution ("We note that the city clerk reported the
+  // application was denied" — S31). A regex grammar of English
+  // attribution can always be evaded; three rounds of whack-a-mole
+  // proved it empirically rather than hypothetically.
+  //
+  // The coordinator's binding ruling: DELETE the exemption. Every
+  // occurrence of this phrase — regardless of framing, subject, or
+  // reported-speech context — is now an unconditional hit, exactly like
+  // every other entry in this array. Rationale (also recorded in
+  // docs/eligibility-claims-acceptance.md):
+  //   1. The failure modes are asymmetric. Over-blocking costs one
+  //      deterministic-fallback answer in place of a legitimate
+  //      informational sentence; under-blocking leaks a legal-adjacent
+  //      determination about an application's outcome. Given a choice
+  //      between an occasional unnecessary fallback and a real leak,
+  //      the fallback is always the cheaper failure.
+  //   2. The assistant has no legitimate need to assert "the application
+  //      was denied" in ANY framing. Program guidance never requires
+  //      stating a specific application's outcome, third-party or
+  //      otherwise — a genuinely informational answer can convey the
+  //      same substance without tripping this phrase family at all.
+  //   3. No exemption grammar has survived contact with adversarial
+  //      review. Every carve-out this file has ever added for this
+  //      family has been bypassed within one to two review rounds.
+  //      Removing the carve-out removes the bypass surface entirely.
+  { pattern: /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
@@ -179,112 +225,6 @@ function findAuthorityRoutingViolation(text: string): string | null {
 }
 
 /**
- * review7 S19(b) (HIGH) — "the application/project/request was denied"
- * (a DEFINITE article, not "your") is genuinely ambiguous: it can mean
- * the reader's own submission (a real determination this validator must
- * catch) OR someone else's, relayed in reported speech — "Jane said the
- * application was denied last cycle" is a third-party, informational
- * sentence, not a claim about THIS reader. An earlier fix
- * (review6 S16) required "your" OR "the" before the noun, closing the
- * fully-optional-article false positive it was reviewed for ("Another
- * applicant's request was denied") — but "the application ... denied"
- * on its own is still ambiguous in exactly the shape this finding names.
- *
- * "your X ... denied" has no such ambiguity (kept as a plain
- * PROHIBITED_PATTERNS regex above — it always means the reader). This
- * function handles ONLY the "the X ... denied" case, SENTENCE BY
- * SENTENCE (same technique as the authority-routing check above): a
- * match is a real violation UNLESS the SAME sentence carries a
- * reported-speech marker (said/told/mentioned/reported/noted/stated/
- * wrote/explained, and their present-tense inflections — says/tells/
- * mentions/reports/notes/states/writes/explains — review8 S25) BEFORE
- * the match — a reliable proxy for "this is being relayed about someone
- * else," not asserted about the reader.
- * Not exhaustive (no marker-list is), but restores the same "restrict
- * to reader context" discipline every other family in this file
- * already follows, rather than leaving "the application" either fully
- * unmatched (missing real violations) or fully unrestricted (the S16
- * regression this finding is about).
- *
- * review8 S25 (HIGH): the original list only covered PAST-tense/one-off
- * forms (said/told/mentioned/reported/noted/stated/wrote/explained), so
- * a present-tense report — "The program guide says/explains/notes that
- * the application was denied in the example" — wasn't recognized as
- * reported speech and was wrongly rejected as a reader-facing denial
- * claim. Each verb now carries both its base/present third-person form
- * (`s?` handles "say"/"says", "tell"/"tells", etc.) and its past-tense
- * form, plus `indicates?`/`indicated` and `describes?`/`described` as
- * two more common framing verbs the coordinator's "etc." invited.
- *
- * review9 S28 (HIGH): S25 widened the MARKER list but never checked the
- * marker's own SUBJECT — any reporting verb anywhere before the match
- * exempted the sentence, so "Our records say the application was
- * denied," "We state the application was denied," and "Please note the
- * application was denied" all wrongly returned `hit: false`. Those are
- * first-party/product-owned direct determinations (or, for the
- * imperative case, no third party at all) — not someone else's speech
- * being relayed. `hasDisqualifyingReportingSubject()` below cancels the
- * exemption when the marker's subject is first-person/product-owned
- * (we/our/us/I directly before the verb) or when the verb has NO
- * subject at all (sentence/clause-initial, optionally after "please" —
- * an imperative instruction). Genuine third-party subjects — "Jane
- * said," "the program guide says," "according to the newsletter," and
- * "I heard" (hearsay — information received FROM elsewhere, the exact
- * third-party-sourced shape this exemption exists for, and an
- * already-established S19(b) control) — are deliberately left
- * unaffected; "hear(d)" and "according to" are excluded from the
- * disqualifying-verb set for exactly that reason.
- */
-const DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN =
-  /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i;
-const REPORTED_SPEECH_MARKER_PATTERN =
-  /\b(?:says?|said|tells?|told|mentions?|mentioned|reports?|reported|notes?|noted|states?|stated|writes?|wrote|explains?|explained|hears?|heard|indicates?|indicated|describes?|described|claims?|claimed|according\s+to)\b/i;
-
-// review9 S28: the subset of REPORTED_SPEECH_MARKER_PATTERN's verbs that
-// plausibly describe a DIRECT, self-sourced assertion when the subject is
-// first-person/product-owned, or an imperative instruction with no subject
-// at all. Deliberately excludes "hear(d)" (hearsay stays exempt — see
-// docstring above) and "according to" (a source-attribution preposition
-// regardless of what, if anything, precedes it).
-const FIRST_PARTY_DISQUALIFYING_VERBS =
-  "says?|said|tells?|told|mentions?|mentioned|reports?|reported|notes?|noted|states?|stated|writes?|wrote|explains?|explained|indicates?|indicated|describes?|described|claims?|claimed";
-
-/** "we/our/us/I [optionally 1-2 words] VERB" — a first-person or
- *  product-owned subject directly asserting something, not relaying a
- *  third party's statement. Matches "Our records say ...", "We state
- *  ...", "I explained ...". */
-const FIRST_PARTY_SUBJECT_PATTERN = new RegExp(
-  `\\b(?:we|our|us|i)\\b(?:\\s+[a-z']+){0,2}\\s+(?:${FIRST_PARTY_DISQUALIFYING_VERBS})\\b`,
-  "i"
-);
-
-/** A reporting verb as the very FIRST word of its sentence/clause
- *  (optionally after "please") has no subject at all — an imperative
- *  instruction, not third-party attribution. Matches "Please note ...",
- *  "Note that ...", "State that ..." at the start of `before`. */
-const IMPERATIVE_REPORTING_PATTERN = new RegExp(
-  `(?:^|[.!?;]\\s+)\\s*(?:please\\s+)?(?:${FIRST_PARTY_DISQUALIFYING_VERBS})\\b`,
-  "i"
-);
-
-function hasDisqualifyingReportingSubject(before: string): boolean {
-  return FIRST_PARTY_SUBJECT_PATTERN.test(before) || IMPERATIVE_REPORTING_PATTERN.test(before);
-}
-
-function findApplicationDeniedViolation(text: string): string | null {
-  for (const sentence of splitIntoSentences(text)) {
-    const match = DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN.exec(sentence);
-    if (!match) continue;
-    const before = sentence.slice(0, match.index);
-    if (REPORTED_SPEECH_MARKER_PATTERN.test(before) && !hasDisqualifyingReportingSubject(before)) {
-      continue;
-    }
-    return "application-denied";
-  }
-  return null;
-}
-
-/**
  * Validate one buffered assistant turn. Deterministic, synchronous, no
  * model calls — the enforcement layer is not itself an AI judgment.
  */
@@ -295,20 +235,14 @@ export function validateConciergeOutput(rawText: string): ConciergeValidationRes
   // affirmative-sounding sentence ("Great news — ...") through unflagged.
   // For a live chat surface under active adversarial probing, any
   // occurrence of these phrases is a hard reject to the deterministic
-  // fallback, never a patch-up.
+  // fallback, never a patch-up. This now includes BOTH the "your X was
+  // denied" and "the X was denied" application-denied families — see
+  // the review10 S29/S30/S31 comment above the latter entry for why the
+  // definite-article form no longer carries a reported-speech exemption.
   for (const { pattern, reason } of PROHIBITED_PATTERNS) {
     if (pattern.test(rawText)) {
       return { text: rawText, hit: true, reason };
     }
-  }
-
-  // review7 S19(b): same "raw text, before normalization" reasoning as
-  // PROHIBITED_PATTERNS above — this is the same category of check (a
-  // negative-determination phrase), just with sentence-level
-  // third-party context awareness a single regex can't express.
-  const applicationDeniedViolation = findApplicationDeniedViolation(rawText);
-  if (applicationDeniedViolation) {
-    return { text: rawText, hit: true, reason: applicationDeniedViolation };
   }
 
   const normalized = normalizePublicDeterminationText(rawText);

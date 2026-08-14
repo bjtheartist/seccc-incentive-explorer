@@ -3110,3 +3110,154 @@ programs:public:check` clean.
 5 pre-existing warnings (unchanged); full `npx vitest run` — **326 test
 files, 4088 passed, 2 skipped**; `npm run programs:public:check` clean;
 `git status` clean; nothing pushed or merged.
+
+---
+
+## Review 10 (`scratchpad/battle-test/review10-out.md`) — S29–S31 closed by BINDING DESIGN SIMPLIFICATION, not another grammar patch
+
+### S29/S30/S31 (HIGH/HIGH/MEDIUM) — the reported-speech exemption's grammar was proven permanently bypassable; the coordinator ruled to delete it
+
+**Finding:** three MORE bypass shapes in S28's subject-aware reported-
+speech exemption, found the very next review round:
+- **S29** — first-person hearsay from THIS product assistant ("I heard
+  the application was denied") still returned `hit: false`. S28
+  deliberately preserved hearsay as exempt (real third-party-sourced
+  information), but coming from the product's OWN assistant, "I heard
+  X" still asserts product knowledge of a specific outcome — a different
+  case from a THIRD PARTY's own hearsay in a sentence the assistant is
+  merely relaying.
+- **S30** — the two-word subject window and narrow clause-boundary
+  regex remained bypassable via multi-word product-owned subjects
+  ("Our team's internal records say..."), intensifiers between subject
+  and verb ("Our records very clearly say..."), non-"."/"!"/"?"/";"
+  clause boundaries ("As a reminder, please note..." — a comma, not a
+  sentence boundary), and "according to our records" (first-party
+  despite the exempted preposition).
+- **S31** — the S28 fix's own subject-scoping had, in closing S28's
+  gap, newly BROKEN genuine nested third-party attribution: "We note
+  that the city clerk reported the application was denied" (the
+  OUTERMOST clause is first-person "We note," but the actual source of
+  the denial claim is the nested "the city clerk reported") now wrongly
+  returned `hit: true` — a false positive the S28 fix introduced by
+  scanning the whole prefix instead of associating each marker with its
+  own nearest source.
+
+This was the THIRD consecutive review round targeting the same
+exemption's grammar (S19(b) → S25 → S28 → S29/S30/S31), each one
+closing exactly the bypass shape the prior round named while leaving
+(or in S31's case, actively creating) another.
+
+**Coordinator's binding ruling — a design change, not a fourth patch:**
+DELETE the reported-speech exemption entirely for the "application/
+project/request denied" determination-outcome phrase family. Every
+sentence containing this phrase — regardless of subject, tense,
+reported-speech marker, or nesting — now trips the validator
+unconditionally, exactly like every OTHER entry in `PROHIBITED_PATTERNS`.
+No subject analysis, no hearsay carve-out, no "according to" logic.
+
+Audited every sibling family in the file for a similar carve-out, per
+the ruling's explicit instruction — none exists.
+`findAuthorityRoutingViolation` (the ZBA authority-routing check) and
+every other `PROHIBITED_PATTERNS` entry are plain, unconditional regex
+matches with no reported-speech-style exemption; the definite-article
+"the application ... denied" family was the ONLY exemption of this kind
+anywhere in this file. Nothing else to remove.
+
+**Rationale (recorded here per the coordinator's explicit instruction):**
+1. **The failure modes are asymmetric.** Over-blocking costs one
+   deterministic-fallback answer in place of a legitimate informational
+   sentence; under-blocking leaks a legal-adjacent determination about a
+   specific application's outcome. Given a choice between an occasional
+   unnecessary fallback and a real leak, the fallback is always the
+   cheaper failure — and it degrades gracefully (the fallback message
+   itself points the user to programs/report-builder/named-program
+   lookup, not a dead end).
+2. **The assistant has no legitimate need to assert this phrase in ANY
+   framing.** Program guidance never requires stating a specific
+   application's outcome — third-party or otherwise — to answer a
+   user's question usefully. A genuinely informational answer can
+   convey the same substance without ever needing this exact phrase
+   shape.
+3. **A regex grammar of English attribution can always be evaded.**
+   Three consecutive review rounds (S19(b) → S25 → S28, then S29/S30/S31
+   the very next round after S28 shipped) each closed one bypass shape
+   only for the next round to find another — including S31, where the
+   fix ITSELF introduced a new false positive. This is not a
+   hypothetical risk; it is what actually happened, empirically, across
+   four rounds of the same exemption. Removing the exemption removes
+   the entire bypass surface, permanently, rather than narrowing it one
+   more time.
+
+**Implementation:** `lib/concierge/output-validator.ts` —
+- Deleted `hasDisqualifyingReportingSubject()`, `FIRST_PARTY_SUBJECT_PATTERN`,
+  `IMPERATIVE_REPORTING_PATTERN`, `FIRST_PARTY_DISQUALIFYING_VERBS`,
+  `REPORTED_SPEECH_MARKER_PATTERN`, `DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN`
+  (as a standalone const), and `findApplicationDeniedViolation()` — the
+  entire exemption apparatus, in full.
+- The definite-article "the application/project/request was/is/has
+  been/will be denied/rejected" regex moved directly into
+  `PROHIBITED_PATTERNS`, immediately after the existing "your X ...
+  denied" entry, with the SAME `reason: "application-denied"` string —
+  now just one more unconditional entry in that array, structurally
+  identical to every other family in the file.
+- `validateConciergeOutput`'s dedicated `findApplicationDeniedViolation`
+  call site removed; the definite-article check now runs through the
+  same `PROHIBITED_PATTERNS` loop as everything else.
+- `splitIntoSentences` remains (still used by `findAuthorityRoutingViolation`,
+  unaffected by this change).
+
+**Tests rewritten:** `lib/concierge/__tests__/output-validator.test.ts`
+(net -11, from 135 to 124 tests — several redundant/superseded
+assertions consolidated):
+- The S19(b) describe block trimmed to only its still-valid mechanics
+  (the "your X" / bare "the X ... denied" tests) — its former
+  third-party "exempt" control loop removed (superseded).
+- The S25 and S28 describe blocks removed entirely — their premises
+  (a marker-based exemption, then a subject-aware exemption) no longer
+  exist.
+- One new consolidated describe block
+  ("review10: reported-speech exemption deleted...") is now the single
+  source of truth for the FULL bypass history: all 16 former "exempt
+  third-party controls" from S19(b) (6) and S25 (10), all 4 already-
+  rejected S28 bypasses (including the your-form sanity check), and 6
+  new S29/S30/S31-named bypass strings (including S31's genuine nested
+  third-party attribution, now also an unconditional hit BY DESIGN) —
+  26 strings total — every one now asserts `hit: true, reason:
+  "application-denied"`. Plus the 3 core reader-facing-denial controls
+  (unaffected either way), and a new assertion confirming
+  `CONCIERGE_VALIDATOR_FALLBACK_MESSAGE` itself (the text substituted on
+  every hit) contains no determination-outcome phrase — re-asserted per
+  the coordinator's explicit instruction, since a validator that
+  rejected its OWN fallback text would degrade every hit into a second,
+  silent failure.
+
+**Verification:** `npx tsc --noEmit` clean (no dangling references to
+any deleted symbol). Empirical regression check via `git stash push
+--keep-index -- lib/concierge/output-validator.ts` (S13/S18/.../S28
+discipline): 21 of the 26 bypass-history strings failed against the
+pre-fix (S28-era, exemption-still-present) code — exactly the 5 that
+were ALREADY correctly rejected under S28's OWN subject-aware fix
+("Our records say the application was denied," "We state...,"
+"Please note...," "Our records say your application was denied," and
+"We note the application was denied" — all first-party/imperative
+shapes S28 already caught) remained passing on old code too, since this
+round's design change is a superset, not a contradiction, of S28's
+narrower fix. All other 103 tests unaffected. `git stash pop` restored
+the fix; re-ran `tsc --noEmit` (clean) and the full test file (124/124
+passed), plus the 3 other files that import `output-validator`
+(`route-persistence-parity.test.ts`, `source-guard-ast.test.ts`,
+`report-engine.test.ts` — 114 tests, no regression). Full repo `npx
+eslint .` — 0 errors, the same 5 pre-existing warnings, unchanged. Full
+`npx vitest run` — **326 test files, 4077 passed, 2 skipped** (down
+from Review 9's 326/4088 — net -11 from the test consolidation, not a
+coverage loss: every removed assertion's underlying claim is either
+superseded by the design change or re-asserted, in the opposite
+direction, inside the new consolidated block). `npm run
+programs:public:check` clean.
+
+**Final gate, run at HEAD of `feat/eligibility-claims-cutover`
+(1 commit: S29-S31):** `npx tsc --noEmit` clean; `npx eslint .` — 0
+errors, 5 pre-existing warnings (unchanged); full `npx vitest run` —
+**326 test files, 4077 passed, 2 skipped**; `npm run
+programs:public:check` clean; `git status` clean; nothing pushed or
+merged.

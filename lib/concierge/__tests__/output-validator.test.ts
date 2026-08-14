@@ -15,6 +15,7 @@ import {
   setConciergeValidatorLogEmitter,
   validateConciergeOutput,
 } from "../output-validator";
+import { CONCIERGE_VALIDATOR_FALLBACK_MESSAGE } from "../system-prompt";
 
 beforeEach(() => {
   resetConciergeValidatorTelemetry();
@@ -288,46 +289,30 @@ describe("validateConciergeOutput — S19(a) restored future/contraction 'qualif
 });
 
 /**
- * review7 S19(b) (HIGH): review6 S16's "application/project denied" fix
- * required "your" OR "the" before the noun — closing the fully-optional-
- * article false positive it was reviewed for, but "the application ...
- * denied" is STILL ambiguous on its own: it can mean the reader's own
- * submission, or someone else's relayed in reported speech ("Jane said
- * the application was denied last cycle" — the coordinator's own named
- * example). `findApplicationDeniedViolation` restricts the definite-
- * article form to reader context via a reported-speech-marker exclusion,
- * sentence by sentence; "your X" (no article ambiguity) is unaffected.
+ * review7 S19(b): review6 S16's "application/project denied" fix required
+ * "your" OR "the" before the noun — closing the fully-optional-article
+ * false positive it was reviewed for. This block now covers only the
+ * base article mechanics that survive review10's design change below:
+ * "your X" (no article ambiguity, always a reader claim) and a bare "the
+ * X ... denied" with nothing before it. Every historical THIRD-PARTY
+ * "exempt" control this block used to assert (S19(b)'s own, plus S25's
+ * and S28's) has been superseded — see the "review10" block below, where
+ * they now assert the OPPOSITE: rejected, unconditionally, by design.
  */
-describe("validateConciergeOutput — S19(b) definite-article application-denied restricted to reader context", () => {
+describe("validateConciergeOutput — S19(b) definite-article application-denied", () => {
   it("still rejects 'your application was denied' — no article ambiguity", () => {
     const result = validateConciergeOutput("Your application was denied.");
     expect(result.hit).toBe(true);
     expect(result.reason).toBe("application-denied");
   });
 
-  it("still rejects a bare 'the application was denied' with no third-party framing", () => {
+  it("still rejects a bare 'the application was denied' with no preceding context", () => {
     const result = validateConciergeOutput("The application was denied last cycle.");
     expect(result.hit).toBe(true);
     expect(result.reason).toBe("application-denied");
   });
 
-  const THIRD_PARTY_DEFINITE_ARTICLE_CONTROLS: string[] = [
-    "Jane said the application was denied last cycle.",
-    "My accountant told me the application was denied.",
-    "According to the newsletter, the project was rejected last quarter.",
-    "A neighboring business owner mentioned the request was denied.",
-    "The city clerk reported the application was denied for missing paperwork.",
-    "I heard the project was rejected, but I haven't confirmed it.",
-  ];
-
-  for (const text of THIRD_PARTY_DEFINITE_ARTICLE_CONTROLS) {
-    it(`does NOT reject the coordinator's third-party control shape: "${text}"`, () => {
-      const result = validateConciergeOutput(text);
-      expect(result.hit, text).toBe(false);
-    });
-  }
-
-  it("a reported-speech marker in an EARLIER, separate sentence does not excuse a LATER sentence's genuine reader-facing denial claim", () => {
+  it("a claim earlier in a multi-sentence answer does not excuse a LATER sentence's genuine reader-facing denial claim", () => {
     const result = validateConciergeOutput(
       "Jane said she had a similar situation last year. The application was denied for your case specifically.",
     );
@@ -337,130 +322,120 @@ describe("validateConciergeOutput — S19(b) definite-article application-denied
 });
 
 /**
- * review8 S25 (HIGH): the reported-speech marker list above only covered
- * past-tense/one-off forms (said/told/mentioned/reported/noted/stated/
- * wrote/explained) — a present-tense report like "the program guide
- * says/explains that the application was denied in the example" wasn't
- * recognized, so it was wrongly rejected as a reader-facing denial claim.
- * Table-driven: every present-tense inflection of an already-covered verb
- * must be recognized (hit: false), while every genuine reader-facing
- * denial form from the S19(b) suite above must still be rejected
- * (hit: true, reason: "application-denied") — no over-correction.
+ * review10 (`scratchpad/battle-test/review10-out.md`, S29/S30/S31) — the
+ * coordinator's BINDING DESIGN RULING, replacing three consecutive review
+ * rounds of reported-speech-exemption grammar patches (S19(b) → S25 →
+ * S28) that each closed one bypass shape only for the next round to find
+ * another: S29 found first-person "I heard the application was denied"
+ * still exempt (hearsay was deliberately preserved by S28's design, but
+ * from a PRODUCT assistant that's still an assertion of product
+ * knowledge); S30 found product-owned sources across bounded modifiers/
+ * punctuation ("Our team's internal records say...", "As a reminder,
+ * please note...") and "according to our records" (first-party despite
+ * the preposition) still bypassing the subject check; S31 found the
+ * subject-scoping fix ITSELF had newly broken genuine nested third-party
+ * attribution ("We note that the city clerk reported the application was
+ * denied" — a real third-party statement — now wrongly REJECTED).
+ *
+ * The ruling: DELETE the reported-speech exemption entirely, for this
+ * determination-outcome phrase family and any sibling family with a
+ * similar carve-out (audited — `findAuthorityRoutingViolation` and every
+ * `PROHIBITED_PATTERNS` entry are all plain, unconditional matches; this
+ * was the ONLY exemption of this kind in the file). Every sentence
+ * containing "the/your application/project/request was/is/has been/will
+ * be denied/rejected" is now an unconditional hit — no subject analysis,
+ * no hearsay carve-out, no "according to" logic, regardless of framing,
+ * tense, or nesting.
+ *
+ * Rationale (also recorded in docs/eligibility-claims-acceptance.md):
+ *   1. The failure modes are asymmetric — over-blocking costs one
+ *      deterministic-fallback answer; under-blocking leaks a legal-
+ *      adjacent determination about a specific application's outcome.
+ *   2. The assistant has no legitimate need to assert this phrase in ANY
+ *      framing — program guidance never requires stating a specific
+ *      application's outcome, third-party or otherwise.
+ *   3. A regex grammar of English attribution can always be evaded, as
+ *      three consecutive review rounds (S19(b)/S25/S28, then S29/S30/S31
+ *      the very next round) empirically proved.
+ *
+ * This block is now the single source of truth for the FULL bypass
+ * history: every string ever used across S14/S19(b)/S25/S28/S29/S30/S31,
+ * whether originally a violation or a (now-deleted) "exempt third-party
+ * control," asserts hit:true, reason:"application-denied" — documenting
+ * every shape that existed and confirming none of them work anymore.
  */
-describe("validateConciergeOutput — S25 present-tense reported-speech inflections", () => {
-  const SAFE_PRESENT_TENSE_DESCRIPTIONS: string[] = [
-    "The program guide says the application was denied in the example.",
-    "The program guide explains that the application was denied in the example.",
-    "The FAQ notes that the application was denied in a similar case last year.",
-    "The city website reports the application was denied for missing paperwork.",
-    "The handbook states the application was denied when the deadline was missed.",
-    "The memo tells readers the application was denied in that scenario.",
-    "The article mentions the project was rejected during a prior round.",
-    "The bulletin writes that the request was denied for incomplete documents.",
-    "The summary indicates the application was denied for that applicant.",
-    "The case study describes how the application was denied in a past cycle.",
-  ];
-
-  for (const text of SAFE_PRESENT_TENSE_DESCRIPTIONS) {
-    it(`recognizes present-tense reported speech and does NOT reject: "${text}"`, () => {
-      const result = validateConciergeOutput(text);
-      expect(result.hit, text).toBe(false);
-    });
-  }
-
-  const READER_FACING_DENIAL_CONTROLS: Array<{ text: string; reason: string }> = [
-    { text: "Your application was denied.", reason: "application-denied" },
-    { text: "The application was denied last cycle.", reason: "application-denied" },
-    { text: "Your project is denied for TIF financing.", reason: "application-denied" },
-  ];
-
-  for (const { text, reason } of READER_FACING_DENIAL_CONTROLS) {
-    it(`still rejects the genuine reader-facing denial control: "${text}"`, () => {
-      const result = validateConciergeOutput(text);
-      expect(result.hit, text).toBe(true);
-      expect(result.reason).toBe(reason);
-    });
-  }
-});
-
-/**
- * review9 S28 (HIGH): S25's reported-speech exemption checked only for a
- * marker verb ANYWHERE before the match, never its SUBJECT — so a
- * first-party/product-owned direct determination ("Our records say...",
- * "We state...") or an imperative instruction with no subject at all
- * ("Please note...") wrongly qualified for the same exemption meant for
- * genuine third-party attribution ("Jane said...", "the program guide
- * says..."). Table-driven: the three coordinator-named bypasses must now
- * be rejected; every S25 third-party inflection case and every S19(b)/
- * S25 reader-facing-denial control must still behave exactly as before.
- */
-describe("validateConciergeOutput — S28 reported-speech exemption is subject-aware", () => {
-  const FIRST_PARTY_AND_IMPERATIVE_BYPASSES: string[] = [
-    "Our records say the application was denied.",
-    "We state the application was denied.",
-    "Please note the application was denied.",
-  ];
-
-  for (const text of FIRST_PARTY_AND_IMPERATIVE_BYPASSES) {
-    it(`no longer exempts the first-party/imperative bypass — still rejects: "${text}"`, () => {
-      const result = validateConciergeOutput(text);
-      expect(result.hit, text).toBe(true);
-      expect(result.reason).toBe("application-denied");
-    });
-  }
-
-  // The named "your"-form control confirming the coordinator's own point:
-  // this shape was ALREADY caught by the separate `your` rule, unaffected
-  // by S25/S28 either way — included as a non-regression sanity check.
-  it("'Our records say your application was denied' is still rejected via the separate your-form rule", () => {
-    const result = validateConciergeOutput("Our records say your application was denied.");
-    expect(result.hit).toBe(true);
-    expect(result.reason).toBe("application-denied");
-  });
-
-  const STILL_EXEMPT_THIRD_PARTY_CASES: string[] = [
-    // S25 present-tense inflections — genuine third-party/product sources,
-    // not first-person or imperative.
-    "The program guide says the application was denied in the example.",
-    "The program guide explains that the application was denied in the example.",
-    "The FAQ notes that the application was denied in a similar case last year.",
-    "The city website reports the application was denied for missing paperwork.",
-    "The handbook states the application was denied when the deadline was missed.",
-    "The memo tells readers the application was denied in that scenario.",
-    "The article mentions the project was rejected during a prior round.",
-    "The bulletin writes that the request was denied for incomplete documents.",
-    "The summary indicates the application was denied for that applicant.",
-    "The case study describes how the application was denied in a past cycle.",
-    // S19(b) third-party controls, including "I heard" — hearsay (info
-    // received FROM elsewhere) stays exempt even though "I" is first-person.
+describe("validateConciergeOutput — review10: reported-speech exemption deleted, all determination-outcome phrasings reject unconditionally", () => {
+  const ALL_HISTORICAL_AND_NEW_BYPASS_STRINGS: string[] = [
+    // S19(b) — genuine third-party attribution, formerly exempt.
     "Jane said the application was denied last cycle.",
     "My accountant told me the application was denied.",
     "According to the newsletter, the project was rejected last quarter.",
     "A neighboring business owner mentioned the request was denied.",
     "The city clerk reported the application was denied for missing paperwork.",
     "I heard the project was rejected, but I haven't confirmed it.",
+    // S25 — present-tense third-party inflections, formerly exempt.
+    "The program guide says the application was denied in the example.",
+    "The program guide explains that the application was denied in the example.",
+    "The FAQ notes that the application was denied in a similar case last year.",
+    "The city website reports the application was denied for missing paperwork.",
+    "The handbook states the application was denied when the deadline was missed.",
+    "The memo tells readers the application was denied in that scenario.",
+    "The article mentions the project was rejected during a prior round.",
+    "The bulletin writes that the request was denied for incomplete documents.",
+    "The summary indicates the application was denied for that applicant.",
+    "The case study describes how the application was denied in a past cycle.",
+    // S28 — first-party/imperative bypasses, already rejected under S28's
+    // subject-aware fix; still rejected now that the whole mechanism is gone.
+    "Our records say the application was denied.",
+    "We state the application was denied.",
+    "Please note the application was denied.",
+    "Our records say your application was denied.",
+    // S29 — first-person hearsay FROM THIS PRODUCT ASSISTANT still
+    // asserts product knowledge; no carve-out survives it.
+    "I heard the application was denied.",
+    // S30 — product-owned sources across bounded modifiers/punctuation,
+    // and "according to our records" (first-party despite the preposition).
+    "Our team's internal records say the application was denied.",
+    "Our records very clearly say the application was denied.",
+    "As a reminder, please note the application was denied.",
+    "According to our records, the application was denied.",
+    // S31 — genuine NESTED third-party attribution is now ALSO an
+    // unconditional hit, by design (rationale #1: over-blocking one
+    // genuine nested-attribution sentence costs a single fallback
+    // answer; the alternative is a fourth exemption-grammar patch with
+    // no reason to expect it survives a fourth review round).
+    "We note that the city clerk reported the application was denied.",
+    "We note the application was denied.",
   ];
 
-  for (const text of STILL_EXEMPT_THIRD_PARTY_CASES) {
-    it(`genuine third-party attribution remains exempt, unaffected by the subject-aware fix: "${text}"`, () => {
+  for (const text of ALL_HISTORICAL_AND_NEW_BYPASS_STRINGS) {
+    it(`unconditionally rejects — no reported-speech exemption survives: "${text}"`, () => {
       const result = validateConciergeOutput(text);
-      expect(result.hit, text).toBe(false);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason, text).toBe("application-denied");
     });
   }
 
-  const READER_FACING_DENIALS_STILL_REJECTED: string[] = [
+  // Direct reader-facing denials — the baseline the exemption never
+  // should have applied to in the first place, unaffected by any of this.
+  const READER_FACING_DENIALS: string[] = [
     "Your application was denied.",
     "The application was denied last cycle.",
     "Your project is denied for TIF financing.",
   ];
 
-  for (const text of READER_FACING_DENIALS_STILL_REJECTED) {
-    it(`genuine reader-facing denials (no reporting verb at all) remain rejected: "${text}"`, () => {
+  for (const text of READER_FACING_DENIALS) {
+    it(`genuine reader-facing denial still rejects: "${text}"`, () => {
       const result = validateConciergeOutput(text);
       expect(result.hit, text).toBe(true);
       expect(result.reason).toBe("application-denied");
     });
   }
+
+  it("the deterministic validator fallback message itself contains no determination-outcome phrase (re-asserted per the binding ruling)", () => {
+    const result = validateConciergeOutput(CONCIERGE_VALIDATOR_FALLBACK_MESSAGE);
+    expect(result.hit).toBe(false);
+  });
 });
 
 /**
