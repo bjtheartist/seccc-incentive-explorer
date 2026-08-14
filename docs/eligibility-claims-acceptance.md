@@ -1344,3 +1344,95 @@ existing `useState` calls, no hooks added/removed/reordered.
 same 5 pre-existing warnings (line numbers shifted, same 4 files/lines);
 full `npx vitest run` — **319 test files, 3787 passed, 2 skipped** (up
 from S8's 318/3761); `npm run programs:public:check` clean.
+
+### S10 (MEDIUM, FINAL) — executable contract checks for the public-claim-surface registry
+
+**Finding:** `lib/public-claim-surfaces.ts`'s registry existed to enumerate
+every surface responsible for a `PublicProgramView`/`ZoneEvidence`/
+`reviewed-copy` claim contract, but its ONLY verification
+(`lib/__tests__/public-claim-surfaces.test.ts`) checked that each entry's
+listed `files` existed on disk. Path-existence proves the registry isn't
+stale-pointing; it proves NOTHING about whether a surface actually
+honors the contract it claims — a surface tagged `PublicProgramView`
+could import raw `Program`/the internal catalog directly, or a surface
+tagged `ZoneEvidence` could still be using the v1 zone-check function,
+and the registry's own test would never notice either.
+
+**Fix:** new `lib/public-claim-surfaces-verify.ts` adds a real,
+executable check for the two contracts with a genuinely testable
+invariant (chosen because they are exactly the two historical bug
+shapes S1-S3 spent this whole pass removing from real surfaces, so a
+regression here is not hypothetical):
+- **`ZoneEvidence`**: fails if any of the surface's listed files
+  reference the v1 function `normalizeZoneCheckResponse` as an
+  identifier anywhere — that function defaults an unresolved layer to
+  `false`, indistinguishable from a confirmed non-match.
+- **`PublicProgramView`**: for every listed file that is a `"use client"`
+  component, fails if `data/programs-internal.json` is reachable through
+  its real static import graph — reusing the exact BFS mechanism (value
+  imports + `require()`, `import type` correctly excluded) S1's own
+  guard test (`lib/__tests__/no-internal-catalog-in-client-bundle.test.ts`)
+  already proved sound, applied to registry-listed files specifically.
+- **`reviewed-copy`** has no executable check, by the registry's own
+  original design — its safety is established per-surface by a dedicated
+  rendered-output test, not a schema this file could verify generically.
+- **Documented boundary, not silently assumed proven:** server-only
+  files in the registry (report-pdf, owner-file-pdf, the survey/report
+  engines) are NOT checked by the PublicProgramView rule — they
+  legitimately need full `Program` fidelity server-side to synthesize
+  their own already-DTO-safe output (S1's documented, bounded
+  engine-source exception). Verifying THAT boundary (full fidelity in,
+  safe output out) is a data-flow property a static import-graph check
+  cannot reach.
+- **"new public sinks require coverage":** every entry in
+  `PUBLIC_CLAIM_SURFACES` runs through whichever check(s) match its
+  declared `contracts` — there is no per-surface opt-out list, so a
+  newly-added surface is automatically covered the moment it's
+  registered.
+- **Performance note, corrected during implementation:** the first
+  version built a fresh `tsConfigFilePath`-based ts-morph `Project` (a
+  full project-graph type-check) PER surface/contract pair — for the
+  ~20-entry registry this took minutes and was killed for timing out.
+  Fixed by building the `Project` ONCE (`buildVerificationProject`,
+  ~3.3s) and reusing it across every check (total real-registry scan:
+  ~7s for 29 checks).
+
+**Tests added:** `lib/__tests__/public-claim-surfaces.test.ts` — a
+"real codebase scan" `describe` block running both checks against every
+CURRENT registry entry (0 violations — confirms S1-S9's fixes actually
+hold under this new executable enforcement, not just under the narrower
+tests each finding added individually). Then the coordinator's exact
+TEST requirement verbatim, as synthetic in-memory fixtures (Hard Rule:
+no live files, no DB): a registered `ZoneEvidence` surface referencing
+the v1 zone function FAILS; a registered `PublicProgramView` surface
+whose client component reaches raw catalog data (via an intermediate
+module with a `require()`, the identical real-world shape S1's
+`program-slug.ts` split fixed) FAILS; a CONTROL test with the same two
+shapes corrected (v2 zones / a data-free intermediate module) PASSES —
+proving the failures above are about the violation, not an artifact of
+the fixture harness itself.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **319 test files,
+3792 passed, 2 skipped** (up from S9's 319/3787); `npm run
+programs:public:check` clean.
+
+---
+
+## Review 5 — ALL TEN FINDINGS CLOSED (S1–S10)
+
+Every finding in `scratchpad/battle-test/review5-out.md` is now fixed,
+tested, and committed on `feat/eligibility-claims-cutover`, in the exact
+priority order specified (S1→S10). See each finding's own section above
+for its specific fix, judgment calls, and test coverage. Known,
+documented boundaries that remain (not silently skipped — each flagged in
+its own section and in the final report): the shortlist export pipeline's
+already-committed data files could not be regenerated (no live DB
+session, S2); `incentiveCount`/vacancy-pin `incentiveGeographyCount` come
+from a separate, deeper DB pipeline not audited (S2); `isRefineEntry`'s
+coordinate handling has the same unvalidated shape S9 fixed for instant
+mode, but is a different query param outside that finding's literal scope
+(S9); the PublicProgramView contract check does not (and structurally
+cannot, via static import-graph analysis alone) verify the server-side
+full-fidelity-in/safe-output-out boundary for engine-source consumers
+(S10).
