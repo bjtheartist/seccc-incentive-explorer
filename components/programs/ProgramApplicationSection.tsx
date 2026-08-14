@@ -3,7 +3,7 @@
 import { CalendarOff, ExternalLink } from "lucide-react";
 
 import { resolveAvailability, type ProgramAvailability } from "@/lib/program-gating";
-import type { Program } from "@/lib/types";
+import type { ProgramApplicationView } from "@/lib/types";
 import { resolveConservativeProgramAvailability } from "./programAvailability";
 import { useLiveNow } from "./useLiveNow";
 
@@ -26,7 +26,15 @@ export function ProgramApplicationSection({
   program,
   now,
 }: {
-  program: Program;
+  // review6 S17 (CRITICAL): was `Program` — the full internal record
+  // (whoQualifies, eligibilityRules, contacts, requiredDocs,
+  // verificationSteps, ...) crossing the server/client RSC boundary as
+  // a prop, the S11 leak shape via props instead of a network route.
+  // `ProgramApplicationView` (lib/types.ts) is the exact, narrow field
+  // set this component and its gating calls actually read — built by
+  // `toProgramApplicationView()` server-side, the only sanctioned way
+  // to produce this prop.
+  program: ProgramApplicationView;
   /** Fixed reference time for deterministic rendering in tests and previews. */
   now?: Date;
 }) {

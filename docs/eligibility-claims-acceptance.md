@@ -2158,3 +2158,90 @@ pre-review6 baseline via `git stash` during S11); full `npx vitest run`
 — **324 test files, 3991 passed, 2 skipped**; `npm run
 programs:public:check` clean; `git status` clean at each commit
 boundary; nothing pushed or merged.
+
+---
+
+## Review 7 (`scratchpad/battle-test/review7-out.md`) — VERDICT FIX-FIRST, S17–S22 all blocking
+
+Required rulings the coordinator confirmed settled/fenced going into this
+round (not re-litigated): S12 and S15 closed as verified; the 13-test
+public-report-safety change ruled strengthened, not weakened; the
+`urlAddress`-only branch confirmed genuinely nonblocking/out-of-scope;
+the 100-path `PUBLIC_CLAIM_SURFACES_KNOWN_GAPS` baseline accepted as a
+frozen, no-additions ratchet; `/api/programs/engine-source`'s deletion +
+the 3 sanitized replacement routes + the MapView client-side rerun
+removal all confirmed real. S17 is what prevented the broader S11
+closure from being complete — a leak via component PROPS, not a route.
+
+### S17 (CRITICAL) — a full raw `Program` crossed the RSC boundary as a client-component prop
+
+**Finding:** `app/programs/[slug]/page.tsx` (a server component) passed
+the full, raw internal `Program` object directly into
+`ProgramApplicationSection` (`"use client"`) as its `program` prop —
+`whoQualifies`, `eligibilityRules`, `contacts`, `requiredDocs`,
+`verificationSteps`, and every other internal-only field, serialized
+into the page's RSC payload. The exact S11 leak shape, but via a
+component prop instead of a network route — which is exactly why S16's
+new client-cast guard was necessary in the first place, and also why it
+alone wasn't sufficient (a prop is neither a cast nor a fetch response).
+
+**Fix:** narrowed the actual dependency instead of building a parallel,
+redundant DTO. `resolveAvailability()` (`lib/program-gating.ts`) and its
+wrappers (`requiresLiveProgramAvailability`,
+`resolveConservativeProgramAvailability`, `canPublishStaticApplicationGuidance`
+in `components/programs/programAvailability.ts`) were typed to accept
+`program: Program`, but direct reading of every branch confirmed they
+only ever touch 7 fields: `id`, `status`, `suspensionNote`,
+`sunsetWarning`, `deadlines`, `oneTime`, `expiresOn`, `recurring`.
+Extracted that exact set as `ProgramAvailabilityFields` (`lib/types.ts`)
+and retyped all four functions to accept it instead of `Program` — since
+`Program` structurally satisfies the narrower interface for free, every
+EXISTING caller that already passes a full `Program` (the static-params
+filter in the same page, `lib/report-engine.ts`, `lib/survey-engine.ts`,
+`scripts/smoke-report.ts`) kept compiling with zero changes, confirmed
+by a clean `tsc --noEmit`. `ProgramApplicationView` extends that with
+the 4 more fields the component itself reads directly (`howToApply`,
+`fastestConfirmingStep`, `sourceUrl`, `url`) — the exact, complete field
+set, nothing more. `toProgramApplicationView(program: Program):
+ProgramApplicationView` (new, `components/programs/programAvailability.ts`)
+is the ONLY sanctioned way to build the prop; the page's call site
+changed from `<ProgramApplicationSection program={p} />` to
+`<ProgramApplicationSection program={toProgramApplicationView(p)} />`.
+
+**Tests added:**
+`components/programs/__tests__/ProgramApplicationSection-boundary.test.tsx`
+(new, 6 tests):
+- `toProgramApplicationView()` output contains ONLY the 12 allowed keys
+  (an object-shape assertion against a fixture with every internal-only
+  field populated).
+- No internal-only field name or its sentinel value survives into the
+  serialized DTO.
+- The fields the component/gating machinery legitimately needs DO
+  survive, correctly.
+- The coordinator's "RSC-response sentinel test": a poisoned fixture
+  program with a unique sentinel string in `whoQualifies`,
+  `eligibilityRules`, `contacts`, `requiredDocs`, `benefits`, `summary`,
+  and `contact`, rendered through the REAL `ProgramApplicationSection`
+  via `toProgramApplicationView` (exactly as the real page calls it,
+  both the "active" and the "lapsed" render branches) — asserts none of
+  the sentinels appear anywhere in the rendered output. (Full RSC flight
+  serialization isn't reproducible in this vitest environment — see
+  `renderToStaticMarkup`'s own limits, noted in
+  `report-page-live-renderer.test.tsx`'s doc comment for the established
+  precedent — so this proves the DTO boundary is real and load-bearing
+  for what CAN be verified: the props object literally is what the
+  component receives and renders from.)
+- A source-inspection test confirming `app/programs/[slug]/page.tsx`'s
+  actual call site reads `toProgramApplicationView(p)`, not a bare `p`
+  — proves the fix is wired into the real page, not just correct in an
+  isolated unit.
+
+The coordinator's second TEST requirement ("repo-wide fixture where a
+client imports/accepts Program WITHOUT a cast → must fail the guard")
+is S20's own job — covered there, not duplicated here.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **325 test files, 3997
+passed, 2 skipped** (up from S16's 324/3991); `npm run
+programs:public:check` clean (unaffected — this finding touches program
+detail-page rendering, not the catalog export).

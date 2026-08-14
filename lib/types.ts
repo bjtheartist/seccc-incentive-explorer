@@ -287,6 +287,55 @@ export interface SafeMapProgramMatch {
   };
 }
 
+/**
+ * review6 S17 (CRITICAL) — `lib/program-gating.ts`'s `resolveAvailability`
+ * (and its client-safe wrapper `requiresLiveProgramAvailability` in
+ * components/programs/programAvailability.ts) only ever reads these 7
+ * fields off a `Program` to compute intake availability — confirmed by
+ * direct reading of every branch of that function. Extracting the exact
+ * dependency as its own interface (rather than typing the parameter as
+ * `Program`) means `Program` structurally satisfies it for free — every
+ * EXISTING server-side caller that already passes a full `Program`
+ * (app/programs/[slug]/page.tsx's static-params filter, lib/report-
+ * engine.ts, lib/survey-engine.ts, scripts/smoke-report.ts) keeps
+ * compiling with zero changes — while a genuinely narrow object built
+ * from ONLY these fields is now also a valid argument, which is what
+ * lets `ProgramApplicationView` below stay narrow instead of widening
+ * back to `Program` just to satisfy this function's old signature.
+ */
+export interface ProgramAvailabilityFields {
+  id: string;
+  status?: ProgramStatus;
+  suspensionNote?: string;
+  sunsetWarning?: string;
+  deadlines?: ProgramDeadlineEntry[];
+  oneTime?: boolean;
+  expiresOn?: string;
+  recurring?: boolean;
+}
+
+/**
+ * review6 S17 (CRITICAL) — `components/programs/ProgramApplicationSection.tsx`
+ * is a `"use client"` component; `app/programs/[slug]/page.tsx` (a server
+ * component) used to pass it a full raw `Program` prop — whoQualifies,
+ * eligibilityRules, contacts, requiredDocs, verificationSteps, and every
+ * other internal-only field, serialized into the page's RSC payload and
+ * reachable by inspecting it, exactly the S11 leak shape but via a PROP
+ * instead of a network route. This is the full, exact field set that
+ * component (and the `resolveAvailability`/`resolveConservativeProgram
+ * Availability` gating calls it makes) actually reads — confirmed by
+ * direct reading of the component's source — nothing more.
+ * `components/programs/programAvailability.ts`'s `toProgramApplicationView`
+ * builds this from a full `Program` server-side; it is the ONLY shape
+ * that component's `program` prop is allowed to receive.
+ */
+export interface ProgramApplicationView extends ProgramAvailabilityFields {
+  howToApply: string[];
+  fastestConfirmingStep?: string;
+  sourceUrl?: string;
+  url: string;
+}
+
 export interface TopAction {
   label: string;
   type: "call" | "gather" | "book" | "check";

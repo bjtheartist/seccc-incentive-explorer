@@ -22,7 +22,10 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
 import { ProgramApplicationSection } from "@/components/programs/ProgramApplicationSection";
-import { canPublishStaticApplicationGuidance } from "@/components/programs/programAvailability";
+import {
+  canPublishStaticApplicationGuidance,
+  toProgramApplicationView,
+} from "@/components/programs/programAvailability";
 
 /* ── Static generation: indexable pages for currently available programs ── */
 
@@ -340,7 +343,11 @@ export default async function ProgramExplainerPage({
         )}
 
         {/* ── Live application availability and next step ── */}
-        <ProgramApplicationSection program={p} />
+        {/* review6 S17 (CRITICAL): toProgramApplicationView(p), never the
+            raw `p` — this component is "use client"; a raw Program prop
+            here serializes whoQualifies/eligibilityRules/contacts/
+            requiredDocs/verificationSteps into the page's RSC payload. */}
+        <ProgramApplicationSection program={toProgramApplicationView(p)} />
 
         {/* ── What you'll need ── */}
         {requiredDocuments.length > 0 && (
