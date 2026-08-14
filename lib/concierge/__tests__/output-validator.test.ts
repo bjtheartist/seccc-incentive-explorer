@@ -254,6 +254,9 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     // S42: negation anywhere before 'approved' within the sentence
     { family: "application/project denied", text: "Your application has not yet been formally approved.", reason: "application-denied" },
     { family: "application/project denied", text: "Your application has not, as of yet, been approved.", reason: "application-denied" },
+    // edge sweep: full auxiliary forms of the been-claims
+    { family: "you were denied (passive tense)", text: "You have been rejected.", reason: "denied-claim" },
+    { family: "you were denied (passive tense)", text: "You have been denied for this program.", reason: "denied-claim" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

@@ -61,7 +61,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
   { pattern: /\byou\s+meet(?:s)?\s+(?:all\s+)?(?:the\s+)?requirements\b/i, reason: "meets-requirements" },
   { pattern: /\bguaranteed\s+(?:to\s+receive|approval|award)\b/i, reason: "guaranteed-claim" },
   { pattern: /\byou\s+will\s+receive\b/i, reason: "you-will-receive" },
-  { pattern: /\byou'?ve?\s+been\s+approved\b/i, reason: "approved-claim" },
+  { pattern: /\byou(?:'ve|ve|\s+ha(?:ve|d))?\s+been\s+approved\b/i, reason: "approved-claim" },
   { pattern: /\bready\s+to\s+apply\b/i, reason: "ready-to-apply" },
   { pattern: /\bthis\s+unlocks?\b/i, reason: "unlocks" },
   { pattern: /\bverify\s+(?:your\s+)?eligibility\b/i, reason: "verify-eligibility" },
@@ -80,7 +80,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
   // not qualify" is now its own dedicated family below, so the two don't
   // silently overlap under one reason string.
   { pattern: /\byou\s+(?:will\s+(?:not|never)|won'?t|cannot|can'?t)\s+(?:receive|be\s+approved|be\s+accepted)\b/i, reason: "you-will-not-receive" },
-  { pattern: /\byou'?ve?\s+been\s+(?:denied|rejected)\b/i, reason: "denied-claim" },
+  { pattern: /\byou(?:'ve|ve|\s+ha(?:ve|d))?\s+been\s+(?:denied|rejected)\b/i, reason: "denied-claim" },
   // review6 S14 (HIGH): six named grammar families the S4 pass didn't
   // cover, each still scoped to a determination ABOUT THE READER (or the
   // reader's own submission) — "you"/"your business"/"your
