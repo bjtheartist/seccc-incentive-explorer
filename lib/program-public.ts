@@ -18,7 +18,6 @@
  * StartHere, concierge, etc. onto it (see docs/eligibility-claims-
  * acceptance.md, F4/F5/F6/F7/F9 rows).
  */
-import { createHash } from "node:crypto";
 import type {
   BenefitTermsStatus,
   IntakeStatus,
@@ -150,11 +149,6 @@ export function toPublicProgramView(record: Program, asOf: string): PublicProgra
     personas: record.personas ?? [],
     zoneKey: record.zoneKey || null,
   };
-}
-
-/** SHA-256 hex digest of raw catalog bytes — mirrors shortlistUniverseChecksum (lib/shortlist-universe-schema.ts). */
-export function catalogRevisionFromRaw(raw: string): string {
-  return createHash("sha256").update(raw).digest("hex");
 }
 
 /**

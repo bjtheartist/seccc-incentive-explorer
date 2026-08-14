@@ -4,14 +4,8 @@ import { describe, expect, it } from "vitest";
 import internalCatalog from "../../data/programs-internal.json";
 import publicArtifact from "../../public/data/programs-public.json";
 import type { Program } from "../types";
-import {
-  benefitQualifier,
-  buildPublicProgramsEnvelope,
-  catalogRevisionFromRaw,
-  isIsoTimestamp,
-  isValidPublicProgramsEnvelopeShape,
-  toPublicProgramView,
-} from "../program-public";
+import { catalogRevisionFromRaw } from "../program-catalog-revision";
+import { benefitQualifier, buildPublicProgramsEnvelope, isIsoTimestamp, isValidPublicProgramsEnvelopeShape, toPublicProgramView,  } from "../program-public";
 
 const programs = internalCatalog as unknown as Program[];
 const byId = new Map(programs.map((p) => [p.id, p]));

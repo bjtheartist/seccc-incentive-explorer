@@ -24,11 +24,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Program } from "../lib/types";
-import {
-  buildPublicProgramsEnvelope,
-  catalogRevisionFromRaw,
-  isValidPublicProgramsEnvelopeShape,
-} from "../lib/program-public";
+import { catalogRevisionFromRaw } from "../lib/program-catalog-revision";
+import { buildPublicProgramsEnvelope, isValidPublicProgramsEnvelopeShape,  } from "../lib/program-public";
 
 const INTERNAL_CATALOG_PATH = join(process.cwd(), "data", "programs-internal.json");
 const PUBLIC_ARTIFACT_PATH = join(process.cwd(), "public", "data", "programs-public.json");
