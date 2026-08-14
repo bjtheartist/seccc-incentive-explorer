@@ -2688,7 +2688,7 @@ flagged in its own section above and restated here):
 
 **Final gate, run at HEAD of `feat/eligibility-claims-cutover`
 (6 commits: S17 `aa715ee`, S18 `f27cf1c`, S19 `e5a0a07`, S20 `73fec46`,
-S21 `c417dd6`, S22 pending):** `npx tsc --noEmit` clean; `npx eslint .`
+S21 `c417dd6`, S22 `0d93fb8`):** `npx tsc --noEmit` clean; `npx eslint .`
 — 0 errors, 5 pre-existing warnings; full `npx vitest run` — **326 test
 files, 4042 passed, 2 skipped**; `npm run programs:public:check` clean;
 `git status` clean at each commit boundary; nothing pushed or merged.
