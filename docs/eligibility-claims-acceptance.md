@@ -3034,3 +3034,79 @@ vitest run` — **326 test files, 4065 passed, 2 skipped** (up from
 Review 7's 326/4042 — 23 new tests across the 5 findings); `npm run
 programs:public:check` clean; `git status` clean at each commit
 boundary; nothing pushed or merged.
+
+---
+
+## Review 9 (`scratchpad/battle-test/review9-out.md`) — VERDICT FIX-FIRST, S28 (single blocker)
+
+### S28 (HIGH) — the S25 reported-speech exemption checked the verb, never its subject
+
+**Finding:** S25 widened `REPORTED_SPEECH_MARKER_PATTERN` to cover
+present-tense inflections, but `findApplicationDeniedViolation` still
+exempted a sentence whenever ANY marker appeared ANYWHERE before the
+"the application ... denied" match — never checking WHO the marker's
+subject was. "Our records say your application was denied" is already
+caught by the separate, unconditional `your`-form rule (no reported-
+speech exemption exists for that pattern at all), but "Our records say
+the application was denied," "We state the application was denied,"
+and "Please note the application was denied" all wrongly returned
+`hit: false` — first-party/product-owned direct determinations (or, for
+the imperative case, no subject/third-party at all), not someone else's
+statement being relayed. The exemption was built for genuine third-party
+attribution ("Jane said," "the program guide says") and had silently
+grown to cover the opposite of that.
+
+**Fix:** `lib/concierge/output-validator.ts` — the exemption is now
+subject-aware via a new `hasDisqualifyingReportingSubject()` check that
+cancels it in two cases: (1) a first-person/product-owned subject
+(`we`/`our`/`us`/`i`, optionally with 1-2 words between the pronoun and
+the verb — "Our records say," "We state") directly before the marker
+verb, or (2) the marker verb as the very first word of its
+sentence/clause, optionally after "please" ("Please note," "Note that")
+— an imperative instruction with no subject, hence no third party.
+Both checks use a NARROWER verb list (`FIRST_PARTY_DISQUALIFYING_VERBS`)
+than the full marker pattern: deliberately excludes `hear(d)`, since "I
+heard the application was denied" is hearsay — information received
+FROM elsewhere, the exact third-party-sourced shape the exemption
+exists for, and an already-established S19(b) control this fix must
+not regress — and excludes `according to`, a source-attribution
+preposition that always names an explicit source regardless of what,
+if anything, precedes it.
+
+**Tests added:** `lib/concierge/__tests__/output-validator.test.ts`
+(extended from 112 to 135 tests), a new table-driven describe block:
+- the three coordinator-named bypasses ("Our records say...", "We
+  state...", "Please note...") must now be rejected;
+- a non-regression sanity check confirming "Our records say your
+  application was denied" was already, and remains, caught by the
+  separate unconditional `your`-form rule, unaffected by S25/S28 either
+  way;
+- all 10 S25 present-tense third-party inflection cases, all 6 S19(b)
+  third-party controls (including "I heard" — the hearsay exception),
+  and all 3 core reader-facing-denial controls must behave exactly as
+  before — proving the subject-aware narrowing didn't over-correct into
+  disqualifying genuine third-party attribution.
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check
+via `git stash push --keep-index -- lib/concierge/output-validator.ts`
+(S13/S18/S22/S23/S25/S26/S27 discipline): exactly the 3 named-bypass
+tests failed against the pre-fix code; all other 132 tests — every
+third-party control, every S25 inflection case, the `your`-form sanity
+check, and the reader-facing-denial controls — remained correctly
+unaffected, confirming the fix targets precisely the 3 named gaps with
+no collateral narrowing. `git stash pop` restored the fix; re-ran `tsc
+--noEmit` (clean) and the full test file (135/135 passed), plus the 3
+other files that import `output-validator`
+(`app/api/concierge/__tests__/route-persistence-parity.test.ts`,
+`lib/__tests__/source-guard-ast.test.ts`,
+`lib/__tests__/report-engine.test.ts` — 114 tests, no regression). Full
+repo `npx eslint .` — 0 errors, the same 5 pre-existing warnings,
+unchanged. Full `npx vitest run` — **326 test files, 4088 passed, 2
+skipped** (up from Review 8's 326/4065 — the 23 new tests). `npm run
+programs:public:check` clean.
+
+**Final gate, run at HEAD of `feat/eligibility-claims-cutover`
+(1 commit: S28):** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+5 pre-existing warnings (unchanged); full `npx vitest run` — **326 test
+files, 4088 passed, 2 skipped**; `npm run programs:public:check` clean;
+`git status` clean; nothing pushed or merged.

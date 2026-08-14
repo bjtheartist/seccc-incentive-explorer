@@ -215,18 +215,70 @@ function findAuthorityRoutingViolation(text: string): string | null {
  * (`s?` handles "say"/"says", "tell"/"tells", etc.) and its past-tense
  * form, plus `indicates?`/`indicated` and `describes?`/`described` as
  * two more common framing verbs the coordinator's "etc." invited.
+ *
+ * review9 S28 (HIGH): S25 widened the MARKER list but never checked the
+ * marker's own SUBJECT — any reporting verb anywhere before the match
+ * exempted the sentence, so "Our records say the application was
+ * denied," "We state the application was denied," and "Please note the
+ * application was denied" all wrongly returned `hit: false`. Those are
+ * first-party/product-owned direct determinations (or, for the
+ * imperative case, no third party at all) — not someone else's speech
+ * being relayed. `hasDisqualifyingReportingSubject()` below cancels the
+ * exemption when the marker's subject is first-person/product-owned
+ * (we/our/us/I directly before the verb) or when the verb has NO
+ * subject at all (sentence/clause-initial, optionally after "please" —
+ * an imperative instruction). Genuine third-party subjects — "Jane
+ * said," "the program guide says," "according to the newsletter," and
+ * "I heard" (hearsay — information received FROM elsewhere, the exact
+ * third-party-sourced shape this exemption exists for, and an
+ * already-established S19(b) control) — are deliberately left
+ * unaffected; "hear(d)" and "according to" are excluded from the
+ * disqualifying-verb set for exactly that reason.
  */
 const DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN =
   /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i;
 const REPORTED_SPEECH_MARKER_PATTERN =
   /\b(?:says?|said|tells?|told|mentions?|mentioned|reports?|reported|notes?|noted|states?|stated|writes?|wrote|explains?|explained|hears?|heard|indicates?|indicated|describes?|described|claims?|claimed|according\s+to)\b/i;
 
+// review9 S28: the subset of REPORTED_SPEECH_MARKER_PATTERN's verbs that
+// plausibly describe a DIRECT, self-sourced assertion when the subject is
+// first-person/product-owned, or an imperative instruction with no subject
+// at all. Deliberately excludes "hear(d)" (hearsay stays exempt — see
+// docstring above) and "according to" (a source-attribution preposition
+// regardless of what, if anything, precedes it).
+const FIRST_PARTY_DISQUALIFYING_VERBS =
+  "says?|said|tells?|told|mentions?|mentioned|reports?|reported|notes?|noted|states?|stated|writes?|wrote|explains?|explained|indicates?|indicated|describes?|described|claims?|claimed";
+
+/** "we/our/us/I [optionally 1-2 words] VERB" — a first-person or
+ *  product-owned subject directly asserting something, not relaying a
+ *  third party's statement. Matches "Our records say ...", "We state
+ *  ...", "I explained ...". */
+const FIRST_PARTY_SUBJECT_PATTERN = new RegExp(
+  `\\b(?:we|our|us|i)\\b(?:\\s+[a-z']+){0,2}\\s+(?:${FIRST_PARTY_DISQUALIFYING_VERBS})\\b`,
+  "i"
+);
+
+/** A reporting verb as the very FIRST word of its sentence/clause
+ *  (optionally after "please") has no subject at all — an imperative
+ *  instruction, not third-party attribution. Matches "Please note ...",
+ *  "Note that ...", "State that ..." at the start of `before`. */
+const IMPERATIVE_REPORTING_PATTERN = new RegExp(
+  `(?:^|[.!?;]\\s+)\\s*(?:please\\s+)?(?:${FIRST_PARTY_DISQUALIFYING_VERBS})\\b`,
+  "i"
+);
+
+function hasDisqualifyingReportingSubject(before: string): boolean {
+  return FIRST_PARTY_SUBJECT_PATTERN.test(before) || IMPERATIVE_REPORTING_PATTERN.test(before);
+}
+
 function findApplicationDeniedViolation(text: string): string | null {
   for (const sentence of splitIntoSentences(text)) {
     const match = DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN.exec(sentence);
     if (!match) continue;
     const before = sentence.slice(0, match.index);
-    if (REPORTED_SPEECH_MARKER_PATTERN.test(before)) continue;
+    if (REPORTED_SPEECH_MARKER_PATTERN.test(before) && !hasDisqualifyingReportingSubject(before)) {
+      continue;
+    }
     return "application-denied";
   }
   return null;

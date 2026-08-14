@@ -384,6 +384,86 @@ describe("validateConciergeOutput — S25 present-tense reported-speech inflecti
 });
 
 /**
+ * review9 S28 (HIGH): S25's reported-speech exemption checked only for a
+ * marker verb ANYWHERE before the match, never its SUBJECT — so a
+ * first-party/product-owned direct determination ("Our records say...",
+ * "We state...") or an imperative instruction with no subject at all
+ * ("Please note...") wrongly qualified for the same exemption meant for
+ * genuine third-party attribution ("Jane said...", "the program guide
+ * says..."). Table-driven: the three coordinator-named bypasses must now
+ * be rejected; every S25 third-party inflection case and every S19(b)/
+ * S25 reader-facing-denial control must still behave exactly as before.
+ */
+describe("validateConciergeOutput — S28 reported-speech exemption is subject-aware", () => {
+  const FIRST_PARTY_AND_IMPERATIVE_BYPASSES: string[] = [
+    "Our records say the application was denied.",
+    "We state the application was denied.",
+    "Please note the application was denied.",
+  ];
+
+  for (const text of FIRST_PARTY_AND_IMPERATIVE_BYPASSES) {
+    it(`no longer exempts the first-party/imperative bypass — still rejects: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason).toBe("application-denied");
+    });
+  }
+
+  // The named "your"-form control confirming the coordinator's own point:
+  // this shape was ALREADY caught by the separate `your` rule, unaffected
+  // by S25/S28 either way — included as a non-regression sanity check.
+  it("'Our records say your application was denied' is still rejected via the separate your-form rule", () => {
+    const result = validateConciergeOutput("Our records say your application was denied.");
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("application-denied");
+  });
+
+  const STILL_EXEMPT_THIRD_PARTY_CASES: string[] = [
+    // S25 present-tense inflections — genuine third-party/product sources,
+    // not first-person or imperative.
+    "The program guide says the application was denied in the example.",
+    "The program guide explains that the application was denied in the example.",
+    "The FAQ notes that the application was denied in a similar case last year.",
+    "The city website reports the application was denied for missing paperwork.",
+    "The handbook states the application was denied when the deadline was missed.",
+    "The memo tells readers the application was denied in that scenario.",
+    "The article mentions the project was rejected during a prior round.",
+    "The bulletin writes that the request was denied for incomplete documents.",
+    "The summary indicates the application was denied for that applicant.",
+    "The case study describes how the application was denied in a past cycle.",
+    // S19(b) third-party controls, including "I heard" — hearsay (info
+    // received FROM elsewhere) stays exempt even though "I" is first-person.
+    "Jane said the application was denied last cycle.",
+    "My accountant told me the application was denied.",
+    "According to the newsletter, the project was rejected last quarter.",
+    "A neighboring business owner mentioned the request was denied.",
+    "The city clerk reported the application was denied for missing paperwork.",
+    "I heard the project was rejected, but I haven't confirmed it.",
+  ];
+
+  for (const text of STILL_EXEMPT_THIRD_PARTY_CASES) {
+    it(`genuine third-party attribution remains exempt, unaffected by the subject-aware fix: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(false);
+    });
+  }
+
+  const READER_FACING_DENIALS_STILL_REJECTED: string[] = [
+    "Your application was denied.",
+    "The application was denied last cycle.",
+    "Your project is denied for TIF financing.",
+  ];
+
+  for (const text of READER_FACING_DENIALS_STILL_REJECTED) {
+    it(`genuine reader-facing denials (no reporting verb at all) remain rejected: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason).toBe("application-denied");
+    });
+  }
+});
+
+/**
  * review5 S4: "authority check sentence-by-sentence (one ZBA mention must
  * not bypass a generic-City sentence elsewhere)" — the exact regression
  * the original whole-text `mentionsZba` check was vulnerable to.
