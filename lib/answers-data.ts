@@ -48,7 +48,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     bullets: [
       "One address returns every overlapping incentive zone in one view.",
       "Covers city (TIF, SBIF, NOF, SSA), county (Cook 7a/7b), state (Enterprise Zone), and federal (Opportunity Zone, NMTC) layers.",
-      "Results are a starting point — verify exact eligibility with the administering agency before you spend money.",
+      "Results are a starting point — confirm current requirements with the administering agency before you spend money.",
       "No login or fee required.",
     ],
     relatedProgramSlugs: [],

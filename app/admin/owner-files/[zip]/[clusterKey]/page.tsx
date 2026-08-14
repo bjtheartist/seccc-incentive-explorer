@@ -174,7 +174,7 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
               <p className="mt-1.5 text-[13px] leading-relaxed text-[#0C1B33]/70">
                 Individually owned (public taxpayer record). Automated outreach letters are reserved for
                 entity owners — coordinate personal contact through a local partner. Completing an IL SOS
-                lookup that shows this owner is a registered entity will unlock letters.
+                lookup that shows this owner is a registered entity will enable letters.
               </p>
             </div>
           )}

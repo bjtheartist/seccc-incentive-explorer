@@ -913,7 +913,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
   {
     id: 86,
     topic: "Utility",
-    question: "Which type of site is eligible for ComEd's higher-tier 'EV Make-Ready' commercial rebate?",
+    question: "Which type of site does ComEd's higher-tier 'EV Make-Ready' commercial rebate target?",
     choices: [
       "Only single-family detached homes",
       "Only state government buildings",

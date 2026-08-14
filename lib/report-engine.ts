@@ -3540,7 +3540,7 @@ function generateBestLocation(
       "tax-incentive-value": (p, z) => ({
         label: "Tax Incentive Value",
         value: z.length >= 3 ? "High" : z.length >= 1 ? "Moderate" : "Limited",
-        detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification may unlock additional property tax incentives." : ""}`,
+        detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification is worth reviewing against additional property tax incentive programs." : ""}`,
         
       }),
       "zoning-compatibility": (_p, _z) => ({
@@ -3656,7 +3656,7 @@ function generateBestLocation(
   if (projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50) {
     recommendedActions.push({
       label: "Check historic designation eligibility",
-      description: "Contact the Illinois SHPO to determine if the building qualifies for the National Register and federal Historic Tax Credit.",
+      description: "Contact the Illinois SHPO to review the building against the National Register and federal Historic Tax Credit criteria.",
       priority: "high",
     });
   }
@@ -3980,7 +3980,7 @@ function generateDeveloperAnalysis(
   });
 
   recommendedActions.push({
-    label: "Verify zone eligibility for all selected programs",
+    label: "Confirm zone requirements for all selected programs",
     description:
       "Confirm that your project address is within the required zone boundaries for each selected program before beginning applications.",
     priority: "medium",
@@ -4399,7 +4399,7 @@ function generateCorridorIntelligence(
       },
       {
         id: SECTION_IDS.whatAFundedVersionUnlocks,
-        title: "What A Funded Version Unlocks",
+        title: "What A Funded Version Adds",
         description: "This hidden demo shows what is possible with one geography. A funded version would make it reliable across more places and partner workflows.",
         items: [
           {

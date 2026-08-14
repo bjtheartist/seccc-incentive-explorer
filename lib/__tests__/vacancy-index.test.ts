@@ -1069,9 +1069,9 @@ describe("ownerConfidenceForPoint (per-point confidence derivation)", () => {
 
 describe("zoningGloss (Chicago district prefixes)", () => {
   it("glosses the single-letter families with the eligibility caution", () => {
-    expect(zoningGloss("C1-1")).toBe("C1-1 — neighborhood commercial uses; verify project-specific eligibility.");
-    expect(zoningGloss("B3-2")).toBe("B3-2 — Neighborhood/community shopping and mixed-use; verify project-specific eligibility.");
-    expect(zoningGloss("M1-2")).toBe("M1-2 — Manufacturing/industrial; verify project-specific eligibility.");
+    expect(zoningGloss("C1-1")).toBe("C1-1 — neighborhood commercial uses; confirm project-specific requirements.");
+    expect(zoningGloss("B3-2")).toBe("B3-2 — Neighborhood/community shopping and mixed-use; confirm project-specific requirements.");
+    expect(zoningGloss("M1-2")).toBe("M1-2 — Manufacturing/industrial; confirm project-specific requirements.");
   });
 
   it("glosses residential and downtown families", () => {
@@ -1084,9 +1084,9 @@ describe("zoningGloss (Chicago district prefixes)", () => {
   });
 
   it("glosses the multi-letter districts, longest-prefix-first (PMD/POS/PD win over P.. families)", () => {
-    expect(zoningGloss("PMD-11")).toBe("PMD-11 — Planned Manufacturing District; verify project-specific eligibility.");
-    expect(zoningGloss("PD-1234")).toBe("PD-1234 — Planned Development — site-specific terms; verify project-specific eligibility.");
-    expect(zoningGloss("POS-4")).toBe("POS-4 — Parks/open space; verify project-specific eligibility.");
+    expect(zoningGloss("PMD-11")).toBe("PMD-11 — Planned Manufacturing District; confirm project-specific requirements.");
+    expect(zoningGloss("PD-1234")).toBe("PD-1234 — Planned Development — site-specific terms; confirm project-specific requirements.");
+    expect(zoningGloss("POS-4")).toBe("POS-4 — Parks/open space; confirm project-specific requirements.");
   });
 
   it("returns the generic 'verify allowable uses' line for an unrecognized prefix", () => {

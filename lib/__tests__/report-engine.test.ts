@@ -1604,7 +1604,7 @@ describe("generateReportData", () => {
     expect(report.sections.find((section) => section.title === "Market Signal Summary")?.table?.rows.length).toBeGreaterThan(0);
     expect(report.sections.map((section) => section.title)).toContain("What The Signals Say");
     expect(report.sections.map((section) => section.title)).toContain("How To Read This");
-    expect(report.sections.map((section) => section.title)).toContain("What A Funded Version Unlocks");
+    expect(report.sections.map((section) => section.title)).toContain("What A Funded Version Adds");
     expect(report.sections.map((section) => section.title)).not.toContain("Intervention Buckets");
     expect(report.recommendedActions).toEqual([]);
     expect(JSON.stringify(report)).not.toMatch(

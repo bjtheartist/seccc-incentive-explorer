@@ -126,7 +126,7 @@ export default async function ProgramExplainerPage({
   const faqItems = [
     { question: `What is ${p.name}?`, answer: p.summary },
     {
-      question: `Who qualifies for ${p.name}?`,
+      question: `What are the published criteria for ${p.name}?`,
       answer:
         publicView.screening.publishedCriteria.length > 0
           ? `${criteriaFrame}: ${publicView.screening.publishedCriteria.join(" ")}`

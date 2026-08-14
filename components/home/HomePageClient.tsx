@@ -690,8 +690,8 @@ export function HomePageClient({
             <div className="accent-bar-light" />
           </div>
           <h2 className="font-editorial text-3xl md:text-5xl text-white leading-[1.05] mb-4">
-            Find what your address{" "}
-            <span className="text-[#2563EB]">unlocks.</span>
+            See which incentive boundaries{" "}
+            <span className="text-[#2563EB]">contain your address.</span>
           </h2>
           <p className="text-white/50 text-sm mb-8">
             One free snapshot. No login. Sixty seconds.

@@ -145,7 +145,7 @@ exports[`legacy action structures are unchanged by the StartHere refactor > deve
     },
     {
       "description": "Confirm that your project address is within the required zone boundaries for each selected program before beginning applications.",
-      "label": "Verify zone eligibility for all selected programs",
+      "label": "Confirm zone requirements for all selected programs",
       "preparationCost": undefined,
       "priority": "medium",
     },

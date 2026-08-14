@@ -1383,7 +1383,7 @@ export default async function VacancyReportPage({
             <p className="text-[#0C1B33]/55">
               Informational screening only. Owner type is inferred from public taxpayer-of-record
               patterns and is anonymized — no owner names or mailing addresses appear here. Records
-              indicate; verify current ownership, eligibility, timing, and approval requirements with
+              indicate; confirm current ownership, program requirements, timing, and approval steps with
               the administering organization before relying.
             </p>
           </div>

@@ -2456,7 +2456,7 @@ function NeighborhoodStep({
               Verify Address
             </button>
             <p className="font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em] leading-relaxed">
-              Verify a specific address to unlock parcel-level detail.
+              Verify a specific address to load parcel-level detail.
             </p>
           </div>
 
@@ -2484,7 +2484,7 @@ function NeighborhoodStep({
           )}
 
           <p className="font-mono-bureau text-[10px] text-[#0C1B33]/25 mt-2">
-            Tip: A specific address unlocks property PIN, assessed value, and zoning data.
+            Tip: A specific address loads property PIN, assessed value, and zoning data.
           </p>
         </div>
       )}
@@ -2565,7 +2565,7 @@ function AddressStep({
           Verify Address
         </button>
         <p className="font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em] leading-relaxed">
-          Verify the address to unlock Next.
+          Verify the address to enable Next.
         </p>
       </div>
 

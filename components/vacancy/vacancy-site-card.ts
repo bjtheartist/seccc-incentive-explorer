@@ -476,7 +476,7 @@ export function permitBadgeText(state: PermitMatchState): string {
 }
 
 const SOURCES_NOTE =
-  "Records indicate; verify current ownership, eligibility, and condition with the county before relying. " +
+  "Records indicate; confirm current ownership, program requirements, and condition with the county before relying. " +
   "Ownership type is inferred from public taxpayer-of-record patterns — no owner names appear.";
 
 /**

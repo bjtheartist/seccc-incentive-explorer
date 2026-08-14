@@ -18,7 +18,7 @@ export const FAQ_ITEMS = [
     a: "The Small Business Improvement Fund (SBIF) provides grants of up to $150,000 per building for permanent improvements like HVAC, plumbing, electrical, roofing, and fire suppression systems. It's one of the most direct funding sources for small businesses in TIF districts. The program is reimbursement-based — you complete the work, then get paid. You must attend a mandatory orientation session and apply during open enrollment.",
   },
   {
-    q: "How do I know if my business qualifies for incentives?",
+    q: "How do I find incentives that may apply to my business?",
     a: "Use the lookup tool on our homepage. Enter your business name or address and we will check mapped incentive layers for likely location-based matches. Each result explains which programs may apply, what they generally offer, and what to verify next.",
   },
   {

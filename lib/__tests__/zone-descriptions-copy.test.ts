@@ -17,7 +17,9 @@ describe("ZONE_DESCRIPTIONS — boundary-description, not eligibility, framing",
     expect(ZONE_DESCRIPTIONS.highUnemployment).not.toMatch(/triggering additional federal eligibility/i);
   });
 
-  it("nrhpDistricts hedges the Historic Tax Credit claim with 'may be eligible', not a bare qualification", () => {
-    expect(ZONE_DESCRIPTIONS.nrhpDistricts).toMatch(/may be eligible/i);
+  it("nrhpDistricts hedges the Historic Tax Credit claim with 'may qualify for review', not a bare qualification", () => {
+    expect(ZONE_DESCRIPTIONS.nrhpDistricts).toMatch(/may qualify for review/i);
+    // "eligible for" is a source-guard-flagged claim phrase (build-spec.md 2.8) — must not reappear here.
+    expect(ZONE_DESCRIPTIONS.nrhpDistricts).not.toMatch(/eligible for/i);
   });
 });

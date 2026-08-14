@@ -114,7 +114,7 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
           note:
             unknownLayers.length > 0
               ? `${unknownLayers.length} layer(s) could not be checked and are NOT confirmed absent — do not tell the user this address is outside them. Zone coverage indicates a program MAY apply at this location; the administering agency confirms eligibility.`
-              : "Zone coverage indicates a program MAY apply at this location. Verify eligibility with the program administrator.",
+              : "Zone coverage indicates a program MAY apply at this location; the administering agency confirms eligibility.",
         };
       },
     }),
