@@ -427,6 +427,7 @@ describe("recipients-panel teardown gate", () => {
       communityInvestmentVisible: true,
       overlays: ALL_ON,
       sourceId: "cook-source-2023",
+      filterInScope: true,
       ...over,
     });
 
@@ -472,5 +473,26 @@ describe("recipients-panel teardown gate", () => {
     // Nothing on screen could switch these off, so they must never stay open.
     expect(open({ sourceId: "foundation" })).toBe(false);
     expect(open({ sourceId: "" })).toBe(false);
+  });
+
+  it("Sol gate blocker 1 — closes when the year/purpose filter no longer includes this source, for all three ZIP-aggregate sources", () => {
+    // A Cook/BIG/B2B panel opened while in scope must not survive a filter
+    // change that pushes its fixed program year (or purpose) out of range —
+    // the caller computes this via zipAggregateOverlaySourceInScope and
+    // passes it in as filterInScope.
+    expect(open({ sourceId: "cook-source-2023", filterInScope: false })).toBe(false);
+    expect(open({ sourceId: "illinois-big", filterInScope: false })).toBe(false);
+    expect(open({ sourceId: "illinois-b2b", filterInScope: false })).toBe(false);
+  });
+
+  it("filterInScope:false wins even with every other condition satisfied", () => {
+    expect(
+      open({
+        adminSessionActive: true,
+        communityInvestmentVisible: true,
+        overlays: ALL_ON,
+        filterInScope: false,
+      }),
+    ).toBe(false);
   });
 });

@@ -62,7 +62,13 @@ import {
   fetchHistoricalRecoveryRecipients,
   fetchInvestmentRecipientRecord,
   filterInvestmentPointFeatures,
+  investmentPopupOutOfScope,
+  investmentRevealButtonLoadingState,
+  investmentRevealButtonOutOfScopeState,
+  investmentRevealButtonStateForResult,
   zipAggregateOverlaySourceInScope,
+  ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE,
+  type InvestmentRevealButtonState,
   investmentFeatureCollection,
   summarizeCitywideEntries,
   DEFAULT_INVESTMENT_YEAR_RANGE,
@@ -76,6 +82,7 @@ import {
   megaprojectFeatureCollection,
   summarizeMegaprojects,
   MEGAPROJECT_STATUS_GROUP_COLORS,
+  type InvestmentFilterDimensions,
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
   type CountyReliefZipSummary,
@@ -400,6 +407,57 @@ export default function MapView() {
   const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
     null
   );
+  /**
+   * Deliverable 2 (audit finding 3 / consult F2) — the ONE filter state every
+   * public-investment overlay, popup, and recipient panel reads through
+   * matchesInvestmentFilter / filterInvestmentPointFeatures /
+   * zipAggregateOverlaySourceInScope / investmentPopupOutOfScope. Declared
+   * early (above the recipients-panel teardown effect, Sol gate blocker 1)
+   * so every consumer — no matter where in this component it lives — reads
+   * the SAME up-to-date value, never a stale one from before this hook ran.
+   */
+  const investmentFilterState = useMemo(
+    () => ({
+      yearRangeId: investmentYearRange,
+      activeFunderTypes: new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k])),
+      activeGovernmentFundingPurposes: new Set<GovernmentFundingPurpose>(
+        MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter((purpose) => investmentGovernmentFundingPurposes[purpose]),
+      ),
+    }),
+    [investmentYearRange, investmentFunderTypes, investmentGovernmentFundingPurposes],
+  );
+  // A ref mirror of investmentFilterState so click handlers registered ONCE
+  // inside the map-init effect (which does not re-run on filter changes) can
+  // read the LATEST filter value instead of a stale closure — used by the
+  // RRF lazy-reveal button's live scope re-check (Sol gate blocker 1).
+  const investmentFilterStateRef = useRef(investmentFilterState);
+  useEffect(() => {
+    investmentFilterStateRef.current = investmentFilterState;
+  }, [investmentFilterState]);
+  // Filterable dimensions of whatever investment record is currently shown in
+  // the shared mapbox popup, or null when the open popup (if any) isn't
+  // filter-scoped (owner-cluster, Megaprojects — exempt by design). Set by
+  // each filter-scoped click handler, cleared on the popup's own "close"
+  // event and by any non-filter-scoped popup opening. Read by the closing
+  // effect below (Sol gate blocker 1).
+  const openInvestmentPopupDimsRef = useRef<InvestmentFilterDimensions | null>(null);
+  // In-flight RRF lazy-reveal fetch, if any — aborted when the popup closes
+  // (including a close triggered by the record falling out of filter scope),
+  // so an out-of-scope reveal never lands after the fact (Sol gate blocker 1).
+  const investmentRevealAbortRef = useRef<AbortController | null>(null);
+  // Sol gate blocker 1 — close (or refuse to reveal) an already-open
+  // investment popup the instant it falls out of the active year/funderType/
+  // purpose scope. This is a SEPARATE, lean effect (not inside the giant
+  // map-init effect, which only runs once) so it re-runs on every filter
+  // change and always sees the current investmentFilterState.
+  useEffect(() => {
+    if (investmentPopupOutOfScope(openInvestmentPopupDimsRef.current, investmentFilterState)) {
+      investmentRevealAbortRef.current?.abort();
+      investmentRevealAbortRef.current = null;
+      sharedDotPopupRef.current?.remove();
+      openInvestmentPopupDimsRef.current = null;
+    }
+  }, [investmentFilterState]);
   // All plotted point features from the last fetch, kept in a ref so the
   // year/funderType filter effect can rebuild the source (setData) without a
   // re-fetch — mirrors VacancyReportMap's featuresRef distress-filter pattern.
@@ -630,6 +688,14 @@ export default function MapView() {
         communityInvestmentVisible,
         overlays: publicInvestmentOverlays,
         sourceId: countyReliefRecipientsPanel.sourceId,
+        // Sol gate blocker 1 — a Cook/BIG/B2B panel open before a year/purpose
+        // change must close (and its in-flight fetch abort, via
+        // closeCountyReliefRecipients below) the instant its source's fixed
+        // program year/purpose falls outside the active filter.
+        filterInScope: zipAggregateOverlaySourceInScope(
+          countyReliefRecipientsPanel.sourceId,
+          investmentFilterState,
+        ),
       })
     ) {
       return;
@@ -641,6 +707,7 @@ export default function MapView() {
     adminSessionActive,
     communityInvestmentVisible,
     publicInvestmentOverlays,
+    investmentFilterState,
     closeCountyReliefRecipients,
   ]);
 
@@ -1845,6 +1912,28 @@ export default function MapView() {
       // Exposed via ref so the deck view-mode effect can close it when entering
       // Arcs/Density (deck's picking tooltip replaces the mapbox dot popup there).
       sharedDotPopupRef.current = sharedDotPopup;
+      // Sol gate blocker 1 — keep openInvestmentPopupDimsRef accurate on EVERY
+      // close path (the user's own X, .remove() calls elsewhere, or the
+      // out-of-scope closing effect above), not just the paths this file
+      // happens to call directly.
+      sharedDotPopup.on("close", () => {
+        openInvestmentPopupDimsRef.current = null;
+        investmentRevealAbortRef.current?.abort();
+        investmentRevealAbortRef.current = null;
+      });
+      // Coerce a clicked investment point feature's mapbox-serialized
+      // properties (JSON-primitive coerced) into InvestmentFilterDimensions,
+      // for the popup-retention check (Sol gate blocker 1). Local to this
+      // effect — the shape mirrors InvestmentPointProps.
+      const investmentPointPopupDims = (
+        p: Record<string, unknown>,
+      ): InvestmentFilterDimensions => ({
+        year: p.year != null && p.year !== "" && !Number.isNaN(Number(p.year)) ? Number(p.year) : null,
+        funderType: String(p.funderType || ""),
+        governmentFundingPurpose: p.governmentFundingPurpose
+          ? (String(p.governmentFundingPurpose) as GovernmentFundingPurpose)
+          : null,
+      });
 
       // Click on cluster to zoom in
       map.on("click", "vacant-clusters", (e) => {
@@ -2028,6 +2117,9 @@ export default function MapView() {
       map.on("click", "owner-clusters-unclustered", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
+        // Not filter-scoped — clear any stale investment-popup dims so the
+        // out-of-scope closing effect never mistakenly targets THIS popup.
+        openInvestmentPopupDimsRef.current = null;
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildOwnerClusterPopupHtml(p))
@@ -2096,6 +2188,7 @@ export default function MapView() {
         if (!e.features?.length) return;
         const properties = e.features[0].properties || {};
         const zipCode = String(properties.zipCode || "");
+        openInvestmentPopupDimsRef.current = ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["cook-source-2023"];
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildCountyReliefPopupHtml(properties))
@@ -2152,6 +2245,7 @@ export default function MapView() {
         if (!e.features?.length) return;
         const properties = e.features[0].properties || {};
         const zipCode = String(properties.zipCode || "");
+        openInvestmentPopupDimsRef.current = ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-big"];
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
@@ -2209,6 +2303,7 @@ export default function MapView() {
         if (!e.features?.length) return;
         const properties = e.features[0].properties || {};
         const zipCode = String(properties.zipCode || "");
+        openInvestmentPopupDimsRef.current = ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-b2b"];
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
@@ -2298,6 +2393,7 @@ export default function MapView() {
       map.on("click", "community-investment-points", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
+        openInvestmentPopupDimsRef.current = investmentPointPopupDims(p);
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildInvestmentPopupHtml(p))
@@ -2327,6 +2423,7 @@ export default function MapView() {
       });
       map.on("click", "community-investment-state-capital-points", (e) => {
         if (!e.features?.length) return;
+        openInvestmentPopupDimsRef.current = investmentPointPopupDims(e.features[0].properties || {});
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
@@ -2366,38 +2463,79 @@ export default function MapView() {
         (e) => {
           if (!e.features?.length) return;
           const p = e.features[0].properties || {};
+          const dims = investmentPointPopupDims(p);
+          openInvestmentPopupDimsRef.current = dims;
           sharedDotPopup
             .setLngLat(e.lngLat)
             .setHTML(buildInvestmentPopupHtml(p))
             .addTo(map);
-          // Deliverable 1 (audit finding 9 / consult F6 + Q2): RRF's recipient
-          // name is withheld from the bulk payload, so buildInvestmentPopupHtml
-          // renders a "Reveal recipient name" button instead. Wire it to the
-          // lazy, single-record, authenticated fetch — never a bulk reload —
-          // and re-render this SAME popup body with the real name filled in.
+          // Deliverable 1 (audit finding 9 / consult F6 + Q2) + Sol gate
+          // blockers 1 and 4. RRF's recipient name is withheld from the bulk
+          // payload, so buildInvestmentPopupHtml renders a "Reveal recipient
+          // name" button instead. The handler below:
+          //   (1) REFUSES to fetch if the record has fallen out of the active
+          //       filter scope by click time (defense in depth alongside the
+          //       out-of-scope closing effect, which should already have
+          //       removed this popup — but a click can race a same-tick
+          //       state update).
+          //   (2) Tracks the in-flight request on investmentRevealAbortRef so
+          //       the closing effect / the popup's own "close" event can
+          //       abort it — an out-of-scope reveal must never land after
+          //       the fact.
+          //   (3) Handles EVERY outcome — ready, unauthorized, not_found,
+          //       unavailable (covers a malformed body — see
+          //       fetchInvestmentRecipientRecord), and a rejected fetch
+          //       (e.g. offline) — restoring an actionable, RETRYABLE button
+          //       state for every failure that isn't permanent, rather than
+          //       leaving "Loading…" forever.
           const revealButton = sharedDotPopup
             .getElement()
             ?.querySelector<HTMLButtonElement>("[data-investment-reveal-recipient]");
-          revealButton?.addEventListener(
-            "click",
-            () => {
-              const id = revealButton.dataset.investmentRevealRecipient || String(p.id || "");
-              if (!id) return;
-              revealButton.disabled = true;
-              revealButton.textContent = "Loading…";
-              fetchInvestmentRecipientRecord(id).then((result) => {
-                if (result.status !== "ready") return;
-                sharedDotPopup.setHTML(
-                  buildInvestmentPopupHtml({
-                    ...p,
-                    recipient: result.recipient ?? p.recipient,
-                    logLine: result.logLine ?? p.logLine,
-                  }),
-                );
+          if (!revealButton) return;
+          const applyRevealButtonState = (state: InvestmentRevealButtonState) => {
+            revealButton.textContent = state.label;
+            revealButton.disabled = state.disabled;
+            if (state.closePopup) sharedDotPopup.remove();
+          };
+          revealButton.addEventListener("click", () => {
+            const id = revealButton.dataset.investmentRevealRecipient || String(p.id || "");
+            if (!id) return;
+            if (investmentPopupOutOfScope(dims, investmentFilterStateRef.current)) {
+              applyRevealButtonState(investmentRevealButtonOutOfScopeState());
+              return;
+            }
+            investmentRevealAbortRef.current?.abort();
+            const controller = new AbortController();
+            investmentRevealAbortRef.current = controller;
+            applyRevealButtonState(investmentRevealButtonLoadingState());
+            fetchInvestmentRecipientRecord(id, { signal: controller.signal })
+              .then((result) => {
+                if (controller.signal.aborted) return;
+                if (result.status === "ready") {
+                  sharedDotPopup.setHTML(
+                    buildInvestmentPopupHtml({
+                      ...p,
+                      recipient: result.recipient ?? p.recipient,
+                      logLine: result.logLine ?? p.logLine,
+                    }),
+                  );
+                  return;
+                }
+                applyRevealButtonState(investmentRevealButtonStateForResult(result.status));
+              })
+              .catch(() => {
+                if (controller.signal.aborted) return;
+                // A genuinely rejected fetch (network down, DNS failure,
+                // etc.) — same retryable state as a resolved "unavailable",
+                // never a stuck "Loading…".
+                applyRevealButtonState(investmentRevealButtonStateForResult("unavailable"));
+              })
+              .finally(() => {
+                if (investmentRevealAbortRef.current === controller) {
+                  investmentRevealAbortRef.current = null;
+                }
               });
-            },
-            { once: true },
-          );
+          });
         },
       );
       map.on(
@@ -2481,6 +2619,10 @@ export default function MapView() {
       map.on("click", "community-investment-megaproject-points", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
+        // Megaprojects is deliberately EXEMPT from year/funder/purpose (its own
+        // disclosed caption already says so — accepted, unchanged by this gate) —
+        // never close this popup on a filter change.
+        openInvestmentPopupDimsRef.current = null;
         sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildInvestmentPopupHtml(p))
@@ -3462,25 +3604,6 @@ export default function MapView() {
     investmentGovernmentFundingPurposes,
     loaded,
   ]);
-
-  /**
-   * Deliverable 2 (audit finding 3 / consult F2) — the ONE filter state every
-   * public-investment overlay below reads through matchesInvestmentFilter /
-   * filterInvestmentPointFeatures / zipAggregateOverlaySourceInScope. Built
-   * once per render so all five overlays, their plotted counts, and their
-   * legend captions stay in lockstep with the base Dots layer's year/funder/
-   * purpose controls instead of each re-deriving (or skipping) its own filter.
-   */
-  const investmentFilterState = useMemo(
-    () => ({
-      yearRangeId: investmentYearRange,
-      activeFunderTypes: new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k])),
-      activeGovernmentFundingPurposes: new Set<GovernmentFundingPurpose>(
-        MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter((purpose) => investmentGovernmentFundingPurposes[purpose]),
-      ),
-    }),
-    [investmentYearRange, investmentFunderTypes, investmentGovernmentFundingPurposes],
-  );
 
   /* Additional public-investment overlays. They deliberately render through
      their own mapbox sources so neither Dots/Arcs/Density nor awarded-dollar

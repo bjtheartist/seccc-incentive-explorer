@@ -290,10 +290,20 @@ function loadFunderHqs(): FunderHq[] {
  */
 export async function GET(req: NextRequest) {
   if (!isOwnerFilesAdminConfigured()) {
-    return NextResponse.json({ error: "Owner Files admin auth is not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Owner Files admin auth is not configured" },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
   if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Sol gate blocker 3 — every failure path off this gate (including the
+    // recipient-record lazy-reveal view below) must carry private/no-store,
+    // not just the success paths. This is the single 401 every view branch
+    // shares, since auth happens before any view is dispatched.
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
 
   const data = loadCommunityInvestment();

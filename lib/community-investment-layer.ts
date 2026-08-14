@@ -739,6 +739,25 @@ export function matchesInvestmentFilter(
 }
 
 /**
+ * Sol gate blocker 1 — filtering must not stop at rendered sources/counts.
+ * Whether an ALREADY-OPEN popup/panel showing a record with these filter
+ * dimensions must close (or refuse a lazy reveal) under the CURRENT filter.
+ * `dims === null` means "the open popup isn't filter-scoped" (an
+ * owner-cluster popup, or the Megaprojects popup — which is deliberately
+ * exempt from year/funder/purpose, matching its own disclosed caption) — such
+ * a popup never closes on a filter change. Pure / deterministic, so the exact
+ * reproduction (an actual 2021 RRF point surviving a switch to "2024–2026")
+ * is unit-testable without mapbox.
+ */
+export function investmentPopupOutOfScope(
+  dims: InvestmentFilterDimensions | null,
+  filter: InvestmentFilterState,
+): boolean {
+  if (dims === null) return false;
+  return !matchesInvestmentFilter(dims, filter);
+}
+
+/**
  * Client-side filter over already-built point features, mirroring the vacancy
  * distress-filter pattern (components/vacancy/VacancyReportMap.tsx) that
  * rebuilds the source data with setData rather than a layer filter. A feature
@@ -1221,6 +1240,52 @@ export async function fetchInvestmentRecipientRecord(
     recipient: data.recipient,
     logLine: typeof data.logLine === "string" ? data.logLine : null,
   };
+}
+
+/** The "Reveal recipient name" button's post-outcome state. */
+export interface InvestmentRevealButtonState {
+  label: string;
+  disabled: boolean;
+  /** true only for "unauthorized" — MapView closes the popup outright rather
+   * than leaving a dead-end control an unauthenticated visitor could keep
+   * clicking. */
+  closePopup: boolean;
+}
+
+/**
+ * Sol gate blocker 4 — the reveal button's state for every possible fetch
+ * OUTCOME (a resolved, non-"ready" InvestmentRecipientRecordStatus).
+ * Exhaustive by construction (the switch has no default), so a future status
+ * added to InvestmentRecipientRecordStatus is a compile error here rather
+ * than a silently-stuck button. "unavailable" also covers a malformed
+ * response body (fetchInvestmentRecipientRecord normalizes both to this
+ * status) and is the SAME state used for a genuinely rejected fetch (offline,
+ * DNS failure, etc. — MapView's .catch() calls this with "unavailable" too).
+ * Only "not_found" is non-retryable in place — the id itself will not
+ * resolve differently on a second attempt.
+ */
+export function investmentRevealButtonStateForResult(
+  status: Exclude<InvestmentRecipientRecordStatus, "ready">,
+): InvestmentRevealButtonState {
+  switch (status) {
+    case "unauthorized":
+      return { label: "Session expired", disabled: true, closePopup: true };
+    case "not_found":
+      return { label: "Recipient unavailable", disabled: true, closePopup: false };
+    case "unavailable":
+      return { label: "Couldn't load — tap to retry", disabled: false, closePopup: false };
+  }
+}
+
+/** The reveal button's state while its fetch is in flight. */
+export function investmentRevealButtonLoadingState(): InvestmentRevealButtonState {
+  return { label: "Loading…", disabled: true, closePopup: false };
+}
+
+/** The reveal button's state when the record has fallen out of the active
+ * filter scope by click time (Sol gate blocker 1's "refuses to reveal"). */
+export function investmentRevealButtonOutOfScopeState(): InvestmentRevealButtonState {
+  return { label: "No longer in the selected filters", disabled: true, closePopup: false };
 }
 
 /** Backward-compatible wrapper retained for the existing Cook County callers. */

@@ -183,6 +183,7 @@ describe("GET /api/owner-file/investment", () => {
     hasSessionMock.mockReturnValue(false);
     const res = await GET(req("http://localhost/api/owner-file/investment?view=map"));
     expect(res.status).toBe(401);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(loadMock).not.toHaveBeenCalled();
   });
 
@@ -298,12 +299,17 @@ describe("GET /api/owner-file/investment", () => {
   });
 
   describe("recipient-record view (deliverable 1 — lazy RRF retrieval)", () => {
-    it("401s unauthenticated, before any data load", async () => {
+    it("401s unauthenticated, before any data load, with private/no-store on the failure path itself (Sol gate blocker 3)", async () => {
       hasSessionMock.mockReturnValue(false);
       const res = await GET(
         req("http://localhost/api/owner-file/investment?view=recipient-record&id=rrf-point"),
       );
       expect(res.status).toBe(401);
+      // Adversarial: asserted on the 401 response DIRECTLY, not inferred from
+      // a passing 200 elsewhere — a cached "Unauthorized" is still a leak
+      // surface (an intermediary could serve it to a since-authenticated
+      // request, or reveal auth-gate existence/state to a shared cache).
+      expect(res.headers.get("Cache-Control")).toBe("private, no-store");
       expect(loadMock).not.toHaveBeenCalled();
     });
 
@@ -689,6 +695,7 @@ describe("GET /api/owner-file/investment", () => {
     );
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(loadMock).not.toHaveBeenCalled();
   });
 });

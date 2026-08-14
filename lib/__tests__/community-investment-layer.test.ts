@@ -21,6 +21,10 @@ import {
   summarizeCitywideInvestment,
   buildMegaprojectFeatures,
   citywideDevelopmentProjectNames,
+  investmentPopupOutOfScope,
+  investmentRevealButtonLoadingState,
+  investmentRevealButtonOutOfScopeState,
+  investmentRevealButtonStateForResult,
   makeMegaprojectRadiusScale,
   matchesInvestmentFilter,
   megaprojectStatusGroup,
@@ -33,7 +37,9 @@ import {
   MEGAPROJECT_RADIUS_MIN,
   MEGAPROJECT_STATUS_GROUPS,
   MEGAPROJECT_STATUS_GROUP_BY_STATUS,
+  type InvestmentFilterDimensions,
   type InvestmentPointFeature,
+  type InvestmentRecipientRecordStatus,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 
@@ -319,6 +325,99 @@ describe("matchesInvestmentFilter (deliverable 2 — the ONE overlay predicate)"
         },
       ),
     ).toBe(true);
+  });
+});
+
+describe("investmentPopupOutOfScope (Sol gate blocker 1 — open popup/panel retention)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+
+  it("an ACTUAL 2021 RRF point popup survives under 'All', then closes on a 2024–2026 selection — the exact reproduction", () => {
+    // Mirrors a real sba-rrf point feature's properties (InvestmentPointProps):
+    // funderType is always "government", governmentFundingPurpose is always
+    // "programmatic" (lib/government-funding-purpose.ts SOURCE_GOVERNMENT_FUNDING_PURPOSE),
+    // year varies per record from the published approval date — this one is 2021.
+    const rrf2021: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf2021, { yearRangeId: "all", activeFunderTypes: allFunderTypes }),
+    ).toBe(false); // survives — still in scope
+    expect(
+      investmentPopupOutOfScope(rrf2021, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true); // closes — the year filter now excludes it
+  });
+
+  it("cook-source-2023 (fixed 2023) closes on a 2024–2026 selection", () => {
+    const cook: InvestmentFilterDimensions = {
+      year: 2023,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(cook, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+    expect(
+      investmentPopupOutOfScope(cook, { yearRangeId: "2022-2023", activeFunderTypes: allFunderTypes }),
+    ).toBe(false);
+  });
+
+  it("illinois-big (fixed 2020) closes on a 2024–2026 selection", () => {
+    const big: InvestmentFilterDimensions = {
+      year: 2020,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(big, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+  });
+
+  it("illinois-b2b (fixed 2022) closes on a 2024–2026 selection", () => {
+    const b2b: InvestmentFilterDimensions = {
+      year: 2022,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(b2b, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+  });
+
+  it("closes on a purpose-checkbox change, not just a year change", () => {
+    const rrf: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf, {
+        yearRangeId: "all",
+        activeFunderTypes: allFunderTypes,
+        activeGovernmentFundingPurposes: ["capital_project"],
+      }),
+    ).toBe(true);
+  });
+
+  it("closes on a funderType-checkbox change", () => {
+    const rrf: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf, {
+        yearRangeId: "all",
+        activeFunderTypes: ["philanthropic", "private_development"],
+      }),
+    ).toBe(true);
+  });
+
+  it("a non-filter-scoped popup (dims === null — owner-cluster or Megaprojects) never closes", () => {
+    expect(
+      investmentPopupOutOfScope(null, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(false);
   });
 });
 
@@ -805,6 +904,53 @@ describe("fetchInvestmentRecipientRecord", () => {
     const fetchImpl = fetchStub(200, { recipient: 12345 });
     const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
     expect(result.status).toBe("unavailable");
+  });
+});
+
+describe("investmentRevealButtonStateForResult (Sol gate blocker 4 — every fetch outcome)", () => {
+  it("unauthorized (session lost) — non-retryable label, and signals the popup should close", () => {
+    const state = investmentRevealButtonStateForResult("unauthorized");
+    expect(state.closePopup).toBe(true);
+    expect(state.disabled).toBe(true);
+    expect(state.label).not.toBe("Loading…");
+  });
+
+  it("not_found — permanent, non-retryable label, popup stays open", () => {
+    const state = investmentRevealButtonStateForResult("not_found");
+    expect(state).toEqual({ label: "Recipient unavailable", disabled: true, closePopup: false });
+  });
+
+  it("unavailable (non-2xx/non-404, malformed body, or a caught network rejection) — RETRYABLE, never stuck on Loading", () => {
+    const state = investmentRevealButtonStateForResult("unavailable");
+    expect(state.disabled).toBe(false);
+    expect(state.closePopup).toBe(false);
+    expect(state.label).not.toBe("Loading…");
+    expect(state.label.toLowerCase()).toContain("retry");
+  });
+
+  it("is exhaustive over every non-ready InvestmentRecipientRecordStatus — no outcome is left unhandled", () => {
+    const statuses: Exclude<InvestmentRecipientRecordStatus, "ready">[] = [
+      "unauthorized",
+      "not_found",
+      "unavailable",
+    ];
+    for (const status of statuses) {
+      const state = investmentRevealButtonStateForResult(status);
+      expect(state.label.length).toBeGreaterThan(0);
+      // Every state is either disabled (a terminal/loading state) or an
+      // enabled retry — never left ambiguous.
+      expect(typeof state.disabled).toBe("boolean");
+    }
+  });
+
+  it("loading and out-of-scope states are both disabled, but read as DIFFERENT statuses, not both 'Loading…'", () => {
+    const loading = investmentRevealButtonLoadingState();
+    const outOfScope = investmentRevealButtonOutOfScopeState();
+    expect(loading.label).toBe("Loading…");
+    expect(outOfScope.label).not.toBe("Loading…");
+    expect(loading.disabled).toBe(true);
+    expect(outOfScope.disabled).toBe(true);
+    expect(outOfScope.closePopup).toBe(false);
   });
 });
 

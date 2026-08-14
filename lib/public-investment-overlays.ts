@@ -282,7 +282,11 @@ export function publicInvestmentOverlayIdForSource(
  * ZIP-aggregate map design and the gated per-ZIP endpoint exist to keep off the
  * screen. So it must hard-close on EVERY teardown path, not only its own X
  * button: its own overlay toggling off, the Community Investment master toggle
- * going off, or the admin session dropping.
+ * going off, the admin session dropping, or — Sol gate blocker 1 — the active
+ * year/funderType/purpose filter no longer including the panel's source. A
+ * Cook/BIG/B2B panel open before a year change to a window outside that
+ * program's fixed year must not keep listing names the map itself no longer
+ * shows.
  *
  * Pure and exhaustive over the teardown inputs, so the rule is unit-testable
  * away from mapbox.
@@ -293,9 +297,18 @@ export function shouldKeepRecipientsPanelOpen(input: {
   overlays: PublicInvestmentOverlayVisibility;
   /** The source whose recipients the open panel is showing. */
   sourceId: string;
+  /**
+   * Whether `sourceId`'s fixed (year, funderType, purpose) is still within
+   * the active filter — computed by the caller via
+   * zipAggregateOverlaySourceInScope (lib/community-investment-layer.ts) and
+   * passed in as a plain boolean so this module never needs to import the
+   * filter machinery (it already flows the other direction).
+   */
+  filterInScope: boolean;
 }): boolean {
   if (!input.adminSessionActive) return false;
   if (!input.communityInvestmentVisible) return false;
+  if (!input.filterInScope) return false;
   const overlayId = publicInvestmentOverlayIdForSource(input.sourceId);
   // An unknown source has no overlay that could switch it off — fail closed
   // rather than leaving names on screen with no control bound to them.
