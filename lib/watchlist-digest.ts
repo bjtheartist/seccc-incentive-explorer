@@ -179,14 +179,6 @@ export async function assessWatchedArea(
   const point = parsePointAreaId(area.areaId);
   if (!point) return null;
 
-  // Every per-area lookup degrades to "no info for this facet" on failure —
-  // one bad area (e.g. a point that trips malformed source geometry) must
-  // never sink the user's whole digest email.
-  const [boundary, zoneResponse] = await Promise.all([
-    resolvers.findTifBoundary(point.lat, point.lon).catch(() => null),
-    resolvers.checkZones(point.lat, point.lon).catch(() => null),
-  ]);
-
   let tif: TifExpirationFinding | null = null;
   let deadlines: DeadlineItem[] = [];
   // review7 S22 (HIGH, BLOCKING): was tracked nowhere — S16 migrated the
@@ -199,6 +191,33 @@ export async function assessWatchedArea(
   // omitted while the email still reads as a complete, confirmed digest.
   let zoneDataIncomplete = false;
   try {
+    // review8 S27 (HIGH, BLOCKING): this try block used to start AFTER
+    // `boundary`/`zoneResponse` were already resolved below — each
+    // resolver call had its own `.catch(() => null)`, but that only
+    // catches a REJECTED promise. A resolver that throws SYNCHRONOUSLY
+    // (before it ever returns a promise to attach `.catch()` to) isn't
+    // caught by that per-call `.catch()` at all — the throw propagates
+    // out of `assessWatchedArea` itself, rejecting the promise this
+    // function returns. The route's own outer `.catch(() => null)`
+    // (app/api/cron/watchlist-digest/route.ts) then converts that
+    // rejection to `null`, and the area is silently dropped from the
+    // digest with no caveat — even though this docstring's own
+    // `zoneDataIncomplete` comment already claimed "or the whole
+    // per-area assessment threw" as a covered case. It wasn't. Moving
+    // the resolver-invocation step INSIDE this try (rather than adding a
+    // second, separate try) means any failure anywhere in a valid
+    // point's assessment — a synchronous throw, a resolver's own
+    // rejected promise (the per-call `.catch(() => null)` below still
+    // absorbs those independently, so a single resolver failing doesn't
+    // discard the OTHER resolver's real result), or an internal
+    // computation error — lands in the SAME catch below and produces a
+    // valid, notable, `zoneDataIncomplete: true` result instead of ever
+    // rejecting this function's own promise.
+    const [boundary, zoneResponse] = await Promise.all([
+      resolvers.findTifBoundary(point.lat, point.lon).catch(() => null),
+      resolvers.checkZones(point.lat, point.lon).catch(() => null),
+    ]);
+
     tif = assessTifExpiration(boundary, today);
 
     const evidence = normalizeZoneEvidenceV2(zoneResponse);

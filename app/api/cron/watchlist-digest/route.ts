@@ -9,6 +9,7 @@ import {
   buildDigestEmailHtml,
   loadSbifRollout,
   loadTifFinancialsMap,
+  parsePointAreaId,
   type AreaAssessment,
   type AreaResolvers,
 } from "@/lib/watchlist-digest";
@@ -135,12 +136,33 @@ export async function GET(req: NextRequest) {
     for (const area of user.areas) {
       let assessment = assessmentCache.get(area.areaId);
       if (assessment === undefined) {
-        // A single failing area degrades to "no findings" — it must not
-        // sink the rest of this user's digest (or other users' digests).
+        // review8 S27 (HIGH, BLOCKING): `assessWatchedArea` itself now
+        // degrades any failure for a VALID point into a notable,
+        // `zoneDataIncomplete: true` result (see its own S27 comment) —
+        // it should no longer reject at all for a parseable areaId. This
+        // catch is defense in depth, not the primary fix: if it ever
+        // fires anyway, it must NOT reduce to the old `null` (which
+        // silently dropped the area from the digest with no caveat,
+        // while a user's OTHER, successfully-assessed areas still sent —
+        // the exact false-negative this finding is about). A parseable
+        // point still gets a synthetic notable/zoneDataIncomplete entry;
+        // only a genuinely unparseable areaId (parsePointAreaId returns
+        // null, same as assessWatchedArea's own early return) stays null.
         assessment = await assessWatchedArea(area, resolvers, today).catch(
           (err) => {
-            console.error("watchlist digest: area skipped", area.areaId, err);
-            return null;
+            console.error("watchlist digest: area assessment failed", area.areaId, err);
+            const point = parsePointAreaId(area.areaId);
+            if (!point) return null;
+            return {
+              areaId: area.areaId,
+              areaLabel: area.areaLabel || area.areaId,
+              lat: point.lat,
+              lon: point.lon,
+              tif: null,
+              deadlines: [],
+              notable: true,
+              zoneDataIncomplete: true,
+            } satisfies AreaAssessment;
           }
         );
         assessmentCache.set(area.areaId, assessment);

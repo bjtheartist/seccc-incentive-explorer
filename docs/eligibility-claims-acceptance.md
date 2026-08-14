@@ -2937,3 +2937,100 @@ regression surface to check. Full repo `npx eslint .` — 0 errors, the
 same 5 pre-existing warnings, unchanged. Full `npx vitest run` — **326
 test files, 4064 passed, 2 skipped** (up from S25's 326/4062 — the 2
 new tests). `npm run programs:public:check` clean.
+
+### S27 (HIGH) — a synchronous resolver throw silently dropped an area from the digest, with no caveat
+
+**Finding:** `app/api/cron/watchlist-digest/route.ts`'s per-area loop
+called `assessWatchedArea(area, resolvers, today).catch((err) => {
+...; return null; })`. Inside `assessWatchedArea` (`lib/watchlist-digest.ts`),
+each resolver's OWN promise already had its own `.catch(() => null)` —
+but that only catches a REJECTED promise. A resolver that throws
+SYNCHRONOUSLY (never returns a promise to attach `.catch()` to at all —
+e.g. a bug in `findTifBoundaryAtPoint` itself, not a rejected fetch)
+propagated straight out of `assessWatchedArea`, rejecting the promise
+IT returns. The route's own outer `.catch()` converted that rejection
+to `null`, and `if (assessment) { assessments.push(...) }` silently
+dropped the area — with a user's OTHER, successfully-assessed area
+still producing and sending a complete-looking digest, no caveat
+anywhere that one area's data was missing that week. Notably,
+`AreaAssessment.zoneDataIncomplete`'s own docstring (review7 S22)
+already CLAIMED "or the whole per-area assessment threw" as a covered
+case — it wasn't; only internal computation errors AFTER the resolvers
+had already resolved were caught, by a try/catch that started too late.
+
+**Fix, in two layers per the coordinator's "in assessWatchedArea or the
+catch" framing — both, not either:**
+1. **Primary (`lib/watchlist-digest.ts`):** widened `assessWatchedArea`'s
+   existing try/catch to also wrap the resolver-invocation step (the
+   `Promise.all([...])` call), not just the internal computation after
+   it. Any failure anywhere in a valid point's assessment — a
+   synchronous resolver throw, a resolver's own rejected promise (the
+   per-call `.catch(() => null)` still independently absorbs those, so
+   one resolver failing doesn't discard the OTHER resolver's real
+   result), or an internal computation error — now lands in the SAME
+   catch and produces a valid, `notable: true, zoneDataIncomplete: true`
+   result instead of ever rejecting the function's own promise. For a
+   parseable `areaId`, `assessWatchedArea` should no longer reject at
+   all.
+2. **Defense in depth (`app/api/cron/watchlist-digest/route.ts`):** the
+   route's outer `.catch()` no longer reduces to `null` unconditionally.
+   If it ever fires anyway, it re-parses the point (`parsePointAreaId`,
+   newly exported) and, for a parseable point, synthesizes the same
+   `notable: true, zoneDataIncomplete: true` shape directly — matching
+   what `assessWatchedArea` itself now produces — so the ROUTE's own
+   behavior is correct independent of the library function's internals.
+   Only a genuinely unparseable `areaId` still resolves to `null` (the
+   same case `assessWatchedArea`'s own early return already treats as
+   "nothing to assess," not a failure).
+
+**Tests added:** `app/api/cron/watchlist-digest/route.test.ts`
+(extended from 5 to 6 tests): a new test forcing `findTifBoundaryMock`
+to throw SYNCHRONOUSLY (`mockImplementationOnce(() => { throw ...
+})`, not `mockRejectedValueOnce`, which the adjacent pre-existing "bad
+geometry" test already covers and which was never broken) for one area,
+alongside a second, successful area for the same user — asserts a
+single email sends (`emailsSent: 1`) whose HTML contains BOTH the
+successful area's own finding AND the failed area's label with the
+`zoneDataIncomplete` caveat text ("Some incentive-geography data could
+not be verified for this location this week.").
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check
+via `git stash push --keep-index -- lib/watchlist-digest.ts
+"app/api/cron/watchlist-digest/route.ts"` (S13/S18/S22/S23/S25/S26
+discipline — both source files stashed together as one fix unit, test
+files left in place): the new S27 test failed against pre-fix code —
+console output showed the OLD "area skipped" log line (confirming the
+route's outer catch, not the widened inner one, was firing) and the
+failed area's label was completely absent from the sent HTML; the other
+5 route tests and all 19 `lib/__tests__/watchlist-digest.test.ts` tests
+remained correctly unaffected. `git stash pop` restored the fix; re-ran
+`tsc --noEmit` (clean) — the re-run's console output now showed "area
+assessment degraded" (confirming the PRIMARY fix, inside
+`assessWatchedArea` itself, is what catches it, with the route-level
+change as untriggered defense in depth) — and all 25 tests across both
+files passed. Full repo `npx eslint .` — 0 errors, the same 5
+pre-existing warnings, unchanged. Full `npx vitest run` — **326 test
+files, 4065 passed, 2 skipped** (up from S26's 326/4064 — the 1 new
+test). `npm run programs:public:check` clean.
+
+---
+
+## Review 8 — ALL FIVE FINDINGS CLOSED (S23–S27)
+
+Every finding in `scratchpad/battle-test/review8-out.md` is now fixed,
+tested, and committed on `feat/eligibility-claims-cutover`. See each
+finding's own section above for its specific fix, judgment calls, and
+test coverage.
+
+S17–S22 confirmed otherwise verified going into this round, per the
+coordinator's own dispatch; everything prior remains fenced and was not
+re-litigated.
+
+**Final gate, run at HEAD of `feat/eligibility-claims-cutover`
+(5 commits: S23 `fe62870`, S24 `d018d08`, S25 `5e08c9f`, S26 `9a1fe71`,
+S27 — this commit):** `npx tsc --noEmit` clean; `npx eslint .` — 0
+errors, 5 pre-existing warnings (unchanged from Review 7); full `npx
+vitest run` — **326 test files, 4065 passed, 2 skipped** (up from
+Review 7's 326/4042 — 23 new tests across the 5 findings); `npm run
+programs:public:check` clean; `git status` clean at each commit
+boundary; nothing pushed or merged.
