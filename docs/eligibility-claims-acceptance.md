@@ -1608,3 +1608,102 @@ above); `npm run programs:public:check` clean
 `data/programs-internal.json`, unaffected by this finding — it was never
 the leak; the leak was a separate route serving the internal file
 directly).
+
+---
+
+### S12 (CRITICAL) — legacy committed shortlist exports still poisoned overlay/count rendering
+
+**Finding:** review5 S2 added the `unknown` overlay field precisely to
+stop an unresolved layer from reading as a confirmed non-match, but its
+own backward-compatibility default undid that for every already-committed
+file: `OverlayMembershipSchema`'s `unknown: z.boolean().default(false)`
+meant an omitted `unknown` (every one of the 9 committed
+`data/exports/shortlist-universe/*.json` files predates the field —
+confirmed by direct inspection, 0 of 125,184 overlay objects carry an
+explicit `unknown` key) silently parsed as a TRUSTED `false` — the exact
+v1 anti-pattern S2 was written to eliminate, now reintroduced one layer
+up by S2's own fallback. Separately, `lib/shortlist-engine.ts`'s
+`incentiveCount: row.incentiveCount ?? 0` coerced every one of the
+12,216 (of 31,296) rows carrying `incentiveCount: null` into a trusted
+`0`, rendered by `components/vacancy/SiteShortlistResults.tsx` as "0
+incentive geographies mapped at this point" — a confirmed-absence claim
+for a fact nobody ever actually checked.
+
+**Fix:**
+- **`lib/shortlist-universe-schema.ts`'s `OverlayMembershipSchema`**
+  (~line 105): `unknown` changed from `z.boolean().default(false)` to
+  `z.boolean().optional()` plus a `.transform()` that computes
+  `unknown: unknown ?? !present`. Per the directive: `present: true`
+  stays trusted (an omitted `unknown` alongside a real geometry match
+  resolves to `false` — a published positive is not in doubt merely
+  because the file predates this field), while an omitted `unknown`
+  alongside `present: false` resolves to `true` (never checked, not
+  confirmed absent). A file that explicitly writes `unknown` (every
+  export run from the day the field was added onward — confirmed
+  `scripts/export-shortlist-universe.ts` already writes it explicitly at
+  every resolution site) always uses that value verbatim; only the
+  omitted case changed. The output shape (`{present, name, unknown}`) is
+  unchanged, so no schema-version bump — this is a parsing-BEHAVIOR fix
+  for the omitted case, not a shape change, and existing/future files
+  that already write the field are byte-for-byte unaffected.
+- **`lib/shortlist-engine.ts`** (~line 648, ~line 870):
+  `RankedShortlistCandidate.incentiveCount` changed from `number` to
+  `number | null`; the `?? 0` coercion removed — `row.incentiveCount`
+  (already `number | null` in the schema) now flows through unchanged.
+- **`components/vacancy/SiteShortlistResults.tsx`** (~line 323): the
+  inline `{candidate.incentiveCount} incentive ... mapped` JSX replaced
+  with a new exported helper, `incentiveCountText(incentiveCount: number
+  | null): string` — returns `"Incentive geography count not checked"`
+  for BOTH `null` and `<= 0` (the coordinator's directive verbatim:
+  "counts stay number|null and null OR zero renders 'Not checked' ...
+  do NOT trust legacy zeros" — a literal `0` gets the same treatment as
+  `null` because this pipeline has never yet produced a distinguishable,
+  audited zero: every committed row today is either `null` or positive,
+  confirmed by direct inspection, so there is no way to tell an audited
+  zero from an unresolved one that happened to compute to the same
+  number); only a genuinely positive count states the real number.
+
+**Judgment call — extended the fix to a second, related surface named in
+the finding's own evidence, not the three explicitly-listed files:** the
+finding text cites "map dossiers render non-null zero as mapped" as
+supporting evidence. `components/map/MapDossierCard.tsx`'s vacancy-detail
+`FactRow` for `selection.incentiveGeographyCount` used `!= null` alone,
+so a genuine `0` rendered as an audited "Mapped incentive geographies: 0"
+— the identical false-zero shape, on a DIFFERENT field/pipeline
+(`incentiveGeographyCount`, sourced from the separate, deeper DB pipeline
+already flagged as an unaudited gap in review5 S2 — not the shortlist
+universe export this finding's TEST requirement targets). Changed the
+guard to `!= null && > 0`, the same conservative fix used above, without
+attempting to audit or regenerate that separate pipeline's data (still
+out of reach without a live DB session, per the Hard Rules).
+
+**Tests added:** `lib/__tests__/shortlist-legacy-export-safety.test.ts`
+(new, 66 tests) — the coordinator's TEST requirement verbatim: loads
+the nine ACTUAL committed files via `loadShortlistUniverse(zip)` with
+**no** `__setShortlistUniverseDataDirForTests` override (the real
+`data/exports/shortlist-universe/` path, the real, unmodified loader,
+the real production schema — not synthetic fixtures), then per ZIP
+asserts: no row's `overlaysText()` output is ever the bare "None mapped"
+string; every `present: true` overlay resolves `unknown: false` and
+still renders as a known positive (never swallowed into "Not checked");
+every `present: false` overlay (the legacy-omitted case) resolves
+`unknown: true`; no row's `incentiveCountText()` ever starts with "0
+incentive"; every `null`-count row renders "Incentive geography count
+not checked"; every positive-count row still renders the real number.
+Plus a small synthetic control (`incentiveCountText(0) ===
+incentiveCountText(null)`, both "not checked") proving the zero-handling
+half of the directive against a value the real files don't currently
+contain (0 of 31,296 committed rows carry a literal `0` today — only
+`null` or positive).
+
+**Verification:** `npx tsc --noEmit` clean (the `incentiveCount: number
+| null` type change flows cleanly through every consumer — `lib/shortlist-csv.ts`'s
+CSV cell already accepted `number | null | undefined`, no change needed
+there); `npx eslint .` — 0 errors, same 5 pre-existing warnings; full
+`npx vitest run` — **323 test files, 3876 passed, 2 skipped** (up from
+S11's 322/3810 — the +1 file/+66 tests is the new safety-test file above;
+all pre-existing shortlist/overlay/CSV/map-dossier tests pass unchanged,
+confirming no regression for rows that already carried real `unknown`
+values); `npm run programs:public:check` clean (unaffected by this
+finding, same as S11 — this is the shortlist universe pipeline, not the
+programs catalog).

@@ -373,7 +373,18 @@ function SelectionFacts({ selection }: { selection: MapDossierSelection }) {
         <>
           <FactRow label="Tracked type" value={VACANCY_TYPE_LABELS[selection.vacancyType]} />
           {selection.pin ? <FactRow label="PIN" value={selection.pin} /> : null}
-          {selection.incentiveGeographyCount != null ? (
+          {/* review6 S12: cited directly in the finding text ("map dossiers
+              render non-null zero as mapped") — `!= null` alone let a
+              genuine `0` render as an audited "Mapped incentive
+              geographies: 0" fact row, same false-zero shape as the
+              shortlist card's `?? 0` coercion (see
+              components/vacancy/SiteShortlistResults.tsx's
+              incentiveCountText). This value comes from a separate,
+              deeper DB pipeline this session has no live access to audit
+              (documented gap, review5 S2) — `> 0` is the conservative
+              fix available without that access: only a positive,
+              unambiguous count is shown at all. */}
+          {selection.incentiveGeographyCount != null && selection.incentiveGeographyCount > 0 ? (
             <FactRow
               label="Mapped incentive geographies"
               value={selection.incentiveGeographyCount.toLocaleString("en-US")}
