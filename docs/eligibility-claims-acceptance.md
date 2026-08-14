@@ -2409,3 +2409,106 @@ every changed file; full `npx vitest run` — **326 test files, 4015
 passed, 2 skipped** (up from S18's 326/4001); `npm run
 programs:public:check` clean (unaffected — concierge output validation
 only).
+
+---
+
+### S20 (MEDIUM) — the raw-Program client guard implemented less than its stated contract
+
+**Finding:** review6 S16's `verifyNoRawProgramClientCast` only matched
+an exact `as Program`/`<Program>x` type ASSERTION, text-matched (not
+symbol-resolved) — missing a plain variable/parameter/prop type
+annotation, a generic type argument (`useState<Program>`), and any
+reference the client code never explicitly casts to but still types as
+`Program`. `verifyNoRawProgramRouteResponse` only matched
+`getProgramsSync()` inlined or through ONE variable hop — missing an
+object-literal wrapper (`{ programs: getProgramsSync() }`), an identity
+`.map(p => p)` no-op, array/object spreads, `JSON.stringify(...)`
+piped through a raw `new Response(...)`, and any non-`getProgramsSync`
+read of the internal catalog (a direct `require()` of
+`data/programs-internal.json`).
+
+**Fix — `verifyNoRawProgramClientCast` rewritten around symbol
+resolution, not cast-only text matching:** now scans every
+`TypeReferenceNode` in a `"use client"` file (covering casts,
+annotations, generic arguments, and prop types in ONE pass — `Program[]`
+is caught automatically, since its `ArrayTypeNode` wraps the same
+`Program` `TypeReferenceNode` the scan already finds) and RESOLVES each
+one by symbol — via `getSymbol()` then, critically, `getAliasedSymbol()`
+to follow an `import type { Program }` specifier through to its real
+declaration in `lib/types.ts` (a same-file-only symbol lookup resolves
+to the LOCAL import binding, not the original interface — missed on the
+first pass of this fix, caught by the fixture tests before it shipped,
+see below) — so an unrelated local type that happens to ALSO be named
+`Program` in some other file is never a false positive. Two safe
+narrowing shapes are excluded: `Pick<Program, ...>`/`Omit<Program,
+...>` (a genuinely narrower derived type, no full value ever held) and
+`Program["field"]` indexed access (a single field's type).
+
+**Fix — `verifyNoRawProgramRouteResponse` rewritten around recursive
+taint tracking:** `isTaintedProgramSource(expr)` traces an expression
+back to `getProgramsSync()` OR a direct `require()` of
+`data/programs-internal.json`, propagating through: a bare identifier
+(resolves to its declaration's initializer), an identity `.map(fn)`
+(only when `fn` is provably a no-op — `p => p` or `p => { return p; }`;
+any OTHER map body is treated as a real transform and stops the taint,
+since this check cannot generally prove an arbitrary map body safe, only
+that the identity shape definitely isn't), array/object spreads, EVERY
+property of an object literal (a `{ programs: <tainted> }` wrapper
+taints the whole literal, since every property serializes together),
+and `JSON.stringify(<tainted>)` (the resulting string still carries the
+raw content). The crossing-point check itself was widened to also catch
+`new Response(...)`/`new NextResponse(...)` (the raw constructor form —
+`NextResponse.json(...)`/`Response.json(...)` alone would miss `new
+Response(JSON.stringify(x))`).
+
+**A real, previously-undetected finding surfaced by the strengthened
+check, and fixed (not just documented) — the same precedent as every
+prior finding in this whole engagement that turned up a genuine bug
+mid-implementation:** the real-codebase scan (run against the actual
+repo, not just fixtures, before this finding could be called closed)
+found TWO live violations: `components/report/ReportDisplay.tsx` (the
+SEPARATE shared ReportDisplay fork used by saved/shared reports — this
+component's own doc comment explicitly says the two forks were never
+consolidated) still declared `programs?: Program[]`, built a
+`programById` Map from it, and passed the looked-up program to
+`ReportNavigationLinks` as a fallback — and `ReportNavigationLinks`
+itself (shared by BOTH forks) still declared `program?: Program` in its
+own signature. review6 S11 had already fixed the IDENTICAL pattern in
+`app/report/page.tsx`'s own local ReportDisplay fork (confirmed via
+`programReportItem()`'s own investigation that every program-linked
+`ReportItem` already sets these fields directly, making the fallback
+redundant) but never mirrored that fix to this second fork. Confirmed
+by inspection that the ONLY real caller of the shared fork
+(`app/workspace/reports/[id]/page.tsx`) never passes a `programs` prop
+at all — genuinely dead code, not a hypothetical risk. Removed
+`programs`/`programById`/`itemProgram` from `ReportDisplay.tsx` and
+`program?: Program` from `ReportNavigationLinks.tsx` entirely (mirroring
+S11's exact fix in the OTHER fork), eliminating the last raw-`Program`
+client-type-reference in the whole codebase — confirmed by the
+strengthened real-codebase scan now returning zero violations.
+
+**Tests added:** `lib/__tests__/public-claim-surfaces.test.ts` extended
+from 29 to 46 tests. A new "S20 fixture-based evasion proof" describe
+block covers every evasion this finding named: variable annotation,
+function parameter, generic argument, and component prop (all FAIL);
+`Pick<Program,...>`, `Program["field"]`, and an unrelated same-named
+local `Program` type (all correctly PASS — proving symbol resolution,
+not text matching); the `{ programs }` wrapper, both identity-`.map()`
+forms, array spread, object spread of a tainted wrapper,
+`JSON.stringify` via raw `new Response`, and a direct
+`data/programs-internal.json` `require()` (all FAIL); a count-only
+derivation, a real (non-identity) `.map()` transform, and an unrelated
+`require()` (all correctly PASS). The existing TEST 1 fixture needed a
+stub `lib/types.ts` file added to resolve at all under the new
+symbol-based check — its own failure (0 violations found where 1 was
+expected) is what surfaced the `getAliasedSymbol()` gap during this
+fix's own implementation, before any of the new tests were even
+written.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **326 test files, 4032
+passed, 2 skipped** (up from S19's 326/4015); the real-codebase "zero
+raw-Program/v1-zone violations" test — which FAILED with 2 real
+violations partway through this fix — now passes clean; no regression
+in `public-report-display.test.tsx` or `report-navigation-links.test.tsx`;
+`npm run programs:public:check` clean.

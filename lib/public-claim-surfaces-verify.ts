@@ -275,18 +275,73 @@ function toRelative(sf: SourceFile, rootDir: string): string {
 }
 
 /**
- * Check 1/3 — "raw Program ... casts": FAILS if a `"use client"` file
- * ANYWHERE under app/components/lib contains a TypeScript type assertion
- * (`as Program`, `as Program[]`, or the `<Program>x` form) naming the
- * raw internal `Program` type. A component that casts a fetch response
- * (or anything else) to the raw shape is declaring, in its own types,
- * that it holds full internal records — exactly the shape a
- * `SafeMapProgramMatch`/`GeneratedReport`/`SurveyResult`-narrowed
- * response can never legitimately need. Scoped to `"use client"` files
- * only, matching this file's existing `verifyPublicProgramViewContract`
- * scoping rationale: server-only files legitimately hold full `Program`
- * fidelity (that's the S11 architecture), so a raw-`Program` cast there
- * is not itself the leak — only a CLIENT file casting to it is.
+ * review7 S20 (MEDIUM) — the type name "Program" appearing anywhere the
+ * raw internal type is actually held (a cast, a variable/parameter
+ * annotation, a generic argument like `useState<Program>`, a component
+ * prop) is the real risk surface. `Program` NESTED as the first type
+ * argument to `Pick<Program, ...>`/`Omit<Program, ...>`, or as the
+ * object type of an indexed-access `Program["field"]`, is excluded —
+ * both derive a genuinely NARROWER type; no full `Program` value is
+ * ever held at runtime for either shape (this codebase's own
+ * `ProgramAvailabilityFields`/`ProgramApplicationView`, review7 S17,
+ * deliberately use hand-written interfaces instead of `Pick<Program,
+ * ...>` for exactly this component, but a future author reaching for
+ * `Pick`/`Omit` here should not be blocked by this guard for doing the
+ * safe thing).
+ */
+function isSafeNarrowingProgramTypeUsage(typeRef: Node): boolean {
+  const parent = typeRef.getParent();
+  if (!parent) return false;
+  if (Node.isIndexedAccessTypeNode(parent) && parent.getObjectTypeNode() === typeRef) return true;
+  if (Node.isTypeReference(parent)) {
+    const utilName = parent.getTypeName().getText();
+    if ((utilName === "Pick" || utilName === "Omit") && parent.getTypeArguments()[0] === typeRef) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True when a `TypeReferenceNode` named "Program" actually resolves
+ *  (via ts-morph's symbol/declaration resolution, not a bare text
+ *  match) to `lib/types.ts`'s exported `Program` interface — so an
+ *  unrelated local type that HAPPENS to also be named `Program` in some
+ *  other file is never a false positive. */
+function resolvesToInternalProgramType(typeRef: Node, rootDir: string): boolean {
+  if (!Node.isTypeReference(typeRef)) return false;
+  if (typeRef.getTypeName().getText() !== "Program") return false;
+  const rawSymbol = typeRef.getTypeName().getSymbol();
+  if (!rawSymbol) return false;
+  // `getSymbol()` on a name imported via `import type { Program } from
+  // "..."` resolves to the LOCAL import-specifier binding (declared in
+  // THIS file), not the original `lib/types.ts` declaration — an
+  // aliased symbol needs one more hop (`getAliasedSymbol()`) to reach
+  // the real declaration. A same-file local `interface Program {...}`
+  // has no alias to follow, so it correctly stays on `rawSymbol`.
+  const symbol = rawSymbol.getAliasedSymbol() ?? rawSymbol;
+  const decls = symbol.getDeclarations();
+  const internalTypesPath = `${rootDir}/lib/types.ts`;
+  return decls.some((d) => d.getSourceFile().getFilePath() === internalTypesPath);
+}
+
+/**
+ * Check 1/3 — "raw Program ... casts/imports/annotations/generics/props":
+ * FAILS if a `"use client"` file ANYWHERE under app/components/lib
+ * references the raw internal `Program` type (resolved by symbol, not
+ * text-matched) in ANY of these positions: a type assertion (`as
+ * Program`/`<Program>x`), a variable/parameter/property type annotation,
+ * a generic type argument (`useState<Program>`, `Array<Program>`), or a
+ * component prop type — `Program[]` is covered automatically, since its
+ * `ArrayTypeNode` wraps exactly the same `Program` `TypeReferenceNode`
+ * this scan already finds. A component holding ANY of these shapes is
+ * declaring, in its own types, that it has full internal records —
+ * exactly what a `SafeMapProgramMatch`/`PublicProgramView`/
+ * `GeneratedReport`/`SurveyResult`-narrowed value never needs. Scoped to
+ * `"use client"` files only, matching this file's existing
+ * `verifyPublicProgramViewContract` scoping rationale: server-only files
+ * legitimately hold full `Program` fidelity (the S11 architecture), so a
+ * raw-`Program` reference there is not itself the leak — only a CLIENT
+ * file referencing it is.
  */
 export function verifyNoRawProgramClientCast(project: Project, rootDir: string): RepoWideViolation[] {
   const violations: RepoWideViolation[] = [];
@@ -294,78 +349,215 @@ export function verifyNoRawProgramClientCast(project: Project, rootDir: string):
     if (!isAppComponentsLibSourceFile(sf, rootDir)) continue;
     if (!hasUseClientDirective(sf)) continue;
 
-    const assertions = [
-      ...sf.getDescendantsOfKind(SyntaxKind.AsExpression),
-      ...sf.getDescendantsOfKind(SyntaxKind.TypeAssertionExpression),
-    ];
-    for (const assertion of assertions) {
-      const typeText = assertion.getTypeNode()?.getText() ?? "";
-      if (typeText === "Program" || typeText === "Program[]" || /^Program\s*\[\s*\]$/.test(typeText)) {
-        violations.push({
-          check: "no-raw-program-client-cast",
-          filePath: toRelative(sf, rootDir),
-          reason: `"use client" file casts to the raw internal Program type (${assertion.getText()}) at line ${assertion.getStartLineNumber()} — client code must only ever hold an already-narrowed DTO (SafeMapProgramMatch, PublicProgramView, a GeneratedReport/SurveyResult field), never the full internal record shape.`,
-        });
-      }
+    for (const typeRef of sf.getDescendantsOfKind(SyntaxKind.TypeReference)) {
+      if (!resolvesToInternalProgramType(typeRef, rootDir)) continue;
+      if (isSafeNarrowingProgramTypeUsage(typeRef)) continue;
+      violations.push({
+        check: "no-raw-program-client-cast",
+        filePath: toRelative(sf, rootDir),
+        reason: `"use client" file references the raw internal Program type ("${typeRef.getText()}") at line ${typeRef.getStartLineNumber()} — as a cast, an annotation, a generic argument, or a prop type. Client code must only ever hold an already-narrowed DTO (SafeMapProgramMatch, PublicProgramView, a GeneratedReport/SurveyResult field), never the full internal record shape.`,
+      });
     }
   }
   return violations;
 }
 
+/** True for an arrow/function expression that is the IDENTITY function
+ *  (`p => p`, `(p) => { return p; }`) — the exact no-op `.map()` shape
+ *  that launders a raw array through `.map()` without narrowing it at
+ *  all. Any OTHER map body (even `p => ({ id: p.id })`) is treated as a
+ *  real transform and is NOT tainted — this check cannot generally
+ *  prove an arbitrary map body is safe, only that the identity shape is
+ *  definitely NOT. */
+function isIdentityMapCallback(fn: Node): boolean {
+  if (!Node.isArrowFunction(fn) && !Node.isFunctionExpression(fn)) return false;
+  const params = fn.getParameters();
+  if (params.length !== 1) return false;
+  const paramName = params[0].getName();
+  const body = fn.getBody();
+  if (Node.isIdentifier(body)) return body.getText() === paramName;
+  if (Node.isBlock(body)) {
+    const stmts = body.getStatements();
+    if (stmts.length !== 1 || !Node.isReturnStatement(stmts[0])) return false;
+    const ret = stmts[0].getExpression();
+    return !!ret && Node.isIdentifier(ret) && ret.getText() === paramName;
+  }
+  return false;
+}
+
+/**
+ * review7 S20 (MEDIUM) — recursive taint check: does `expr` carry (or
+ * contain, anywhere inside an object/array literal) a value sourced from
+ * the raw internal catalog — `getProgramsSync()` OR a direct
+ * import/require of `data/programs-internal.json` (the S16 check only
+ * recognized the former; a route could bypass `getProgramsSync()`
+ * entirely and read the file directly) — WITHOUT having been narrowed
+ * by a real transform along the way? Handles the evasions named in this
+ * finding: `{ programs: <tainted> }` wrapper objects (a property value
+ * taints the WHOLE object literal, since it all gets serialized
+ * together), `.map(p => p)` identity maps (no-op, stays tainted; any
+ * OTHER map body is treated as a real transform), array/object spreads
+ * (`[...tainted]`, `{...tainted}`), and `JSON.stringify(tainted)` (the
+ * resulting STRING is still "tainted" for this check's purposes — it
+ * can cross the network wrapped in `new Response(...)` just as easily
+ * as an object can via `.json()`). `visited` guards against infinite
+ * recursion through circular `const x = x` style aliasing (never
+ * legitimate JS, but defensive).
+ */
+function isTaintedProgramSource(
+  expr: Node,
+  rootDir: string,
+  internalCatalogPath: string,
+  visited: Set<Node> = new Set(),
+): boolean {
+  if (visited.has(expr)) return false;
+  visited.add(expr);
+
+  // getProgramsSync() — the direct, named source.
+  if (Node.isCallExpression(expr)) {
+    const callee = expr.getExpression();
+    if (Node.isIdentifier(callee) && callee.getText() === "getProgramsSync") return true;
+
+    // .map(fn) — tainted only when `fn` is a no-op identity callback AND
+    // the receiver itself is already tainted.
+    if (Node.isPropertyAccessExpression(callee) && callee.getName() === "map") {
+      const receiver = callee.getExpression();
+      const mapArg = expr.getArguments()[0];
+      if (mapArg && isIdentityMapCallback(mapArg) && isTaintedProgramSource(receiver, rootDir, internalCatalogPath, visited)) {
+        return true;
+      }
+      return false;
+    }
+
+    // JSON.stringify(<tainted>) — the string result still carries the
+    // raw shape's content once it crosses the network.
+    if (Node.isPropertyAccessExpression(callee) && callee.getExpression().getText() === "JSON" && callee.getName() === "stringify") {
+      const arg = expr.getArguments()[0];
+      return !!arg && isTaintedProgramSource(arg, rootDir, internalCatalogPath, visited);
+    }
+
+    // require("<path to data/programs-internal.json>") — a
+    // non-getProgramsSync raw source, read directly.
+    if (Node.isIdentifier(callee) && callee.getText() === "require") {
+      const arg = expr.getArguments()[0];
+      if (arg && Node.isStringLiteral(arg)) {
+        const sf = expr.getSourceFile();
+        const dir = sf.getDirectoryPath();
+        const candidates = [resolvePath(dir, arg.getLiteralText()), resolvePath(dir, `${arg.getLiteralText()}.json`)];
+        if (candidates.includes(internalCatalogPath)) return true;
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  // Bare identifier — resolve to its declaration's initializer and
+  // recurse (covers `const programs = getProgramsSync(); ...
+  // json(programs)`, the exact original S11/S16 shape, plus any alias
+  // chain built on top of it).
+  if (Node.isIdentifier(expr)) {
+    const decls = expr.getSymbol()?.getDeclarations() ?? [];
+    return decls.some((decl) => {
+      if (!Node.isVariableDeclaration(decl)) return false;
+      const init = decl.getInitializer();
+      return !!init && isTaintedProgramSource(init, rootDir, internalCatalogPath, visited);
+    });
+  }
+
+  // [...tainted, ...] — an array spread carries the raw element shape
+  // through untouched.
+  if (Node.isArrayLiteralExpression(expr)) {
+    return expr.getElements().some((el) => {
+      if (Node.isSpreadElement(el)) return isTaintedProgramSource(el.getExpression(), rootDir, internalCatalogPath, visited);
+      return isTaintedProgramSource(el, rootDir, internalCatalogPath, visited);
+    });
+  }
+
+  // { programs: tainted, ... } / { ...tainted, ... } — ANY property
+  // (spread or named) carrying a tainted value taints the whole object,
+  // since every property gets serialized together in the same
+  // response body.
+  if (Node.isObjectLiteralExpression(expr)) {
+    return expr.getProperties().some((prop) => {
+      if (Node.isPropertyAssignment(prop)) {
+        const init = prop.getInitializer();
+        return !!init && isTaintedProgramSource(init, rootDir, internalCatalogPath, visited);
+      }
+      if (Node.isSpreadAssignment(prop)) {
+        return isTaintedProgramSource(prop.getExpression(), rootDir, internalCatalogPath, visited);
+      }
+      if (Node.isShorthandPropertyAssignment(prop)) {
+        return isTaintedProgramSource(prop.getNameNode(), rootDir, internalCatalogPath, visited);
+      }
+      return false;
+    });
+  }
+
+  // Parenthesized/`as`-cast wrapper — unwrap and recurse.
+  if (Node.isParenthesizedExpression(expr)) {
+    return isTaintedProgramSource(expr.getExpression(), rootDir, internalCatalogPath, visited);
+  }
+  if (Node.isAsExpression(expr)) {
+    return isTaintedProgramSource(expr.getExpression(), rootDir, internalCatalogPath, visited);
+  }
+
+  return false;
+}
+
 /**
  * Check 2/3 — "raw Program ... fetch-responses": FAILS if a
  * `app/api/**\/route.ts` file's `NextResponse.json(...)`/`Response.json(...)`
- * call returns, as its direct argument, either `getProgramsSync()`
- * inlined, or a bare identifier whose declaration's initializer is
- * exactly `getProgramsSync()` (no `.map()`/DTO transform in between) —
- * the EXACT shape the deleted /api/programs/engine-source route had:
- * `return NextResponse.json(getProgramsSync())`. A route that reads
- * `getProgramsSync()` for its OWN internal use (e.g. feeding a
- * server-side digest/engine, never serializing it as the response body)
- * is untouched — this only looks at what actually crosses the
- * `.json(...)` boundary to the network.
+ * call, OR a raw `new Response(...)`/`new NextResponse(...)`
+ * construction, sends a value this file's `isTaintedProgramSource`
+ * traces back to `getProgramsSync()` or a direct
+ * `data/programs-internal.json` read — inline, via an intermediate
+ * variable, wrapped in an object literal (`{ programs: ... }`), passed
+ * through a `.map()` identity no-op, spread into an array/object, or
+ * flattened through `JSON.stringify` — the exact shape the deleted
+ * /api/programs/engine-source route had, and every evasion of it this
+ * finding named. A route that reads `getProgramsSync()` for its OWN
+ * internal use (e.g. feeding a server-side digest/engine, never
+ * serializing it as the response body) is untouched — this only looks
+ * at what actually crosses the network boundary.
  */
 export function verifyNoRawProgramRouteResponse(project: Project, rootDir: string): RepoWideViolation[] {
   const violations: RepoWideViolation[] = [];
+  const internalCatalogPath = `${rootDir}/${INTERNAL_CATALOG_RELATIVE_PATH}`;
+
   for (const sf of project.getSourceFiles()) {
     if (!isAppComponentsLibSourceFile(sf, rootDir)) continue;
     const relative = toRelative(sf, rootDir);
     if (!/^app\/api\/.*\/route\.ts$/.test(relative)) continue;
 
-    sf.forEachDescendant((node) => {
-      if (!Node.isCallExpression(node)) return;
-      const expr = node.getExpression();
-      if (!Node.isPropertyAccessExpression(expr)) return;
-      if (expr.getName() !== "json") return;
-      // Only NextResponse.json(...) / Response.json(...) — not an
-      // arbitrary unrelated `.json(...)` call (e.g. a fetched Response
-      // being PARSED, which is the opposite direction).
-      const receiver = expr.getExpression().getText();
-      if (receiver !== "NextResponse" && receiver !== "Response") return;
-
-      const arg = node.getArguments()[0];
+    const flagArg = (arg: Node | undefined, node: Node) => {
       if (!arg) return;
+      if (!isTaintedProgramSource(arg, rootDir, internalCatalogPath)) return;
+      violations.push({
+        check: "no-raw-program-route-response",
+        filePath: relative,
+        reason: `${relative}:${node.getStartLineNumber()} sends a value traced back to the raw internal catalog (getProgramsSync() or a direct data/programs-internal.json read) as an HTTP response body — the exact shape the deleted /api/programs/engine-source route had (review6 S11), or an evasion of it (a wrapper object, an identity .map(), a spread, or JSON.stringify). Route server-only fidelity must stay server-only; only an already-narrowed engine RESULT may cross the network boundary.`,
+      });
+    };
 
-      const argText = arg.getText().replace(/\s+/g, "");
-      let isRawProgramsCall = argText === "getProgramsSync()";
-
-      if (!isRawProgramsCall && Node.isIdentifier(arg)) {
-        const decls = arg.getSymbol()?.getDeclarations() ?? [];
-        for (const decl of decls) {
-          if (!Node.isVariableDeclaration(decl)) continue;
-          const init = decl.getInitializer();
-          if (init && init.getText().replace(/\s+/g, "") === "getProgramsSync()") {
-            isRawProgramsCall = true;
+    sf.forEachDescendant((node) => {
+      // NextResponse.json(...) / Response.json(...)
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression();
+        if (Node.isPropertyAccessExpression(expr) && expr.getName() === "json") {
+          const receiver = expr.getExpression().getText();
+          if (receiver === "NextResponse" || receiver === "Response") {
+            flagArg(node.getArguments()[0], node);
           }
         }
       }
-
-      if (isRawProgramsCall) {
-        violations.push({
-          check: "no-raw-program-route-response",
-          filePath: relative,
-          reason: `${relative}:${node.getStartLineNumber()} returns getProgramsSync()'s result directly as an HTTP response body — the exact shape the deleted /api/programs/engine-source route had (review6 S11). Route server-only fidelity must stay server-only; only an already-narrowed engine RESULT may cross .json(...).`,
-        });
+      // new Response(<body>) / new NextResponse(<body>) — the raw
+      // constructor form, e.g. `new Response(JSON.stringify(x))`.
+      if (Node.isNewExpression(node)) {
+        const expr = node.getExpression();
+        if (Node.isIdentifier(expr) && (expr.getText() === "Response" || expr.getText() === "NextResponse")) {
+          flagArg(node.getArguments()[0], node);
+        }
       }
     });
   }

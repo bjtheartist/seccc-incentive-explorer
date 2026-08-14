@@ -294,8 +294,23 @@ describe("public-claim-surfaces-verify — S16 fixture-based failure proof", () 
     return new Project({ useInMemoryFileSystem: true, compilerOptions: { jsx: ts.JsxEmit.ReactJSX } });
   }
 
+  /** review7 S20: `verifyNoRawProgramClientCast` now RESOLVES the
+   *  `Program` type reference by symbol (not text-matching) — a fixture
+   *  importing "Program" must have a REAL `lib/types.ts` in the same
+   *  in-memory project for that import to resolve to anything, or the
+   *  check correctly finds no matching symbol and stays silent (exactly
+   *  as it should for an import that doesn't actually resolve to
+   *  anything). */
+  function withProgramTypeStub(project: Project): void {
+    project.createSourceFile(
+      "/fixture-root/lib/types.ts",
+      `export interface Program { id: string; name: string; whoQualifies: string; url: string; }`,
+    );
+  }
+
   it("TEST 1: a registered client fetching raw Program[] FAILS — casts a fetch response to the raw internal type", () => {
     const project = makeFixtureProject();
+    withProgramTypeStub(project);
     project.createSourceFile(
       "/fixture-root/components/some-new-widget.tsx",
       [
@@ -476,5 +491,303 @@ describe("public-claim-surfaces-verify — S16 fixture-based failure proof", () 
     expect(
       findUnregisteredPublicSinks(["app/some-known-gap/page.tsx"], [], ["app/some-known-gap/page.tsx"]),
     ).toEqual([]);
+  });
+});
+
+/**
+ * review7 S20 (MEDIUM) — "S16's Program guard implements less than its
+ * stated contract: it checks only exact `as Program` assertions, not
+ * raw `Program` imports, annotations, generics, or client props. Its
+ * route-response check misses `{ programs }`, identity maps
+ * (`.map(p => p)`), spreads, `JSON.stringify`, and non-getProgramsSync
+ * raw sources." Fixtures for every evasion named in the finding,
+ * against the STRENGTHENED `verifyNoRawProgramClientCast` (symbol-
+ * resolved `Program` references in any position) and
+ * `verifyNoRawProgramRouteResponse` (recursive taint tracking).
+ */
+describe("public-claim-surfaces-verify — S20 fixture-based evasion proof", () => {
+  function makeFixtureProject() {
+    return new Project({ useInMemoryFileSystem: true, compilerOptions: { jsx: ts.JsxEmit.ReactJSX } });
+  }
+  function withProgramTypeStub(project: Project): void {
+    project.createSourceFile(
+      "/fixture-root/lib/types.ts",
+      `export interface Program { id: string; name: string; whoQualifies: string; url: string; }`,
+    );
+  }
+
+  describe("verifyNoRawProgramClientCast — imports/annotations/generics/props", () => {
+    it("a variable type ANNOTATION (no cast at all) FAILS", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program } from "../lib/types";`,
+          `export function Widget() {`,
+          `  const p: Program = { id: "x", name: "y", whoQualifies: "z", url: "u" };`,
+          `  return null;`,
+          `}`,
+        ].join("\n"),
+      );
+      const violations = verifyNoRawProgramClientCast(project, "/fixture-root");
+      expect(violations).toHaveLength(1);
+      expect(violations[0].reason).toContain("Program");
+    });
+
+    it("a FUNCTION PARAMETER type FAILS", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program } from "../lib/types";`,
+          `export function describe(p: Program) {`,
+          `  return p.name;`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramClientCast(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("a GENERIC type argument (useState<Program>) FAILS", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import { useState } from "react";`,
+          `import type { Program } from "../lib/types";`,
+          `export function Widget() {`,
+          `  const [program] = useState<Program | null>(null);`,
+          `  return program;`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramClientCast(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("a COMPONENT PROP type FAILS", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program } from "../lib/types";`,
+          `export function Card({ program }: { program: Program }) {`,
+          `  return program.name;`,
+          `}`,
+        ].join("\n"),
+      );
+      const violations = verifyNoRawProgramClientCast(project, "/fixture-root");
+      expect(violations).toHaveLength(1);
+      expect(violations[0].reason).toContain("prop");
+    });
+
+    it("CONTROL: Pick<Program, ...> (a genuinely narrower derived type) PASSES", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program } from "../lib/types";`,
+          `export function Card({ program }: { program: Pick<Program, "id" | "name"> }) {`,
+          `  return program.name;`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramClientCast(project, "/fixture-root")).toEqual([]);
+    });
+
+    it("CONTROL: Program[\"id\"] (an indexed-access single-field type) PASSES", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program } from "../lib/types";`,
+          `export function Card({ id }: { id: Program["id"] }) {`,
+          `  return id;`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramClientCast(project, "/fixture-root")).toEqual([]);
+    });
+
+    it("CONTROL: an UNRELATED local type also named 'Program' (not imported from lib/types) PASSES — symbol resolution, not text-matching", () => {
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `interface Program { step: number; }`,
+          `export function Wizard({ program }: { program: Program }) {`,
+          `  return program.step;`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramClientCast(project, "/fixture-root")).toEqual([]);
+    });
+  });
+
+  describe("verifyNoRawProgramRouteResponse — taint tracking through evasions", () => {
+    it("EVASION: a { programs } wrapper object FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  return NextResponse.json({ programs: getProgramsSync() });`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: an identity .map(p => p) FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  return NextResponse.json(getProgramsSync().map((p) => p));`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: an identity .map with a block-bodied arrow (p => { return p; }) also FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  return NextResponse.json(getProgramsSync().map((p) => { return p; }));`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: an array spread [...getProgramsSync()] FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  const programs = getProgramsSync();`,
+          `  return NextResponse.json([...programs]);`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: an object spread of a tainted wrapper ({ ...raw }) FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  const raw = { programs: getProgramsSync() };`,
+          `  return NextResponse.json({ ...raw });`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: JSON.stringify(getProgramsSync()) via a raw new Response(...) FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  return new Response(JSON.stringify(getProgramsSync()));`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("EVASION: a non-getProgramsSync raw source — direct require() of data/programs-internal.json — FAILS", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `export async function GET() {`,
+          `  const programs = require("../../../data/programs-internal.json");`,
+          `  return NextResponse.json(programs);`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toHaveLength(1);
+    });
+
+    it("CONTROL: deriving only a COUNT (not the raw records) PASSES", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  return NextResponse.json({ count: getProgramsSync().length });`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toEqual([]);
+    });
+
+    it("CONTROL: a REAL (non-identity) .map() transform PASSES", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `import { getProgramsSync } from "../../../lib/programs-data";`,
+          `export async function GET() {`,
+          `  const safe = getProgramsSync().map((p) => ({ id: p.id, name: p.name }));`,
+          `  return NextResponse.json({ programs: safe });`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toEqual([]);
+    });
+
+    it("CONTROL: an unrelated require() (not the internal catalog) PASSES", () => {
+      const project = makeFixtureProject();
+      project.createSourceFile(
+        "/fixture-root/app/api/some-new-route/route.ts",
+        [
+          `import { NextResponse } from "next/server";`,
+          `export async function GET() {`,
+          `  const config = require("../../../data/some-other-config.json");`,
+          `  return NextResponse.json(config);`,
+          `}`,
+        ].join("\n"),
+      );
+      expect(verifyNoRawProgramRouteResponse(project, "/fixture-root")).toEqual([]);
+    });
   });
 });
