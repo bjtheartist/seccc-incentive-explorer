@@ -21,6 +21,14 @@ import MapMobileSheet from "./MapMobileSheet";
 import MapDossierCard from "./MapDossierCard";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
+import {
+  applyMapZoningFamilyVisibility,
+  applyMapZoningLayerFilters,
+  installMapZoningLayers,
+  loadMapZoningSource,
+  mapZoningFamilyVisibility,
+  removeMapZoningLayers,
+} from "./zoning-map-filter";
 import CountyReliefRecipientsPanel, {
   type CountyReliefRecipientsPanelStatus,
 } from "./CountyReliefRecipientsPanel";
@@ -174,7 +182,7 @@ import {
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
 
-const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 12_000;
+const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 30_000;
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -191,6 +199,13 @@ export default function MapView() {
   const [zoningVisible, setZoningVisible] = useState<Record<string, boolean>>(
     () => Object.fromEntries(ZONING_CATEGORIES.map((cat) => [cat.key, true]))
   );
+  const [zoningDistrictClasses, setZoningDistrictClasses] = useState<string[]>([]);
+  const [zoningLayerStatus, setZoningLayerStatus] = useState<
+    "loading" | "available" | "unavailable"
+  >("loading");
+  const [zoningFamilyFilter, setZoningFamilyFilter] = useState("");
+  const [zoningDistrictTypeFilter, setZoningDistrictTypeFilter] = useState("");
+  const [zoningExactCodeFilter, setZoningExactCodeFilter] = useState("");
   const [legendOpen, setLegendOpen] = useState(true);
   const [snapshotOpen, setSnapshotOpen] = useState(true);
   const [dossierSelection, setDossierSelection] = useState<MapDossierSelection | null>(null);
@@ -796,6 +811,9 @@ export default function MapView() {
       setZoneVisible(updated);
 
       if (typeof preset.zoning === "boolean") {
+        setZoningFamilyFilter("");
+        setZoningDistrictTypeFilter("");
+        setZoningExactCodeFilter("");
         const zoningUpdated: Record<string, boolean> = {};
         const vis = preset.zoning ? "visible" : "none";
         for (const cat of ZONING_CATEGORIES) {
@@ -1726,55 +1744,20 @@ export default function MapView() {
         OPTIONAL_ZONING_LAYER_TIMEOUT_MS
       );
       try {
-        const zoningData = await cachedFetch(CHICAGO_ZONING_URL, {
-          signal: zoningRequestController.signal,
-        });
-        if (zoningData) {
-          map.addSource("chicago-zoning", { type: "geojson", data: zoningData as GeoJSON.FeatureCollection, generateId: true });
-
-          // Create a separate fill + outline layer per zoning category
-          for (const cat of ZONING_CATEGORIES) {
-            // Build a filter that matches features whose zone_class starts with any of the category's prefixes
-            const prefixFilters = cat.prefixes.map((p) => [
-              "==",
-              ["slice", ["to-string", ["get", "zone_class"]], 0, p.length],
-              p,
-            ]);
-            const filter: mapboxgl.Expression =
-              prefixFilters.length === 1
-                ? (prefixFilters[0] as mapboxgl.Expression)
-                : (["any", ...prefixFilters] as mapboxgl.Expression);
-
-            map.addLayer({
-              id: `zoning-${cat.key}-fill`,
-              type: "fill",
-              source: "chicago-zoning",
-              filter,
-              layout: { visibility: "visible" },
-              paint: {
-                "fill-color": cat.color,
-                "fill-opacity": [
-                  "case",
-                  ["boolean", ["feature-state", "hover"], false],
-                  0.65,
-                  0.45,
-                ],
-              },
-            });
-
-            map.addLayer({
-              id: `zoning-${cat.key}-line`,
-              type: "line",
-              source: "chicago-zoning",
-              filter,
-              layout: { visibility: "visible" },
-              paint: {
-                "line-color": "#ffffff",
-                "line-width": 0.3,
-                "line-opacity": 0.5,
-              },
-            });
-          }
+        const zoningSource = await loadMapZoningSource(() =>
+          cachedFetch(CHICAGO_ZONING_URL, {
+            signal: zoningRequestController.signal,
+          }),
+        );
+        if (zoningSource.status === "available") {
+          const zoningData = zoningSource.data;
+          const publishedZoneClasses = zoningSource.publishedZoneClasses;
+          installMapZoningLayers(
+            map,
+            ZONING_CATEGORIES,
+            zoningData as GeoJSON.FeatureCollection,
+            publishedZoneClasses,
+          );
 
           // Hover interaction across all zoning fill layers
           const zoningFillLayers = ZONING_CATEGORIES.map((c) => `zoning-${c.key}-fill`);
@@ -1801,9 +1784,23 @@ export default function MapView() {
             // resolved into its Programs and zones section, avoiding a second
             // popup for the same click.
           }
+          setZoningDistrictClasses(publishedZoneClasses);
+          setZoningLayerStatus("available");
+        } else {
+          setZoningDistrictClasses([]);
+          setZoningVisible(
+            Object.fromEntries(ZONING_CATEGORIES.map((category) => [category.key, false])),
+          );
+          setZoningLayerStatus("unavailable");
         }
       } catch {
         // Zoning districts layer is optional
+        removeMapZoningLayers(map, ZONING_CATEGORIES);
+        setZoningDistrictClasses([]);
+        setZoningVisible(
+          Object.fromEntries(ZONING_CATEGORIES.map((category) => [category.key, false])),
+        );
+        setZoningLayerStatus("unavailable");
       } finally {
         window.clearTimeout(zoningRequestTimeout);
       }
@@ -2843,11 +2840,53 @@ export default function MapView() {
     [loaded, poiVisible]
   );
 
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return;
+    applyMapZoningLayerFilters(
+      mapRef.current,
+      ZONING_CATEGORIES,
+      zoningDistrictClasses,
+      zoningDistrictTypeFilter,
+      zoningExactCodeFilter,
+    );
+  }, [loaded, zoningDistrictClasses, zoningDistrictTypeFilter, zoningExactCodeFilter]);
+
+  const selectZoningFamily = useCallback(
+    (familySelection: string) => {
+      setZoningFamilyFilter(familySelection);
+      setZoningDistrictTypeFilter("");
+      setZoningExactCodeFilter("");
+      setActivePreset(null);
+
+      const updated =
+        mapRef.current && loaded
+          ? applyMapZoningFamilyVisibility(mapRef.current, ZONING_CATEGORIES, familySelection)
+          : mapZoningFamilyVisibility(ZONING_CATEGORIES, familySelection);
+      setZoningVisible(updated);
+    },
+    [loaded],
+  );
+
+  const selectZoningDistrictType = useCallback((districtTypeSelection: string) => {
+    setZoningDistrictTypeFilter(districtTypeSelection);
+    setZoningExactCodeFilter("");
+    setActivePreset(null);
+  }, []);
+
+  const selectZoningExactCode = useCallback((exactCodeSelection: string) => {
+    setZoningExactCodeFilter(exactCodeSelection);
+    setActivePreset(null);
+  }, []);
+
   /* ── Toggle individual zoning category ─── */
   const toggleZoningCategory = useCallback(
     (catKey: string) => {
       if (!mapRef.current || !loaded) return;
       const map = mapRef.current;
+      setZoningFamilyFilter("");
+      setZoningDistrictTypeFilter("");
+      setZoningExactCodeFilter("");
+      setActivePreset(null);
       const next = !zoningVisible[catKey];
       setZoningVisible((prev) => ({ ...prev, [catKey]: next }));
       const vis = next ? "visible" : "none";
@@ -2863,6 +2902,10 @@ export default function MapView() {
   const toggleAllZoning = useCallback(() => {
     if (!mapRef.current || !loaded) return;
     const map = mapRef.current;
+    setZoningFamilyFilter("");
+    setZoningDistrictTypeFilter("");
+    setZoningExactCodeFilter("");
+    setActivePreset(null);
     const anyVisible = Object.values(zoningVisible).some(Boolean);
     const next = !anyVisible;
     const vis = next ? "visible" : "none";
@@ -4309,6 +4352,11 @@ export default function MapView() {
           zoneVisible={zoneVisible}
           poiVisible={poiVisible}
           zoningVisible={zoningVisible}
+          zoningDistrictClasses={zoningDistrictClasses}
+          zoningLayerStatus={zoningLayerStatus}
+          zoningFamilyFilter={zoningFamilyFilter}
+          zoningDistrictTypeFilter={zoningDistrictTypeFilter}
+          zoningExactCodeFilter={zoningExactCodeFilter}
           vacantVisible={vacantVisible}
           parcelsVisible={parcelsVisible}
           permitsVisible={permitsVisible}
@@ -4363,6 +4411,9 @@ export default function MapView() {
           onTogglePoi={togglePoi}
           onToggleZoningCategory={toggleZoningCategory}
           onToggleAllZoning={toggleAllZoning}
+          onSetZoningFamilyFilter={selectZoningFamily}
+          onSetZoningDistrictTypeFilter={selectZoningDistrictType}
+          onSetZoningExactCodeFilter={selectZoningExactCode}
           onSetVacantVisible={setVacantVisible}
           onSetParcelsVisible={setParcelsVisible}
           onSetPermitsVisible={setPermitsVisible}

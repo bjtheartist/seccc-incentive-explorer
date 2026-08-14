@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import {
@@ -71,11 +71,24 @@ import {
   type PublicInvestmentOverlayVisibility,
 } from "@/lib/public-investment-overlays";
 import { PERMIT_MAP_TYPES, type PermitMapTypeKey } from "@/lib/permit-map";
+import {
+  mapZoningDistrictTypeOptions,
+  mapZoningExactCodeOptions,
+  mapZoningFamilyOptions,
+  mapZoningTypeRequiresOrdinanceLookup,
+} from "./zoning-map-filter";
+
+const EMPTY_ZONING_DISTRICT_CLASSES: readonly string[] = [];
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
   poiVisible: Record<string, boolean>;
   zoningVisible: Record<string, boolean>;
+  zoningDistrictClasses?: readonly string[];
+  zoningLayerStatus?: "loading" | "available" | "unavailable";
+  zoningFamilyFilter?: string;
+  zoningDistrictTypeFilter?: string;
+  zoningExactCodeFilter?: string;
   vacantVisible: Record<string, boolean>;
   parcelsVisible: boolean;
   permitsVisible?: boolean;
@@ -148,6 +161,9 @@ interface MapLegendPanelProps {
   onTogglePoi: (key: string) => void;
   onToggleZoningCategory: (catKey: string) => void;
   onToggleAllZoning: () => void;
+  onSetZoningFamilyFilter?: (value: string) => void;
+  onSetZoningDistrictTypeFilter?: (value: string) => void;
+  onSetZoningExactCodeFilter?: (value: string) => void;
   onSetVacantVisible: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   onSetParcelsVisible: React.Dispatch<React.SetStateAction<boolean>>;
   onSetPermitsVisible?: (value: boolean) => void;
@@ -167,6 +183,11 @@ export default function MapLegendPanel({
   zoneVisible,
   poiVisible,
   zoningVisible,
+  zoningDistrictClasses = EMPTY_ZONING_DISTRICT_CLASSES,
+  zoningLayerStatus = "loading",
+  zoningFamilyFilter = "",
+  zoningDistrictTypeFilter = "",
+  zoningExactCodeFilter = "",
   vacantVisible,
   parcelsVisible,
   permitsVisible = false,
@@ -221,6 +242,9 @@ export default function MapLegendPanel({
   onTogglePoi,
   onToggleZoningCategory,
   onToggleAllZoning,
+  onSetZoningFamilyFilter = () => {},
+  onSetZoningDistrictTypeFilter = () => {},
+  onSetZoningExactCodeFilter = () => {},
   onSetVacantVisible,
   onSetParcelsVisible,
   onSetPermitsVisible = () => {},
@@ -236,6 +260,38 @@ export default function MapLegendPanel({
   // Local collapse for the "Citywide commitments" note — purely presentational,
   // no need to lift into MapView (mirrors ZoneLayerSection's local useState).
   const [citywideOpen, setCitywideOpen] = useState(false);
+  const zoningFamilyOptions = useMemo(
+    () => mapZoningFamilyOptions(zoningDistrictClasses),
+    [zoningDistrictClasses],
+  );
+  const zoningDistrictTypeOptions = useMemo(
+    () => mapZoningDistrictTypeOptions(zoningDistrictClasses, zoningFamilyFilter),
+    [zoningDistrictClasses, zoningFamilyFilter],
+  );
+  const zoningExactCodeOptions = useMemo(
+    () =>
+      mapZoningExactCodeOptions(
+        zoningDistrictClasses,
+        zoningFamilyFilter,
+        zoningDistrictTypeFilter,
+      ),
+    [zoningDistrictClasses, zoningFamilyFilter, zoningDistrictTypeFilter],
+  );
+  const zoningTypeRequiresOrdinanceLookup = mapZoningTypeRequiresOrdinanceLookup(
+    zoningDistrictTypeFilter,
+  );
+  const zoningFilterSummary =
+    zoningLayerStatus === "unavailable"
+      ? "Published zoning districts unavailable"
+      : zoningLayerStatus === "loading"
+        ? "Published zoning districts loading"
+        : zoningExactCodeFilter
+          ? `${zoningExactCodeFilter} highlighted`
+          : zoningDistrictTypeFilter
+            ? `${zoningDistrictTypeFilter} districts highlighted`
+            : zoningFamilyFilter
+              ? `${zoningFamilyOptions.find((option) => option.value === zoningFamilyFilter)?.label ?? zoningFamilyFilter} districts highlighted`
+              : `${Object.values(zoningVisible).filter(Boolean).length} zoning families shown`;
 
   /* ── Zone-layer groups (WP4) ───────────────────────────────────
    * Applied through the zone checkboxes this panel already owns, so MapView
@@ -413,20 +469,165 @@ export default function MapLegendPanel({
           </div>
           <button
             onClick={onToggleAllZoning}
-            className="font-mono-bureau text-[8px] tracking-[0.1em] uppercase text-[#059669]/40 hover:text-[#059669] transition-colors"
+            disabled={zoningLayerStatus !== "available"}
+            className="font-mono-bureau text-[8px] tracking-[0.1em] uppercase text-[#059669]/40 hover:text-[#059669] transition-colors disabled:cursor-not-allowed disabled:text-[#0C1B33]/20"
           >
             {Object.values(zoningVisible).some(Boolean) ? "Hide all" : "Show all"}
           </button>
+        </div>
+
+        <div
+          className="mb-3 border border-[#059669]/15 bg-[#059669]/[0.03] p-2.5"
+          aria-labelledby="map-zoning-filter-heading"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div
+                id="map-zoning-filter-heading"
+                className="font-mono-bureau text-[8px] uppercase tracking-[0.14em] text-[#0C1B33]/55"
+              >
+                Focus zoning overlay
+              </div>
+              <p className="mt-1 text-[9px] leading-relaxed text-[#0C1B33]/45">
+                Choose a family, district type, then an exact published code.
+              </p>
+            </div>
+            {zoningFamilyFilter ? (
+              <button
+                type="button"
+                onClick={() => onSetZoningFamilyFilter("")}
+                className="shrink-0 font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#059669]/60 hover:text-[#059669]"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-2.5 space-y-2">
+            <label htmlFor="map-zoning-family-filter" className="block">
+              <span className="mb-1 block font-mono-bureau text-[8px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                Zoning family
+              </span>
+              <select
+                id="map-zoning-family-filter"
+                value={zoningFamilyFilter}
+            disabled={zoningLayerStatus !== "available" || zoningFamilyOptions.length === 0}
+                aria-describedby="map-zoning-filter-disclaimer"
+                onChange={(event) => onSetZoningFamilyFilter(event.target.value)}
+                className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2 py-2 text-base text-[#0C1B33] focus-visible:border-[#059669] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#059669]/30 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:text-[#0C1B33]/35 md:text-[10px]"
+              >
+                <option value="">Manual family visibility</option>
+                {zoningFamilyOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} ({option.codeCount} {option.codeCount === 1 ? "code" : "codes"})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label htmlFor="map-zoning-type-filter" className="block">
+              <span className="mb-1 block font-mono-bureau text-[8px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                District type
+              </span>
+              <select
+                id="map-zoning-type-filter"
+                value={zoningDistrictTypeFilter}
+                disabled={
+                  zoningLayerStatus !== "available" ||
+                  !zoningFamilyFilter ||
+                  zoningDistrictTypeOptions.length === 0
+                }
+                aria-describedby="map-zoning-filter-disclaimer"
+                onChange={(event) => onSetZoningDistrictTypeFilter(event.target.value)}
+                className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2 py-2 text-base text-[#0C1B33] focus-visible:border-[#059669] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#059669]/30 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:text-[#0C1B33]/35 md:text-[10px]"
+              >
+                <option value="">All district types</option>
+                {zoningDistrictTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} ({option.codeCount} {option.codeCount === 1 ? "code" : "codes"})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label htmlFor="map-zoning-exact-filter" className="block">
+              <span className="mb-1 block font-mono-bureau text-[8px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                Exact published code
+              </span>
+              <select
+                id="map-zoning-exact-filter"
+                value={zoningExactCodeFilter}
+                disabled={
+                  zoningLayerStatus !== "available" ||
+                  !zoningDistrictTypeFilter ||
+                  zoningTypeRequiresOrdinanceLookup ||
+                  zoningExactCodeOptions.length === 0
+                }
+                aria-describedby="map-zoning-filter-disclaimer"
+                onChange={(event) => onSetZoningExactCodeFilter(event.target.value)}
+                className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2 py-2 text-base text-[#0C1B33] focus-visible:border-[#059669] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#059669]/30 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:text-[#0C1B33]/35 md:text-[10px]"
+              >
+                <option value="">
+                  {zoningTypeRequiresOrdinanceLookup
+                    ? "Inspect the site-specific ordinance"
+                    : "All published codes"}
+                </option>
+                {zoningExactCodeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {zoningTypeRequiresOrdinanceLookup ? (
+            <p className="mt-2 text-[9px] leading-relaxed text-[#B45309]">
+              PD and PMD numbers point to site-specific ordinances. Select the type here, then click
+              a district to inspect its published designation. Confirm the governing ordinance with
+              the City before relying on it.
+            </p>
+          ) : null}
+          {zoningLayerStatus === "loading" ? (
+            <p className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/45">
+              Published district choices will appear when the zoning layer finishes loading.
+            </p>
+          ) : null}
+          {zoningLayerStatus === "unavailable" ? (
+            <p className="mt-2 text-[9px] leading-relaxed text-[#B45309]" role="status">
+              Published zoning districts are temporarily unavailable. Reload the map to retry.
+            </p>
+          ) : null}
+          <p
+            id="map-zoning-filter-disclaimer"
+            className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/45"
+          >
+            This highlights mapped districts by their published designation. It does not determine
+            whether a particular use is permitted; verify the ordinance and site-specific rules
+            before relying on it.
+          </p>
+          <p className="sr-only" role="status" aria-live="polite">
+            {zoningFilterSummary}
+          </p>
+        </div>
+
+        <div className="mb-1 font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/35">
+          Manual family visibility
         </div>
         <div className="space-y-0.5">
           {ZONING_CATEGORIES.map((cat) => (
             <label
               key={cat.key}
-              className="flex items-center gap-2.5 py-1 cursor-pointer group"
+              className={`flex items-center gap-2.5 py-1 group ${
+                zoningLayerStatus === "available"
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-45"
+              }`}
             >
               <input
                 type="checkbox"
                 checked={zoningVisible[cat.key]}
+                disabled={zoningLayerStatus !== "available"}
                 onChange={() => onToggleZoningCategory(cat.key)}
                 className="sr-only"
               />

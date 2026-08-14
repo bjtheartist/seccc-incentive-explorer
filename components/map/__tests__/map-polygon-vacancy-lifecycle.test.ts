@@ -19,7 +19,7 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
       "/* ── Parcel boundary layer"
     );
 
-    expect(source).toContain("const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 12_000");
+    expect(source).toContain("const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 30_000");
     expect(zoningLoad).toContain("zoningRequestController.abort()");
     expect(zoningLoad).toContain("OPTIONAL_ZONING_LAYER_TIMEOUT_MS");
     expect(zoningLoad).toContain("signal: zoningRequestController.signal");
