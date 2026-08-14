@@ -12,8 +12,15 @@ const nextConfig: NextConfig = {
   // locally. Declared now, even though PR2 wires the actual consumer route
   // (/vacancy/[zip]/shortlist) — see lib/__tests__/shortlist-universe-
   // bundling.test.ts, which proves this via a real production build.
+  // data/programs-internal.json (the eligibility-claims-overhaul internal
+  // catalog — build-spec.md 1.2) is server-only for the same reason as the
+  // shortlist universe above. No PR1 route reads it at request time yet
+  // (PR2 wires the actual consumer routes), so "/**" declares it for every
+  // route rather than guessing which ones PR2 will add — see
+  // lib/__tests__/programs-internal-bundling.test.ts.
   outputFileTracingIncludes: {
     "/vacancy/[zip]/shortlist": ["./data/exports/shortlist-universe/**"],
+    "/**": ["./data/programs-internal.json"],
   },
   async redirects() {
     return [

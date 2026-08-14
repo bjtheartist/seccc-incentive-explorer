@@ -1,0 +1,2686 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T17:25:47.388Z",
+  "catalogRevision": "2241512139bdd2b0e0de5d48ed126f0dc95d242573db0201d4757f3e53c2ede6",
+  "programs": [
+    {
+      "id": "tif",
+      "name": "TIF Districts",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-10"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Accepted on a rolling basis via the Universal Financial Incentives Submittable portal for RDAs > $250K."
+        }
+      },
+      "benefit": {
+        "summary": "Project-sized (no fixed cap)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-10"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Property must be within a designated TIF district",
+          "Commercial or mixed-use property",
+          "Project must involve qualifying improvements"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "tif"
+    },
+    {
+      "id": "federalOZ",
+      "name": "Federal Opportunity Zones",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": "2027-01-01",
+          "note": "OZ 2.0 governor nominations underway July 2026; new map effective 2027-01-01. OZ 1.0 tracts remain valid through 2028-12-31."
+        }
+      },
+      "benefit": {
+        "summary": "Tax deferral + 0% gains after 10 yrs (OZ 1.0 through 2028; OZ 2.0 eff. 1/1/2027)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Investment must be in a designated Opportunity Zone census tract",
+          "Must invest capital gains through a Qualified Opportunity Fund",
+          "Most industries qualify except sin businesses (golf, gambling, liquor stores)"
+        ]
+      },
+      "links": {
+        "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones",
+        "sourceUrl": "https://www.irs.gov/newsroom/treasury-irs-provide-guidance-to-states-for-nominating-census-tracts-as-qualified-opportunity-zones-under-the-one-big-beautiful-bill",
+        "administeringAgency": "Internal Revenue Service"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "federalOZ"
+    },
+    {
+      "id": "illinoisOZ",
+      "name": "Illinois Opportunity Zones",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": "2027-01-01",
+          "note": "New IL-nominated OZ 2.0 zones take effect 2027-01-01; existing zones remain active for investment."
+        }
+      },
+      "benefit": {
+        "summary": "DCEO grants + federal OZ stacking",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Investment must be in an Illinois-designated Opportunity Zone",
+          "Must invest through a Qualified Opportunity Fund"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/oppzn.html",
+        "sourceUrl": "https://dceo.illinois.gov/oppzn.html",
+        "administeringAgency": "Illinois Department of Commerce and Economic Opportunity"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "federalOZ"
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise Zones",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": "2028-01-01",
+          "note": "All six Chicago Enterprise Zones expire 2030; recertification window opens 2028."
+        }
+      },
+      "benefit": {
+        "summary": "Up to 9.25% sales tax exemption + 0.5% investment credit + utility exemptions",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Business must be within an Enterprise Zone boundary",
+          "Must make qualifying investment in machinery, equipment, or building materials"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/enterprisezone.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/enterprisezone.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "enterprise"
+    },
+    {
+      "id": "sbif",
+      "name": "Small Business Improvement Fund (SBIF)",
+      "level": "City",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-10"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-08-30",
+          "note": "August 2026 window open for eligible TIF districts through 2026-08-30 (July 2026 window already closed). Monthly TIF-by-TIF rollout schedule."
+        }
+      },
+      "benefit": {
+        "summary": "$75K–$250K cap (property-type dependent); 30–90% reimbursement (commercial) / 50% (industrial)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-10"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Property must be in an eligible TIF district with an open enrollment window",
+          "Commercial or industrial building (1-4 story for commercial); determines cap tier",
+          "Permanent building improvements only (HVAC, plumbing, electrical, roofing, fire suppression); operating expenses excluded",
+          "Gross sales or net worth determines reimbursement tier (90%/60%/30% commercial; 50% flat industrial)"
+        ]
+      },
+      "links": {
+        "url": "https://somercor.com/sbif/",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+        "administeringAgency": "SomerCor 504"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": "tif"
+    },
+    {
+      "id": "edge",
+      "name": "EDGE Tax Credit",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "50% withholding (new hires) / 25% (retained) / +25% underserved-area boost",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "proxy",
+        "publishedCriteria": [
+          "Illinois business; underserved-area projects qualify for enhanced credit",
+          "Most industries qualify; focus on job creation",
+          "Must create or retain jobs and make capital investment"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
+        "administeringAgency": "Illinois Department of Commerce and Economic Opportunity"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "stateIncentiveZones"
+    },
+    {
+      "id": "rev",
+      "name": "REV Illinois",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Negotiated tax credits across 4 investment/job tiers",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "proxy",
+        "publishedCriteria": [
+          "Underserved-area projects qualify for enhanced credit",
+          "Must be in EV, battery, renewable energy, or related supply chain",
+          "Must meet one of four investment/job tier thresholds"
+        ]
+      },
+      "links": {
+        "url": "https://ev.illinois.gov/incentives/rev-tax-credit.html",
+        "sourceUrl": "https://ev.illinois.gov/incentives/rev-tax-credit.html",
+        "administeringAgency": "Illinois Department of Commerce and Economic Opportunity"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "stateIncentiveZones"
+    },
+    {
+      "id": "micro",
+      "name": "MICRO Program",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "75% payroll withholding (100% underserved) + training, construction, and investment credits",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "proxy",
+        "publishedCriteria": [
+          "Must be in semiconductor manufacturing, packaging, testing, or supply chain",
+          "≥$2.5M investment + lesser of 50 jobs or 10% of worldwide baseline"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
+        "administeringAgency": "Illinois Department of Commerce and Economic Opportunity"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "stateIncentiveZones"
+    },
+    {
+      "id": "dataCenter",
+      "name": "Data Center Tax Incentive",
+      "level": "State",
+      "statusBadge": {
+        "state": "closed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "closed",
+        "nextWindow": {
+          "expected": null,
+          "note": "New applications not processed since Governor's directive 2026-06-05; no resumption date published. Existing certifications continue receiving benefits."
+        }
+      },
+      "benefit": {
+        "summary": "Sales tax exemption on equipment + 20% construction wage credit (underserved areas)",
+        "termsStatus": "conditional",
+        "qualifier": "Most recently published round offered Sales tax exemption on equipment + 20% construction wage credit (underserved areas). (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "proxy",
+        "publishedCriteria": [
+          "Underserved-area projects qualify for 20% construction wage credit",
+          "Must be a data center operation or tech infrastructure"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
+        "administeringAgency": "Illinois Department of Commerce and Economic Opportunity"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "stateIncentiveZones"
+    },
+    {
+      "id": "ssa",
+      "name": "Special Service Area (SSA)",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Free corridor services (streetscaping, marketing, safety)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Commercial property must be within an active SSA boundary"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": "ssa"
+    },
+    {
+      "id": "highUnemployment",
+      "name": "High Unemployment Zone (Information Overlay)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "WOTC authority lapsed 2025-12-31; historically reauthorized retroactively. Continue IRS Form 8850 pre-screening within 28 days of hire."
+        }
+      },
+      "benefit": {
+        "summary": "WOTC: $2,400–$9,600/hire (authority lapsed 1/1/2026; retroactive reauthorization historically occurs)",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered WOTC: $2,400–$9,600/hire (authority lapsed 1/1/2026; retroactive reauthorization historically occurs). (No round currently open as of 2026-07-02.)"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Must hire from a WOTC target group"
+        ]
+      },
+      "links": {
+        "url": "https://ides.illinois.gov/",
+        "sourceUrl": "https://www.dol.gov/agencies/eta/wotc",
+        "administeringAgency": "Illinois Department of Employment Security"
+      },
+      "personas": [],
+      "zoneKey": "highUnemployment"
+    },
+    {
+      "id": "class7a",
+      "name": "Cook County Class 7a Property Tax Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment (vs. 25%) for 10 years",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Property must be in Cook County",
+          "Commercial property — new construction, rehab, or reoccupancy",
+          "Total project costs under $2 million"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyil.gov/service/property-tax-incentives",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "catalystGrant",
+      "name": "Cook County Catalyst Grant",
+      "level": "County",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "Cook County does not anticipate a grant round in 2026 or 2027; the sole window closed 2025-11-14, awards notified 2026-05-22."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $100,000",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered Up to $100,000. (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Business must be in Cook County",
+          "At least $500,000 in annual revenue with demonstrated growth in net income and employee count"
+        ]
+      },
+      "links": {
+        "url": "https://cookcountysmallbiz.org/catalystgrant/",
+        "sourceUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
+        "administeringAgency": "Cook County Bureau of Economic Development"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cpace",
+      "name": "Cook County C-PACE (Clean Energy Financing)",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Up to 100% project financing (30-year terms)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Commercial property in Cook County",
+          "Commercial property owner (office, retail, industrial, multi-family 5+)",
+          "Project must involve energy efficiency, renewable energy, or water conservation"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
+        "sourceUrl": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
+        "administeringAgency": "Cook County C-PACE Program"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "smallBizSource",
+      "name": "Cook County Small Business Source",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Free advising (no cost)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Business in Cook County"
+        ]
+      },
+      "links": {
+        "url": "https://cookcountysmallbiz.org/",
+        "sourceUrl": "https://cookcountysmallbiz.org/",
+        "administeringAgency": "Cook County Small Business Source"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "landBank",
+      "name": "Cook County Land Bank Authority",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Below-market property acquisition + Reclaiming Chicago pipeline",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Properties are in Cook County",
+          "Seeking commercial, industrial, or residential development property"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountylandbank.org/",
+        "sourceUrl": "https://www.cookcountylandbank.org/",
+        "administeringAgency": "Cook County Land Bank Authority"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "nof",
+      "name": "Neighborhood Opportunity Fund (NOF)",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-10"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Most recent awards announced May 2026 ($5.5M to 11 businesses); no specific next-round date published in this record."
+        }
+      },
+      "benefit": {
+        "summary": "$250K @ 75% reimbursement + up to $50K TA bonus",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-10"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Project must be in an eligible South, Southwest, or West Side community",
+          "Commercial or industrial project",
+          "Must demonstrate community impact and job creation"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
+        "sourceUrl": "https://www.chicago.gov/content/dam/city/sites/neighborhood-opportunity-fund/pdfs/NOF_Program_Manual_9.18.25.pdf",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": "nof"
+    },
+    {
+      "id": "nmtcEligible",
+      "name": "New Markets Tax Credits (NMTC)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "pending",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "pending",
+        "nextWindow": {
+          "expected": null,
+          "note": "CY 2026 application round not yet open as of last verification (2026-07-02); NMTC flows through CDEs, not directly to businesses."
+        }
+      },
+      "benefit": {
+        "summary": "39% tax credit over 7 years (program made permanent by OBBBA 2025 at $5B/year)",
+        "termsStatus": "current",
+        "qualifier": "Most recently published round offered 39% tax credit over 7 years (program made permanent by OBBBA 2025 at $5B/year). (No round currently open as of 2026-07-02.)"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Project must be in an NMTC-eligible low-income census tract",
+          "Projects typically $5M+; must attract qualified equity investment through a CDE"
+        ]
+      },
+      "links": {
+        "url": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
+        "sourceUrl": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
+        "administeringAgency": "Community Development Financial Institutions Fund"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "nmtcEligible"
+    },
+    {
+      "id": "qct",
+      "name": "Qualified Census Tract (QCT) — LIHTC Boost",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "130% LIHTC basis boost (30% more credits)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Project must be in a HUD-designated Qualified Census Tract",
+          "Affordable rental housing development or substantial rehabilitation",
+          "Must comply with LIHTC income and rent restrictions"
+        ]
+      },
+      "links": {
+        "url": "https://www.huduser.gov/portal/datasets/qct.html",
+        "sourceUrl": "https://www.huduser.gov/portal/datasets/qct.html",
+        "administeringAgency": "Illinois Housing Development Authority"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "qct"
+    },
+    {
+      "id": "landmarkDistricts",
+      "name": "Chicago Landmark District Incentives",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Class L: 10% assessment for 10 years (administered by Cook County Assessor)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Property must be in a Chicago-designated Landmark District",
+          "Historically significant building undergoing rehabilitation"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html",
+        "sourceUrl": "https://www.chicago.gov/content/dam/city/depts/zlup/Historic_Preservation/Publications/Chicago_Landmarks_Ordinance_2025.pdf",
+        "administeringAgency": "City of Chicago Department of Planning and Development — Historic Preservation"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "landmarkDistricts"
+    },
+    {
+      "id": "nrhpDistricts",
+      "name": "Federal Historic Tax Credit (HTC)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "20% federal tax credit (no cap)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Building must be listed on or contribute to a National Register Historic District",
+          "Income-producing building (commercial, rental residential, industrial)",
+          "Rehabilitation must exceed adjusted basis of the building or $5,000"
+        ]
+      },
+      "links": {
+        "url": "https://www.nps.gov/subjects/taxincentives/index.htm",
+        "sourceUrl": "https://www.nps.gov/subjects/taxincentives/index.htm",
+        "administeringAgency": "Illinois State Historic Preservation Office"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "nrhpDistricts"
+    },
+    {
+      "id": "microMarketRecovery",
+      "name": "Chicago Neighborhood Recovery Program (CNRP, formerly MMRP)",
+      "level": "City",
+      "statusBadge": {
+        "state": "closed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "closed",
+        "nextWindow": {
+          "expected": null,
+          "note": "NHS Chicago's purchase-assistance intake is currently closed. Program migrated to Dept of Housing (CNRP): $15,000 down-payment assistance across 11 target areas, subject to fund availability."
+        }
+      },
+      "benefit": {
+        "summary": "$15,000 down-payment assistance, subject to fund availability",
+        "termsStatus": "conditional",
+        "qualifier": "Most recently published round offered $15,000 down-payment assistance, subject to fund availability. (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "proxy",
+        "publishedCriteria": [
+          "Property must be in one of the 11 designated CNRP target areas",
+          "Owner-occupied residential purchase"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
+        "sourceUrl": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
+        "administeringAgency": "Chicago Department of Housing"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "microMarketRecovery"
+    },
+    {
+      "id": "industrialCorridors",
+      "name": "Industrial Corridor Protections",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Zoning protections + infrastructure priority",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Site must be within a designated Industrial Corridor",
+          "Manufacturing, logistics, industrial, or related business use"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [],
+      "zoneKey": "industrialCorridors"
+    },
+    {
+      "id": "ccsa",
+      "name": "Commercial Corridor Storefront Activation Program (CCSAP)",
+      "level": "City",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-08-21",
+          "note": "Quarterly round cutoff 2026-08-21 5:00 PM CT. Awards, eligible costs, and current corridor availability must be confirmed with the program administrator."
+        }
+      },
+      "benefit": {
+        "summary": "Grants fund up to 75% of eligible project costs; applicant must show funding for at least the remaining 25%",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Property must be within a currently approved CCSAP corridor boundary",
+          "Business type must be eligible (see website for excluded types)",
+          "Applicant must own the property or have permission from the property owner",
+          "Must be in good standing with State of Illinois and City of Chicago"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
+        "administeringAgency": "Allies for Community Business (Program Administrator)"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": "ccsa"
+    },
+    {
+      "id": "hubzone",
+      "name": "SBA HUBZone Program",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "3-year grace period for Redesignated Areas expired 2026-07-01; businesses whose principal office is ONLY in a Redesignated Area (not an active QCT, Indian Reservation, or Governor-Designated Community) lost eligibility as of that date. Verify current status at certify.sba.gov."
+        }
+      },
+      "benefit": {
+        "summary": "Contract set-asides + 10% price preference",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Principal office must be located in a HUBZone-designated area",
+          "At least 35% of employees must live in a HUBZone",
+          "Must qualify as a small business under SBA size standards",
+          "Requires SBA HUBZone certification before bidding on set-asides; verify current requirements at certify.sba.gov before applying"
+        ]
+      },
+      "links": {
+        "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+        "sourceUrl": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+        "administeringAgency": "U.S. Small Business Administration"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": "hubzone"
+    },
+    {
+      "id": "energyCommunityBonus",
+      "name": "IRA Energy Community Tax Credit Bonus",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "+10 points on ITC / +10% PTC",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Project site must be inside a designated energy community",
+          "Project must qualify for the underlying federal ITC or PTC",
+          "Designations and claiming rules should be verified against current IRS guidance before relying on the bonus"
+        ]
+      },
+      "links": {
+        "url": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
+        "sourceUrl": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
+        "administeringAgency": "Interagency Working Group on Energy Communities"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": "energyCommunities"
+    },
+    {
+      "id": "iraCleanElectricity",
+      "name": "IRA Clean Electricity Credits (§48E / §45Y) + Low-Income Communities Bonus",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "As of this record's last verification (2026-07-02), wind/solar facilities must begin physical construction by 2026-07-04 to remain eligible for Section 48E/45Y credits, and the Section 48E(h) Low-Income Communities Bonus Credit's 2026 window was scheduled to close 2026-08-07 -- both dates were still upcoming as of the verification date. Non-wind/solar zero-emission technologies are unaffected and continue to earn the full credit. Consult a tax advisor on construction-start documentation and to confirm current status of these dates."
+        }
+      },
+      "benefit": {
+        "summary": "30% base ITC + up to 20% bonuses (50% total possible)",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Qualified clean electricity facility (solar, storage, wind, etc.)",
+          "Bonus stacks for energy community or low-income community sites"
+        ]
+      },
+      "links": {
+        "url": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
+        "sourceUrl": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
+        "administeringAgency": "Internal Revenue Service"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "electivePay",
+      "name": "Elective Pay & Transferability (Clean Energy Credits)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Cash monetization of clean-energy credits",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Owner of an eligible clean energy credit"
+        ]
+      },
+      "links": {
+        "url": "https://www.irs.gov/credits-deductions/elective-pay-and-transferability",
+        "sourceUrl": "https://www.irs.gov/credits-deductions/elective-pay-and-transferability",
+        "administeringAgency": "Internal Revenue Service"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "sec179d",
+      "name": "§179D — Energy Efficient Commercial Buildings Deduction",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "Terminated for construction beginning after 2026-06-30 (that date has passed); only construction starts before 2026-07-01 remain claimable."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $5.94/sf federal deduction",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered Up to $5.94/sf federal deduction. (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Commercial building with qualifying energy-efficiency improvements",
+          "Must meet ASHRAE-referenced energy savings thresholds"
+        ]
+      },
+      "links": {
+        "url": "https://www.congress.gov/crs-product/IF12862",
+        "sourceUrl": "https://www.congress.gov/crs-product/IF12862",
+        "administeringAgency": "Internal Revenue Service"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "hudSection108",
+      "name": "HUD Section 108 Loan Guarantee",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Federally-guaranteed loan, 30-year term, 0.58% FY26 fee",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Project located in Chicago (CDBG entitlement city)",
+          "Must meet a CDBG national objective"
+        ]
+      },
+      "links": {
+        "url": "https://www.hud.gov/hud-partners/community-section108",
+        "sourceUrl": "https://www.hud.gov/hud-partners/community-section108",
+        "administeringAgency": "U.S. Department of Housing and Urban Development"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cdfiBond",
+      "name": "CDFI Fund Bond Guarantee Program",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Long-term fixed-rate capital deployed through certified CDFIs",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Project must qualify under a CDFI's allocation parameters"
+        ]
+      },
+      "links": {
+        "url": "https://www.cdfifund.gov/programs-training/programs/cdfi-bond",
+        "sourceUrl": "https://www.cdfifund.gov/programs-training/programs/cdfi-bond",
+        "administeringAgency": "Community Development Financial Institutions Fund"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "sba7a504",
+      "name": "SBA 7(a) and 504 Financing",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-27"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": "2026-09-30",
+          "note": "FY2026 manufacturer fee waiver expires 2026-09-30; a 2026-07-04 policy change revised how 7(a) and 504 exposure is coordinated when both are used. No approval or financing amount is implied."
+        }
+      },
+      "benefit": {
+        "summary": "Financing structure and terms vary by project and lender; no approval or amount is implied",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-27"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "For-profit business meeting SBA size standards"
+        ]
+      },
+      "links": {
+        "url": "https://www.sba.gov/funding-programs/loans",
+        "sourceUrl": "https://www.sba.gov/document/policy-notice-5000-879058-coordination-7a-504-maximum-loan-limits",
+        "administeringAgency": "SBA Chicago District Office"
+      },
+      "personas": [
+        "starting",
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "sbaMicroloan",
+      "name": "SBA Microloan Program",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-27"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Terms and amount are determined by the intermediary; no approval or financing amount is implied",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-27"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Applicant must be an eligible small business or qualifying nonprofit childcare center",
+          "Funds must be used for an SBA-permitted business purpose and not for real-estate purchase or existing-debt repayment"
+        ]
+      },
+      "links": {
+        "url": "https://www.sba.gov/funding-programs/loans/microloans",
+        "sourceUrl": "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+        "administeringAgency": "Justine PETERSEN"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "sbaDisasterEidl",
+      "name": "SBA Disaster EIDL — Cook County Flood Declaration",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2027-01-25",
+          "note": "Physical damage loan applications closed ~2026-06-22; only Economic Injury Disaster Loan applications remain open, through 2027-01-25."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $2M at 4% (small business) or 2.75% (nonprofit), up to 30-year term",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Business or nonprofit in Cook County (declared disaster area for July 25-28, 2025 storms)",
+          "Small business, small agricultural cooperative, or private nonprofit",
+          "Must demonstrate economic injury (lost revenue/working capital) from the declared disaster event"
+        ]
+      },
+      "links": {
+        "url": "https://www.sba.gov/funding-programs/disaster-assistance",
+        "sourceUrl": "https://www.sba.gov/article/2026/05/21/sba-disaster-relief-still-available-illinois-businesses-private-nonprofits-residents-affected-severe",
+        "administeringAgency": "U.S. Small Business Administration — Disaster Assistance"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "chips48d",
+      "name": "CHIPS Investment Tax Credit (§48D)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "35% federal investment tax credit (property placed in service after 2025)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Semiconductor manufacturing facility or specialized equipment",
+          "Investment must be initiated by end of 2026"
+        ]
+      },
+      "links": {
+        "url": "https://www.irs.gov/credits-deductions/advanced-manufacturing-investment-credit",
+        "sourceUrl": "https://www.irs.gov/instructions/i3468",
+        "administeringAgency": "Internal Revenue Service"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "ssbciAdvantageIL",
+      "name": "SSBCI — Advantage Illinois & INVENT VCP",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "State participation/guarantee $10K–$2M + equity through INVENT VCP",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Illinois business",
+          "Small business or eligible startup"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html",
+        "sourceUrl": "https://home.treasury.gov/policy-issues/small-business-programs/state-small-business-credit-initiative-ssbci",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "edaBuildToScale",
+      "name": "EDA Build to Scale (B2S)",
+      "level": "Federal",
+      "statusBadge": {
+        "state": "pending",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "pending",
+        "nextWindow": {
+          "expected": null,
+          "note": "No upcoming NOFO announced; EDA's program page publishes no expected date. Most recent competition (FY2024) closed 2024-10-28."
+        }
+      },
+      "benefit": {
+        "summary": "$500K – $5M federal grants",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered $500K – $5M federal grants. (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Nonprofit, EDO, university, or government partnership"
+        ]
+      },
+      "links": {
+        "url": "https://www.eda.gov/funding/programs/build-to-scale",
+        "sourceUrl": "https://www.eda.gov/funding/programs/build-to-scale",
+        "administeringAgency": "U.S. Economic Development Administration"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "bmec",
+      "name": "Building Materials Exemption Certificate (BMEC)",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Sales tax exemption on eligible building materials",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Project certified under Enterprise Zone, RERZ, HIB, REV, MICRO, AIM, or Quantum EZ"
+        ]
+      },
+      "links": {
+        "url": "https://tax.illinois.gov/businesses/incentives.html",
+        "sourceUrl": "https://tax.illinois.gov/businesses/incentives.html",
+        "administeringAgency": "Illinois Department of Revenue"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "aim",
+      "name": "Advancing Innovative Manufacturing (AIM) Tax Credit",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "3% / 5% / 7% capital credit (tiered by investment)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Manufacturing in target industry (automotive, aerospace, life sciences, energy, food, advanced materials, robotics, semiconductors)",
+          "$10M+ qualifying capital investment"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/businesshelp/incentivesandtaxcredits.html",
+        "sourceUrl": "https://dceo.illinois.gov/businesshelp/incentivesandtaxcredits.html",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "quantumEZ",
+      "name": "Quantum Enterprise Zone (QEZ) Program",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Utility + sales tax exemptions + income tax credits",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Tenancy in a designated Quantum Enterprise Zone (IQMP)",
+          "Quantum computing, microelectronics, or supporting supply chain"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/quantum-enterprise-zone-program.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/quantum-enterprise-zone-program.html",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "hib",
+      "name": "High Impact Business (HIB)",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Sales + utility + manufacturing M&E exemptions + investment tax credit",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "≥$12M investment + 500 new jobs OR $30M + 1,500 retained"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
+        "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "innovationVoucher",
+      "name": "Illinois Innovation Voucher Program",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Round 3 announced February 2026 (~$2.6M available)."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $75,000 (75% reimbursement)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Illinois small business",
+          "AI, quantum, clean energy, advanced manufacturing, semiconductors, or life sciences"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/whyillinois/innovation-vouchers.html",
+        "sourceUrl": "https://innovate-illinois.com/dceo-incentives/",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "economicEmpowermentCenters",
+      "name": "Economic Empowerment Centers (EEC) Grant Program — Round 2",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-06-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Round 2 accepted on a rolling basis until funding is exhausted, per DCEO."
+        }
+      },
+      "benefit": {
+        "summary": "$250,000-$500,000",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-06-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Applicant must operate in Illinois and serve eligible Illinois businesses or entrepreneurs",
+          "Applicant must be a career education agency or nonprofit organization delivering business-support services"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
+        "sourceUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+        "administeringAgency": "Illinois DCEO Office of Economic Equity & Empowerment"
+      },
+      "personas": [
+        "starting"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "filmCredit",
+      "name": "Illinois Film Production Services Tax Credit",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": "2038-12-31",
+          "note": "Credit authority extended through 2038-12-31 (P.A. 104-0453)."
+        }
+      },
+      "benefit": {
+        "summary": "Up to 35% transferable credit",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Film, television, or commercial production"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/whyillinois/film/filmtaxcredit.html",
+        "sourceUrl": "https://dceo.illinois.gov/whyillinois/film/filmtaxcredit.html",
+        "administeringAgency": "Illinois Film Office (DCEO)"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "liveTheaterCredit",
+      "name": "Illinois Live Theater Production Tax Credit",
+      "level": "State",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "20% transferable credit on qualified IL expenditures",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Live theater production (commercial or nonprofit)"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/whyillinois/film/live-theater-tax-credit.html",
+        "sourceUrl": "https://dceo.illinois.gov/whyillinois/film/live-theater-tax-credit.html",
+        "administeringAgency": "Illinois DCEO"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cannabisR3",
+      "name": "Illinois Cannabis Social Equity Loan Program — Round III",
+      "level": "State",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "Round III closed 2025-09-25; $31.8M awarded to 95 businesses. No Round IV has been announced."
+        }
+      },
+      "benefit": {
+        "summary": "Forgivable loans (size varies by round)",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered Forgivable loans (size varies by round). (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Licensed Illinois cannabis operator with social-equity status"
+        ]
+      },
+      "links": {
+        "url": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
+        "sourceUrl": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
+        "administeringAgency": "Illinois DCEO Office of Economic Equity"
+      },
+      "personas": [
+        "starting"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "r3Grants",
+      "name": "Restore, Reinvest, Renew (R3) Program",
+      "level": "State",
+      "statusBadge": {
+        "state": "closed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "closed",
+        "nextWindow": {
+          "expected": null,
+          "note": "No round is currently open -- the March 6, 2026 deadline has passed and both the $35M and $15M opportunities are listed as expired. Watch r3.illinois.gov for the next NOFO."
+        }
+      },
+      "benefit": {
+        "summary": "Grants (size varies by NOFO)",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered Grants (size varies by NOFO). (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Service area in an R3-designated disinvested community",
+          "Nonprofit or local government"
+        ]
+      },
+      "links": {
+        "url": "https://r3.illinois.gov/",
+        "sourceUrl": "https://r3.illinois.gov/news/restore-reinvest-renew-r3-program-grants-apply-now/",
+        "administeringAgency": "Illinois R3 Program"
+      },
+      "personas": [
+        "starting"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class6b",
+      "name": "Cook County Class 6b Industrial Property Tax Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-10"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment (vs. 25%) for 10 years, then 15% / 20%",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-10"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Industrial property in Cook County",
+          "Industrial use (manufacturing, warehousing, R&D)",
+          "New construction, substantial rehab, or reoccupancy of abandoned property"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class6bSer",
+      "name": "Cook County Class 6b SER (Sustainable Emergency Relief)",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment for 10 years (non-renewable)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Industrial property in Cook County",
+          "Industrial enterprise occupying the same premises for 10+ consecutive years",
+          "Documented economic hardship without incentive"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class7b",
+      "name": "Cook County Class 7b Commercial Property Tax Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment for 10 years, then 15% / 20%",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Property in a municipally-designated 'area in need of commercial development'",
+          "Commercial property — new construction, rehab, or reoccupancy",
+          "Total project costs over $2 million"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class7c",
+      "name": "Cook County Class 7c Commercial Urban Relief Eligibility (CURE)",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment for 5 years (renewable once)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Commercial property in Cook County with municipal support",
+          "Commercial — new construction, rehab, or reoccupancy"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class8",
+      "name": "Cook County Class 8 Property Tax Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment for 10 years, then 15% / 20%",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Property in Bloom, Bremen, Calumet, Rich, or Thornton Township",
+          "Industrial or commercial use"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "class8aMicro",
+      "name": "Cook County Class 8a MICRO (Semiconductor)",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment for 30 years (stacks with state MICRO + federal §48D)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Semiconductor / microchip / advanced manufacturing",
+          "Property in Cook County"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+        "sourceUrl": "https://www.cookcountyil.gov/service/property-tax-incentives",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "classC",
+      "name": "Cook County Class C Brownfield Property Tax Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment on land + improvements for 10 years",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Industrial or commercial property in Cook County",
+          "Industrial or commercial use post-remediation",
+          "Remediation costs ≥$100K or ≥25% of market value"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/form-document/class-c",
+        "sourceUrl": "https://www.cookcountyassessor.com/form-document/class-c",
+        "administeringAgency": "Cook County Assessor's Office — Incentives"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "classL",
+      "name": "Cook County Class L Landmark Rehabilitation Incentive",
+      "level": "County",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "10% assessment on improvements for 10 years (12-year total schedule)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Designated Chicago landmark or contributing property in a landmark district",
+          "Commercial, industrial, or income-producing not-for-profit use",
+          "Rehab investment ≥50% of building market value"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist/svcs/class_l_propertytaxincentive.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist/svcs/class_l_propertytaxincentive.html",
+        "administeringAgency": "Chicago DPD Historic Preservation"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": "landmarkDistricts"
+    },
+    {
+      "id": "ahsap",
+      "name": "Affordable Housing Special Assessment Program (AHSAP)",
+      "level": "County",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-09-05",
+          "note": "2026 Part 1 + Part 2 application deadline: 2026-09-05."
+        }
+      },
+      "benefit": {
+        "summary": "25% (Tier 15) or 35% (Tier 35) assessed-value reduction",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Multifamily rental property in Cook County",
+          "Multifamily rental with affordability commitment",
+          "Capital expenditure meeting tier threshold ($8.16-$12.75/sf for 2026)"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyassessoril.gov/affordable-housing",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/affordable-housing",
+        "administeringAgency": "Cook County Assessor's Office — Affordable Housing"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cookCannabisGrant",
+      "name": "Cook County Cannabis Development Grant",
+      "level": "County",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "Published window ran 2024-05-23 to 2024-06-21; no current or upcoming round is announced."
+        }
+      },
+      "benefit": {
+        "summary": "$75,000–$150,000, depending on business type",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered $75,000–$150,000, depending on business type. (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Cannabis business in Cook County",
+          "Licensed cannabis operator with Illinois social-equity status"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyil.gov/service/cannabis-development-grant",
+        "sourceUrl": "https://www.cookcountyil.gov/news/cook-county-president-toni-preckwinkle-announces-nine-additional-recipients-cannabis",
+        "administeringAgency": "Cook County Bureau of Economic Development"
+      },
+      "personas": [
+        "starting"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "investInCook",
+      "name": "Invest in Cook — Transportation Grant Program",
+      "level": "County",
+      "statusBadge": {
+        "state": "closed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "closed",
+        "nextWindow": {
+          "expected": null,
+          "note": "10th round closed March 2026; next annual round not yet announced (annual $8.5M program)."
+        }
+      },
+      "benefit": {
+        "summary": "Grant award sized to project (program total $8.5M/year)",
+        "termsStatus": "current",
+        "qualifier": "Most recently published round offered Grant award sized to project (program total $8.5M/year). (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Transportation project in Cook County",
+          "Public infrastructure or sponsored private project"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyil.gov/investincook",
+        "sourceUrl": "https://www.cookcountyil.gov/investincook",
+        "administeringAgency": "Cook County DOTH"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cookBrownfield",
+      "name": "Cook County Brownfield Redevelopment Assistance",
+      "level": "County",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-12-31",
+          "note": "No-cost service window runs 2022 through 2026; this ARPA funding sunsets at the end of calendar year 2026. Suburban Cook County only (outside City of Chicago)."
+        }
+      },
+      "benefit": {
+        "summary": "Phase I/II assessments and remediation planning, no-cost to qualifying owners through 2026",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Suburban Cook County property (CCDES area)",
+          "Property with known or suspected environmental contamination"
+        ]
+      },
+      "links": {
+        "url": "https://www.cookcountyil.gov/service/brownfield-redevelopment",
+        "sourceUrl": "https://www.cookcountyil.gov/service/brownfield-redevelopment",
+        "administeringAgency": "Cook County DES"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cdgSmall",
+      "name": "Community Development Grant — Small (≤ $250K)",
+      "level": "City",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-08-14",
+          "note": "Current cycle deadline: 2026-08-14 11:59 PM. Citywide -- no corridor or zone gate."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $250,000 (75% of eligible costs)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Project located within Chicago city limits (all 77 community areas eligible)",
+          "Capital project: new construction, substantial rehabilitation, build-out, or equipment installation",
+          "For-profit business, 501(c)(3) nonprofit, or developer LLC",
+          "Total project cost up to $250,000 (Small tier)",
+          "Good standing with State of Illinois and City of Chicago"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cdgMedium",
+      "name": "Community Development Grant — Medium ($300K – $5M)",
+      "level": "City",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-08-14",
+          "note": "Current cycle deadline: 2026-08-14 11:59 PM. Monthly webinars held 2026-07-08 and 2026-08-12."
+        }
+      },
+      "benefit": {
+        "summary": "$300K–$5M reimbursement (50% of eligible costs)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "preference",
+        "publishedCriteria": [
+          "Project located within Chicago city limits",
+          "Capital project: new construction, substantial rehabilitation, or major build-out",
+          "For-profit business, 501(c)(3) nonprofit, or developer LLC",
+          "Total project cost $300,001 – $5,000,000 (Medium tier)",
+          "Good standing with State of Illinois and City of Chicago"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "cdgLarge",
+      "name": "Community Development Grant — Large (> $5M)",
+      "level": "City",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Rolling application, no deadline, per the record's own summary. Citywide, no corridor/zone gate."
+        }
+      },
+      "benefit": {
+        "summary": "> $5M reimbursement (catalytic)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Project located within Chicago city limits",
+          "Catalytic capital project: large new construction, major adaptive-reuse, anchor development",
+          "Developer LLC, large 501(c)(3) nonprofit, or institutional sponsor",
+          "Total project cost > $5,000,000 (Large tier)",
+          "Good standing with State of Illinois and City of Chicago; capacity to manage public-financing compliance"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "workforceSolutions",
+      "name": "Workforce Solutions Program (formerly TIFWorks)",
+      "level": "City",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-10"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": null,
+          "note": "Q3 2026 window opened 2026-07-01 for non-TIF businesses (no listed close date); businesses inside funded TIF districts may apply year-round."
+        }
+      },
+      "benefit": {
+        "summary": "Up to $250K (standard) / $500K (extraordinary impact); 100% or 25–50% match depending on business size",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-10"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Chicago employer (citywide since Feb 1, 2026; TIF-district businesses apply year-round, non-TIF quarterly)",
+          "Commercial or industrial employer investing in employee training/onboarding",
+          "100% reimbursement up to $1.5M gross sales (commercial) or ≤40 FTE (industrial); 25–50% match above those thresholds"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "climateInfrastructureFund",
+      "name": "Climate Infrastructure Fund (CIF) / Equitable Transit-Oriented Development (ETOD)",
+      "level": "City",
+      "statusBadge": {
+        "state": "lapsed",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "lapsed",
+        "nextWindow": {
+          "expected": null,
+          "note": "Grant application closed; no successor round announced. The ETOD half of this record is also closed (Round 1 deadline was 2023-08-18)."
+        }
+      },
+      "benefit": {
+        "summary": "Grants up to $250,000 per award (round closed)",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered Grants up to $250,000 per award (round closed). (No round currently open as of 2026-08-09.)"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Project in Chicago",
+          "Climate infrastructure or transit-oriented development"
+        ]
+      },
+      "links": {
+        "url": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/climate-infrastructure-projects.html",
+        "sourceUrl": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/CRPFinalistResources.html",
+        "administeringAgency": "City of Chicago Department of Planning and Development"
+      },
+      "personas": [
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "comedEvRebate",
+      "name": "ComEd EV Charger and Installation Rebate",
+      "level": "Utility",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-08-09"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-12-31",
+          "note": "Program term capped at 2026-12-31 or until funds are exhausted, whichever comes first."
+        }
+      },
+      "benefit": {
+        "summary": "Residential up to $750 ($2,500 LI/LIC/EIEC); commercial up to $5,000/port ($7,500 LI/EIEC)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-08-09"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "ComEd service territory"
+        ]
+      },
+      "links": {
+        "url": "https://www.comed.com/about-us/clean-energy/electric-vehicle-charger-and-installation-rebate",
+        "sourceUrl": "https://www.comed.com/about-us/clean-energy/electric-vehicle-charger-and-installation-rebate",
+        "administeringAgency": "Commonwealth Edison"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "comedSmallBizEfficiency",
+      "name": "ComEd Small Business Energy Efficiency (Adjacent Capital — NOT a grant incentive)",
+      "level": "Utility",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Specific adder amounts require direct verification with ComEd (their pages block automated fetches, per catalog note)."
+        }
+      },
+      "benefit": {
+        "summary": "Up to 75% of eligible equipment costs (specific caps require direct ComEd verification)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "ComEd service territory (Chicago and northern Illinois)",
+          "Peak demand under 500 kW for Small Business program"
+        ]
+      },
+      "links": {
+        "url": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
+        "sourceUrl": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
+        "administeringAgency": "Commonwealth Edison"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "comedDgSolar",
+      "name": "ComEd Distributed Generation Solar + Battery Rebate (Adjacent Capital — NOT a grant incentive)",
+      "level": "Utility",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": "Standalone battery-storage rebate terms require direct verification with ComEd."
+        }
+      },
+      "benefit": {
+        "summary": "$300/kW (≤100 kW) or $250/kW (>100 kW) upfront; stacks with IL Shines RECs + federal ITC",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "ComEd service territory",
+          "Rooftop or ground-mount solar installation"
+        ]
+      },
+      "links": {
+        "url": "https://www.comed.com/SmartEnergy/MyGreenPowerConnection/Pages/SolarRebates.aspx",
+        "sourceUrl": "https://illinoisshines.com/",
+        "administeringAgency": "Commonwealth Edison — Distributed Generation"
+      },
+      "personas": [
+        "growing",
+        "developer"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "peoplesGasEfficiency",
+      "name": "Peoples Gas C&I Energy Efficiency Rebates 2026-2029 (Adjacent Capital — NOT a grant incentive)",
+      "level": "Utility",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2026-12-31",
+          "note": "2026 annual cycle (2026-01-01 to 2026-12-31) under the ICC-approved 2026-2029 Energy Efficiency Plan; specific dollar amounts should be verified directly with Peoples Gas."
+        }
+      },
+      "benefit": {
+        "summary": "Prescriptive rebates vary by measure — call (855) 849-8928 or request the 2026 rebate schedule PDF",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "Peoples Gas service territory (Chicago)",
+          "Commercial or industrial natural gas customer with qualifying equipment"
+        ]
+      },
+      "links": {
+        "url": "https://www.peoplesgasdelivery.com/savings/business/rebates-ci",
+        "sourceUrl": "https://www.peoplesgasdelivery.com/savings/business/rebates-ci",
+        "administeringAgency": "Peoples Gas — Commercial & Industrial Efficiency"
+      },
+      "personas": [
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "kivaChicago",
+      "name": "Kiva Chicago 0% Microloan (Adjacent Capital — NOT a grant incentive)",
+      "level": "Nonprofit / CDFI",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "$1,000–$15,000 at 0% interest, no fees",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "none",
+        "publishedCriteria": [
+          "U.S.-based business (nationwide, including Chicago)",
+          "For-profit business (cannabis, gambling, MLM, and gig-only businesses excluded)"
+        ]
+      },
+      "links": {
+        "url": "https://www.kiva.org/borrow",
+        "sourceUrl": "https://www.kiva.org/borrow",
+        "administeringAgency": "Kiva US"
+      },
+      "personas": [
+        "starting"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "greenwoodArcher",
+      "name": "Greenwood Archer Capital CDFI Loans (Adjacent Capital — NOT a grant incentive)",
+      "level": "Nonprofit / CDFI",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Loans up to $500,000; CRE-specific terms — verify with GAC",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "South or West Side Chicago focus (broader Chicago area also served)",
+          "Small business or entrepreneur — most industries; verify CRE track eligibility directly"
+        ]
+      },
+      "links": {
+        "url": "https://greenwoodarchercapital.org/",
+        "sourceUrl": "https://greenwoodarchercapital.org/",
+        "administeringAgency": "Greenwood Archer Capital"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "alliesCommunityBusiness",
+      "name": "Allies for Community Business (A4CB) Term & Revenue-Based Loans (Adjacent Capital — NOT a grant incentive)",
+      "level": "Nonprofit / CDFI",
+      "statusBadge": {
+        "state": "rolling",
+        "asOfDate": "2026-07-02"
+      },
+      "intake": {
+        "status": "rolling",
+        "nextWindow": {
+          "expected": null,
+          "note": null
+        }
+      },
+      "benefit": {
+        "summary": "Term loans $500–$500K (10–12% + 3% closing); revenue-based $50K–$500K (3% fee, 1.5x max repayment)",
+        "termsStatus": "current",
+        "qualifier": "Current published terms as of 2026-07-02"
+      },
+      "screening": {
+        "locationRelation": "contextual",
+        "publishedCriteria": [
+          "Chicago and Cook County businesses",
+          "Most for-profit and nonprofit businesses with earned revenue; commercial corridor priority"
+        ]
+      },
+      "links": {
+        "url": "https://a4cb.org/services/loans/",
+        "sourceUrl": "https://a4cb.org/services/loans/",
+        "administeringAgency": "Allies for Community Business"
+      },
+      "personas": [
+        "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    }
+  ]
+}

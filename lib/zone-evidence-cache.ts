@@ -1,0 +1,188 @@
+/**
+ * lib/zone-evidence-cache.ts — Zone Evidence v2 caching (build-spec.md 1.3;
+ * consult item 5; review1 R3). A brand-new Redis key namespace
+ * ("zones:check:v3:", distinct from v1's "zones:check:v2:") keyed by
+ * (schemaVersion, dataRevision, roundedCoord, requestedLayers).
+ *
+ * Content-aware TTL, which `lib/redis.ts`'s `memCached()` cannot express
+ * (it takes one fixed TTL up front, before the result — whose content
+ * decides the right TTL — is known): fully-covered responses get the
+ * normal 7-day TTL; any response containing an `unknown` layer gets a
+ * short TTL (<= 5 min) so a transient outage cannot serve a stale
+ * evidence-of-absence claim for a week. `stale-on-error` must never stand
+ * in for a negative claim — this cache never serves an expired/missing
+ * entry as a fallback; a miss always re-resolves from
+ * `resolveZoneEvidenceV2`.
+ *
+ * review1 R9: a cached hit must carry an evidence entry for EVERY key the
+ * current lookup requested — a payload cached for a different (e.g.
+ * narrower) key set is never valid for this one, even if its own shape is
+ * otherwise fine. See `isValidStoredPayload`'s `requestedKeys` parameter.
+ *
+ * Two review1 R3 fixes over the original design:
+ *   1. The resolution timestamp (`checkedAt`) is generated once, at
+ *      resolution time, and cached alongside `layers`. A cache HIT returns
+ *      that original `checkedAt` — the route must not stamp a fresh
+ *      `now()` on a result that may be up to 7 days old, which would make
+ *      "checked <date>" a lie.
+ *   2. `hadUnknown` is NEVER stored. It is recomputed from `layers` every
+ *      time this function returns, on both the fresh-resolve path and the
+ *      cache-hit path — a stored boolean could in principle drift from the
+ *      `layers` it was computed from (a corrupted/hand-edited cache entry,
+ *      a future code path that writes the cache differently); recomputing
+ *      makes that drift structurally impossible to observe. The cached
+ *      payload's shape is also validated on read — a Redis entry that
+ *      doesn't look like `{layers, checkedAt}` is treated as a miss.
+ */
+import { getRedisClient, roundCoord } from "@/lib/redis";
+import {
+  resolveZoneEvidenceV2,
+  type ZoneEvidenceOpts,
+  type ZoneLayerEvidence,
+  type ZoneLayerState,
+} from "@/lib/zones-check";
+
+export const ZONE_EVIDENCE_V2_NAMESPACE = "zones:check:v3:";
+export const FULL_COVERAGE_TTL_SECONDS = 604_800; // 7 days
+export const UNKNOWN_BEARING_TTL_SECONDS = 300; // 5 minutes — the spec's "TTL <= 5 min" cap
+
+/** What is actually persisted in Redis — deliberately does NOT include hadUnknown (see module doc comment). */
+interface StoredZoneEvidenceV2Payload {
+  layers: Record<string, ZoneLayerEvidence>;
+  checkedAt: string;
+}
+
+/** What resolveZoneEvidenceV2Cached returns to its caller — hadUnknown is always freshly computed from `layers`. */
+export interface ZoneEvidenceV2Result {
+  layers: Record<string, ZoneLayerEvidence>;
+  checkedAt: string;
+  hadUnknown: boolean;
+}
+
+const VALID_ZONE_LAYER_STATES: ReadonlySet<ZoneLayerState> = new Set([
+  "matched",
+  "not_matched",
+  "unknown",
+]);
+
+/**
+ * `requestedKeys` is required (review1 R9, tightened by review2 R12): a
+ * cache entry is only valid for THIS lookup if its `layers` cover EXACTLY
+ * the requested key set — no missing keys (R9's original fix) AND no
+ * extra ones (R12). R9 alone only checked that every requested key was
+ * present, which let a stored SUPERSET pass: a payload cached under
+ * `["tif","ssa"]` would validate as a "hit" for a narrower request of
+ * just `["tif"]`, and `resolveZoneEvidenceV2Cached` would return the
+ * WHOLE stored `layers` object — so the route would declare
+ * `requestedLayers: ["tif"]` while actually serving `ssa` too, and
+ * `normalizeZoneEvidenceV2` would preserve/expose that extra layer as
+ * real evidence for a layer nobody asked about. Since the Redis cache KEY
+ * itself already encodes the exact sorted layer set
+ * (`zoneEvidenceV2CacheKey`), any stored payload whose OWN layers don't
+ * exactly match what was requested is stale/foreign data for this key,
+ * not a legitimate hit — order-insensitive set equality, not subset/
+ * superset tolerance in either direction.
+ */
+function isValidStoredPayload(
+  value: unknown,
+  requestedKeys: readonly string[]
+): value is StoredZoneEvidenceV2Payload {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.checkedAt !== "string" || v.checkedAt.length === 0) return false;
+  if (!v.layers || typeof v.layers !== "object" || Array.isArray(v.layers)) return false;
+
+  const layers = v.layers as Record<string, unknown>;
+
+  // review2 R12: exact key-set match, order-insensitive — neither missing
+  // (R9) nor extra (R12) keys are tolerated.
+  const requestedKeySet = new Set(requestedKeys);
+  const storedKeySet = new Set(Object.keys(layers));
+  if (requestedKeySet.size !== storedKeySet.size) return false;
+  for (const key of requestedKeySet) {
+    if (!storedKeySet.has(key)) return false;
+  }
+
+  for (const entry of Object.values(layers)) {
+    if (!entry || typeof entry !== "object") return false;
+    const state = (entry as Record<string, unknown>).state;
+    if (typeof state !== "string" || !VALID_ZONE_LAYER_STATES.has(state as ZoneLayerState)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/** Recomputed on every read — see module doc comment for why a stored boolean is never trusted. */
+function computeHadUnknown(layers: Record<string, ZoneLayerEvidence>): boolean {
+  return Object.values(layers).some((evidence) => evidence.state === "unknown");
+}
+
+export function zoneEvidenceV2CacheKey(
+  schemaVersion: number,
+  dataRevision: string,
+  lat: number,
+  lon: number,
+  keys: readonly string[]
+): string {
+  const rLat = roundCoord(lat);
+  const rLon = roundCoord(lon);
+  const sortedKeys = [...keys].sort().join(",");
+  return `${ZONE_EVIDENCE_V2_NAMESPACE}${schemaVersion}:${dataRevision}:${rLat}:${rLon}:${sortedKeys}`;
+}
+
+/**
+ * Resolve Zone Evidence v2 for a point + layer set, reading/writing through
+ * the v3 Redis namespace with content-aware TTL. Gracefully degrades to
+ * "resolve, don't cache" when Redis is unavailable (no env vars — matches
+ * every other cache helper in this codebase).
+ */
+export async function resolveZoneEvidenceV2Cached(
+  dataRevision: string,
+  lat: number,
+  lon: number,
+  keys: readonly string[],
+  opts: ZoneEvidenceOpts = {}
+): Promise<ZoneEvidenceV2Result> {
+  const cacheKey = zoneEvidenceV2CacheKey(2, dataRevision, lat, lon, keys);
+  const redis = getRedisClient();
+
+  if (redis) {
+    try {
+      const hit = await redis.get<unknown>(cacheKey);
+      if (hit != null) {
+        if (isValidStoredPayload(hit, keys)) {
+          return {
+            layers: hit.layers,
+            checkedAt: hit.checkedAt, // the ORIGINAL resolution timestamp, not now()
+            hadUnknown: computeHadUnknown(hit.layers), // always recomputed, never a stored boolean
+          };
+        }
+        console.warn(
+          "[zone-evidence-cache] discarding invalid/malformed cached payload, re-resolving:",
+          cacheKey
+        );
+      }
+    } catch (err) {
+      console.warn("[zone-evidence-cache] read error, falling through:", err);
+    }
+  }
+
+  const layers = await resolveZoneEvidenceV2(lat, lon, keys, opts);
+  const checkedAt = new Date().toISOString();
+  const hadUnknown = computeHadUnknown(layers);
+
+  if (redis) {
+    try {
+      const toStore: StoredZoneEvidenceV2Payload = { layers, checkedAt };
+      await redis.set(cacheKey, JSON.stringify(toStore), {
+        ex: hadUnknown ? UNKNOWN_BEARING_TTL_SECONDS : FULL_COVERAGE_TTL_SECONDS,
+      });
+    } catch (err) {
+      console.warn("[zone-evidence-cache] write error:", err);
+    }
+  }
+
+  return { layers, checkedAt, hadUnknown };
+}
