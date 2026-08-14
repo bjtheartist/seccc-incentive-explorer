@@ -74,8 +74,58 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   { pattern: /\byour\s+business\s+(?:is\s+)?(?:not\s+eligible|ineligible)\b/i, reason: "business-ineligible" },
   { pattern: /\byou\s+do\s+not\s+meet\s+(?:the\s+)?requirements\b/i, reason: "does-not-meet-requirements" },
   { pattern: /\byou\s+don'?t\s+meet\s+(?:the\s+)?requirements\b/i, reason: "does-not-meet-requirements" },
-  { pattern: /\byou\s+will\s+(?:not|never)\s+(?:receive|qualify|be\s+approved)\b/i, reason: "you-will-not-receive" },
+  // review6 S14: "cannot"/"can't"/"won't" added alongside the original
+  // "will not"/"never"; "be accepted" added alongside "receive"/"be
+  // approved". "qualify" REMOVED from this outcome list — "cannot/does
+  // not qualify" is now its own dedicated family below, so the two don't
+  // silently overlap under one reason string.
+  { pattern: /\byou\s+(?:will\s+(?:not|never)|won'?t|cannot|can'?t)\s+(?:receive|be\s+approved|be\s+accepted)\b/i, reason: "you-will-not-receive" },
   { pattern: /\byou'?ve?\s+been\s+(?:denied|rejected)\b/i, reason: "denied-claim" },
+  // review6 S14 (HIGH): six named grammar families the S4 pass didn't
+  // cover, each still scoped to a determination ABOUT THE READER (or the
+  // reader's own submission) — "you"/"your business"/"your
+  // application"/"your project" as subject — never a bare "requires"/
+  // "qualify"/"fails" anywhere in the text. That scoping is deliberate:
+  // it's exactly what keeps a genuinely informational sentence like "the
+  // program requires a minimum investment" or "some applicants do not
+  // qualify" (neither one a claim about THIS reader) from tripping any
+  // of these.
+  //
+  // "not qualified" — adjectival ("you're not qualified"), a distinct
+  // grammatical form from the verb phrase "do/does not qualify" above; a
+  // model can produce either for the same underlying claim.
+  { pattern: /\byou(?:'re| are)\s+not\s+qualified\b/i, reason: "you-not-qualified" },
+  { pattern: /\byour\s+business\s+(?:is\s+)?not\s+qualified\b/i, reason: "business-not-qualified" },
+  // "does not/cannot qualify" — the modal ("cannot"/"can't") forms S4's
+  // "do not"/"don't" pair didn't cover, plus the currently-uncovered
+  // "your business" subject for this verb (S4 only had it for
+  // eligible/ineligible, not qualify).
+  { pattern: /\byou\s+cannot\s+qualify\b/i, reason: "you-cannot-qualify" },
+  { pattern: /\byou\s+can'?t\s+qualify\b/i, reason: "you-cannot-qualify" },
+  { pattern: /\byour\s+business\s+(?:does\s+not|doesn'?t|cannot|can'?t)\s+qualify\b/i, reason: "business-does-not-qualify" },
+  // "appears ineligible" — the negative mirror of the existing
+  // POSITIVE-only "appears eligible" entry above (review5 S4 hard-reject).
+  { pattern: /\bappears?\s+(?:to\s+be\s+)?(?:not\s+eligible|ineligible)\b/i, reason: "appears-ineligible" },
+  // "fails requirements".
+  { pattern: /\byou\s+fails?\s+(?:to\s+meet\s+)?(?:the\s+)?requirements\b/i, reason: "fails-requirements" },
+  { pattern: /\byour\s+(?:application|business|project)\s+fails?\s+(?:to\s+meet\s+)?(?:the\s+)?requirements\b/i, reason: "fails-requirements" },
+  // "cannot/will not receive/be approved/be accepted" — passive tense
+  // expansion of the existing "you've been denied/rejected" entry above
+  // (present-perfect only); a model can just as easily produce simple
+  // past/present/future passive for the same claim.
+  { pattern: /\byou\s+(?:were|are|will\s+be)\s+(?:denied|rejected)\b/i, reason: "denied-claim" },
+  // "application/project denied" — a determination about the READER'S
+  // SUBMISSION specifically, distinct from "you've been denied" (about
+  // the reader personally) above. Passive, across the four tenses a
+  // model might reasonably produce. Requires "your" OR "the" (a definite
+  // reference — in a 1:1 concierge chat, "the application" with no other
+  // application in play unambiguously means the reader's own) directly
+  // before the noun — NOT optional, unlike an earlier draft of this
+  // pattern: making the article optional would also match a genuinely
+  // third-party/generic sentence like "Another applicant's request was
+  // denied last cycle" or "Other applications were denied for missing
+  // paperwork," neither of which is a claim about THIS reader.
+  { pattern: /\b(?:your|the)\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a

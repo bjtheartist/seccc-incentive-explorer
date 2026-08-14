@@ -1810,3 +1810,79 @@ same 5 pre-existing warnings; full `npx vitest run` — **324 test files,
 3922 passed, 2 skipped** (up from S12's 323/3876); `npm run
 programs:public:check` clean (unaffected — this finding touches only
 `app/report/page.tsx`'s coordinate handling, not the programs catalog).
+
+---
+
+### S14 (HIGH) — expanded negative-determination grammar in the concierge output validator
+
+**Finding:** `lib/concierge/output-validator.ts`'s `PROHIBITED_PATTERNS`
+(review5 S4) covered "you do not qualify"/"you don't qualify", "you are
+ineligible"/"you're not eligible", "you do not/don't meet requirements",
+"you will not/never receive/qualify/be approved", and "you've been
+denied/rejected" — but left six named grammar families a chat model
+could still use to produce the same underlying reader-facing negative
+determination: "not qualified" (adjectival, a different part of speech
+from the verb "do not qualify"), "does not/cannot qualify" (the modal
+"cannot"/"can't" forms), "appears ineligible" (the negative mirror of
+the existing positive-only "appears eligible" hard-reject), "fails
+requirements", an expanded "cannot/will not receive/be approved/be
+accepted" (contractions + a new "be accepted" outcome), and
+"application/project denied" (a determination about the reader's
+SUBMISSION, not the reader personally — a genuinely new claim shape, not
+just new wording for an existing one).
+
+**Fix:** `PROHIBITED_PATTERNS` in `lib/concierge/output-validator.ts`
+gained the following, all keeping the file's established scoping
+discipline (subject must be "you"/"your business"/"your
+application"/"your project"/a definite "the application" in a 1:1 chat
+— never a bare "requires"/"qualify"/"fails" anywhere in the text, which
+is what keeps genuinely informational sentences from tripping):
+- **"not qualified"**: `you(?:'re| are) not qualified` /
+  `your business (?:is )?not qualified`.
+- **"does not/cannot qualify"**: `you cannot/can't qualify` (the modal
+  forms S4's "do not"/"don't" pair didn't cover) plus
+  `your business (?:does not|doesn't|cannot|can't) qualify` (S4 only had
+  "your business" for eligible/ineligible, never for "qualify").
+- **"appears ineligible"**: `appears? (?:to be )?(?:not eligible|ineligible)`.
+- **"fails requirements"**: `you fails? (?:to meet )?(?:the )?requirements` /
+  `your (?:application|business|project) fails? (?:to meet )?(?:the )?requirements`.
+- **"cannot/will not receive/be approved/be accepted"**: the EXISTING
+  `you will not/never receive/qualify/be approved` pattern expanded to
+  `you (?:will (?:not|never)|won't|cannot|can't) (?:receive|be approved|be accepted)`
+  — `qualify` deliberately REMOVED from this pattern's outcome list
+  (moved to its own dedicated "cannot qualify" family above, so the two
+  don't silently share one reason string for two different claim
+  shapes), `won't`/`cannot`/`can't` and `be accepted` added.
+- **Passive-tense expansion of the existing "you've been denied/rejected"
+  entry**: `you (?:were|are|will be) (?:denied|rejected)` — present-perfect
+  only before this finding; a model can just as easily produce simple
+  past/present/future passive for the identical claim.
+- **"application/project denied"** (new claim shape): `(?:your|the)
+  (?:application|project|request) (?:was|is|has been|will be) (?:denied|rejected)`.
+  Mid-implementation correction: an early draft made the article
+  optional (`(?:your\s+)?`), which would have ALSO matched a genuinely
+  third-party/generic sentence like "Another applicant's request was
+  denied last cycle" — tightened to require "your" or "the" (a definite
+  reference; in a 1:1 concierge chat with no other application in play,
+  "the application" unambiguously means the reader's own) directly
+  before the noun, closing that false-positive path before it ever
+  shipped.
+
+**Tests added:** `lib/concierge/__tests__/output-validator.test.ts`
+extended from 42 to 85 tests. A new table-driven describe block adds one
+assertion per named phrase across all six families (34 phrases:
+contraction and passive variants of each), plus a dedicated 9-entry
+"safe near-miss" table proving genuinely informational sentences never
+trip — including the coordinator's own named example ("The program
+requires a minimum investment of $50,000.") and one control per new
+family: a third-party subject ("Some applicants are not qualified..."),
+a generic/plural statement ("Common reasons applications fail...",
+"Other applications were denied..."), "qualify"/"appears"/"denied" used
+in a non-eligibility sense, and the exact "another applicant's request"
+shape the article-optional draft would have false-positived on.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors
+on the changed files; full `npx vitest run` — **324 test files, 3965
+passed, 2 skipped** (up from S13's 324/3922); `npm run
+programs:public:check` clean (unaffected — concierge output validation
+only, no catalog changes).

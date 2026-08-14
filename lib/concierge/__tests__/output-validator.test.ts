@@ -155,6 +155,98 @@ describe("validateConciergeOutput — S4 adversarial phrase table (both directio
 });
 
 /**
+ * review6 S14 (HIGH): "expand the negative-determination grammar" — six
+ * named families the S4 pass didn't cover, each with contractions and/or
+ * passive constructions: "not qualified", "does not/cannot qualify",
+ * "appears ineligible", "fails requirements", "cannot/will not
+ * receive/be approved/be accepted", "application/project denied". Table-
+ * driven per the coordinator's TEST requirement, one assertion per named
+ * phrase, plus a dedicated near-miss table proving genuinely
+ * informational sentences (not a claim about THIS reader) never trip.
+ */
+describe("validateConciergeOutput — S14 expanded negative-determination grammar families", () => {
+  const FAMILY_PHRASES: { family: string; text: string; reason: string }[] = [
+    // "not qualified" (adjectival)
+    { family: "not qualified", text: "You're not qualified for the SBIF grant.", reason: "you-not-qualified" },
+    { family: "not qualified", text: "You are not qualified for this program.", reason: "you-not-qualified" },
+    { family: "not qualified", text: "Your business is not qualified for TIF financing.", reason: "business-not-qualified" },
+    { family: "not qualified", text: "Your business not qualified — sorry.", reason: "business-not-qualified" },
+    // "does not/cannot qualify"
+    { family: "cannot qualify", text: "You cannot qualify for the Enterprise Zone exemption.", reason: "you-cannot-qualify" },
+    { family: "cannot qualify", text: "You can't qualify for NOF funding.", reason: "you-cannot-qualify" },
+    { family: "cannot qualify", text: "Your business does not qualify for this grant.", reason: "business-does-not-qualify" },
+    { family: "cannot qualify", text: "Your business doesn't qualify for TIF financing.", reason: "business-does-not-qualify" },
+    { family: "cannot qualify", text: "Your business cannot qualify for the SBIF program.", reason: "business-does-not-qualify" },
+    { family: "cannot qualify", text: "Your business can't qualify for this round.", reason: "business-does-not-qualify" },
+    // "appears ineligible"
+    { family: "appears ineligible", text: "This location appears ineligible for the program.", reason: "appears-ineligible" },
+    { family: "appears ineligible", text: "It appears to be ineligible for NOF funding.", reason: "appears-ineligible" },
+    { family: "appears ineligible", text: "Based on your address, you appear not eligible for this grant.", reason: "appears-ineligible" },
+    // "fails requirements"
+    { family: "fails requirements", text: "You fail the requirements for this grant.", reason: "fails-requirements" },
+    { family: "fails requirements", text: "You fail to meet the requirements for TIF financing.", reason: "fails-requirements" },
+    { family: "fails requirements", text: "Your application fails the requirements for this program.", reason: "fails-requirements" },
+    { family: "fails requirements", text: "Your project fails to meet requirements for this round.", reason: "fails-requirements" },
+    // "cannot/will not receive/be approved/be accepted"
+    { family: "cannot receive/approved/accepted", text: "You will not receive any funding from this program.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You will never receive this incentive.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You won't receive the full grant amount.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You cannot be approved for this program.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You can't be approved for TIF financing.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You cannot be accepted into this round.", reason: "you-will-not-receive" },
+    { family: "cannot receive/approved/accepted", text: "You won't be accepted for this program.", reason: "you-will-not-receive" },
+    // passive tenses of the existing "you've been denied/rejected" claim
+    { family: "you were denied (passive tense)", text: "You were denied for this program.", reason: "denied-claim" },
+    { family: "you were denied (passive tense)", text: "You are denied for the SBIF grant.", reason: "denied-claim" },
+    { family: "you were denied (passive tense)", text: "You will be rejected for this round.", reason: "denied-claim" },
+    // "application/project denied"
+    { family: "application/project denied", text: "Your application was denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application has been denied for this program.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your project is denied for TIF financing.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your request will be denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application was rejected.", reason: "application-denied" },
+    { family: "application/project denied", text: "The application was denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "The project has been rejected.", reason: "application-denied" },
+  ];
+
+  for (const { family, text, reason } of FAMILY_PHRASES) {
+    it(`[${family}] rejects: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason, text).toBe(reason);
+    });
+  }
+
+  /**
+   * Near-miss safe-language controls — the coordinator's own named
+   * example ("the program requires X" must NOT trip) plus one control
+   * per new family, all sentences that describe a published rule or a
+   * GENERIC/third-party fact rather than asserting anything about THIS
+   * reader. These must pass straight through (hit: false) — a validator
+   * that trips on these would make ordinary, safe informational answers
+   * unusable.
+   */
+  const SAFE_NEAR_MISSES: { label: string; text: string }[] = [
+    { label: "coordinator's named example", text: "The program requires a minimum investment of $50,000." },
+    { label: "generic requirement, not a reader claim", text: "This grant requires proof of ownership before you apply." },
+    { label: "third-party subject, not 'you'/'your business'", text: "Some applicants are not qualified for this round due to timing." },
+    { label: "informational, not this reader's outcome", text: "Common reasons applications fail: missing required documents." },
+    { label: "'requirements' as a noun the reader must satisfy, not a claim they failed to", text: "Review the eligibility requirements before you apply." },
+    { label: "'qualify' describing the program category, not the reader", text: "This program does not qualify as a direct cash grant — it is a tax credit." },
+    { label: "'appears' used descriptively, no eligibility claim", text: "The parcel appears to be zoned for commercial use." },
+    { label: "'denied' in an unrelated, non-determination context", text: "Access to the online portal was denied due to a login error." },
+    { label: "third-party application, not the reader's own", text: "Other applications were denied last cycle for missing paperwork." },
+  ];
+
+  for (const { label, text } of SAFE_NEAR_MISSES) {
+    it(`[safe near-miss: ${label}] does NOT reject: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(false);
+    });
+  }
+});
+
+/**
  * review5 S4: "authority check sentence-by-sentence (one ZBA mention must
  * not bypass a generic-City sentence elsewhere)" — the exact regression
  * the original whole-text `mentionsZba` check was vulnerable to.
