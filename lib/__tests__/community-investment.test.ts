@@ -1062,13 +1062,28 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.totalAuthorizedTif).not.toBe(data.meta.totalDollarsAwarded);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("every tif/cdbg-home/lihtc record is a PLOTTABLE point (point-quality rule)", () => {
+  /**
+   * PR1 / consult Q5: a tif/cdbg-home/lihtc row with no usable coordinate is no
+   * longer silently dropped — it is RETAINED as an unplotted citywide record
+   * with an explicit locationReason (never a bare, unexplained "held-citywide").
+   * Every OTHER geometry stays a plottable point; a citywide row in this trio
+   * must always carry a reason, and a point row must never carry one.
+   */
+  it("every tif/cdbg-home/lihtc record is either a PLOTTABLE point or an explicitly-reasoned citywide hold", () => {
     const data = loadCommunityInvestment()!;
     for (const r of data.records) {
       if (r.source === "tif" || r.source === "cdbg-home" || r.source === "lihtc") {
-        expect(r.geometry.kind).toBe("point");
+        expect(["point", "citywide"]).toContain(r.geometry.kind);
+        if (r.geometry.kind === "citywide") {
+          expect(r.locationReason).not.toBeNull();
+        } else {
+          expect(r.locationReason ?? null).toBeNull();
+        }
       }
     }
+    expect(data.meta.heldTifUnlocatedRecords).toBeGreaterThan(0);
+    expect(data.meta.heldAdministrativeOutsideCityRecords).toBeGreaterThan(0);
+    expect(data.meta.heldLihtcUnlocatedRecords).toBeGreaterThan(0);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("NMTC is CA-stamped citywide: never a point, but carries a communityArea for analysis lists", () => {

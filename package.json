@@ -71,6 +71,11 @@
     "data:import:chicago-cares": "npx tsx scripts/import-chicago-cares-program-ledger.ts",
     "data:import:cook-cares-2020": "npx tsx scripts/import-cook-county-cares-program-ledger.ts",
     "data:export:investment": "npx tsx scripts/export-community-investment.ts",
+    "data:manifest:generate": "npx tsx scripts/generate-investment-manifest.ts",
+    "data:manifest:check": "npx tsx scripts/generate-investment-manifest.ts --check",
+    "data:docs:generate": "npx tsx scripts/generate-investment-docs.ts",
+    "data:docs:check": "npx tsx scripts/generate-investment-docs.ts --check",
+    "data:audit:foundation-fresh": "python3 scripts/foundation/fresh_srs_audit.py && python3 scripts/foundation/chicago_prize_census_check.py",
     "data:refresh:live": "npx tsx scripts/refresh/refresh-live-sources.ts",
     "data:sync:zoning": "npx tsx scripts/sync-zoning-sources.ts"
   },

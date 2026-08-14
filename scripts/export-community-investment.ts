@@ -59,6 +59,7 @@ import {
   type CommunityInvestmentRecordDraft,
   type InvestmentGeometry,
   type InvestmentStatus,
+  type LocationReason,
 } from "../lib/community-investment";
 import { governmentFundingPurposeForRecord } from "../lib/government-funding-purpose";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
@@ -80,6 +81,13 @@ import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
 } from "../lib/recovery-investment";
+import {
+  assertNoOrphanedManifestSources,
+  foundationManifestEntries,
+  loadManifest,
+  manifestContentHash,
+  verifyManifestInputBytes,
+} from "./lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +103,8 @@ const GEOCODE_CACHE_PATH = join(INPUT_DIR, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
 /** Coordinate-less capital CONTEXT (per-district TIF series, CRA/CDFI, state awards). */
 const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
+/** Sol gate finding 3 — record-level, source-keyed exclusion ledger sibling. */
+const EXCLUSION_LEDGER_OUT_PATH = join(process.cwd(), "data", "private", "investment-exclusion-ledger.json");
 /** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
@@ -116,10 +126,141 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
  * Those rows are grant-SCHEDULE aggregates ("SEE ATTACHED DETAIL") with no public
  * itemization; they are committed for provenance only and must never reach a record.
  */
-const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
-const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
-const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
-const FOUNDATION_PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
+// Sol gate finding 1 (BLOCKER) — "The manifest does not drive exporter or
+// audit scope." The four foundation file names are no longer hard-coded here:
+// they come from data/curated/investment-inputs/manifest.json (via
+// foundationManifestEntries, the SAME function scripts/generate-investment-docs.ts
+// and the fresh audit both key off), by manifest id in the fixed publication
+// order base -> tier1 -> phase2 -> phase3. Adding a Phase-4 file with NO
+// manifest entry throws here instead of silently never being read; removing
+// one from the manifest throws instead of silently leaving a stale filename.
+const investmentManifest = loadManifest();
+const foundationManifestFiles = foundationManifestEntries(investmentManifest);
+
+/**
+ * Sol gate finding 1 (round 2) — "the manifest is still not the sole input
+ * list: foundation IDs and sidecars remain hard-coded." ONE lookup, used for
+ * every manifest-declared filename this exporter reads by id (not just the
+ * four foundation files) — a missing manifest entry throws here, at import
+ * time, rather than a stale filename silently surviving.
+ */
+function manifestFile(id: string): string {
+  const entry = investmentManifest.sources.find((e) => e.id === id);
+  if (!entry) {
+    throw new Error(
+      `Manifest is missing a source entry with id "${id}" — every input file the exporter reads ` +
+        `MUST be authored in scripts/lib/investment-manifest.ts's AUTHORED_SOURCES (deliverable 1 — ` +
+        `the manifest is the ONLY input list).`,
+    );
+  }
+  return entry.file;
+}
+/**
+ * Sol gate finding 1 (round 3) — "the exporter's fixed foundation-ID
+ * enumeration goes — derive the foundation source set from the manifest
+ * entries themselves (role/kind field), so adding a manifest foundation
+ * source is consumed (or fails loudly if unsupported), never silently
+ * ignored." Every manifest source with role "foundation-grant" is processed
+ * here — NOT four named ids. `foundationManifestFiles` (module scope, from
+ * foundationManifestEntries) is iterated by main()'s foundation-mapping loop
+ * below; a NEW foundation-grant entry (role + foundationGrantOrder +
+ * foundationGrantIdPrefix all present) is picked up automatically the next
+ * time this file runs, with no code change here. A foundation-grant entry
+ * missing foundationGrantIdPrefix throws loudly (see the loop) instead of
+ * silently defaulting or being skipped.
+ */
+
+/**
+ * Sol gate finding 1 (round 2) — the ONLY manifest source ids this exporter is
+ * documented to NOT read as an input, each with a reason. Checked at the end
+ * of main() by assertNoOrphanedManifestSources: any manifest entry that is
+ * neither touched by a verified read NOR listed here throws.
+ */
+const DELIBERATELY_NOT_READ_MANIFEST_IDS = new Set<string>([
+  // Held pending the intermediary-linkage design (README.md) — never read by
+  // the exporter by design, not an oversight.
+  "impact-grants-held",
+  // Generated FROM the committed export AFTER it is written (a downstream
+  // id-map snapshot), never read back in as an input.
+  "foundation-id-map",
+  // A report ABOUT the export (Chicago Prize 18/18 census), generated after
+  // the export exists, never read back in as an input.
+  "chicago-prize-census",
+  // Written by scripts/refresh/refresh-live-sources.ts on a failed refresh
+  // attempt only; the exporter never reads it.
+  "refresh-attempt",
+]);
+// Sol gate finding 1 round 4 — geocode-cache.json is NOT exempt from byte
+// verification. It used to bypass verifiedRead entirely (a raw readFileSync
+// in loadGeocodeCache) and was carried in this Set with a "self-referential,
+// read-and-written-in-the-same-run" justification. That reasoning was wrong:
+// being rewritten at the END of a run does not excuse the file from proving,
+// AT READ TIME (the START of the run, before any write), that its on-disk
+// bytes match what the committed manifest declares — the same guarantee
+// every other input gets, and the same protection against silent tampering
+// or drift between a stale committed manifest and the actual cache on disk.
+// loadGeocodeCache() now reads it through verifiedRead() like every other
+// file (see below), so it is "touched" and no longer needs this exemption.
+// Its post-write staleness relative to the manifest is reconciled the same
+// way every exporter-written input's staleness is: by re-running
+// `npm run data:manifest:generate` afterward.
+
+/**
+ * Deliverable 2/3 sidecars — built by scripts/foundation/build_grant_identity.py
+ * and scripts/foundation/adjudicate_dedupe.py, joined here by (file, raw CSV row
+ * index, 0-based, INCLUDING placeholder rows). Identity/dedupe resolution needs
+ * live IRS-filing XML fetches, so it runs as a separate Python pass rather than
+ * inline in this exporter — see data/curated/investment-inputs/README.md.
+ * Filenames come from the manifest (ids "foundation-grant-identity" /
+ * "foundation-dedupe-actions"), not a hard-coded literal.
+ */
+const FOUNDATION_IDENTITY_FILE = manifestFile("foundation-grant-identity");
+const FOUNDATION_DEDUPE_ACTIONS_FILE = manifestFile("foundation-dedupe-actions");
+
+interface FoundationIdentity {
+  filingObjectId: string | null;
+  taxPeriodBegin: string | null;
+  taxPeriodEnd: string | null;
+  amendedReturn: boolean | null;
+  schedulePart: string | null;
+  sourceRowOrdinal: number | null;
+  stableId: string | null;
+  resolved: boolean;
+}
+
+type FoundationDedupeAction = "keep" | "keep-flagged" | "collapse";
+
+function loadFoundationIdentity(): Map<string, FoundationIdentity> {
+  const path = join(INPUT_DIR, FOUNDATION_IDENTITY_FILE);
+  const map = new Map<string, FoundationIdentity>();
+  if (!existsSync(path)) return map;
+  for (const r of readCsv(FOUNDATION_IDENTITY_FILE)) {
+    const key = `${r.file}#${r.raw_idx}`;
+    const resolved = r.identity_status === "resolved_verified";
+    map.set(key, {
+      filingObjectId: nullableStr(r.filing_object_id),
+      taxPeriodBegin: nullableStr(r.tax_period_begin),
+      taxPeriodEnd: nullableStr(r.tax_period_end),
+      amendedReturn: r.amended ? r.amended === "Y" : null,
+      schedulePart: nullableStr(r.schedule_part),
+      sourceRowOrdinal: r.source_row_ordinal !== "" ? Number(r.source_row_ordinal) : null,
+      stableId: nullableStr(r.stable_id),
+      resolved,
+    });
+  }
+  return map;
+}
+
+function loadFoundationDedupeActions(): Map<string, { action: FoundationDedupeAction; flag: string | null }> {
+  const path = join(INPUT_DIR, FOUNDATION_DEDUPE_ACTIONS_FILE);
+  const map = new Map<string, { action: FoundationDedupeAction; flag: string | null }>();
+  if (!existsSync(path)) return map;
+  for (const r of readCsv(FOUNDATION_DEDUPE_ACTIONS_FILE)) {
+    const key = `${r.file}#${r.raw_idx}`;
+    map.set(key, { action: r.action as FoundationDedupeAction, flag: nullableStr(r.flag) });
+  }
+  return map;
+}
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -287,11 +428,25 @@ export function parseDelimited(text: string, delimiter: string): Record<string, 
   return out;
 }
 
+// Sol gate finding 1 (round 2) — every file read through readCsv/readTsv is
+// verified against the manifest's declared contentHash for THOSE ACTUAL
+// BYTES, right here at read time (not a generation-time echo), and recorded
+// as "touched" so assertNoOrphanedManifestSources (called at the end of
+// main()) can catch a manifest source the exporter never actually reads.
+const touchedManifestFiles = new Set<string>();
+
+function verifiedRead(file: string): string {
+  const raw = readFileSync(join(INPUT_DIR, file), "utf8");
+  verifyManifestInputBytes(investmentManifest, file, raw);
+  touchedManifestFiles.add(file);
+  return raw;
+}
+
 function readCsv(file: string): Record<string, string>[] {
-  return parseDelimited(readFileSync(join(INPUT_DIR, file), "utf8"), ",");
+  return parseDelimited(verifiedRead(file), ",");
 }
 function readTsv(file: string): Record<string, string>[] {
-  return parseDelimited(readFileSync(join(INPUT_DIR, file), "utf8"), "\t");
+  return parseDelimited(verifiedRead(file), "\t");
 }
 
 // ── Census geocoder (cached) ─────────────────────────────────────────────────
@@ -304,11 +459,20 @@ interface GeoResult {
 type GeocodeCache = Record<string, GeoResult>;
 
 function loadGeocodeCache(): GeocodeCache {
+  // A missing file (first-ever run, or a fresh checkout before any address has
+  // been geocoded) is the ONE legitimate "start empty" case — there are no
+  // bytes to verify. Anything that DOES exist on disk must pass the exact
+  // same verifyManifestInputBytes check as every csv/tsv input: a genuine
+  // hash mismatch (tampered or edited cache, stale committed manifest) throws
+  // out of verifiedRead() and is NOT caught here — only a malformed-JSON
+  // parse failure on content that already passed byte verification falls
+  // back to empty, since that is a corrupt-but-verified cache, not a
+  // manifest/bytes disagreement.
+  if (!existsSync(GEOCODE_CACHE_PATH)) return {};
+  const raw = verifiedRead("geocode-cache.json");
   try {
-    if (existsSync(GEOCODE_CACHE_PATH)) {
-      const parsed = JSON.parse(readFileSync(GEOCODE_CACHE_PATH, "utf8"));
-      if (parsed && typeof parsed === "object") return parsed as GeocodeCache;
-    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed as GeocodeCache;
   } catch {
     /* fall through to empty cache */
   }
@@ -720,8 +884,19 @@ export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
 export interface FoundationStats {
   citywideFallback: number;
   droppedPlaceholder: number;
+  /** Sol gate finding 3 — the exclusion ledger needs dollars, not just a
+   * count, for every true-excluded category, including placeholder rows. */
+  droppedPlaceholderDollars: number;
   outOfBoundsGeocodes: number;
   negativeAmountsNulled: number;
+  /** Deliverable 3 — rows dropped by the 236-group dedupe adjudication (proven
+   * extractor duplication; see foundation_dedupe_ledger.json). */
+  dedupeCollapsed: number;
+  dedupeCollapsedDollars: number;
+  /** Deliverable 2 — rows whose identity resolved to a verified filing vs. a
+   * fingerprint-only fallback id (see foundation_grant_identity.csv). */
+  identityResolved: number;
+  identityUnresolved: number;
 }
 
 /** Sum two foundation-file tallies so the meta counters describe EVERY foundation
@@ -732,8 +907,13 @@ export function mergeFoundationStats(a: FoundationStats, b: FoundationStats): Fo
   return {
     citywideFallback: a.citywideFallback + b.citywideFallback,
     droppedPlaceholder: a.droppedPlaceholder + b.droppedPlaceholder,
+    droppedPlaceholderDollars: a.droppedPlaceholderDollars + b.droppedPlaceholderDollars,
     outOfBoundsGeocodes: a.outOfBoundsGeocodes + b.outOfBoundsGeocodes,
     negativeAmountsNulled: a.negativeAmountsNulled + b.negativeAmountsNulled,
+    dedupeCollapsed: a.dedupeCollapsed + b.dedupeCollapsed,
+    dedupeCollapsedDollars: a.dedupeCollapsedDollars + b.dedupeCollapsedDollars,
+    identityResolved: a.identityResolved + b.identityResolved,
+    identityUnresolved: a.identityUnresolved + b.identityUnresolved,
   };
 }
 
@@ -784,6 +964,9 @@ export function assertDisjointFoundationFunders(
 export function mapFoundations(
   rows: Record<string, string>[],
   idPrefix = "foundation",
+  rawFileName?: string,
+  identity?: Map<string, FoundationIdentity>,
+  dedupeActions?: Map<string, { action: FoundationDedupeAction; flag: string | null }>,
 ): {
   records: CommunityInvestmentRecordDraft[];
   stats: FoundationStats;
@@ -792,30 +975,65 @@ export function mapFoundations(
   const stats: FoundationStats = {
     citywideFallback: 0,
     droppedPlaceholder: 0,
+    droppedPlaceholderDollars: 0,
     outOfBoundsGeocodes: 0,
     negativeAmountsNulled: 0,
+    dedupeCollapsed: 0,
+    dedupeCollapsedDollars: 0,
+    identityResolved: 0,
+    identityUnresolved: 0,
   };
   let idx = 0;
+  let rawIdx = -1;
   for (const r of rows) {
+    rawIdx++;
+    const joinKey = rawFileName ? `${rawFileName}#${rawIdx}` : "";
+    const action = dedupeActions?.get(joinKey);
+    if (action?.action === "collapse") {
+      // Deliverable 3 — the 236-group dedupe adjudication proved (by direct
+      // filing inspection) that this specific row is an extractor duplicate:
+      // the filing itself does not carry as many matching grant nodes as the
+      // CSV does. Dropped here, never reaching a record, and counted.
+      stats.dedupeCollapsed++;
+      stats.dedupeCollapsedDollars += parseAmount(r.amount) ?? 0;
+      continue;
+    }
     if (isPlaceholderFoundationRow(r)) {
       stats.droppedPlaceholder++;
+      stats.droppedPlaceholderDollars += parseAmount(r.amount) ?? 0;
       continue;
     }
     let geometry: InvestmentGeometry;
+    // Deliverable 3 (Sol gate finding 3) — every citywide record carries an
+    // explicit locationReason, never a bare unexplained hold. Foundation has
+    // three distinct citywide paths, each a DIFFERENT claim:
+    //   • locType intermediary_or_citywide: the row is legitimately citywide by
+    //     the SOURCE's own design (the recipient is an intermediary, not a
+    //     site) — "source_unlocated", not a failure of any kind.
+    //   • a real geocode attempt returned coordinates outside Chicago —
+    //     "geocode_failed" (an out-of-Chicago hit for that attempt, per the
+    //     taxonomy's own definition).
+    //   • no usable coordinate at all (blank/zero lat-lng) — also
+    //     "geocode_failed" (nothing resolved for that attempt).
+    let locationReason: LocationReason | null;
     if (r.locType === "intermediary_or_citywide") {
       geometry = { kind: "citywide" };
+      locationReason = "source_unlocated";
     } else {
       const lat = Number(r.lat);
       const lng = Number(r.lng);
       if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
         if (inChicagoBounds(lat, lng)) {
           geometry = point(lat, lng);
+          locationReason = null;
         } else {
           geometry = { kind: "citywide" }; // out-of-Chicago geocode -> honest citywide, never a misplaced dot
+          locationReason = "geocode_failed";
           stats.outOfBoundsGeocodes++;
         }
       } else {
         geometry = { kind: "citywide" }; // sited row with unusable coords -> honest citywide, not 0,0
+        locationReason = "geocode_failed";
         stats.citywideFallback++;
       }
     }
@@ -828,6 +1046,9 @@ export function mapFoundations(
       stats.negativeAmountsNulled++;
     }
     const addr = [r.address_line1, r.city, r.state, r.zip].map((s) => (s || "").trim()).filter(Boolean).join(", ");
+    const ident = identity?.get(joinKey);
+    if (ident?.resolved) stats.identityResolved++;
+    else stats.identityUnresolved++;
     out.push({
       id: `${idPrefix}-${idx++}`,
       source: "foundation",
@@ -843,6 +1064,15 @@ export function mapFoundations(
       status: "awarded",
       recordDate: null,
       links: [],
+      locationReason,
+      filingObjectId: ident?.filingObjectId ?? null,
+      taxPeriodBegin: ident?.taxPeriodBegin ?? null,
+      taxPeriodEnd: ident?.taxPeriodEnd ?? null,
+      amendedReturn: ident?.amendedReturn ?? null,
+      schedulePart: ident?.schedulePart ?? null,
+      sourceRowOrdinal: ident?.sourceRowOrdinal ?? null,
+      stableId: ident?.stableId ?? null,
+      dedupeFlag: action?.action === "keep-flagged" ? action.flag : null,
     });
   }
   return { records: out, stats };
@@ -988,6 +1218,7 @@ function enrichedDevelopmentRecord(
   geometry: InvestmentGeometry,
   id: string,
   address: string | null,
+  locationReason: LocationReason | null = null,
 ): CommunityInvestmentRecordDraft {
   const name = (mega.name || "").trim();
   const isSubset = MEGADEV_SUBSET_NAMES.has(name);
@@ -1011,6 +1242,7 @@ function enrichedDevelopmentRecord(
     status: mapStatus2026(mega.status_2026),
     recordDate: null,
     links: parseLinks(mega.source_urls),
+    locationReason,
   };
 }
 
@@ -1107,6 +1339,7 @@ function mapDevelopments(
     const geoSpec = MEGADEV_DISCOVERED_GEO[name];
     let geometry: InvestmentGeometry;
     let address: string | null = null;
+    let locationReason: LocationReason | null = null;
     if (geoSpec?.kind === "point") {
       geometry = point(geoSpec.lat, geoSpec.lng);
     } else if (geoSpec?.kind === "geocode") {
@@ -1116,13 +1349,15 @@ function mapDevelopments(
         address = geoSpec.address;
       } else {
         geometry = { kind: "citywide" }; // ungeocodable → honest citywide, never a misplaced dot
+        locationReason = "geocode_failed";
         stats.discoveredCitywide++;
       }
     } else {
       geometry = { kind: "citywide" }; // explicit citywide (multi-site)
+      locationReason = "source_unlocated";
       stats.discoveredCitywide++;
     }
-    const record = enrichedDevelopmentRecord(mega, geometry, `development-disc-${idx++}`, address);
+    const record = enrichedDevelopmentRecord(mega, geometry, `development-disc-${idx++}`, address, locationReason);
     out.push(record);
     stats.discoveredAdded++;
     if (record.announcedInvestment === null && MEGADEV_SUBSET_NAMES.has(name)) stats.subsetExcluded++;
@@ -1144,15 +1379,19 @@ function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRec
   let idx = 0;
   for (const r of rows) {
     let geometry: InvestmentGeometry;
+    let locationReason: LocationReason | null = null;
     if ((r.locType || "").trim() === "sited") {
       const lat = Number(r.lat);
       const lng = Number(r.lng);
-      geometry =
-        Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
-          ? point(lat, lng)
-          : { kind: "citywide" };
+      const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+      geometry = hasCoords ? point(lat, lng) : { kind: "citywide" };
+      if (!hasCoords) locationReason = "geocode_failed";
     } else {
+      // A finalist round with no confirmed site (planning-stage, per-organization
+      // grants rather than one funded project) — legitimately citywide by the
+      // source's own design, not a geocoding failure.
       geometry = { kind: "citywide" };
+      locationReason = "source_unlocated";
     }
     const purpose = nullableStr(r.purpose);
     const orgs = nullableStr(r.recipient_orgs);
@@ -1174,6 +1413,7 @@ function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRec
       recordDate: null,
       recordProvenance: "official",
       links: parseLinks(r.source_url),
+      locationReason,
     });
   }
   return out;
@@ -1242,7 +1482,13 @@ function dateIsPast(raw: string | null | undefined, asOf: Date): boolean {
 }
 
 interface TifDrops {
+  /** No longer a drop path (consult Q5) — kept at 0 for interface stability;
+   * a future TRUE exclusion (e.g. proven non-Chicago TIF district) would
+   * increment this. */
   noCoords: number;
+  /** Rows retained as unplotted Chicago-program records because the source
+   * publishes no coordinates for them (locationReason "source_unlocated"). */
+  heldUnlocated: number;
 }
 
 /**
@@ -1251,22 +1497,31 @@ interface TifDrops {
  * authorizedAmount (amountAwarded stays null — a TIF ceiling is not a grant to a
  * business). total_project_cost is context in the logLine only, NEVER a summed
  * money field. Status: "completed" once a Certificate of Completion (COC) issued,
- * else "awarded" (CDC-approved). Only rows with real coordinates become points;
- * the coordinate-less annual-report rows are never records (they feed the context
- * file). Deterministic.
+ * else "awarded" (CDC-approved). A row with real coordinates becomes a point; a
+ * row with none is RETAINED (never dropped, consult Q5) as an unplotted citywide
+ * record — its Chicago scope is already established by the source's own
+ * rda-iga selection criterion, so a coordinate gap is not grounds to erase real
+ * authorized dollars. Deterministic.
  */
 function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
+  // Sol gate finding 8 — the id NUMBERING must be IDENTICAL to the pre-held-rows
+  // baseline for every record that already existed. `idx` therefore increments
+  // ONLY on the exact condition that used to gate `push` at all (hasCoords) — a
+  // held (no-coords) row NEVER consumes a `tif-N` slot and NEVER shifts a later
+  // row's id. Held rows are collected separately and get their own
+  // never-renumbering `tif-held-N` namespace, APPENDED after every point record
+  // — never interleaved into the original sequence.
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: TifDrops = { noCoords: 0 };
+  const held: CommunityInvestmentRecordDraft[] = [];
+  const drops: TifDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     if ((r.dataset || "").trim() !== "rda-iga") continue; // annual-report rows are context, not records
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.noCoords++;
-      continue;
-    }
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) drops.heldUnlocated++;
     const district = nullableStr(r.tif_district);
     const totalCost = parseAmount(r.total_project_cost);
     const statusText = nullableStr(r.status_text);
@@ -1275,8 +1530,8 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       totalCost != null ? `Total project cost $${Math.round(totalCost).toLocaleString("en-US")}` : null,
       statusText,
     ].filter(Boolean);
-    out.push({
-      id: `tif-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: hasCoords ? `tif-${idx++}` : `tif-held-${heldIdx++}`,
       source: "tif",
       funderType: SOURCE_FUNDER_TYPE.tif,
       funderName: TIF_FUNDER,
@@ -1286,19 +1541,32 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       authorizedAmount: parseAmount(r.authorized_tif_assistance),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: cleanYear(r.approval_or_report_year),
-      geometry: point(lat, lng),
+      geometry: hasCoords ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: /COC issued/i.test(statusText || "") ? "completed" : "awarded",
       recordDate: null,
       recordProvenance: "official",
       links: [],
-    });
+      locationReason: hasCoords ? null : "source_unlocated",
+    };
+    if (hasCoords) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface HudDrops {
+  /** TRUE exclusions only: a row with NO usable coordinate at all (nothing to
+   * classify as an administrative address vs. a Chicago site). Rare/zero in the
+   * current input; kept as a real drop because there is no location claim of
+   * ANY kind to retain. */
   outOfBbox: number;
+  /** Rows RETAINED (consult Q5) because they carry a REAL coordinate that
+   * resolves to a non-Chicago administrative/suburban/out-of-state address —
+   * Chicago-administered (GRANTEE_ID=17408), location-unresolved. EXCLUDED from
+   * sited + community-area totals (citywide geometry is never point-stamped)
+   * but never deleted — the federal allocation is still real. */
+  heldAdministrativeOutsideCity: number;
 }
 
 /**
@@ -1306,34 +1574,44 @@ interface HudDrops {
  * capitalClass "federal_program"; funding_amount is a COMMITTED FEDERAL PROGRAM
  * ALLOCATION, not a discretionary grant award to a named business — it lands in
  * authorizedAmount, NOT amountAwarded (which stays null). Status is "completed"
- * once the activity's completion_date is in the past, else "awarded". A row whose
- * geocode falls OUTSIDE the Chicago bounding box is DROPPED and counted (never
- * plotted at a misleading suburban/foreign point). Deterministic.
+ * once the activity's completion_date is in the past, else "awarded". A row with
+ * NO coordinate at all is a true drop (nothing to plot OR retain with a location
+ * claim). A row whose real coordinate falls OUTSIDE the Chicago bounding box is
+ * RETAINED as an unplotted citywide record — Chicago-administered (the source is
+ * already filtered to GRANTEE_ID=17408, the City of Chicago), location-unresolved
+ * (consult Q5) — never silently deleted, never plotted at the misleading
+ * suburban/foreign point either. Deterministic.
  */
 function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
 ): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
+  // Sol gate finding 8 — same append-only discipline as mapTif: `idx` increments
+  // ONLY on the exact old gating condition (inBounds), so every previously
+  // existing `cdbg-home-N` id is reproduced exactly. Held (administrative
+  // outside-city) rows get their own `cdbg-home-held-N` namespace, appended
+  // after every point record.
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: HudDrops = { outOfBbox: 0 };
+  const held: CommunityInvestmentRecordDraft[] = [];
+  const drops: HudDrops = { outOfBbox: 0, heldAdministrativeOutsideCity: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.outOfBbox++; // no usable coord → treated as out-of-bounds drop (counted)
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) {
+      drops.outOfBbox++; // no usable coord at all → nothing to retain, true exclusion
       continue;
     }
-    if (!inChicagoBounds(lat, lng)) {
-      drops.outOfBbox++;
-      continue;
-    }
+    const inBounds = inChicagoBounds(lat, lng);
+    if (!inBounds) drops.heldAdministrativeOutsideCity++;
     const program = (r.program || "").trim().toUpperCase();
     const objective = nullableStr(r.national_objective);
     const group = nullableStr(r.activity_group);
     const logParts = [program ? `${program} activity` : null, group, objective].filter(Boolean);
-    out.push({
-      id: `cdbg-home-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: inBounds ? `cdbg-home-${idx++}` : `cdbg-home-held-${heldIdx++}`,
       source: "cdbg-home",
       funderType: SOURCE_FUNDER_TYPE["cdbg-home"],
       funderName: HUD_FUNDER,
@@ -1343,49 +1621,66 @@ function mapHud(
       authorizedAmount: parseAmount(r.funding_amount),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: yearOfDate(r.completion_date),
-      geometry: point(lat, lng),
+      geometry: inBounds ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: dateIsPast(r.completion_date, asOf) ? "completed" : "awarded",
       recordDate: nullableStr(r.completion_date),
       recordProvenance: "official",
       links: [],
-    });
+      locationReason: inBounds ? null : "administrative_address_outside_city",
+    };
+    if (inBounds) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface LihtcDrops {
+  /** No longer a drop path (consult Q5) — kept at 0 for interface stability. */
   noCoords: number;
+  /** Rows retained as unplotted Chicago-program records because the source
+   * publishes no coordinates for them (locationReason "source_unlocated"). */
+  heldUnlocated: number;
 }
 
 /**
  * Map the LIHTC rows to `lihtc`-source records. capitalClass "tax_credit"; the
  * annual_allocated_amount (often blank → null, never coerced) lands in
  * creditAmount. Year from allocation_year (HUD 8888/9999 sentinels → null).
- * Status "completed" once placed in service, else "awarded". Only rows with real
- * coordinates become points. Deterministic.
+ * Status "completed" once placed in service, else "awarded". A row with real
+ * coordinates becomes a point; a row with none is RETAINED (never dropped,
+ * consult Q5) as an unplotted citywide record with provenance — the Chicago
+ * selection criterion that put it in this curated file is retained even when
+ * the coordinate is not. Deterministic.
  */
 function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: LihtcDrops } {
+  // Sol gate finding 8 — same append-only discipline as mapTif/mapHud.
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: LihtcDrops = { noCoords: 0 };
+  const held: CommunityInvestmentRecordDraft[] = [];
+  const drops: LihtcDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.noCoords++;
-      continue;
-    }
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) drops.heldUnlocated++;
     const placed = cleanYear(r.placed_in_service_year);
     const units = nullableStr(r.units_total);
     const lowInc = nullableStr(r.units_low_income);
+    // Sol gate finding 3 — retain the source's OWN identifier (hud_id) and its
+    // own explanatory text for a held row's Chicago-selection provenance
+    // (coord_source, e.g. "missing_no_usable_address") verbatim.
+    const hudId = nullableStr(r.hud_id);
+    const coordSource = nullableStr(r.coord_source);
     const logParts = [
       units ? `${units} units` : null,
       lowInc ? `${lowInc} low-income` : null,
       placed != null ? `placed in service ${placed}` : null,
+      !hasCoords && coordSource ? `source coordinate status: ${coordSource}` : null,
     ].filter(Boolean);
-    out.push({
-      id: `lihtc-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: hasCoords ? `lihtc-${idx++}` : `lihtc-held-${heldIdx++}`,
       source: "lihtc",
       funderType: SOURCE_FUNDER_TYPE.lihtc,
       funderName: LIHTC_FUNDER,
@@ -1395,15 +1690,20 @@ function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmen
       creditAmount: parseAmount(r.annual_allocated_amount),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: cleanYear(r.allocation_year),
-      geometry: point(lat, lng),
+      geometry: hasCoords ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: placed != null ? "completed" : "awarded",
       recordDate: null,
       recordProvenance: "official",
       links: [],
-    });
+      locationReason: hasCoords ? null : "source_unlocated",
+      sourceRecordId: hudId,
+      sourceLocationProvenance: coordSource,
+    };
+    if (hasCoords) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface NmtcStamp {
@@ -1472,6 +1772,9 @@ function mapNmtc(
       recordDate: null,
       recordProvenance: "official",
       links: [],
+      // Structurally citywide (the source never publishes a street address for
+      // any NMTC QLICI) — never a geocode failure, always "source_unlocated".
+      locationReason: "source_unlocated",
     });
   }
   return { records: out, stamp };
@@ -1678,6 +1981,9 @@ function mapIllinoisHospitalityEmergencyGrants(
       status: "disbursed",
       recordDate: null,
       recordProvenance: "official",
+      // The source never publishes a street address or ZIP for this program —
+      // structurally unlocated, never a geocode failure.
+      locationReason: "source_unlocated",
       links: [
         nullableStr(row.source_url) ??
           RECOVERY_INVESTMENT_SOURCE_METADATA["illinois-hospitality-emergency"]
@@ -1805,6 +2111,9 @@ function mapSbaRestaurantRevitalization(
       ? point(inside.lat, inside.lng)
       : { kind: "citywide" };
     if (geometry.kind === "point") pointRecords += 1;
+    // No published address to even attempt a geocode -> source_unlocated; a
+    // published address that missed or resolved outside Chicago -> geocode_failed.
+    const locationReason: LocationReason | null = inside ? null : address ? "geocode_failed" : "source_unlocated";
 
     const legalName = nullableStr(row.legal_business_name);
     const dba = nullableStr(row.dba_trade_name);
@@ -1853,6 +2162,7 @@ function mapSbaRestaurantRevitalization(
       recordProvenance: "official",
       links: [...new Set(sourceLinks)],
       recovery: historicalRecoveryRecord("sba-rrf", amount),
+      locationReason,
     });
   }
 
@@ -1956,6 +2266,17 @@ function mapDceoCapital(
     if (multiSite) multiSiteHeldCitywide += 1;
     const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
     if (geometry.kind === "point") pointRecords += 1;
+    // Multi-site describes more than one location -> source_unlocated (no
+    // single point the source itself resolves to); a published address that
+    // missed or resolved outside Chicago -> geocode_failed; no address at all
+    // (should not occur post-selection, but never left unlabeled) -> source_unlocated.
+    const locationReason: LocationReason | null = hit
+      ? null
+      : multiSite
+        ? "source_unlocated"
+        : safeAddress
+          ? "geocode_failed"
+          : "source_unlocated";
     const lineType = row.line_type === "line_item" ? "Line-item appropriation" : "Lump-sum appropriation record";
     const description = conciseDceoDescription(row.original_description);
     const sourceLinks = [nullableStr(row.source_url) || DCEO_CAPITAL_PDF_URL, DCEO_CAPITAL_SOURCE_PAGE];
@@ -1981,6 +2302,7 @@ function mapDceoCapital(
       recordDate: null,
       recordProvenance: "official",
       links: [...new Set(sourceLinks)],
+      locationReason,
     });
   }
   return {
@@ -2051,6 +2373,10 @@ export function mapCdgAwards(
     if (geometry.kind === "point") pointRecords += 1;
     const amountAwarded = parseAmount(r.amount);
     if (!hit && amountAwarded != null) heldCitywideDollars += amountAwarded;
+    // A published address that failed to geocode is "geocode_failed"; a row
+    // with NO address column at all (only a community-area label) is
+    // "source_unlocated" — the City never published a site to attempt.
+    const locationReason: LocationReason | null = hit ? null : addr ? "geocode_failed" : "source_unlocated";
     records.push({
       id: `cdg-${records.length}`,
       source: "cdg",
@@ -2063,6 +2389,7 @@ export function mapCdgAwards(
       year: yearOfRound(r.round),
       geometry,
       address: addr,
+      locationReason,
       // A row the City published WITHOUT a street address can still publish
       // its community area in the address column ("South Lawndale (Little
       // Village) -- exact street address not published"). Stamping the CA from
@@ -2257,6 +2584,7 @@ export function mapPartnerNofAwards(
     } else if (amountAwarded != null) {
       heldCitywideDollars += amountAwarded;
     }
+    const locationReason: LocationReason | null = hit ? null : address ? "geocode_failed" : "source_unlocated";
 
     records.push({
       id: `nof-small-corridor-${records.length}`,
@@ -2269,6 +2597,7 @@ export function mapPartnerNofAwards(
       logLine: null,
       year,
       geometry,
+      locationReason,
       address,
       status: "awarded",
       recordDate: null,
@@ -2626,63 +2955,174 @@ function buildCapitalContext(generatedAt: string): unknown {
   };
 }
 
+// ── Exclusion ledger (Sol gate finding 3) ────────────────────────────────────
+
+interface ExclusionLedgerRetainedGroup {
+  source: string;
+  locationReason: string;
+  count: number;
+  dollars: number;
+  evidence: string;
+  recordIds: string[];
+}
+
+interface ExclusionLedgerTrueExclusion {
+  source: string;
+  reason: string;
+  count: number;
+  dollars: number | null;
+  evidence: string;
+}
+
+/**
+ * Deliverable 4 / Sol gate finding 3 — "commit a record-level, source-keyed
+ * exclusion ledger (reason, evidence, count, dollars)." Two tiers:
+ *   - `retained`: every record that IS in the export but carries a
+ *     locationReason (unplotted/held) — grouped by (source, reason), each
+ *     group listing every member record id so the ledger is auditable down
+ *     to the actual row, not just an aggregate count.
+ *   - `trueExclusions`: rows that never became a record at all (a true drop),
+ *     grouped by (source, reason) from the run's own drop counters — no
+ *     record ids exist for these by definition, but the count/dollars/
+ *     evidence are never silently absent.
+ */
+function buildExclusionLedger(
+  records: readonly CommunityInvestmentRecord[],
+  trueExclusions: ExclusionLedgerTrueExclusion[],
+  generatedAt: string,
+  exportContentHash: string,
+): {
+  generatedAt: string;
+  boundExportContentHash: string;
+  retained: ExclusionLedgerRetainedGroup[];
+  trueExclusions: ExclusionLedgerTrueExclusion[];
+} {
+  const groups = new Map<string, ExclusionLedgerRetainedGroup>();
+  for (const r of records) {
+    if (!r.locationReason) continue;
+    const key = `${r.source}|${r.locationReason}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        source: r.source,
+        locationReason: r.locationReason,
+        count: 0,
+        dollars: 0,
+        evidence: LOCATION_REASON_EVIDENCE[r.locationReason] ?? "",
+        recordIds: [],
+      };
+      groups.set(key, group);
+    }
+    group.count += 1;
+    group.dollars += r.amountAwarded ?? r.authorizedAmount ?? r.creditAmount ?? r.publishedBalance ?? 0;
+    group.recordIds.push(r.id);
+  }
+  return {
+    generatedAt,
+    boundExportContentHash: exportContentHash,
+    retained: [...groups.values()].sort((a, b) => (a.source + a.locationReason).localeCompare(b.source + b.locationReason)),
+    trueExclusions,
+  };
+}
+
+const LOCATION_REASON_EVIDENCE: Record<string, string> = {
+  geocode_failed:
+    "The source published a street address, but the Census geocoder returned no match or an out-of-Chicago hit for that specific attempt.",
+  administrative_address_outside_city:
+    "The source published a real coordinate/address, but it is the funder/grantee's suburban or out-of-state administrative office, not a Chicago site.",
+  source_unlocated:
+    "The source itself publishes no usable single-site location for this row (an intermediary/regranting recipient, a multi-site description, or a program that never publishes street addresses).",
+  out_of_scope:
+    "The row fails the product's own jurisdiction/subject test and is excluded entirely (not retained even unplotted).",
+};
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-async function main() {
+/**
+ * Exported (not just isDirectRun-gated) so the Sol gate finding 1 (round 4)
+ * manifest-coverage test can invoke the REAL export end-to-end and spy on the
+ * fs read layer, proving every file this exporter actually opens under
+ * data/curated/investment-inputs/ resolves through verifiedRead/readCsv —
+ * not a hand-picked subset of pure helpers. main() itself never calls
+ * process.exit; only the isDirectRun wrapper below does, so a test awaiting
+ * main() directly gets a normal promise rejection on failure, not a killed
+ * process.
+ */
+export async function main() {
   const generatedAt = new Date().toISOString();
 
+  // Deliverable 1 — bind this export to the manifest version that produced it.
+  // manifestContentHash (NOT a raw-file hash) so this stays stable across a
+  // manifest regeneration that only touches the volatile top-level
+  // `generatedAt` stamp — see its doc comment in scripts/lib/investment-manifest.ts.
+  const sourceManifestHash = manifestContentHash(investmentManifest);
+
+  // Deliverable 3 — the dedupe ledger summary (per-group detail already lives
+  // in the committed foundation_dedupe_ledger.json; only the totals travel
+  // into meta). Filename from the manifest (id "foundation-dedupe-ledger").
+  const dedupeLedgerFile = manifestFile("foundation-dedupe-ledger");
+  const dedupeLedgerPath = join(INPUT_DIR, dedupeLedgerFile);
+  const dedupeLedgerSummary = existsSync(dedupeLedgerPath)
+    ? (JSON.parse(verifiedRead(dedupeLedgerFile)) as {
+        summary: { candidate_groups: number; collapsed_rows: number; collapsed_dollars: number };
+      }).summary
+    : { candidate_groups: 0, collapsed_rows: 0, collapsed_dollars: 0 };
+
   // 1) Sources that already carry coordinates (or resolve citywide by locType).
-  const nofSmallRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8"),
-  ) as SocrataRow[];
-  const nofLargeRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8"),
-  ) as SocrataRow[];
-  const sbifRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "sbif.json"), "utf8"),
-  ) as SocrataRow[];
+  // Filenames from the manifest, not hard-coded literals.
+  const nofSmallRows = JSON.parse(verifiedRead(manifestFile("nof-small"))) as SocrataRow[];
+  const nofLargeRows = JSON.parse(verifiedRead(manifestFile("nof-large"))) as SocrataRow[];
+  const sbifRows = JSON.parse(verifiedRead(manifestFile("sbif"))) as SocrataRow[];
   const nofSmallR = mapSocrata(nofSmallRows, "nof-small", NOF_PROGRAM, 2017);
   const nofLargeR = mapSocrata(nofLargeRows, "nof-large", NOF_PROGRAM, 2017);
   const sbifR = mapSocrata(sbifRows, "sbif", SBIF_PROGRAM, 2020);
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  // Four foundation files, ONE mapper: same locType/citywide handling, same
-  // placeholder rejection, same negative-amount nulling. Disjointness is asserted
-  // PAIRWISE before any file is mapped, so a collision aborts the export instead
-  // of shipping a double-counted headline.
-  const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
-  const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
-  const foundationPhase2Rows = readCsv(FOUNDATION_PHASE2_FILE);
-  const foundationPhase3Rows = readCsv(FOUNDATION_PHASE3_FILE);
-  const foundationInputs = [
-    { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
-    { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
-    { file: FOUNDATION_PHASE2_FILE, rows: foundationPhase2Rows },
-    { file: FOUNDATION_PHASE3_FILE, rows: foundationPhase3Rows },
-  ];
+  // Sol gate finding 1 (round 3) — LOOP over every manifest source with role
+  // "foundation-grant" (foundationManifestFiles, module scope), not four
+  // named consts. A foundation-grant entry missing foundationGrantIdPrefix
+  // throws loudly here rather than being silently skipped; a NEW
+  // foundation-grant entry (order + idPrefix present) is processed
+  // automatically. Same mapper (mapFoundations) for every entry: same
+  // locType/citywide handling, same placeholder rejection, same
+  // negative-amount nulling. Disjointness is asserted PAIRWISE across every
+  // pair before any file is mapped, so a funder-name collision aborts the
+  // export instead of shipping a double-counted headline.
+  if (foundationManifestFiles.length === 0) {
+    throw new Error(
+      `No manifest source has role "foundation-grant" — the exporter has nothing to read for the ` +
+        `foundation universe. Check scripts/lib/investment-manifest.ts's AUTHORED_SOURCES.`,
+    );
+  }
+  const foundationInputs = foundationManifestFiles.map((entry) => {
+    if (!entry.foundationGrantIdPrefix) {
+      throw new Error(
+        `Manifest foundation-grant source "${entry.id}" is missing foundationGrantIdPrefix — every ` +
+          `foundation-grant entry MUST declare one (see scripts/lib/investment-manifest.ts's ManifestSource).`,
+      );
+    }
+    return { entry, file: entry.file, idPrefix: entry.foundationGrantIdPrefix, rows: readCsv(entry.file) };
+  });
   for (let i = 0; i < foundationInputs.length; i++) {
     for (let j = i + 1; j < foundationInputs.length; j++) {
       assertDisjointFoundationFunders(foundationInputs[i], foundationInputs[j]);
     }
   }
-  const foundationBase = mapFoundations(foundationBaseRows);
-  const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
-  const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
-  const foundationPhase3 = mapFoundations(foundationPhase3Rows, "foundation-p3");
-  const foundations = [
-    ...foundationBase.records,
-    ...foundationTier1.records,
-    ...foundationPhase2.records,
-    ...foundationPhase3.records,
-  ];
-  const foundationStats = mergeFoundationStats(
-    mergeFoundationStats(
-      mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
-      foundationPhase2.stats,
-    ),
-    foundationPhase3.stats,
+  // Deliverable 2/3 sidecars — see scripts/foundation/build_grant_identity.py and
+  // scripts/foundation/adjudicate_dedupe.py. Both key by (raw csv file name, raw
+  // 0-based row index) so the join below is exact regardless of which rows the
+  // placeholder filter later drops.
+  const foundationIdentity = loadFoundationIdentity();
+  const foundationDedupeActions = loadFoundationDedupeActions();
+
+  const foundationMapped = foundationInputs.map(({ file, idPrefix, rows }) =>
+    mapFoundations(rows, idPrefix, file, foundationIdentity, foundationDedupeActions),
   );
+  const foundations = foundationMapped.flatMap((m) => m.records);
+  const foundationStats = foundationMapped
+    .map((m) => m.stats)
+    .reduce((acc, stats) => (acc ? mergeFoundationStats(acc, stats) : stats));
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
   const kmlRows = readCsv("developments.csv");
@@ -2713,13 +3153,17 @@ async function main() {
   const droppedPreWindow = nofSmallR.drops.preWindow + nofLargeR.drops.preWindow + sbifR.drops.preWindow;
   const droppedNoCoords = nofSmallR.drops.noCoords + nofLargeR.drops.noCoords + sbifR.drops.noCoords;
 
+  const foundationBreakdown = foundationInputs
+    .map(({ entry, idPrefix }, i) => `${idPrefix}(${entry.id})=${foundationMapped[i].records.length}`)
+    .join(" ");
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length} phase3=${foundationPhase3.records.length}) ` +
+      `foundation=${foundations.length} (${foundationBreakdown}) ` +
       `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
-      `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
+      `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow} ` +
+      `dedupe-collapsed=${foundationStats.dedupeCollapsed} identity-resolved=${foundationStats.identityResolved} identity-unresolved=${foundationStats.identityUnresolved})`,
   );
 
   // 2) City-grant sources that need geocoding (CDG + Jim's corridor list).
@@ -2857,9 +3301,9 @@ async function main() {
   const { records: lihtc, drops: lihtcDrops } = mapLihtc(readCsv("lihtc_chicago.csv"));
   const { records: nmtc, stamp: nmtcStamp } = mapNmtc(readCsv("nmtc_chicago.csv"), caPolygons);
   console.log(
-    `Capital spine: tif=${tif.length} (noCoords-dropped=${tifDrops.noCoords}) ` +
-      `cdbg-home=${hud.length} (out-of-bbox-dropped=${hudDrops.outOfBbox}) ` +
-      `lihtc=${lihtc.length} (noCoords-dropped=${lihtcDrops.noCoords}) ` +
+    `Capital spine: tif=${tif.length} (true-excluded=${tifDrops.noCoords} held-unlocated=${tifDrops.heldUnlocated}) ` +
+      `cdbg-home=${hud.length} (true-excluded=${hudDrops.outOfBbox} held-admin-outside-city=${hudDrops.heldAdministrativeOutsideCity}) ` +
+      `lihtc=${lihtc.length} (true-excluded=${lihtcDrops.noCoords} held-unlocated=${lihtcDrops.heldUnlocated}) ` +
       `nmtc=${nmtc.length} (CA-stamped=${nmtcStamp.stamped} unstamped=${nmtcStamp.unstamped})`,
   );
 
@@ -2944,26 +3388,110 @@ async function main() {
     dceoAddressOutOfBounds: dceo.addressOutOfBounds,
     dceoMultiSiteHeldCitywide: dceo.multiSiteHeldCitywide,
     sources: PROVENANCE_LABELS,
+    dedupeCandidateGroups: dedupeLedgerSummary.candidate_groups,
+    dedupeCollapsedRows: dedupeLedgerSummary.collapsed_rows,
+    dedupeCollapsedDollars: dedupeLedgerSummary.collapsed_dollars,
+    foundationIdentityResolved: foundationStats.identityResolved,
+    foundationIdentityUnresolved: foundationStats.identityUnresolved,
+    sourceManifestHash,
   });
 
-  // Build and validate BOTH sibling artifacts before replacing either one. A
-  // failed context build must never leave a fresh record export beside stale
-  // context. Temporary files also keep partially-written JSON off the read path.
+  // Sol gate finding 3 — record-level, source-keyed exclusion ledger. TRUE
+  // exclusions (never became a record) are listed from this run's own drop
+  // counters; RETAINED-with-reason records are grouped straight from `out.records`
+  // inside buildExclusionLedger.
+  const trueExclusions: ExclusionLedgerTrueExclusion[] = [
+    {
+      source: "foundation",
+      reason: "out_of_scope",
+      count: foundationStats.droppedPlaceholder,
+      dollars: foundationStats.droppedPlaceholderDollars || null,
+      evidence:
+        "Recipient/address is a grant-SCHEDULE aggregate placeholder (\"SEE ATTACHED\", a 99999-style " +
+        "filler zip/address) — not a real single itemized grant row.",
+    },
+    {
+      source: "foundation",
+      reason: "out_of_scope",
+      count: dedupeLedgerSummary.collapsed_rows,
+      dollars: dedupeLedgerSummary.collapsed_dollars || null,
+      evidence:
+        "236-group dedupe adjudication (deliverable 3): the row's own filing does not carry as many " +
+        "matching grant nodes as the CSV does — proven extractor duplication, not a real second award. " +
+        "See foundation_dedupe_ledger.json.",
+    },
+    {
+      source: "nof-small/nof-large/sbif",
+      reason: "out_of_scope",
+      count: droppedPreWindow,
+      dollars: null,
+      evidence:
+        "Socrata completion row dated before the source's inclusion window (nof 2017 / sbif 2020) — " +
+        "per-row dollar figures not retained for this aggregate count in this run.",
+    },
+    {
+      source: "nof-small/nof-large/sbif",
+      reason: "geocode_failed",
+      count: droppedNoCoords,
+      dollars: null,
+      evidence:
+        "Socrata completion row published no usable coordinate — per-row dollar figures not retained " +
+        "for this aggregate count in this run.",
+    },
+    {
+      source: "cdbg-home",
+      reason: "geocode_failed",
+      count: hudDrops.outOfBbox,
+      dollars: null,
+      evidence:
+        "HUD CDBG/HOME activity with no usable coordinate at all (nothing to classify as an administrative " +
+        "address vs. a Chicago site) — the only cdbg-home category still a true drop after consult Q5.",
+    },
+    {
+      source: "development",
+      reason: "out_of_scope",
+      count: devStats.privateLedExcluded,
+      dollars: null,
+      evidence:
+        "Major-development row is NOT private-led (public infrastructure) — this layer models private " +
+        "development only.",
+    },
+  ].filter((e) => e.count > 0);
+  const exclusionLedger = buildExclusionLedger(out.records, trueExclusions, generatedAt, out.meta.exportContentHash);
+
+  // Build and validate ALL THREE sibling artifacts before replacing any one of
+  // them. A failed context/ledger build must never leave a fresh record
+  // export beside stale siblings. Temporary files also keep partially-written
+  // JSON off the read path.
   const context = buildCapitalContext(generatedAt);
   assertNoBannedFigureKeys(context);
+
+  // Sol gate finding 1 (round 2) — "an entry present in the manifest but
+  // unknown to the exporter must fail loudly." Every readCsv/readTsv/verifiedRead
+  // call above (including inside buildCapitalContext) has now run and recorded
+  // its filename in touchedManifestFiles. Any manifest source NOT touched and
+  // NOT in this explicit, commented list is either a file the exporter's code
+  // was never wired to read, or one it silently stopped reading.
+  assertNoOrphanedManifestSources(investmentManifest, touchedManifestFiles, DELIBERATELY_NOT_READ_MANIFEST_IDS);
+
   const outPayload = JSON.stringify(out, null, 2) + "\n";
   const contextPayload = JSON.stringify(context, null, 2) + "\n";
+  const ledgerPayload = JSON.stringify(exclusionLedger, null, 2) + "\n";
   const outTempPath = `${OUT_PATH}.${process.pid}.tmp`;
   const contextTempPath = `${CONTEXT_OUT_PATH}.${process.pid}.tmp`;
+  const ledgerTempPath = `${EXCLUSION_LEDGER_OUT_PATH}.${process.pid}.tmp`;
 
   try {
     writeFileSync(outTempPath, outPayload);
     writeFileSync(contextTempPath, contextPayload);
+    writeFileSync(ledgerTempPath, ledgerPayload);
+    renameSync(ledgerTempPath, EXCLUSION_LEDGER_OUT_PATH);
     renameSync(outTempPath, OUT_PATH);
     renameSync(contextTempPath, CONTEXT_OUT_PATH);
   } finally {
     if (existsSync(outTempPath)) unlinkSync(outTempPath);
     if (existsSync(contextTempPath)) unlinkSync(contextTempPath);
+    if (existsSync(ledgerTempPath)) unlinkSync(ledgerTempPath);
   }
 
   console.log(`\nWrote ${OUT_PATH}`);
@@ -2982,8 +3510,12 @@ async function main() {
   );
   console.log(`  counts=${JSON.stringify(out.meta.counts)}`);
 
-  // Capital CONTEXT is assembled and replaced in the same two-phase write above.
+  // Capital CONTEXT and the exclusion ledger are assembled and replaced in the
+  // same three-phase write above.
   console.log(`Wrote ${CONTEXT_OUT_PATH}`);
+  console.log(
+    `Wrote ${EXCLUSION_LEDGER_OUT_PATH} (retained groups=${exclusionLedger.retained.length} trueExclusions=${exclusionLedger.trueExclusions.length})`,
+  );
 }
 
 /**

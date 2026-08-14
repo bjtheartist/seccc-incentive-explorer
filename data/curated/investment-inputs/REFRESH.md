@@ -58,11 +58,27 @@ review the integrity contract in `README.md`, commit.
 
 ## Annual, manual
 
+**Foundation files** (previously hand-listed here and already caught omitting
+Phase-3 — audit finding 13's "prose-only manifests rot" — now generated FROM
+the shared manifest, one file, so this table cannot omit a published file
+again):
+
+<!-- GENERATED:FOUNDATION_CADENCE:BEGIN -->
+| File | What it is | How it refreshes |
+| --- | --- | --- |
+| `foundation_grants_geocoded.csv` | Foundation grants — base parse (12 funders, pre-recon-discipline) | scripts/foundation/ base parse (predates the reconciliation gate) |
+| `foundation_grants_tier1_expansion.csv` | Foundation grants — Tier-1 expansion (20 funders) | scripts/foundation/phase2_pipeline.py + phase2_integrate.py (PHASE_TARGETS=phase2_targets.json) |
+| `foundation_grants_phase2_expansion.csv` | Foundation grants — Phase-2 expansion (65 funders, 80% coverage bar) | scripts/foundation/phase2_pipeline.py + phase2_integrate.py |
+| `foundation_grants_phase3_expansion.csv` | Foundation grants — Phase-3 expansion (79 funders, census closeout) | scripts/foundation/phase2_pipeline.py (PHASE_TARGETS=phase3_targets.json) + phase3_integrate.py |
+
+Source of truth: `data/curated/investment-inputs/manifest.json` (regenerate with
+`npm run data:manifest:generate`). This table is generated FROM that manifest —
+edit `scripts/lib/investment-manifest.ts`'s `AUTHORED_SOURCES`, never this table
+directly.
+<!-- GENERATED:FOUNDATION_CADENCE:END -->
+
 | File | Source |
 | --- | --- |
-| `foundation_grants_geocoded.csv` | IRS 990 filings |
-| `foundation_grants_tier1_expansion.csv` | IRS 990-PF e-file XML (Tier-1 funders) |
-| `foundation_grants_phase2_expansion.csv` | IRS 990-PF / 990 e-file XML (Phase-2 funders, `scripts/foundation/` pipeline) |
 | `lihtc_chicago.csv` | HUD LIHTC placed-in-service database |
 | `nmtc_chicago.csv` | CDFI Fund NMTC public data |
 | `cra_by_community_area.csv` | FFIEC CRA disclosure |
