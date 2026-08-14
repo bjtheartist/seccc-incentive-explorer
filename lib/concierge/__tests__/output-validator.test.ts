@@ -245,6 +245,12 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
     { family: "application/project denied", text: "Your application was not approved.", reason: "application-denied" },
     { family: "application/project denied", text: "Your application wasn't approved.", reason: "application-denied" },
     { family: "application/project denied", text: "Your application was unsuccessful.", reason: "application-denied" },
+    // S40: newline immediately after an abbreviation must not split the sentence
+    { family: "application/project denied", text: "Your application e.g.\nwas denied.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application to Agency A.\nwas denied.", reason: "application-denied" },
+    // S41: auxiliary chains in the not-approved form
+    { family: "application/project denied", text: "Your application has not yet been approved.", reason: "application-denied" },
+    { family: "application/project denied", text: "Your application hasn't yet been approved.", reason: "application-denied" },
   ];
 
   for (const { family, text, reason } of FAMILY_PHRASES) {

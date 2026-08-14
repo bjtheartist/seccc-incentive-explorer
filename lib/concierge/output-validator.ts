@@ -189,7 +189,7 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
   // rejected/rejection, any inflection) is an unconditional hit. There is
   // no morphology left to enumerate. Over-match (e.g. "denial of service
   // requests") is the accepted default-deny cost per the Round-9 ruling.
-  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*(?:\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|refus(?:e|es|ed|ing|al|als)|unsuccessful)\b|\bturn(?:s|ed|ing)?\b[^.!?\n]*?\bdown\b|\b(?:not|never)\s+(?:be\s+|been\s+|yet\s+)?approved\b|n['’]t\s+(?:be\s+|been\s+|yet\s+)?approved\b))/i, reason: "application-denied", perSentence: true },
+  { pattern: /(?=[\s\S]*\b(?:applications?|projects?|requests?)(?:['’]s?)?\b)(?=[\s\S]*(?:\b(?:den(?:y|ies|ied|ying|ial|ials)|reject(?:s|ed|ing|ion|ions)?|declin(?:e|es|ed|ing)|refus(?:e|es|ed|ing|al|als)|unsuccessful)\b|\bturn(?:s|ed|ing)?\b[^.!?\n]*?\bdown\b|\b(?:not|never)(?:\s+\w+){0,2}\s+approved\b|n['’]t(?:\s+\w+){0,2}\s+approved\b))/i, reason: "application-denied", perSentence: true },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
@@ -211,18 +211,20 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string; perSentence?: bool
  * naive splitter — its semantics are settled and reviewed.
  */
 function splitIntoSentencesConservative(text: string): string[] {
+  const ABBREV_END =
+    /(?:\b(?:U\.S|U\.S\.A|e\.g|i\.e|etc|vs|Inc|Corp|Dept|No|Nos|approx|St|Ave|Dr|Mr|Mrs|Ms)\.|\b[A-Z]\.)$/;
   const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const blocks: string[] = [];
   for (const line of lines) {
     const prev = blocks[blocks.length - 1];
-    if (prev !== undefined && !/[.!?]$/.test(prev)) {
+    // review16 S40: a line ending in a known abbreviation has NOT ended its
+    // sentence, even though it ends with a period — join across the newline.
+    if (prev !== undefined && (!/[.!?]$/.test(prev) || ABBREV_END.test(prev))) {
       blocks[blocks.length - 1] = `${prev} ${line}`;
     } else {
       blocks.push(line);
     }
   }
-  const ABBREV_END =
-    /(?:\b(?:U\.S|U\.S\.A|e\.g|i\.e|etc|vs|Inc|Corp|Dept|No|Nos|approx|St|Ave|Dr|Mr|Mrs|Ms)\.|\b[A-Z]\.)$/;
   const out: string[] = [];
   for (const block of blocks) {
     const fragments: string[] = [];
