@@ -29,6 +29,29 @@ function boundary(expirationDate: string | null): TifBoundaryContext {
   };
 }
 
+/**
+ * review6 S16: v2 zone-evidence envelope fixture — replaces the v1
+ * positives-only array shape (`[{ key, name }]`) `checkZones` mocks used
+ * to return, matching `assessWatchedArea`'s migration from
+ * `normalizeZoneCheckResponse` to `normalizeZoneEvidenceV2`.
+ */
+function zoneEvidenceV2(
+  matched: Record<string, string | undefined> = {},
+): unknown {
+  return {
+    schemaVersion: 2,
+    dataRevision: "test-revision",
+    checkedAt: TODAY.toISOString(),
+    requestedLayers: Object.keys(matched),
+    layers: Object.fromEntries(
+      Object.entries(matched).map(([key, name]) => [
+        key,
+        { state: "matched", name: name ?? null },
+      ]),
+    ),
+  };
+}
+
 describe("parsePointAreaId", () => {
   it("parses a rounded lat,lon pair", () => {
     expect(parsePointAreaId("41.7355,-87.5512")).toEqual({
@@ -111,7 +134,7 @@ describe("assessWatchedArea", () => {
 
   const resolvers: AreaResolvers = {
     findTifBoundary: async () => boundary(isoInDays(90)),
-    checkZones: async () => [{ key: "tif", name: "Test District" }],
+    checkZones: async () => zoneEvidenceV2({ tif: "Test District" }),
     programs: [zoneProgram],
     tifFinancials: null,
     sbifRollout: null,
@@ -175,7 +198,7 @@ describe("assessWatchedArea", () => {
       {
         ...resolvers,
         findTifBoundary: async () => null,
-        checkZones: async () => [],
+        checkZones: async () => zoneEvidenceV2(),
         programs: [],
       },
       TODAY
@@ -193,7 +216,7 @@ describe("buildDigestEmailHtml", () => {
       { areaType: "point", areaId: "41.7355,-87.5512", areaLabel: "Commercial Ave" },
       {
         findTifBoundary: async () => boundary(isoInDays(60)),
-        checkZones: async () => [],
+        checkZones: async () => zoneEvidenceV2(),
         programs: [],
         tifFinancials: null,
         sbifRollout: null,

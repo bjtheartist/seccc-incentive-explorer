@@ -21,8 +21,19 @@ vi.mock("@/lib/tif-boundary", () => ({
   findTifBoundaryAtPoint: findTifBoundaryMock,
 }));
 
-vi.mock("@/app/api/zones/check/route", () => ({
-  GET: vi.fn(async () => NextResponse.json([])),
+// review6 S16: migrated from the v1 zones/check route mock — the cron
+// route now calls v2. Empty `layers` is the v2-shaped equivalent of the
+// old v1 empty-array "no zone matches" fixture.
+vi.mock("@/app/api/zones/check/v2/route", () => ({
+  GET: vi.fn(async () =>
+    NextResponse.json({
+      schemaVersion: 2,
+      dataRevision: "test-revision",
+      checkedAt: new Date().toISOString(),
+      requestedLayers: [],
+      layers: {},
+    }),
+  ),
 }));
 
 vi.mock("@/lib/programs-data", () => ({

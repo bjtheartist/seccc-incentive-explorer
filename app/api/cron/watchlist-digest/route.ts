@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getSQL } from "@/lib/db";
 import { findTifBoundaryAtPoint } from "@/lib/tif-boundary";
-import { GET as zonesCheckGET } from "@/app/api/zones/check/route";
+import { GET as zonesCheckV2GET } from "@/app/api/zones/check/v2/route";
 import { getProgramsSync } from "@/lib/programs-data";
 import {
   assessWatchedArea,
@@ -48,10 +48,15 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 async function checkZonesAtPoint(lat: number, lon: number): Promise<unknown> {
-  // Reuse the zones/check route handler (DB-first with static GeoJSON
-  // fallback + caching) instead of duplicating its lookup logic.
-  const res = await zonesCheckGET(
-    new NextRequest(`http://localhost/api/zones/check?lat=${lat}&lon=${lon}`)
+  // review6 S16: was the v1 zones/check route handler — migrated to v2
+  // (see lib/watchlist-digest.ts's own comment on the normalize call for
+  // why). Reuses the route handler in-process (DB-first with static
+  // GeoJSON fallback + Redis caching) instead of duplicating its lookup
+  // logic, same pattern the v1 call already used. Layers param omitted
+  // — the v2 route defaults to every CHECKABLE_ZONE_KEYS, matching v1's
+  // "check everything" behavior.
+  const res = await zonesCheckV2GET(
+    new NextRequest(`http://localhost/api/zones/check/v2?lat=${lat}&lon=${lon}`)
   );
   if (!res.ok) return null;
   return res.json();

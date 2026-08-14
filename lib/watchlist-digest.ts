@@ -8,7 +8,8 @@ import {
 import type { TifBoundaryContext } from "@/lib/tif-boundary";
 import type { Program } from "@/lib/types";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
+import { bridgeZoneEvidenceV2ToBooleanMap } from "@/lib/zone-evidence-bridge";
 import { loadSbifRollout } from "@/lib/report-engine";
 
 /**
@@ -58,7 +59,8 @@ export interface AreaAssessment {
 
 export interface AreaResolvers {
   findTifBoundary: (lat: number, lon: number) => Promise<TifBoundaryContext | null>;
-  /** Zone matches at the point, in /api/zones/check response shape. */
+  /** Zone evidence at the point, in /api/zones/check/v2 response shape
+   *  (review6 S16 — was v1's /api/zones/check response shape). */
   checkZones: (lat: number, lon: number) => Promise<unknown>;
   programs: Program[];
   tifFinancials: Record<string, TifFinancialsSlim> | null;
@@ -171,12 +173,29 @@ export async function assessWatchedArea(
   try {
     tif = assessTifExpiration(boundary, today);
 
-    const normalized = normalizeZoneCheckResponse(zoneResponse);
-    if (normalized) {
+    // review6 S16: was normalizeZoneCheckResponse (v1) — a repo-wide
+    // scan for v1 zone-check usage (independent of any registry entry;
+    // this module was never a registered public-claim surface, so the
+    // registry-scoped S1-S3 migration never reached it) found this as a
+    // genuine, currently-shipping v1 pathway. v1 silently defaults an
+    // unresolved layer to "not matched," indistinguishable from a
+    // confirmed non-match — the exact anti-pattern that could make this
+    // weekly digest silently under-report (or entirely skip) a TIF/
+    // program deadline notification for a watched area whose zone data
+    // failed to resolve that week. `bridgeZoneEvidenceV2ToBooleanMap`
+    // bridges v2's tri-state evidence into the boolean map
+    // runConfidenceEngine still requires (unchanged engine signature);
+    // `unknownKeys` is available here but not yet surfaced in the digest
+    // email itself — a real, separate enhancement (documented, not
+    // silently assumed done) tracked in docs/eligibility-claims-
+    // acceptance.md's S16 entry, out of this correctness fix's scope.
+    const evidence = normalizeZoneEvidenceV2(zoneResponse);
+    if (evidence) {
+      const { zones, zoneNames } = bridgeZoneEvidenceV2ToBooleanMap(evidence);
       const matched = runConfidenceEngine(
         resolvers.programs,
-        normalized.zones,
-        normalized.zoneNames
+        zones,
+        zoneNames
       ).filter((r) => r.relevance !== "not_mapped_at_location");
 
       const summary = deadlinesForAddress({

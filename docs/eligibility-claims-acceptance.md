@@ -1988,3 +1988,173 @@ actually USED" real-codebase tests both pass, confirming the 4
 regenerated fingerprints are exactly correct for the current state of
 the 3 reviewed files; `npm run programs:public:check` clean (unaffected
 — source-guard scanning only, no catalog changes).
+
+---
+
+### S16 (MEDIUM, FINAL) — repo-wide prohibited-source checks, independent of registry membership; public-sink discovery; registered the 3 new S11 routes
+
+**Finding:** every check in `lib/public-claim-surfaces-verify.ts` (S10)
+only ever looks at files a `PUBLIC_CLAIM_SURFACES` entry already lists.
+That's a real strength for anything actually registered, but it was
+also the exact blind spot S11 fell through: the deleted
+`/api/programs/engine-source` route was never a registry entry, so none
+of S10's checks — in either direction — ever looked at it; it took a
+human/Sol review round to find it. "S11 and S16 interact — fix S11's
+architecture first, then make S16's checks prove it can't come back."
+
+**Fix — three repo-wide checks, scanning every file under
+`app/`/`components`/`lib/` directly (not the registry):**
+- **`verifyNoRawProgramClientCast`** ("raw Program... casts"): fails if
+  any `"use client"` file anywhere contains a TypeScript type assertion
+  (`as Program`, `as Program[]`, or `<Program>x`) naming the raw
+  internal `Program` type — a client component holding that cast is
+  declaring, in its own types, that it has full internal records.
+  Scoped to client files only (server-only full-fidelity is the S11
+  architecture itself, not the leak).
+- **`verifyNoRawProgramRouteResponse`** ("raw Program...
+  fetch-responses"): fails if any `app/api/**/route.ts`'s
+  `NextResponse.json(...)`/`Response.json(...)` call returns
+  `getProgramsSync()` directly (inlined or via an unmapped intermediate
+  variable) as the response body — the EXACT shape the deleted
+  engine-source route had. A route using `getProgramsSync()` only for
+  its own internal computation (never serializing it) is untouched —
+  this only looks at what actually crosses the `.json(...)` boundary.
+- **`verifyNoV1ZoneUsage`** ("v1 zone endpoints/hand-rolled v1 shapes"):
+  the SAME `normalizeZoneCheckResponse` identifier rule S10 already
+  applied per-registry-entry, now repo-wide — plus a NEW check for a
+  hand-rolled fetch to the v1 HTTP endpoint `/api/zones/check` (without
+  `/v2`), covering both a plain string literal and an interpolated
+  template literal (`` `/api/zones/check?lat=${lat}...` ``, the
+  realistic shape for a URL built with query params — an early version
+  of this check only handled the non-interpolated literal kinds and
+  missed this, caught before it shipped).
+- **`findUnregisteredPublicSinks`** (discovery): walks every real
+  `app/**/page.tsx`/`route.ts`, fails for any file NEITHER covered by a
+  registry entry NOR in a new, explicitly documented
+  `PUBLIC_CLAIM_SURFACES_KNOWN_GAPS` baseline.
+
+**Judgment call — the discovery check's scope, stated explicitly, not
+silently narrowed:** a full-repo walk found 103 pre-existing
+page.tsx/route.ts files with zero registry coverage (auth routes,
+admin-only tools behind their own login, health/cron/internal
+endpoints, and public pages this review pass never individually
+re-audited). Retroactively classifying and registering all 103 is a
+real, separate body of work this MEDIUM finding does not expand to
+cover — out of proportion to "add a discovery check," and inconsistent
+with this whole engagement's own escape-hatch discipline (a loop needs
+a falsifiable terminal state, not an open-ended full audit). The
+discovery check is scoped to its literal, stated purpose — "a NEW
+unregistered page/route" fails — by baselining today's 100 gaps (3 of
+the original 103 became genuinely registered, see below) as
+`PUBLIC_CLAIM_SURFACES_KNOWN_GAPS`: any path in that list is a
+documented, tracked pass-through; anything NOT in that list and not
+registered is a genuine, unexplained new gap and fails. Closing the
+baseline to zero (registering or deliberately excluding each one with
+its own reviewed rationale) is real, tracked follow-up work, not
+silently deferred without a trace.
+
+**The 3 new S11 routes registered** (the coordinator's explicit
+instruction): `programs-match-api`, `report-generate-api`,
+`survey-score-api` added to `PUBLIC_CLAIM_SURFACES` (all
+`PublicProgramView`, `findings: ["S11"]`) — confirmed genuinely
+registered (not merely absent from the known-gaps baseline) by a
+dedicated test.
+
+**A real, previously-undetected finding surfaced by the new checks
+during their own build-out, and fixed (not just documented) — matching
+this whole session's established precedent (S11's `whoQualifies` leak,
+S13's urlAddress-branch boundary, S14's article-optional false
+positive):** `lib/watchlist-digest.ts` (the weekly watched-area digest
+email, `app/api/cron/watchlist-digest/route.ts`) was STILL calling v1's
+`normalizeZoneCheckResponse` against the v1 `/api/zones/check` endpoint
+— a genuinely-shipping v1 pathway the S1-S3/S8 registry-scoped migration
+never reached, because this module was never a registered public-claim
+surface. v1 silently defaults an unresolved layer to "not matched,"
+which could make the digest silently under-report (or entirely skip) a
+TIF/program deadline notification for a watched area whose zone data
+failed to resolve that week — a real product-correctness bug, not
+hypothetical. Migrated both files to v2: `app/api/cron/watchlist-
+digest/route.ts` now calls `app/api/zones/check/v2/route.ts`'s handler
+in-process (same pattern the v1 call already used, just pointed at the
+new route); `lib/watchlist-digest.ts` now calls
+`normalizeZoneEvidenceV2` + `bridgeZoneEvidenceV2ToBooleanMap`
+(`runConfidenceEngine`'s boolean-map signature is unchanged, per that
+bridge's own documented purpose). **Documented, not silently expanded:**
+`bridgeZoneEvidenceV2ToBooleanMap` returns `unknownKeys`, but this fix
+does not yet surface an "incomplete zone data" caveat in the digest
+EMAIL itself (the way `zoneCoverageCaveat` does for other v2 consumers)
+— that's a real, separate UX enhancement, out of this correctness fix's
+scope; the bug being closed here is the false-negative-defaulting, not
+the (separate) question of caveat-surfacing in this specific email.
+
+**Tests added:**
+- `lib/__tests__/public-claim-surfaces.test.ts` extended from 12 to 29
+  tests. A new "repo-wide checks against the REAL codebase" block: zero
+  raw-Program/v1-zone violations across the whole tree (confirms the
+  watchlist-digest fix above is real and complete); every real
+  page.tsx/route.ts is registered or a documented known gap; the 3 new
+  S11 routes are genuinely registered; the known-gaps baseline and the
+  registry never claim the same path. A new fixture-based block is the
+  coordinator's TEST requirement, read literally: TEST 1 (a registered
+  client fetching raw `Program[]` fails) + CONTROL (an already-narrow
+  DTO cast passes); TEST 2 (+2b, an intermediate-variable variant) (a
+  public route returning raw programs fails, the exact deleted
+  engine-source shape) + CONTROL (+2b, internal-use-only) (a mapped
+  response, and internal-only usage, both pass); TEST 3 (a v1
+  endpoint/manual normalization fails — both the identifier AND the
+  endpoint string, independently) + CONTROL (+3b, the v1 function's own
+  defining module is not flagged for its own declaration) (a v2
+  migration passes); TEST 4 (a new unregistered page/route fails
+  discovery) + CONTROL (4a/4b/4c: an exact file, a covered directory,
+  and a known-gaps entry, all pass).
+- `lib/__tests__/watchlist-digest.test.ts` (12 tests, all pre-existing)
+  and `app/api/cron/watchlist-digest/route.test.ts` (5 tests, all
+  pre-existing): `checkZones` mock fixtures converted from the v1
+  positives-only array shape to a v2 envelope (`zoneEvidenceV2()` new
+  helper); all assertions unchanged and passing, confirming the v2
+  migration preserves the exact same program-matching behavior for the
+  known-good cases.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **324 test files, 3991
+passed, 2 skipped** (up from S15's 324/3974); `npm run
+programs:public:check` clean.
+
+---
+
+## Review 6 — ALL SIX FINDINGS CLOSED (S11–S16)
+
+Every finding in `scratchpad/battle-test/review6-out.md` is now fixed,
+tested, and committed on `feat/eligibility-claims-cutover`, in the exact
+priority order specified (S11→S16, with S11's architecture landing
+before S16's checks per the coordinator's explicit sequencing note). See
+each finding's own section above for its specific fix, judgment calls,
+and test coverage.
+
+Known, documented boundaries that remain (not silently skipped — each
+flagged in its own section above and restated here):
+- **S11**: the `urlAddress`-only `wizardState` init branch in
+  `app/report/page.tsx` (no `instant=true`/`refine=true`) still passes
+  `instantLat`/`instantLon` through without validation — genuinely
+  outside this finding's literal scope (never auto-engages the
+  report-generation effect chain the "hang forever" risk is about).
+- **S12**: the shortlist export pipeline's already-committed data files
+  could not be regenerated (no live DB session); `incentiveCount`/
+  vacancy-pin `incentiveGeographyCount`'s separate, deeper DB pipeline
+  remains unaudited (both a review5 S2-era boundary, restated).
+- **S16**: 100 pre-existing `page.tsx`/`route.ts` files remain
+  unregistered, tracked in `PUBLIC_CLAIM_SURFACES_KNOWN_GAPS` rather
+  than individually audited — real follow-up work, explicitly out of
+  this MEDIUM finding's proportionate scope; `lib/watchlist-digest.ts`'s
+  v1→v2 migration does not yet surface an "incomplete zone data" caveat
+  in the digest email itself (a separate UX enhancement from the
+  correctness fix that was made).
+
+**Final gate, run at HEAD of `feat/eligibility-claims-cutover`
+(6 commits: S11 `0b6fc8c`, S12 `c95f415`, S13 `a9e27c0`, S14 `2350a84`,
+S15 `29ba77c`, S16 pending):** `npx tsc --noEmit` clean; `npx eslint .`
+— 0 errors, 5 pre-existing warnings (confirmed unchanged from the
+pre-review6 baseline via `git stash` during S11); full `npx vitest run`
+— **324 test files, 3991 passed, 2 skipped**; `npm run
+programs:public:check` clean; `git status` clean at each commit
+boundary; nothing pushed or merged.

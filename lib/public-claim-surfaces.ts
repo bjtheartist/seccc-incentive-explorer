@@ -145,6 +145,35 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     contracts: ["reviewed-copy"],
     files: ["lib/program-seo-overrides.ts"],
   },
+  // review6 S11/S16: three server-only engine-execution routes that
+  // replaced the deleted /api/programs/engine-source (the S11 leak) —
+  // each runs a client engine (confidence/report/survey) against the
+  // full internal catalog SERVER-SIDE and returns only the engine's
+  // already-narrow RESULT, never the raw catalog. Registered here per
+  // S16's discovery requirement ("every public sink... must have a
+  // registry entry" — these three were the exact gap: new S11 routes
+  // that shipped without ever being added to this registry).
+  {
+    id: "programs-match-api",
+    description: "POST /api/programs/match — server-side confidence-engine execution for the map click snapshot; returns SafeMapProgramMatch[], never a raw Program.",
+    contracts: ["PublicProgramView"],
+    files: ["app/api/programs/match/route.ts"],
+    findings: ["S11"],
+  },
+  {
+    id: "report-generate-api",
+    description: "POST /api/report/generate — server-side report-engine execution for app/report/page.tsx's wizard; returns a GeneratedReport, never a raw Program.",
+    contracts: ["PublicProgramView"],
+    files: ["app/api/report/generate/route.ts"],
+    findings: ["S11"],
+  },
+  {
+    id: "survey-score-api",
+    description: "POST /api/survey/score — server-side survey-engine execution for /qualify; returns a SurveyResult, never a raw Program.",
+    contracts: ["PublicProgramView"],
+    files: ["app/api/survey/score/route.ts"],
+    findings: ["S11"],
+  },
 
   // ── SEO / content pages ───────────────────────────────────────────────
   {
