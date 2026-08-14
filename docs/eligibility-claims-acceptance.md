@@ -2152,7 +2152,7 @@ flagged in its own section above and restated here):
 
 **Final gate, run at HEAD of `feat/eligibility-claims-cutover`
 (6 commits: S11 `0b6fc8c`, S12 `c95f415`, S13 `a9e27c0`, S14 `2350a84`,
-S15 `29ba77c`, S16 pending):** `npx tsc --noEmit` clean; `npx eslint .`
+S15 `29ba77c`, S16 `2ffa367`):** `npx tsc --noEmit` clean; `npx eslint .`
 — 0 errors, 5 pre-existing warnings (confirmed unchanged from the
 pre-review6 baseline via `git stash` during S11); full `npx vitest run`
 — **324 test files, 3991 passed, 2 skipped**; `npm run
