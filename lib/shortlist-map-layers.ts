@@ -288,6 +288,7 @@ export interface ShortlistPinProps extends Record<string, unknown> {
   markerNumber: number;
   badge: ZoningBadge;
   address: string;
+  zoningDistrict: string | null;
   zoningBadge: string;
   domId: string;
   color: string;
@@ -301,10 +302,12 @@ export interface ShortlistPinProps extends Record<string, unknown> {
  */
 export function shortlistPinFeatures(
   ranked: readonly RankedShortlistCandidate[],
+  visibleCandidateKeys?: ReadonlySet<string>,
 ): GeoJSON.Feature[] {
   return ranked
     .filter(
       (candidate) =>
+        (visibleCandidateKeys === undefined || visibleCandidateKeys.has(candidate.key)) &&
         typeof candidate.lat === "number" &&
         typeof candidate.lon === "number" &&
         Number.isFinite(candidate.lat) &&
@@ -321,6 +324,7 @@ export function shortlistPinFeatures(
         markerNumber,
         badge: candidate.badge,
         address: candidate.address,
+        zoningDistrict: candidate.zoningDistrict,
         zoningBadge: pinZoningBadgeText(candidate),
         domId: shortlistCardDomId(candidate.key),
         color: badgePinColor(candidate.badge),
