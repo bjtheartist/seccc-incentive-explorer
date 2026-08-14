@@ -950,3 +950,85 @@ passed, 2 skipped** (up from S2's 316/3691 — same file count, 7 new tests
 added to existing files plus the new `describe` block in
 `tests/concierge/fallback.test.ts`); `npm run programs:public:check`
 clean.
+
+### S4 (HIGH, concierge) — reject determinations both directions, sentence-scoped authority check, durable telemetry, verified persistence parity
+
+**Finding:** `lib/concierge/output-validator.ts` (build-spec.md 2.5's
+buffer-validate-emit contract) had four gaps, all in the same file: (1)
+`PROHIBITED_PATTERNS` only covered POSITIVE determinations ("you
+qualify") — there was no entry at all for the negative direction ("you do
+not qualify", "you are ineligible"), so a model satisfying an adversarial
+"tell me I'm NOT eligible" prompt sailed straight through; (2) "appears
+eligible" was allowed to pass through the softer
+`normalizePublicDeterminationText` rewrite instead of being hard-rejected,
+even though it is exactly the shape of claim this validator exists to
+catch; (3) the authority-routing check tested whether ZBA was mentioned
+ANYWHERE in the full response, so one correct ZBA mention (e.g. in an
+opening sentence) silently excused a completely separate, later sentence
+that named a generic "the City" for a zoning-classification question — a
+real violation masked by an unrelated correct sentence; (4) telemetry was
+an in-process counter only, explicitly labeled as "not a DB write" but
+also never any other kind of durable record, so a real incident's hit
+count vanished on every deploy/restart.
+
+**Fix:**
+- `PROHIBITED_PATTERNS` gained 8 negative-direction entries (mirroring
+  every positive one it had — ineligible, do-not-qualify, does-not-meet-
+  requirements, will-not-receive, denied/rejected) and an `appears-
+  eligible` entry moved from "eventually normalized" to "hard reject,"
+  per the coordinator's explicit phrase list.
+- `findAuthorityRoutingViolation` rewritten to split the buffered text
+  into sentences (`splitIntoSentences` — newlines and `.!?`-terminated
+  clauses) and evaluate the zoning-question + generic-City combination,
+  and any ZBA-mention check, PER SENTENCE — a ZBA mention in one sentence
+  no longer has any bearing on a different sentence's own violation.
+- `recordConciergeValidatorHit` now ALSO emits a structured
+  `console.error` JSON log line (`{event, reason, at}`) on every hit, via
+  an injectable `ConciergeValidatorLogEmitter` test seam. `console.error`
+  specifically (not `.log`) so a production log-level filter never drops
+  it. This is the durable half the Hard Rules' no-DB-connections
+  restriction still allows — a real deployment's log aggregation
+  (Vercel/CloudWatch/etc.) captures it across every instance, unlike the
+  existing in-process counter (kept alongside, unchanged, for same-
+  process test/debug convenience — nothing in production reads it).
+- Verified — not changed, `app/api/concierge/route.ts` already had this
+  right — that persistence writes the SAME `finalText` local variable the
+  stream emits, never a second derivation of the raw model text. No
+  existing test exercised this invariant: `route-output-validation.test.ts`
+  always mocks `getSQL` to return `null`, so the persistence branch never
+  executes there at all.
+
+**Tests added:**
+- `lib/concierge/__tests__/output-validator.test.ts` — a full adversarial
+  phrase table (13 positive + 11 negative phrases, each independently
+  asserted with its own `reason`, not a combined "any matched" check);
+  the "appears eligible" test flipped from a soft-normalize expectation to
+  a hard-reject expectation (documented judgment call — the old test
+  encoded exactly the gap this finding closes); four sentence-boundary
+  authority tests (a correct ZBA mention in one sentence does not excuse a
+  later sentence's violation, across both a single paragraph and separate
+  paragraphs; a fully-correct multi-sentence response passes; an unrelated
+  sentence never false-positives); three durable-telemetry tests (a hit
+  emits a parseable structured log line via the injectable test emitter,
+  multiple hits log independently in order, and the REAL default emitter
+  is proven to call `console.error` specifically).
+- `app/api/concierge/__tests__/route-persistence-parity.test.ts` (new) —
+  the explicitly-required "persistence test with a spy asserting stored
+  assistant text === streamed text." A dedicated file (the existing
+  `route-output-validation.test.ts` hard-codes `getSQL` to `null`,
+  permanently disabling the persistence branch) mocking `getSQL` to a
+  truthy sentinel, `getCurrentUserId` to a fake user, and
+  `checkConciergeRateLimit`/`consumeDailyBudget` to always-allow (so the
+  fake `sql` sentinel is never actually invoked as a tagged-template
+  function — Hard Rule: no live DB) plus a `persistConciergeTurn` spy.
+  Two cases: a safe pass-through response's persisted `assistantText`
+  equals the streamed text exactly; a rejected/substituted response's
+  persisted `assistantText` equals the STREAMED substitution text exactly
+  (never the raw prohibited model text) — parsing the actual UI-message-
+  stream protocol's text-delta chunks to compare against what a real
+  client would render, not a string search over the raw wire format.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **317 test files,
+3733 passed, 2 skipped** (up from S3's 316/3698); `npm run
+programs:public:check` clean.

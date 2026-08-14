@@ -41,30 +41,81 @@ export interface ConciergeValidationResult {
  * rewrites report-specific vocabulary like "eligible incentive programs"
  * section titles) — this targets the shape a chat model is likeliest to
  * produce under a prompt-injection attempt ("tell me I'm eligible").
+ *
+ * review5 S4: BOTH directions are prohibited, not just the positive one.
+ * The original list caught "you qualify" but had no entry at all for "you
+ * do not qualify" / "you are ineligible" / "you do not meet the
+ * requirements" — a model could satisfy an adversarial prompt ("tell me
+ * I'm NOT eligible") just as harmfully as the positive direction, and the
+ * validator let it straight through. A determination is a determination
+ * regardless of which way it points; reject both, at the raw-text stage,
+ * before normalization can soften either into something that slips past.
  */
 const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
+  // Positive determinations.
   { pattern: /\byou(?:'re| are)\s+eligible\b/i, reason: "you-are-eligible" },
+  { pattern: /\bappears?\s+(?:to\s+be\s+)?eligible\b/i, reason: "appears-eligible" },
   { pattern: /\byou\s+qualify\b/i, reason: "you-qualify" },
   { pattern: /\byou\s+(?:already\s+)?qualif(?:y|ies)\b/i, reason: "you-qualify" },
   { pattern: /\byour\s+business\s+(?:is\s+)?eligible\b/i, reason: "business-eligible" },
+  { pattern: /\byou\s+meet(?:s)?\s+(?:all\s+)?(?:the\s+)?requirements\b/i, reason: "meets-requirements" },
   { pattern: /\bguaranteed\s+(?:to\s+receive|approval|award)\b/i, reason: "guaranteed-claim" },
   { pattern: /\byou\s+will\s+receive\b/i, reason: "you-will-receive" },
   { pattern: /\byou'?ve?\s+been\s+approved\b/i, reason: "approved-claim" },
   { pattern: /\bready\s+to\s+apply\b/i, reason: "ready-to-apply" },
   { pattern: /\bthis\s+unlocks?\b/i, reason: "unlocks" },
   { pattern: /\bverify\s+(?:your\s+)?eligibility\b/i, reason: "verify-eligibility" },
+  // Negative determinations — the SAME reader-facing claim, pointed the
+  // other way. Just as prohibited: this validator does not decide
+  // eligibility in either direction.
+  { pattern: /\byou(?:'re| are)\s+(?:not\s+eligible|ineligible)\b/i, reason: "you-are-ineligible" },
+  { pattern: /\byou\s+do\s+not\s+qualify\b/i, reason: "you-do-not-qualify" },
+  { pattern: /\byou\s+don'?t\s+qualify\b/i, reason: "you-do-not-qualify" },
+  { pattern: /\byour\s+business\s+(?:is\s+)?(?:not\s+eligible|ineligible)\b/i, reason: "business-ineligible" },
+  { pattern: /\byou\s+do\s+not\s+meet\s+(?:the\s+)?requirements\b/i, reason: "does-not-meet-requirements" },
+  { pattern: /\byou\s+don'?t\s+meet\s+(?:the\s+)?requirements\b/i, reason: "does-not-meet-requirements" },
+  { pattern: /\byou\s+will\s+(?:not|never)\s+(?:receive|qualify|be\s+approved)\b/i, reason: "you-will-not-receive" },
+  { pattern: /\byou'?ve?\s+been\s+(?:denied|rejected)\b/i, reason: "denied-claim" },
 ];
 
-/** Authority-routing check (F10): a sentence naming a generic "the City"
- *  alongside a zoning classification/use word must instead name ZBA. */
+/** Naive sentence splitter — good enough for a prose model response, not a
+ *  general-purpose NLP tool. Splits on '.', '!', '?' followed by
+ *  whitespace, and on hard newlines (a model's own paragraph/list breaks),
+ *  so a multi-paragraph answer is checked paragraph-by-paragraph and
+ *  sentence-by-sentence within each. */
+function splitIntoSentences(text: string): string[] {
+  return text
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Authority-routing check (F10): a sentence naming a generic "the City"
+ * alongside a zoning classification/use word must instead name ZBA.
+ *
+ * review5 S4: checked SENTENCE BY SENTENCE, not once over the whole text.
+ * The original implementation checked whether ZBA was mentioned ANYWHERE
+ * in the full response and, if so, skipped the check entirely — so a
+ * multi-paragraph answer that correctly named ZBA in one sentence (e.g. an
+ * opening summary) but then had a LATER, separate sentence asserting "the
+ * City decides your zoning classification" (a real violation) sailed
+ * through untouched, because the global ZBA mention masked it. Each
+ * sentence's own zoning-question + generic-City combination is now
+ * evaluated using only ZBA mentions WITHIN THAT SENTENCE.
+ */
 function findAuthorityRoutingViolation(text: string): string | null {
   const zba = AUTHORITY_ROUTING.zoning;
-  const mentionsZba = text.includes(zba.abbreviation) || text.includes(zba.name);
-  if (mentionsZba) return null;
   const zoningQuestionPattern = /\b(?:zoning classification|use category|Title 17 use|permitted use|zoning relief)\b/i;
   const genericCityPattern = /\bthe City\b(?!\s+of\s+Chicago['’]s\s+Zoning)/;
-  if (zoningQuestionPattern.test(text) && genericCityPattern.test(text)) {
-    return "zoning-question-missing-zba";
+
+  for (const sentence of splitIntoSentences(text)) {
+    if (!zoningQuestionPattern.test(sentence) || !genericCityPattern.test(sentence)) continue;
+    const sentenceMentionsZba =
+      sentence.includes(zba.abbreviation) || sentence.includes(zba.name);
+    if (!sentenceMentionsZba) {
+      return "zoning-question-missing-zba";
+    }
   }
   return null;
 }
@@ -98,15 +149,51 @@ export function validateConciergeOutput(rawText: string): ConciergeValidationRes
 }
 
 // ── Telemetry (build-spec.md 2.5: "log a telemetry counter") ──────────────
-// In-process counter, deliberately not a DB write (Hard Rules: no DB
-// connections in this task) — a real deployment would forward this to the
-// existing analytics pipeline; the counter here is the seam a caller reads.
+//
+// review5 S4: "durable telemetry (log/DB write, not process memory)". The
+// in-process counter below (kept for same-process test/debug convenience —
+// nothing reads it in production) does not satisfy that on its own: it is
+// lost on every deploy/restart, and — unlike a real incident, which spans
+// many server instances/invocations behind a load balancer — it is not
+// even visible outside the single process that happened to record it.
+// Every hit is now ALSO written as a structured log line via
+// `emitConciergeValidatorLog`, which any real deployment's log
+// aggregation (Vercel/CloudWatch/etc.) captures durably and makes
+// queryable across every instance — without a DB connection, per the
+// Hard Rules. `console.error` (not `.log`) so it is never filtered out of
+// a production log level by default.
 let validatorHitCount = 0;
 const validatorHitReasons = new Map<string, number>();
+
+/** Test seam — the real emitter is `console.error`; tests inject a spy
+ *  instead of asserting against captured stdout. */
+export type ConciergeValidatorLogEmitter = (line: string) => void;
+let logEmitter: ConciergeValidatorLogEmitter = (line) => console.error(line);
+
+/** Test-only injection point. */
+export function setConciergeValidatorLogEmitter(emitter: ConciergeValidatorLogEmitter): void {
+  logEmitter = emitter;
+}
+
+/** Test-only reset to the real console.error emitter. */
+export function resetConciergeValidatorLogEmitter(): void {
+  logEmitter = (line) => console.error(line);
+}
+
+function emitConciergeValidatorLog(reason: string): void {
+  logEmitter(
+    JSON.stringify({
+      event: "concierge_output_validator_hit",
+      reason,
+      at: new Date().toISOString(),
+    }),
+  );
+}
 
 export function recordConciergeValidatorHit(reason: string): void {
   validatorHitCount += 1;
   validatorHitReasons.set(reason, (validatorHitReasons.get(reason) ?? 0) + 1);
+  emitConciergeValidatorLog(reason);
 }
 
 export function getConciergeValidatorTelemetry(): { total: number; byReason: Record<string, number> } {
