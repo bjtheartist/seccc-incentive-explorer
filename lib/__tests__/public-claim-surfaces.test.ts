@@ -641,6 +641,51 @@ describe("public-claim-surfaces-verify — S20 fixture-based evasion proof", () 
       expect(violations[0].reason).toContain("prop");
     });
 
+    it("review8 S26: an ALIASED import (`Program as RawProgram`) used as a prop type still FAILS", () => {
+      // Before S26: `resolvesToInternalProgramType` gated on
+      // `typeRef.getTypeName().getText() !== "Program"` BEFORE symbol
+      // resolution — a `RawProgram`-typed prop has a type-name text of
+      // "RawProgram", so the old code returned false immediately and
+      // never even attempted resolution. The fix resolves the symbol
+      // first; the local alias name is irrelevant to what it resolves to.
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import type { Program as RawProgram } from "../lib/types";`,
+          `export function Card({ program }: { program: RawProgram }) {`,
+          `  return program.name;`,
+          `}`,
+        ].join("\n"),
+      );
+      const violations = verifyNoRawProgramClientCast(project, "/fixture-root");
+      expect(violations).toHaveLength(1);
+      expect(violations[0].reason).toContain("prop");
+    });
+
+    it("review8 S26: a NAMESPACE-QUALIFIED reference (`Types.Program`) used as a prop type still FAILS", () => {
+      // Same gap, different bypass shape: `import * as Types from
+      // "../lib/types"` then a `Types.Program`-typed prop has a
+      // type-name text of "Types.Program", also never exactly "Program".
+      const project = makeFixtureProject();
+      withProgramTypeStub(project);
+      project.createSourceFile(
+        "/fixture-root/components/some-new-widget.tsx",
+        [
+          `"use client";`,
+          `import * as Types from "../lib/types";`,
+          `export function Card({ program }: { program: Types.Program }) {`,
+          `  return program.name;`,
+          `}`,
+        ].join("\n"),
+      );
+      const violations = verifyNoRawProgramClientCast(project, "/fixture-root");
+      expect(violations).toHaveLength(1);
+      expect(violations[0].reason).toContain("prop");
+    });
+
     it("CONTROL: Pick<Program, ...> (a genuinely narrower derived type) PASSES", () => {
       const project = makeFixtureProject();
       withProgramTypeStub(project);

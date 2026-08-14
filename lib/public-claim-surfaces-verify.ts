@@ -316,26 +316,52 @@ function isSafeNarrowingProgramTypeUsage(typeRef: Node): boolean {
   return false;
 }
 
-/** True when a `TypeReferenceNode` named "Program" actually resolves
- *  (via ts-morph's symbol/declaration resolution, not a bare text
- *  match) to `lib/types.ts`'s exported `Program` interface — so an
- *  unrelated local type that HAPPENS to also be named `Program` in some
- *  other file is never a false positive. */
+/** True when a `TypeReferenceNode` actually resolves (via ts-morph's
+ *  symbol/declaration resolution, not a bare text match) to
+ *  `lib/types.ts`'s exported `Program` interface — so an unrelated
+ *  local type that HAPPENS to also be named `Program` in some other
+ *  file is never a false positive.
+ *
+ * review8 S26 (MEDIUM): this used to gate on `typeRef.getTypeName().
+ * getText() !== "Program"` BEFORE attempting symbol resolution at all —
+ * a fast-path that assumed the REFERENCE's own textual name always
+ * matches the declaration's name. That assumption breaks for anything
+ * that renames on the way in: `import type { Program as RawProgram }
+ * from "@/lib/types"` used as a `RawProgram`-typed prop has a type-name
+ * text of `"RawProgram"`, so the old gate returned `false` immediately
+ * and skipped resolution entirely — a raw `Program` leak, invisible to
+ * this guard, purely because of a cosmetic import rename. Same failure
+ * for namespace-qualified access (`import * as Types from "@/lib/types"`
+ * then a `Types.Program`-typed prop): the type-name text there is
+ * `"Types.Program"`, never `"Program"`.
+ *
+ * Fixed by resolving the symbol/declaration FIRST, unconditionally, and
+ * only THEN checking whether the RESOLVED declaration — not the
+ * reference's own local spelling — is named `Program` and lives in
+ * `lib/types.ts`. Resolution is what's robust to aliasing; the text of
+ * whatever name the call site happened to use never is. */
 function resolvesToInternalProgramType(typeRef: Node, rootDir: string): boolean {
   if (!Node.isTypeReference(typeRef)) return false;
-  if (typeRef.getTypeName().getText() !== "Program") return false;
   const rawSymbol = typeRef.getTypeName().getSymbol();
   if (!rawSymbol) return false;
   // `getSymbol()` on a name imported via `import type { Program } from
-  // "..."` resolves to the LOCAL import-specifier binding (declared in
-  // THIS file), not the original `lib/types.ts` declaration — an
-  // aliased symbol needs one more hop (`getAliasedSymbol()`) to reach
-  // the real declaration. A same-file local `interface Program {...}`
-  // has no alias to follow, so it correctly stays on `rawSymbol`.
+  // "..."` (aliased or not) resolves to the LOCAL import-specifier
+  // binding (declared in THIS file), not the original `lib/types.ts`
+  // declaration — an aliased symbol needs one more hop
+  // (`getAliasedSymbol()`) to reach the real declaration. A same-file
+  // local `interface Program {...}` has no alias to follow, so it
+  // correctly stays on `rawSymbol`; a namespace-qualified reference
+  // (`Types.Program`) already resolves directly via the type checker
+  // and `getAliasedSymbol()` correctly returns undefined for it too.
   const symbol = rawSymbol.getAliasedSymbol() ?? rawSymbol;
   const decls = symbol.getDeclarations();
   const internalTypesPath = `${rootDir}/lib/types.ts`;
-  return decls.some((d) => d.getSourceFile().getFilePath() === internalTypesPath);
+  return decls.some(
+    (d) =>
+      d.getSourceFile().getFilePath() === internalTypesPath &&
+      Node.isInterfaceDeclaration(d) &&
+      d.getName() === "Program",
+  );
 }
 
 /**

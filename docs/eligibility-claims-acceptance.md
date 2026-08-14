@@ -2882,3 +2882,58 @@ passed), plus the 3 other files that import `output-validator`
 same 5 pre-existing warnings, unchanged. Full `npx vitest run` — **326
 test files, 4062 passed, 2 skipped** (up from S24's 326/4049 — the 13
 new tests). `npm run programs:public:check` clean.
+
+### S26 (MEDIUM) — the raw-`Program` guard gated on a textual name before symbol resolution
+
+**Finding:** `lib/public-claim-surfaces-verify.ts`'s
+`resolvesToInternalProgramType` (the symbol-resolution helper
+`verifyNoRawProgramClientCast` — review7 S20 — uses to decide whether a
+`TypeReferenceNode` really is the internal `Program` type) started with
+`if (typeRef.getTypeName().getText() !== "Program") return false;` —
+BEFORE attempting any symbol resolution. That fast-path assumed the
+reference's own local spelling always matches the declaration's name.
+It doesn't for `import type { Program as RawProgram } from "@/lib/types"`
+used as a `RawProgram`-typed prop (type-name text `"RawProgram"`) or a
+namespace-qualified `import * as Types from "@/lib/types"` then a
+`Types.Program`-typed prop (type-name text `"Types.Program"`) — both
+returned `false` immediately, skipping resolution entirely, so a raw
+internal `Program` held in a `"use client"` component prop under either
+alias shape was invisible to the S17/S20 guard this whole review5→8 arc
+built to catch that exact leak.
+
+**Fix:** removed the textual pre-gate. The symbol/declaration is now
+resolved FIRST, unconditionally (`typeRef.getTypeName().getSymbol()` →
+`getAliasedSymbol() ?? rawSymbol` → `getDeclarations()`, unchanged from
+S20), and only THEN is the RESOLVED declaration checked — is it an
+`InterfaceDeclaration` named `"Program"`, in `lib/types.ts` — rather than
+checking the reference's own textual name at all. Resolution is robust
+to aliasing; the reference's local spelling never is. No change to
+`verifyNoRawProgramClientCast`'s own call site or scoping.
+
+**Tests added:** `lib/__tests__/public-claim-surfaces.test.ts`
+(extended from 49 to 51 tests), in the existing S20 fixture-based
+evasion-proof describe block:
+- an ALIASED import (`Program as RawProgram`) used as a component prop
+  type FAILS;
+- a NAMESPACE-QUALIFIED reference (`Types.Program`) used as a component
+  prop type FAILS.
+
+Both reuse the established `makeFixtureProject()`/`withProgramTypeStub()`
+in-memory ts-morph fixture harness from the same describe block, so
+resolution runs against a REAL `lib/types.ts` stub in the fixture
+project, not a text-only guess.
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check
+via `git stash push --keep-index -- lib/public-claim-surfaces-verify.ts`
+(S13/S18/S22/S23/S25 discipline): exactly the 2 new tests (both alias
+shapes) failed against the pre-fix textual gate; all 49 pre-existing
+tests remained correctly unaffected, including the "CONTROL: an
+UNRELATED local type also named 'Program'" test — confirming the fix
+didn't loosen the guard into false-positive territory, only closed the
+false-negative alias gap. `git stash pop` restored the fix; re-ran `tsc
+--noEmit` (clean) and the full test file (51/51 passed) — the only file
+in the repo importing `public-claim-surfaces-verify`, so no broader
+regression surface to check. Full repo `npx eslint .` — 0 errors, the
+same 5 pre-existing warnings, unchanged. Full `npx vitest run` — **326
+test files, 4064 passed, 2 skipped** (up from S25's 326/4062 — the 2
+new tests). `npm run programs:public:check` clean.
