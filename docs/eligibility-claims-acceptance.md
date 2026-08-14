@@ -2833,3 +2833,52 @@ re-ran: all 8 tests passed, `tsc --noEmit` clean. Full repo `npx eslint .`
 — 0 errors, the same 5 pre-existing warnings, unchanged. Full `npx
 vitest run` — **326 test files, 4049 passed, 2 skipped** (up from S23's
 326/4047 — the 2 new tests). `npm run programs:public:check` clean.
+
+### S25 (HIGH) — the reported-speech marker list only covered past-tense verbs
+
+**Finding:** `lib/concierge/output-validator.ts`'s
+`REPORTED_SPEECH_MARKER_PATTERN` (the exclusion `findApplicationDeniedViolation`
+checks BEFORE flagging a definite-article "the application ... denied"
+sentence as a reader-facing violation) only listed past-tense/one-off
+forms: `said|told|mentioned|reported|noted|stated|wrote|explained|heard|
+claims?|claimed|according to`. A present-tense report — "The program
+guide says/explains that the application was denied in the example" —
+carries none of those exact tokens ("says" is not "said"; "explains" is
+not "explained"), so it was wrongly rejected as a reader-facing denial
+claim, even though it's the SAME reported-speech shape the S19(b) fix
+(Review 7) was built to exempt.
+
+**Fix:** every already-covered verb now carries both its past-tense form
+and its base/present-third-person form (`s?` handles "say"/"says",
+"tell"/"tells", "mention"/"mentions", "report"/"reports", "note"/"notes",
+"state"/"states", "write"/"writes", "explain"/"explains", "hear"/"hears"),
+plus two more common framing verbs the finding's own "etc." invited —
+`indicates?`/`indicated` and `describes?`/`described`. No change to the
+sentence-scoped, before-the-match matching discipline `findApplicationDeniedViolation`
+already used — only the marker vocabulary itself widened.
+
+**Tests added:** `lib/concierge/__tests__/output-validator.test.ts`
+(extended from 99 to 112 tests), a new table-driven describe block:
+- 10 safe present-tense descriptions (one per newly-recognized verb —
+  says, explains, notes, reports, states, tells, mentions, writes,
+  indicates, describes) must NOT be rejected;
+- the 3 core reader-facing denial controls from the S19(b) suite
+  ("Your application was denied," the bare definite-article form, "Your
+  project is denied...") must still be rejected with `reason:
+  "application-denied"` — proving the widened marker list didn't
+  over-correct into exempting genuine violations.
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check
+via `git stash push --keep-index -- lib/concierge/output-validator.ts`
+(S13/S18/S22/S23 discipline): exactly the 10 new safe-description tests
+failed against the pre-fix marker list (all 10, one per newly-added
+inflection); the 3 denial-control tests and all 99 pre-existing tests
+remained correctly passing on old code too. `git stash pop` restored
+the fix; re-ran `tsc --noEmit` (clean) and the full test file (112/112
+passed), plus the 3 other files that import `output-validator`
+(`app/api/concierge/__tests__/route-persistence-parity.test.ts`,
+`lib/__tests__/source-guard-ast.test.ts`, `lib/__tests__/report-engine.test.ts`
+— 114 tests, no regression). Full repo `npx eslint .` — 0 errors, the
+same 5 pre-existing warnings, unchanged. Full `npx vitest run` — **326
+test files, 4062 passed, 2 skipped** (up from S24's 326/4049 — the 13
+new tests). `npm run programs:public:check` clean.

@@ -337,6 +337,53 @@ describe("validateConciergeOutput — S19(b) definite-article application-denied
 });
 
 /**
+ * review8 S25 (HIGH): the reported-speech marker list above only covered
+ * past-tense/one-off forms (said/told/mentioned/reported/noted/stated/
+ * wrote/explained) — a present-tense report like "the program guide
+ * says/explains that the application was denied in the example" wasn't
+ * recognized, so it was wrongly rejected as a reader-facing denial claim.
+ * Table-driven: every present-tense inflection of an already-covered verb
+ * must be recognized (hit: false), while every genuine reader-facing
+ * denial form from the S19(b) suite above must still be rejected
+ * (hit: true, reason: "application-denied") — no over-correction.
+ */
+describe("validateConciergeOutput — S25 present-tense reported-speech inflections", () => {
+  const SAFE_PRESENT_TENSE_DESCRIPTIONS: string[] = [
+    "The program guide says the application was denied in the example.",
+    "The program guide explains that the application was denied in the example.",
+    "The FAQ notes that the application was denied in a similar case last year.",
+    "The city website reports the application was denied for missing paperwork.",
+    "The handbook states the application was denied when the deadline was missed.",
+    "The memo tells readers the application was denied in that scenario.",
+    "The article mentions the project was rejected during a prior round.",
+    "The bulletin writes that the request was denied for incomplete documents.",
+    "The summary indicates the application was denied for that applicant.",
+    "The case study describes how the application was denied in a past cycle.",
+  ];
+
+  for (const text of SAFE_PRESENT_TENSE_DESCRIPTIONS) {
+    it(`recognizes present-tense reported speech and does NOT reject: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(false);
+    });
+  }
+
+  const READER_FACING_DENIAL_CONTROLS: Array<{ text: string; reason: string }> = [
+    { text: "Your application was denied.", reason: "application-denied" },
+    { text: "The application was denied last cycle.", reason: "application-denied" },
+    { text: "Your project is denied for TIF financing.", reason: "application-denied" },
+  ];
+
+  for (const { text, reason } of READER_FACING_DENIAL_CONTROLS) {
+    it(`still rejects the genuine reader-facing denial control: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason).toBe(reason);
+    });
+  }
+});
+
+/**
  * review5 S4: "authority check sentence-by-sentence (one ZBA mention must
  * not bypass a generic-City sentence elsewhere)" — the exact regression
  * the original whole-text `mentionsZba` check was vulnerable to.

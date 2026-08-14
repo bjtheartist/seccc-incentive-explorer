@@ -196,18 +196,30 @@ function findAuthorityRoutingViolation(text: string): string | null {
  * SENTENCE (same technique as the authority-routing check above): a
  * match is a real violation UNLESS the SAME sentence carries a
  * reported-speech marker (said/told/mentioned/reported/noted/stated/
- * wrote/explained) BEFORE the match — a reliable proxy for "this is
- * being relayed about someone else," not asserted about the reader.
+ * wrote/explained, and their present-tense inflections — says/tells/
+ * mentions/reports/notes/states/writes/explains — review8 S25) BEFORE
+ * the match — a reliable proxy for "this is being relayed about someone
+ * else," not asserted about the reader.
  * Not exhaustive (no marker-list is), but restores the same "restrict
  * to reader context" discipline every other family in this file
  * already follows, rather than leaving "the application" either fully
  * unmatched (missing real violations) or fully unrestricted (the S16
  * regression this finding is about).
+ *
+ * review8 S25 (HIGH): the original list only covered PAST-tense/one-off
+ * forms (said/told/mentioned/reported/noted/stated/wrote/explained), so
+ * a present-tense report — "The program guide says/explains/notes that
+ * the application was denied in the example" — wasn't recognized as
+ * reported speech and was wrongly rejected as a reader-facing denial
+ * claim. Each verb now carries both its base/present third-person form
+ * (`s?` handles "say"/"says", "tell"/"tells", etc.) and its past-tense
+ * form, plus `indicates?`/`indicated` and `describes?`/`described` as
+ * two more common framing verbs the coordinator's "etc." invited.
  */
 const DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN =
   /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i;
 const REPORTED_SPEECH_MARKER_PATTERN =
-  /\b(?:said|told|mentioned|reported|noted|stated|wrote|explained|heard|claims?|claimed|according\s+to)\b/i;
+  /\b(?:says?|said|tells?|told|mentions?|mentioned|reports?|reported|notes?|noted|states?|stated|writes?|wrote|explains?|explained|hears?|heard|indicates?|indicated|describes?|described|claims?|claimed|according\s+to)\b/i;
 
 function findApplicationDeniedViolation(text: string): string | null {
   for (const sentence of splitIntoSentences(text)) {
