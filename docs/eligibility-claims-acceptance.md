@@ -2574,3 +2574,121 @@ every changed file; full `npx vitest run` — **326 test files, 4035
 passed, 2 skipped** (up from S20's 326/4032); `npm run
 programs:public:check` clean (unaffected — this finding touches only
 dead-code removal and the scanner's own implementation).
+
+---
+
+### S22 (HIGH, FINAL) — the digest folded v2 `unknown` layers to `false` and discarded `unknownKeys`, reversing an earlier "out of scope" judgment call
+
+**Finding:** review6 S16 migrated `lib/watchlist-digest.ts` from v1 to
+v2 zone evidence (fixing the false-negative-by-default anti-pattern),
+but `assessWatchedArea` immediately discarded `bridgeZoneEvidenceV2ToBooleanMap`'s
+`unknownKeys` after bridging to the boolean map `runConfidenceEngine`
+requires. The email itself carried no signal that a week's zone data was
+incomplete: an area whose `checkZones` call failed outright, or came
+back with one or more genuinely unresolved layers, produced EXACTLY the
+same shape (`tif: null, deadlines: [], notable: false`) as an area
+whose zone data was fully, confidently resolved with nothing due — and
+because only `notable` areas render in the email at all, the WORST case
+(a total lookup failure) was silently DROPPED from the digest entirely,
+with zero indication anything was missing. Sol's ruling: this is the
+exact false-negative class the v1→v2 migration exists to close, not a
+separable UX enhancement — reversing the explicit "documented, not
+silently expanded... out of this correctness fix's scope" judgment call
+made when S16 shipped.
+
+**Fix:**
+- **`AreaAssessment`** gains `zoneDataIncomplete: boolean` — true when
+  one or more zone layers came back `unknown`, `checkZones`
+  failed/returned an unparseable response entirely (a STRICTER
+  incomplete state than a partial-unknown case — zero evidence at all,
+  not just one gap), or the per-area assessment threw. `tif`/`deadlines`
+  stay whatever COULD be resolved — known positives are never discarded
+  just because something else was incomplete, matching the S2/S3
+  "known positives AND an unavailable notice must both render"
+  discipline already established elsewhere in this codebase.
+- **`notable`** is now `Boolean(tif) || deadlines.length > 0 ||
+  zoneDataIncomplete` — an area with zero confirmed findings but
+  incomplete zone data is now ALWAYS notable, specifically so the caveat
+  has somewhere to render instead of the area vanishing from the email
+  with no trace.
+- **`buildDigestEmailHtml`** renders a visible, amber-styled caveat
+  inline within EACH incomplete area's own block ("Some
+  incentive-geography data could not be verified for this location this
+  week...") — present alongside any confirmed findings that block also
+  has (never hiding a known positive), or alone when there are none. A
+  fully-resolved area never renders it.
+
+**Tests added:** `lib/__tests__/watchlist-digest.test.ts` extended from
+12 to 19 tests. The coordinator's TEST requirement verbatim ("v2
+unknown-layer fixtures preserve known positives and produce the caveat,
+never an unqualified complete digest"): a mix of one `matched` + one
+`unknown` layer preserves the matched program's deadline AND sets
+`zoneDataIncomplete: true`; ALL layers unknown produces zero confirmed
+findings but stays `notable: true`; a fully-resolved area (no unknown
+layers) keeps `zoneDataIncomplete: false`; in `buildDigestEmailHtml`,
+the mixed case renders BOTH the deadline and the caveat, the
+zero-findings-but-incomplete case renders the area with ONLY the
+caveat (proving it's never silently dropped), a fully-resolved area
+NEVER renders the caveat, and a multi-area digest confirms one area's
+caveat never bleeds into a separate, fully-resolved area's own block.
+One PRE-EXISTING test ("degrades to no findings when the area's lookups
+fail") asserted `notable: false` on a total lookup failure — the exact
+bug this finding closes — updated to assert `notable: true,
+zoneDataIncomplete: true` instead, the same "a test asserting the old
+bug is not settled, it's stale" precedent used throughout this whole
+review. Verified empirically via `git stash` (the same discipline as
+S13/S18): 8 of 19 assertions fail against the pre-fix code (the updated
+stale-assertion test, both new `assessWatchedArea` unknown-layer tests,
+the fully-resolved control, and all 4 new `buildDigestEmailHtml`
+caveat tests), while the 11 other pre-existing tests remain unaffected;
+all 19 pass against the restored fix.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **326 test files, 4042
+passed, 2 skipped** (up from S21's 326/4035); no regression in
+`app/api/cron/watchlist-digest/route.test.ts`; `npm run
+programs:public:check` clean.
+
+---
+
+## Review 7 — ALL SIX FINDINGS CLOSED (S17–S22)
+
+Every finding in `scratchpad/battle-test/review7-out.md` is now fixed,
+tested, and committed on `feat/eligibility-claims-cutover`. See each
+finding's own section above for its specific fix, judgment calls, and
+test coverage.
+
+Settled/fenced per the coordinator's explicit rulings going into this
+round (restated, not re-litigated): S12 and S15 closed as verified; the
+13-test public-report-safety change ruled strengthened, not weakened;
+the `urlAddress`-only branch confirmed genuinely nonblocking; the
+100-path `PUBLIC_CLAIM_SURFACES_KNOWN_GAPS` baseline accepted as a
+frozen, no-additions ratchet; `/api/programs/engine-source`'s deletion +
+the 3 sanitized replacement routes + the MapView client-side rerun
+removal all confirmed real.
+
+Known, documented boundaries that remain (not silently skipped — each
+flagged in its own section above and restated here):
+- **S20**: the recursive taint tracker (`isTaintedProgramSource`) cannot
+  generally prove an arbitrary `.map()` transform is safe — it only
+  proves the identity `p => p` shape definitely isn't; a real transform
+  is assumed safe rather than analyzed field-by-field. `Pick<Program,
+  ...>`/`Omit<Program, ...>` are excluded from the client-cast guard by
+  construction, not by further verifying the derived type is actually
+  narrow.
+- **S21**: the self-exclusion for `lib/public-claim-surfaces-verify.ts`'s
+  own reason strings is scoped to exactly this one file, by exact path —
+  a future new checker file added under `lib/` with similarly
+  self-descriptive reason strings would need its own exclusion, not
+  inherit this one automatically.
+- **S22**: the caveat is per-area only — there is no additional
+  digest-level summary line (e.g. in the intro paragraph or subject)
+  noting how many areas were affected; a recipient must read into each
+  area's own block to see it.
+
+**Final gate, run at HEAD of `feat/eligibility-claims-cutover`
+(6 commits: S17 `aa715ee`, S18 `f27cf1c`, S19 `e5a0a07`, S20 `73fec46`,
+S21 `c417dd6`, S22 pending):** `npx tsc --noEmit` clean; `npx eslint .`
+— 0 errors, 5 pre-existing warnings; full `npx vitest run` — **326 test
+files, 4042 passed, 2 skipped**; `npm run programs:public:check` clean;
+`git status` clean at each commit boundary; nothing pushed or merged.
