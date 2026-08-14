@@ -10,14 +10,25 @@ import { formatCompactDollars, formatFullDollars, formatAsOf } from "./format";
  *   2. Announced private capital — self-reported development price tags.
  *   3. Reported disbursements — payment evidence from an authoritative source.
  *
- * The third is a deliberately EMPTY slot: no source in this dataset reports
- * payment/receipt yet, so it shows "Not yet reported by any source" — never "$0",
- * which would read as "nothing was paid" rather than "we have no receipt data".
- * The slot exists so the day disbursement data arrives it has a home.
+ * The third card is SCOPE-AWARE (audit finding 6 / consult F5 — this component
+ * is shared by the citywide landing page, every per-community area page, and
+ * the print brief, so one card must never read as though it belongs to all
+ * three). "Closed recovery-program files report [meta.totalRecoveryHistorical]
+ * disbursed" was true citywide but is NOT a per-community figure — no source
+ * attributes recovery disbursements to a single community — so
+ * `disbursement.scope`:
+ *   - "citywide" (landing only) renders the real, meta-derived recovery total
+ *     with the consult's exact sentence.
+ *   - "not-applicable" (every area page + print) explicitly states the figure
+ *     is citywide-only and is not shown here, rather than silently rendering
+ *     a blank slot that could be misread as "this community has none."
  *
- * Beneath the three, a compact row surfaces the new NON-GRANT capital classes —
- * TIF authorized, federal program (CDBG/HOME), tax-credit capital — each labeled
- * with its own noun and NEVER summed with the others or with awarded dollars.
+ * Beneath the three, a compact row surfaces the FOUR non-grant capital classes
+ * — TIF authorized, federal program (CDBG/HOME), tax-credit capital, and the
+ * published state appropriation balance (audit finding 7 / consult F8 — the
+ * public model previously exposed only the first three of five capital
+ * classes) — each labeled with its own noun and NEVER summed with the others
+ * or with awarded dollars.
  *
  * Every dollar carries a status/source badge; the footer carries the as-of date
  * and a coverage link into the methodology rail. Server component: the awarded
@@ -44,14 +55,30 @@ function StatusBadge({ label, tone }: { label: string; tone: "documented" | "ann
   );
 }
 
+/**
+ * The disbursement card's scope (audit finding 6 / consult F5). Required
+ * (not optional-defaulted) so every caller makes an explicit scope decision
+ * rather than silently inheriting a citywide figure it never asked for.
+ */
+export type StatusCardsDisbursement =
+  | { scope: "citywide"; totalRecoveryDisbursed: number }
+  | { scope: "not-applicable" };
+
 export interface StatusCardsProps {
   /** Documented awarded dollars in scope (community-sited on the landing, this
    * community on an area page). */
   awarded: number;
   /** Announced private development capital in scope (a separate measure). */
   announced: number;
-  /** The new non-grant capital classes, each reported under its own noun. */
-  capital: { authorizedTif: number; federalProgram: number; creditCapital: number };
+  /** The four non-grant capital classes, each reported under its own noun
+   * (consult F8 — the fifth, published state appropriation balance, was
+   * previously missing from the public model). */
+  capital: {
+    authorizedTif: number;
+    federalProgram: number;
+    creditCapital: number;
+    publishedStateAppropriation: number;
+  };
   /** ISO timestamp for the as-of line. */
   asOf: string;
   /** Anchor into the methodology / coverage rail on the same page. */
@@ -60,6 +87,8 @@ export interface StatusCardsProps {
   animate?: boolean;
   /** Overrides the awarded card's one-line scope note. */
   awardedNote?: string;
+  /** Scope for the "Reported disbursements" card — see StatusCardsDisbursement. */
+  disbursement: StatusCardsDisbursement;
 }
 
 /** One of the three primary status cards. */
@@ -114,7 +143,15 @@ export function StatusCards({
   coverageHref,
   animate = true,
   awardedNote = "Documented commitments sited to this scope, from public records. An award is a commitment on paper, not proof of receipt.",
+  disbursement,
 }: StatusCardsProps) {
+  const isCitywideDisbursement = disbursement.scope === "citywide";
+  // The consult's exact sentence (F5), with the dollar figure read live from
+  // meta.totalRecoveryHistorical — never a hand-typed literal. formatCompactDollars
+  // renders it in the same compact form the consult itself used.
+  const disbursementNote = isCitywideDisbursement
+    ? `Closed recovery-program files report ${formatCompactDollars(disbursement.totalRecoveryDisbursed)} disbursed; ordinary award, foundation, TIF, HUD, tax-credit, and appropriation sources do not report recipient receipts.`
+    : "Closed recovery-program files report a disbursed total citywide — it is not shown on this page because it does not belong to any single community. Ordinary award, foundation, TIF, HUD, tax-credit, and appropriation sources do not report recipient receipts.";
   return (
     <div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -146,20 +183,46 @@ export function StatusCards({
 
         <StatusCard
           eyebrow="Reported disbursements"
-          badge={<StatusBadge label="Awaiting source" tone="pending" />}
-          note="Payment evidence supplied by an authoritative source. No source in this dataset reports receipts yet, so nothing is shown here rather than a misleading zero."
+          badge={
+            isCitywideDisbursement ? (
+              <StatusBadge label="Disbursed" tone="documented" />
+            ) : (
+              <StatusBadge label="Citywide only" tone="pending" />
+            )
+          }
+          note={disbursementNote}
         >
-          <div className="text-[15px] font-medium leading-snug text-[#0C1B33]/45">
-            Not yet reported by any source
-          </div>
+          {isCitywideDisbursement ? (
+            <div
+              className="text-[clamp(30px,4.4vw,42px)] font-semibold leading-none tracking-tight text-[#0C1B33]"
+              style={{ fontVariantNumeric: "proportional-nums" }}
+            >
+              {animate ? (
+                <CountUpDollars value={disbursement.totalRecoveryDisbursed} />
+              ) : (
+                <span>{formatFullDollars(disbursement.totalRecoveryDisbursed)}</span>
+              )}
+            </div>
+          ) : (
+            <div className="text-[15px] font-medium leading-snug text-[#0C1B33]/45">
+              Not shown on this page — citywide only
+            </div>
+          )}
         </StatusCard>
       </div>
 
-      {/* Non-grant capital classes — each its own noun, never summed. */}
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* Non-grant capital classes — each its own noun, never summed. Four
+          classes (consult F8 — the published state appropriation balance was
+          previously missing from the public model). */}
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <CapitalClassStat label="TIF authorized" value={capital.authorizedTif} badge="Authorized" />
         <CapitalClassStat label="Federal program (CDBG/HOME)" value={capital.federalProgram} badge="Committed" />
         <CapitalClassStat label="Tax-credit capital (LIHTC/NMTC)" value={capital.creditCapital} badge="Allocated" />
+        <CapitalClassStat
+          label="State appropriation"
+          value={capital.publishedStateAppropriation}
+          badge="Published balance"
+        />
       </div>
 
       <p className="mt-3 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">

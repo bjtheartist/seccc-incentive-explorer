@@ -129,7 +129,12 @@ export function YearBars({
           const isYtd = y.year === partialYear;
           const amountText = formatFullDollars(y.awardedDollars);
           const countText = `${formatCount(y.count)} grant${y.count === 1 ? "" : "s"}`;
-          const tip = `${y.year}: ${mode === "amount" ? `${amountText} · ${countText}` : `${countText} · ${amountText}`}${isYtd ? " · year-to-date" : ""}`;
+          // Deliverable 3 (audit finding 11 / consult F8): "year-to-date"
+          // asserts strict calendar YTD, which is only true for the sources
+          // whose year IS a calendar year — a foundation row's year is its
+          // FILER TAX YEAR (often a non-calendar fiscal period), so a bar that
+          // mixes both source kinds cannot honestly claim ordinary YTD.
+          const tip = `${y.year}: ${mode === "amount" ? `${amountText} · ${countText}` : `${countText} · ${amountText}`}${isYtd ? " · partial source/reporting-year coverage" : ""}`;
           return (
             <Group key={y.year} left={xScale(String(y.year)) ?? 0}>
               {h > 0 &&
@@ -158,7 +163,7 @@ export function YearBars({
               </text>
               {isYtd && (
                 <text x={bandW / 2} y={BASELINE + 27} textAnchor="middle" fontSize={8} fill={INK_40} style={{ letterSpacing: "0.06em" }}>
-                  YTD
+                  PARTIAL
                 </text>
               )}
             </Group>
@@ -168,18 +173,23 @@ export function YearBars({
 
       <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/40">
         {hasYtd ? `${partialYear} is partial through ${formatAsOf(generatedAt)} (hatched). ` : ""}
-        Per-year coverage is uneven: City completion records (NOF/SBIF) and grant rounds (CDG) enter on
-        different cadences than foundation 990 filings, so a low year can reflect reporting lag rather than
-        less money.
+        Each bar is grouped by <strong className="font-medium text-[#0C1B33]/55">source/reporting year</strong> —
+        the award, completion, or program year for most sources, or the filer&rsquo;s own IRS tax year for
+        foundation rows (often not a calendar year). Per-year coverage is uneven: City completion records
+        (NOF/SBIF) and grant rounds (CDG) enter on different cadences than foundation 990 filings, so a low
+        year can reflect reporting lag rather than less money.
       </p>
 
       {hasYtd ? (
         <div className="mt-3 border-l-2 border-[#A45B00]/45 bg-[#FFF4DD]/55 px-3 py-2">
           <span className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8A4B00]">
-            {partialYear} · Partial year
+            {partialYear} · Partial source/reporting-year coverage
           </span>
           <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/55">
-            Export as of {formatAsOf(generatedAt)}. Later source publications are not inferred.
+            Export as of {formatAsOf(generatedAt)}. Later source publications are not inferred. This is NOT
+            ordinary calendar year-to-date for every bar in this column: a foundation grant here is grouped by
+            its own filer tax year, which may already be a complete (non-calendar) fiscal period rather than a
+            still-accumulating one.
           </p>
         </div>
       ) : null}

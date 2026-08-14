@@ -181,10 +181,15 @@ export default async function InvestmentAreaPage({
                   authorizedTif: analysis.authorizedTif,
                   federalProgram: analysis.federalProgram,
                   creditCapital: analysis.creditCapital,
+                  publishedStateAppropriation: meta?.totalPublishedStateAppropriation ?? 0,
                 }}
                 asOf={analysis.generatedAt}
                 coverageHref="#methodology"
                 awardedNote={`${analysis.recordCount} grants & projects · ${rangeLabel}. Documented commitments from public records; an award is a commitment on paper, not proof of receipt.`}
+                // Scope-aware (audit finding 6 / consult F5): the citywide
+                // recovery-disbursement total is never per-community — this
+                // page must not imply it belongs to this community.
+                disbursement={{ scope: "not-applicable" }}
               />
             </div>
 
@@ -208,7 +213,8 @@ export default async function InvestmentAreaPage({
               </p>
               <SourceBars bySource={analysis.bySource} />
               <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
-                Development projects are counted, not dollared.
+                Development projects are counted; development capital is reported separately as announced
+                capital and excluded from awarded totals.
               </p>
             </Section>
 
@@ -319,7 +325,21 @@ export default async function InvestmentAreaPage({
 
             {/* 8 — Methodology */}
             <Section title="Methodology" id="methodology">
-              <Methodology sources={sources} generatedAt={analysis.generatedAt} />
+              <Methodology
+                sources={sources}
+                generatedAt={analysis.generatedAt}
+                dedupe={
+                  meta
+                    ? {
+                        candidateGroups: meta.dedupeCandidateGroups,
+                        collapsedRows: meta.dedupeCollapsedRows,
+                        collapsedDollars: meta.dedupeCollapsedDollars,
+                        keptFlaggedGroups: meta.dedupeKeptFlaggedGroups,
+                        keptFlaggedRows: meta.dedupeKeptFlaggedRows,
+                      }
+                    : undefined
+                }
+              />
             </Section>
 
             <ComparePinBar />

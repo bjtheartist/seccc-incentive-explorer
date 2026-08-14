@@ -157,7 +157,9 @@ export default async function InvestmentBriefPrintPage({
 
   // Missing-data warnings — dataset-level honesty for the packet's second page.
   const warnings: string[] = [];
-  warnings.push("Reported disbursements: no source in this dataset reports receipts yet, so payment evidence is not shown.");
+  warnings.push(
+    "Reported disbursements: closed recovery-program files report a disbursed total citywide (see /investment); ordinary award, foundation, TIF, HUD, tax-credit, and appropriation sources do not report recipient receipts, and no disbursement figure is shown for a single community.",
+  );
   warnings.push("Per-resident awarded dollars are withheld — there is no community-area population join, so a per-capita figure would be fabricated.");
   warnings.push("Foundation figures come from IRS 990 filings with a 1–2 year reporting lag, so the most recent grants are undercounted.");
   warnings.push("Citywide and intermediary commitments that never land in a single neighborhood are excluded from this community's totals.");
@@ -208,11 +210,16 @@ export default async function InvestmentBriefPrintPage({
                     authorizedTif: analysis.authorizedTif,
                     federalProgram: analysis.federalProgram,
                     creditCapital: analysis.creditCapital,
+                    publishedStateAppropriation: meta?.totalPublishedStateAppropriation ?? 0,
                   }}
                   asOf={analysis.generatedAt}
                   coverageHref="#brief-methodology"
                   animate={false}
                   awardedNote={`${analysis.recordCount} grants & projects since 2020. Documented commitments from public records; an award is a commitment on paper, not proof of receipt.`}
+                  // Scope-aware (audit finding 6 / consult F5): a per-community
+                  // meeting packet must not imply the citywide recovery total
+                  // belongs to this community.
+                  disbursement={{ scope: "not-applicable" }}
                 />
               </div>
 
@@ -337,7 +344,21 @@ export default async function InvestmentBriefPrintPage({
 
                 <div id="brief-methodology" className="mt-6 scroll-mt-6">
                   <Section title="Methodology">
-                    <Methodology sources={sources} generatedAt={analysis.generatedAt} />
+                    <Methodology
+                      sources={sources}
+                      generatedAt={analysis.generatedAt}
+                      dedupe={
+                        meta
+                          ? {
+                              candidateGroups: meta.dedupeCandidateGroups,
+                              collapsedRows: meta.dedupeCollapsedRows,
+                              collapsedDollars: meta.dedupeCollapsedDollars,
+                              keptFlaggedGroups: meta.dedupeKeptFlaggedGroups,
+                              keptFlaggedRows: meta.dedupeKeptFlaggedRows,
+                            }
+                          : undefined
+                      }
+                    />
                   </Section>
                 </div>
 

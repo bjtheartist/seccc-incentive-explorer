@@ -7,7 +7,7 @@ import {
   loadMajorDevelopments,
 } from "@/lib/investment-analysis";
 import { buildSourceCoverageRows } from "@/lib/investment-source-coverage";
-import { formatCount, formatAsOf } from "@/components/investment/format";
+import { formatCount, formatAsOf, formatFullDollars, formatPercent } from "@/components/investment/format";
 import { StatusCards } from "@/components/investment/StatusCards";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { ComparePinBar } from "@/components/investment/PinControls";
@@ -71,7 +71,9 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
           Investment &amp; Impact
         </span>
-        <h1 className="mt-3 font-editorial text-[44px] leading-none sm:text-[56px]">Where the money went</h1>
+        <h1 className="mt-3 font-editorial text-[44px] leading-none sm:text-[56px]">
+          Where award recipients are located
+        </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
           Grants, awards, and development sited into Chicago&rsquo;s community areas since 2020 — government,
           philanthropic, and private capital, from public records. Admin-only; never shown to public visitors.
@@ -95,10 +97,15 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                   authorizedTif: meta?.totalAuthorizedTif ?? 0,
                   federalProgram: meta?.totalFederalProgram ?? 0,
                   creditCapital: meta?.totalCreditCapital ?? 0,
+                  publishedStateAppropriation: meta?.totalPublishedStateAppropriation ?? 0,
                 }}
                 asOf={index.generatedAt}
                 coverageHref="#coverage"
                 awardedNote={`Community-sited awarded dollars across ${formatCount(index.communityCount)} communities since 2020, from public records. An award is a commitment on paper, not proof of receipt.`}
+                disbursement={{
+                  scope: "citywide",
+                  totalRecoveryDisbursed: meta?.totalRecoveryHistorical ?? 0,
+                }}
               />
             </div>
 
@@ -120,6 +127,30 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 About this data
               </a>
             </p>
+
+            {/* The full-awarded → displayed-hero bridge (audit finding 8 /
+                consult F3 + Q4). The hero above is "community-sited since
+                2020," a deliberate NARROWER slice of the full awarded total —
+                this states the arithmetic in disjoint order, entirely from
+                meta.bridge* (PR1 guarantees these exist), so the delta is
+                never left implicit or hand-typed. */}
+            {meta ? (
+              <p className="mt-3 border-b border-[#0C1B33]/10 bg-white px-4 py-2.5 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                Full awarded dollars:{" "}
+                <strong className="font-semibold text-[#0C1B33]">
+                  {formatFullDollars(meta.bridgeFullAwardedDollars)}
+                </strong>{" "}
+                across {formatCount(meta.bridgeFullAwardedRows)} rows −{" "}
+                {formatFullDollars(meta.bridgeNoCommunityAreaDollars)} in{" "}
+                {formatCount(meta.bridgeNoCommunityAreaRows)} rows with no community area −{" "}
+                {formatFullDollars(meta.bridgePre2020SitedDollars)} in{" "}
+                {formatCount(meta.bridgePre2020SitedRows)} community-sited rows before 2020 ={" "}
+                <strong className="font-semibold text-[#0C1B33]">
+                  {formatFullDollars(meta.bridgeDisplayedHeroDollars)}
+                </strong>{" "}
+                displayed above.
+              </p>
+            ) : null}
 
             {/* Start here — three task paths, each ending in an artifact. The
                 battle-test's core verdict (Sol #6): the page opened with data
@@ -164,6 +195,26 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               <div className="mb-3">
                 <h2 className="font-editorial text-[26px]">Communities by awarded dollars</h2>
               </div>
+              {/* Rank disclosure (audit finding 5 / consult Q4), read live from
+                  the #1 row's own foundationDollars — never a hand-typed
+                  literal, and correct for whichever community currently ranks
+                  first. Full per-community quantification lives on the area
+                  page's "How it compares" card (EquityContext); this general
+                  clause carries the same warning at the point a reader first
+                  sees the ranking. */}
+              <p className="mb-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                This ranks recipient-location concentrations, not neighborhood impact: a point may be a
+                grantee headquarters or administrative address rather than the funded site.
+                {index.rows[0] && index.rows[0].foundationDollars > 0 ? (
+                  <>
+                    {" "}
+                    In {index.rows[0].communityArea}, the top-ranked community, foundation rows account for{" "}
+                    {formatFullDollars(index.rows[0].foundationDollars)} of{" "}
+                    {formatFullDollars(index.rows[0].totalAwarded)} (
+                    {formatPercent(index.rows[0].foundationDollars / index.rows[0].totalAwarded, 1)}).
+                  </>
+                ) : null}
+              </p>
               <CommunityRankingList
                 rows={index.rows.map((row) => ({
                   communityArea: row.communityArea,
@@ -257,6 +308,36 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                     <div className="mt-4">
                       <SourceCoverageMatrix rows={coverageRows} generatedAt={investment.generatedAt} />
                     </div>
+                  </section>
+                ) : null}
+
+                {/* Dedupe ledger (audit finding 4 / consult F4 + Q1) — the
+                    ACTUAL contract: keep-with-flag is the default, and a
+                    candidate group collapses ONLY when the filing itself
+                    proves identity (same filing/schedule/row locator, a
+                    repeated award id, or an amendment supersession) — never
+                    merely because funder/recipient/address/amount/purpose/
+                    year all match. Every figure below reads meta.dedupe*
+                    (PR1 guarantees these exist). */}
+                {meta && meta.dedupeCandidateGroups > 0 ? (
+                  <section className="mt-8">
+                    <h2 className="font-editorial text-[22px]">Foundation duplicate review</h2>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
+                      A source-keyed scan (funder, recipient, address, amount, purpose, and tax year) found{" "}
+                      {formatCount(meta.dedupeCandidateGroups)} groups of indistinguishable foundation rows.
+                      Identical funder/recipient/address/amount/purpose/year alone is never sufficient to
+                      collapse a group — only the filing itself proving the same source line (a repeated
+                      filing/schedule/row locator, a repeated award id, or an amendment supersession) does.
+                    </p>
+                    <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
+                      {formatCount(meta.dedupeCollapsedRows)} rows ({formatFullDollars(meta.dedupeCollapsedDollars)})
+                      were confirmed duplicates and collapsed.{" "}
+                      {formatCount(meta.dedupeKeptFlaggedRows)} rows across{" "}
+                      {formatCount(meta.dedupeKeptFlaggedGroups)} groups ({formatFullDollars(meta.dedupeKeptFlaggedDollars)}
+                      ) were kept in every total below and flagged &ldquo;Two source line items; award-level
+                      distinctness not independently verified&rdquo; — visible on the record itself, never
+                      silently deleted.
+                    </p>
                   </section>
                 ) : null}
               </div>

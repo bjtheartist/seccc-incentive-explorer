@@ -85,6 +85,17 @@ describe("buildInvestmentIndex", () => {
       ["Alpha", 350000],
     ]);
   });
+
+  it("computes foundationDollars live per row (audit finding 5 / consult Q4) — never a hand-typed literal", () => {
+    const alpha = index.rows.find((r) => r.communityArea === "Alpha")!;
+    const beta = index.rows.find((r) => r.communityArea === "Beta")!;
+    // Alpha: only a3 ($50k, 2023, foundation) is in-window philanthropic — the
+    // pre-2020 a4 ($999k) and null-year a6 ($30k) are excluded, matching the
+    // same in-window basis as totalAwarded.
+    expect(alpha.foundationDollars).toBe(50000);
+    // Beta has no philanthropic record at all.
+    expect(beta.foundationDollars).toBe(0);
+  });
 });
 
 describe("analyzeCommunityArea — Alpha", () => {
@@ -157,6 +168,13 @@ describe("analyzeCommunityArea — Alpha", () => {
     expect(a.equity.thisVsMedian).toBeCloseTo(350000 / 425000, 10);
     expect(a.equity.citywideTotal).toBe(850000);
     expect(a.equity.share).toBeCloseTo(350000 / 850000, 10);
+  });
+
+  it("computes the rank disclosure's foundation-share stat live (audit finding 5 / consult Q4)", () => {
+    // Same basis as the buildInvestmentIndex row above: only a3 ($50k) is
+    // in-window philanthropic.
+    expect(a.equity.foundationDollars).toBe(50000);
+    expect(a.equity.foundationShare).toBeCloseTo(50000 / 350000, 10);
   });
 
   it("produces an output shape free of banned derived-figure keys", () => {
