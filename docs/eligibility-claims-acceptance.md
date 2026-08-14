@@ -2512,3 +2512,65 @@ raw-Program/v1-zone violations" test — which FAILED with 2 real
 violations partway through this fix — now passes clean; no regression
 in `public-report-display.test.tsx` or `report-navigation-links.test.tsx`;
 `npm run programs:public:check` clean.
+
+---
+
+### S21 (MEDIUM) — the v1-endpoint scanner examined only a template's head, missing the committed `lib/data.ts` shape
+
+**Finding:** review6/7's `verifyNoV1ZoneUsage` v1-endpoint check only
+inspected `templateExpr.getHead().getText()` — correct for a template
+STARTING with literal text (`` `/api/zones/check?lat=${lat}` ``), but it
+missed the equally realistic (and, per this finding, actually
+COMMITTED) shape where an interpolation comes FIRST:
+`` `${API_BASE}/api/zones/check?lat=${lat}&lon=${lon}` `` in
+`lib/data.ts`'s `checkZonesAPI` — the endpoint text lives in a later
+template SPAN, never the head, so the check silently passed it every
+time.
+
+**Fix:** the scanner now inspects EVERY static fragment of a template
+expression — the head AND every span's literal portion
+(`templateExpr.getTemplateSpans().map((span) => span.getLiteral().getText())`)
+— so the v1 endpoint text is caught regardless of which interpolation
+slot it falls after.
+
+**`checkZonesAPI` removed outright, not migrated:** a repo-wide grep
+confirmed it had ZERO callers anywhere in the codebase — genuinely dead
+code. Migrating a function nobody calls to v2 would have preserved a
+dead v1-shaped function under a new name; removing it entirely closes
+the anti-pattern instead of relocating it. Also removed the now-fully-
+unused `ZoneCheckResult` type (the v1 `{key, name}` positives-only
+shape) from `lib/types.ts` and its import in `lib/data.ts` — confirmed
+via repo-wide grep that `checkZonesAPI` was its only consumer.
+
+**Judgment call — a genuine false positive found and fixed during this
+finding's own implementation, the same precedent every prior finding in
+this review round established:** the STRENGTHENED span-aware scan, once
+built, immediately flagged `lib/public-claim-surfaces-verify.ts` ITSELF
+for its own reason-message template strings — `` `${relative}:${...} references the v1 zone-check HTTP endpoint "/api/zones/check" (without /v2)...` `` — descriptive prose ABOUT the v1 endpoint, not an
+actual call to it. The exact same reflexive problem
+`lib/source-guard/scan.ts` already excludes its own directory for ("a
+phrase list necessarily CONTAINS the phrases it's matching against").
+Added a matching self-exclusion (`SELF_EXCLUDED_RELATIVE_PATH`) scoped
+narrowly to the three repo-wide checks this file's own reason strings
+could trip — confirmed this file is never itself a registered
+`PUBLIC_CLAIM_SURFACES` entry, so the exclusion has zero effect on the
+S10 registry-scoped checks.
+
+**Tests added:** `lib/__tests__/public-claim-surfaces.test.ts` extended
+from 46 to 49 tests. TEST 3c (S21) is the coordinator's TEST requirement
+verbatim: a prefix-interpolated v1 endpoint (the exact `lib/data.ts`
+shape, interpolation BEFORE the endpoint text) in a fixture that is NOT
+a registered surface FAILS, proving the repo-wide check catches it
+independently of registry membership; CONTROL 3c proves the same shape
+migrated to v2 passes; one more test confirms a v1 endpoint in the
+FINAL tail span (after the last interpolation, not just a middle span)
+is also caught. The self-exclusion fix's own correctness is proven by
+the existing real-codebase "zero violations" test, which failed with 2
+false positives from this file's own strings partway through this fix
+and now passes clean.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **326 test files, 4035
+passed, 2 skipped** (up from S20's 326/4032); `npm run
+programs:public:check` clean (unaffected — this finding touches only
+dead-code removal and the scanner's own implementation).

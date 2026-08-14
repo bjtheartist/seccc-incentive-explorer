@@ -750,10 +750,10 @@ export interface LookupResult {
   parcel?: ParcelData;
 }
 
-export interface ZoneCheckResult {
-  key: string;
-  name: string;
-}
+// review7 S21 (MEDIUM): `ZoneCheckResult` removed — it was the v1
+// positives-only-array shape (`{key, name}`), used only by
+// lib/data.ts's now-deleted, zero-caller `checkZonesAPI` function. See
+// that removal's own comment for the full rationale.
 
 export interface CommunityAsset {
   id: string;

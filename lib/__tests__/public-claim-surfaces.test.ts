@@ -461,6 +461,59 @@ describe("public-claim-surfaces-verify — S16 fixture-based failure proof", () 
     expect(verifyNoV1ZoneUsage(project, "/fixture-root")).toEqual([]);
   });
 
+  /**
+   * review7 S21 (MEDIUM) — "the v1-endpoint scanner examines only an
+   * interpolated template's HEAD. It misses the currently committed
+   * `${API_BASE}/api/zones/check?...` because the endpoint is in a
+   * LATER template span." TEST (verbatim): "a prefix-interpolated v1
+   * endpoint must fail independently of registry membership" — this
+   * fixture is NOT a registered surface, proving the repo-wide check
+   * catches it regardless.
+   */
+  it("TEST 3c (S21): a PREFIX-INTERPOLATED v1 endpoint — the exact lib/data.ts shape, interpolation BEFORE the endpoint text — FAILS", () => {
+    const project = makeFixtureProject();
+    project.createSourceFile(
+      "/fixture-root/lib/some-new-zone-helper.ts",
+      [
+        `const API_BASE = "";`,
+        `export async function checkZonesAPI(lat: number, lon: number) {`,
+        `  return fetch(\`\${API_BASE}/api/zones/check?lat=\${lat}&lon=\${lon}\`);`,
+        `}`,
+      ].join("\n"),
+    );
+    const violations = verifyNoV1ZoneUsage(project, "/fixture-root");
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toContain("/api/zones/check");
+  });
+
+  it("CONTROL 3c: the SAME prefix-interpolated shape, migrated to v2, PASSES", () => {
+    const project = makeFixtureProject();
+    project.createSourceFile(
+      "/fixture-root/lib/some-new-zone-helper.ts",
+      [
+        `const API_BASE = "";`,
+        `export async function checkZonesAPI(lat: number, lon: number) {`,
+        `  return fetch(\`\${API_BASE}/api/zones/check/v2?lat=\${lat}&lon=\${lon}\`);`,
+        `}`,
+      ].join("\n"),
+    );
+    expect(verifyNoV1ZoneUsage(project, "/fixture-root")).toEqual([]);
+  });
+
+  it("a v1 endpoint appearing in the FINAL tail span (after the last interpolation) also FAILS", () => {
+    const project = makeFixtureProject();
+    project.createSourceFile(
+      "/fixture-root/lib/some-new-zone-helper.ts",
+      [
+        `const BASE = "https://example.com";`,
+        `export async function checkZones(qs: string) {`,
+        `  return fetch(\`\${BASE}/proxy?target=/api/zones/check\`);`,
+        `}`,
+      ].join("\n"),
+    );
+    expect(verifyNoV1ZoneUsage(project, "/fixture-root")).toHaveLength(1);
+  });
+
   it("TEST 4: a new unregistered page/route FAILS discovery", () => {
     const violations = findUnregisteredPublicSinks(
       ["app/some-brand-new-feature/page.tsx"],

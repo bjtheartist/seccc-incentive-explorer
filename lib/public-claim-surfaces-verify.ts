@@ -261,12 +261,26 @@ export interface RepoWideViolation {
 
 const V1_ZONE_ENDPOINT_PATTERN = /\/api\/zones\/check(?!\/v2)(?:["'`?]|$)/;
 
+// review7 S21 (MEDIUM): this file's OWN reason-message strings
+// necessarily contain the literal text these repo-wide checks scan
+// for ("/api/zones/check", "getProgramsSync()", "Program", etc.) —
+// the same reflexive problem `lib/source-guard/scan.ts` already
+// excludes its own directory for ("a phrase list necessarily CONTAINS
+// the phrases it's matching against"). Confirmed as a real false
+// positive during this finding's own implementation: strengthening the
+// v1-endpoint scan to inspect every template SPAN (not just the head)
+// made it catch this file's OWN `"...references the v1 zone-check HTTP
+// endpoint \"/api/zones/check\"..."` reason strings, which are
+// descriptive prose, not an actual endpoint call.
+const SELF_EXCLUDED_RELATIVE_PATH = "lib/public-claim-surfaces-verify.ts";
+
 function isAppComponentsLibSourceFile(sf: SourceFile, rootDir: string): boolean {
   const path = sf.getFilePath();
   if (!path.startsWith(rootDir)) return false;
   const relative = path.slice(rootDir.length).replace(/^[/\\]/, "");
   if (!/^(app|components|lib)\//.test(relative)) return false;
   if (relative.includes("__tests__") || /\.test\.tsx?$/.test(relative)) return false;
+  if (relative === SELF_EXCLUDED_RELATIVE_PATH) return false;
   return true;
 }
 
@@ -620,8 +634,23 @@ export function verifyNoV1ZoneUsage(project: Project, rootDir: string): RepoWide
       }
     }
     for (const templateExpr of sf.getDescendantsOfKind(SyntaxKind.TemplateExpression)) {
-      const head = templateExpr.getHead().getText();
-      if (V1_ZONE_ENDPOINT_PATTERN.test(head)) {
+      // review7 S21 (MEDIUM): was `templateExpr.getHead().getText()`
+      // ONLY — correct for a template starting with the literal text
+      // (`` `/api/zones/check?lat=${lat}` ``), but MISSED the equally
+      // realistic shape where an interpolation comes FIRST
+      // (`` `${API_BASE}/api/zones/check?lat=${lat}&lon=${lon}` `` —
+      // the committed lib/data.ts shape this finding is named for),
+      // where the endpoint text lives in a later SPAN's literal
+      // fragment, not the head. Every static fragment of the template
+      // — the head AND every span's literal portion — is checked now,
+      // so the endpoint text is caught no matter which interpolation
+      // slot it falls after.
+      const fragments = [
+        templateExpr.getHead().getText(),
+        ...templateExpr.getTemplateSpans().map((span) => span.getLiteral().getText()),
+      ];
+      const hasV1Endpoint = fragments.some((fragment) => V1_ZONE_ENDPOINT_PATTERN.test(fragment));
+      if (hasV1Endpoint) {
         violations.push({
           check: "no-v1-zone-usage",
           filePath: relative,
