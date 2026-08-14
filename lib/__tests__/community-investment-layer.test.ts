@@ -8,6 +8,7 @@ import {
   fetchCommunityInvestmentLayer,
   fetchCountyReliefRecipients,
   fetchHistoricalRecoveryRecipients,
+  fetchInvestmentRecipientRecord,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
@@ -20,18 +21,29 @@ import {
   summarizeCitywideInvestment,
   buildMegaprojectFeatures,
   citywideDevelopmentProjectNames,
+  investmentPopupOutOfScope,
+  investmentRevealButtonLoadingState,
+  investmentRevealButtonOutOfScopeState,
+  investmentRevealButtonStateForResult,
+  InvestmentPopupTracker,
   makeMegaprojectRadiusScale,
+  matchesInvestmentFilter,
   megaprojectStatusGroup,
   summarizeMegaprojects,
   truncateMegaprojectLabel,
+  zipAggregateOverlaySourceInScope,
   MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL,
   MEGAPROJECT_LABEL_MAX_CHARS,
   MEGAPROJECT_RADIUS_MAX,
   MEGAPROJECT_RADIUS_MIN,
   MEGAPROJECT_STATUS_GROUPS,
   MEGAPROJECT_STATUS_GROUP_BY_STATUS,
+  type InvestmentFilterDimensions,
   type InvestmentPointFeature,
+  type InvestmentPopupLike,
+  type InvestmentRecipientRecordStatus,
 } from "@/lib/community-investment-layer";
+import type { FunderType } from "@/lib/community-investment";
 
 /**
  * Unit coverage for the client-safe Community Investment map-layer helpers,
@@ -261,6 +273,438 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
       activeGovernmentFundingPurposes: ["programmatic"],
     });
     expect(programmaticOnly).toEqual({ count: 1, totalDollars: 250_000 });
+  });
+});
+
+describe("matchesInvestmentFilter (deliverable 2 — the ONE overlay predicate)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+
+  it("passes a record inside the year window, active funderType, and active purpose", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "2020-2021", activeFunderTypes: allFunderTypes },
+      ),
+    ).toBe(true);
+  });
+
+  it("fails a record outside the active year window", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2020, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "2022-2023", activeFunderTypes: allFunderTypes },
+      ),
+    ).toBe(false);
+  });
+
+  it("fails a record whose funderType checkbox is off", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "programmatic" },
+        { yearRangeId: "all", activeFunderTypes: ["philanthropic", "private_development"] },
+      ),
+    ).toBe(false);
+  });
+
+  it("fails a government record whose purpose checkbox is off, without affecting non-government funderTypes", () => {
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "government", governmentFundingPurpose: "capital_project" },
+        {
+          yearRangeId: "all",
+          activeFunderTypes: allFunderTypes,
+          activeGovernmentFundingPurposes: ["programmatic"],
+        },
+      ),
+    ).toBe(false);
+    expect(
+      matchesInvestmentFilter(
+        { year: 2021, funderType: "philanthropic", governmentFundingPurpose: null },
+        {
+          yearRangeId: "all",
+          activeFunderTypes: allFunderTypes,
+          activeGovernmentFundingPurposes: ["programmatic"],
+        },
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("investmentPopupOutOfScope (Sol gate blocker 1 — open popup/panel retention)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+
+  it("an ACTUAL 2021 RRF point popup survives under 'All', then closes on a 2024–2026 selection — the exact reproduction", () => {
+    // Mirrors a real sba-rrf point feature's properties (InvestmentPointProps):
+    // funderType is always "government", governmentFundingPurpose is always
+    // "programmatic" (lib/government-funding-purpose.ts SOURCE_GOVERNMENT_FUNDING_PURPOSE),
+    // year varies per record from the published approval date — this one is 2021.
+    const rrf2021: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf2021, { yearRangeId: "all", activeFunderTypes: allFunderTypes }),
+    ).toBe(false); // survives — still in scope
+    expect(
+      investmentPopupOutOfScope(rrf2021, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true); // closes — the year filter now excludes it
+  });
+
+  it("cook-source-2023 (fixed 2023) closes on a 2024–2026 selection", () => {
+    const cook: InvestmentFilterDimensions = {
+      year: 2023,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(cook, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+    expect(
+      investmentPopupOutOfScope(cook, { yearRangeId: "2022-2023", activeFunderTypes: allFunderTypes }),
+    ).toBe(false);
+  });
+
+  it("illinois-big (fixed 2020) closes on a 2024–2026 selection", () => {
+    const big: InvestmentFilterDimensions = {
+      year: 2020,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(big, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+  });
+
+  it("illinois-b2b (fixed 2022) closes on a 2024–2026 selection", () => {
+    const b2b: InvestmentFilterDimensions = {
+      year: 2022,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(b2b, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(true);
+  });
+
+  it("closes on a purpose-checkbox change, not just a year change", () => {
+    const rrf: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf, {
+        yearRangeId: "all",
+        activeFunderTypes: allFunderTypes,
+        activeGovernmentFundingPurposes: ["capital_project"],
+      }),
+    ).toBe(true);
+  });
+
+  it("closes on a funderType-checkbox change", () => {
+    const rrf: InvestmentFilterDimensions = {
+      year: 2021,
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
+    };
+    expect(
+      investmentPopupOutOfScope(rrf, {
+        yearRangeId: "all",
+        activeFunderTypes: ["philanthropic", "private_development"],
+      }),
+    ).toBe(true);
+  });
+
+  it("a non-filter-scoped popup (dims === null — owner-cluster or Megaprojects) never closes", () => {
+    expect(
+      investmentPopupOutOfScope(null, { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes }),
+    ).toBe(false);
+  });
+});
+
+/**
+ * Sol gate round 2 finding 1 / round 3 durability follow-up — the Mapbox
+ * popup-REUSE lifecycle hole. `MockMapboxPopup` is a minimal, FAITHFUL
+ * emulation of the real mapbox-gl-js 3.18.1 `Popup` class's
+ * addTo()/remove()/close semantics — verified directly against the
+ * INSTALLED package source, node_modules/mapbox-gl/dist/mapbox-gl-unminified.js:
+ *
+ *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); return this; }
+ *   remove() { ...; this.fire(new Event('close')); return this; }
+ *
+ * Two load-bearing behaviors, both reproduced exactly:
+ *   1. `.addTo()` on an ALREADY-attached popup calls `remove()` FIRST
+ *      (synchronously firing "close" for whatever was previously showing)
+ *      and only THEN re-attaches — reusing the shared popup for a new
+ *      feature fires "close" for the OLD content as a side effect of
+ *      opening the NEW one.
+ *   2. `remove()` ALWAYS fires "close" — UNCONDITIONALLY, even when the
+ *      popup was never attached (`_map` already undefined). Round 2's mock
+ *      wrongly gated this behind an `attached` check (a real divergence Sol
+ *      round 3 caught); this version fires every time, matching the source.
+ */
+class MockMapboxPopup implements InvestmentPopupLike {
+  private closeHandlers: Array<() => void> = [];
+
+  once(event: "close", handler: () => void): void {
+    if (event !== "close") return;
+    const wrapped = () => {
+      this.closeHandlers = this.closeHandlers.filter((h) => h !== wrapped);
+      handler();
+    };
+    this.closeHandlers.push(wrapped);
+  }
+
+  /** Mirrors mapbox-gl-js 3.18.1 Popup.addTo(): remove() FIRST if already attached. */
+  addTo(_map: unknown): this {
+    if (this.attached) this.remove();
+    this.attached = true;
+    return this;
+  }
+
+  /** Mirrors mapbox-gl-js 3.18.1 Popup.remove(): fires "close" UNCONDITIONALLY. */
+  remove(): this {
+    this.attached = false;
+    const handlers = this.closeHandlers;
+    this.closeHandlers = [];
+    for (const handler of handlers) handler();
+    return this;
+  }
+
+  private attached = false;
+
+  isAttached(): boolean {
+    return this.attached;
+  }
+}
+
+describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse lifecycle)", () => {
+  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+  const ALL_FILTER = { yearRangeId: "all", activeFunderTypes: allFunderTypes };
+  const FILTER_2024_2026 = { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes };
+
+  // An ACTUAL 2021 RRF feature's dimensions (mirrors a real sba-rrf point:
+  // funderType always "government", governmentFundingPurpose always
+  // "programmatic" per SOURCE_GOVERNMENT_FUNDING_PURPOSE — only `year` varies
+  // per record, from the published approval date).
+  const RRF_2021: InvestmentFilterDimensions = {
+    year: 2021,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  };
+  const RRF_2022: InvestmentFilterDimensions = {
+    year: 2022,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  };
+
+  // A stand-in for mapboxgl.Map — the tracker/mock never inspect it, only
+  // forward it to addTo(), so any stable reference works.
+  const MOCK_MAP = { id: "mock-map" };
+
+  it("open() performs addTo() ITSELF, in the correct order, so a caller cannot get the ordering wrong (Sol gate round 3 — structural fix)", () => {
+    // tracker.open() is the ONLY way to attach+track a popup through this
+    // class — there is no separate register-only method a caller could call
+    // AFTER its own .addTo(), so the round-1/round-2 ordering bug (a close
+    // listener registered before addTo, self-consumed by the very open it
+    // was meant to track) is impossible by construction, not convention.
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+
+    const tokenA = tracker.open(popup, MOCK_MAP, RRF_2021);
+    expect(popup.isAttached()).toBe(true);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+
+    // Reuse: open B on the SAME popup instance via the SAME single call.
+    // Internally this calls popup.addTo(MOCK_MAP) again, which — per the
+    // corrected mock (matching mapbox-gl 3.18.1 exactly) — calls remove()
+    // FIRST, firing "close" for A SYNCHRONOUSLY, before open() registers B's
+    // own close listener.
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2022);
+
+    expect(tokenB).not.toBe(tokenA);
+    // (i) After the A→B reuse, the tracker still holds B's dims — not wiped
+    // by A's stale close, and not self-consumed by B's own registration.
+    expect(tracker.getActiveDims()).toEqual(RRF_2022);
+    expect(tracker.isActiveToken(tokenB)).toBe(true);
+    expect(tracker.isActiveToken(tokenA)).toBe(false);
+  });
+
+  it("(ii) a filter change that excludes B's record closes it and aborts B's in-flight reveal", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+
+    tracker.open(popup, MOCK_MAP, RRF_2021); // A
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2022); // B, reuse — A's stale close fires inside this call
+
+    // B has an in-flight reveal fetch.
+    const controllerB = new AbortController();
+    tracker.startReveal(tokenB, controllerB);
+    expect(tracker.hasInFlightReveal()).toBe(true);
+    expect(controllerB.signal.aborted).toBe(false);
+
+    // A 2024–2026 filter excludes B's 2022 record.
+    const closed = tracker.closeIfOutOfScope(FILTER_2024_2026, () => popup.remove());
+    expect(closed).toBe(true);
+    expect(popup.isAttached()).toBe(false);
+    expect(controllerB.signal.aborted).toBe(true);
+    expect(tracker.hasInFlightReveal()).toBe(false);
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("(iii) THE ORIGINAL REPRO: a real 2021 RRF popup, replaced via reuse then filtered by 2024–2026, ends closed with no reveal completion", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+
+    // Open the 2021 RRF popup (A).
+    tracker.open(popup, MOCK_MAP, RRF_2021);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+
+    // Replaced via reuse by a different RRF point, B — also 2021, so it
+    // stays in scope under "All" (proves the reuse itself doesn't spuriously
+    // close anything survivable).
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2021);
+    expect(tracker.getActiveDims()).toEqual(RRF_2021);
+    expect(tracker.isActiveToken(tokenB)).toBe(true);
+
+    // B's admin starts a reveal fetch.
+    const controllerB = new AbortController();
+    let revealCompleted = false;
+    tracker.startReveal(tokenB, controllerB);
+    controllerB.signal.addEventListener("abort", () => {
+      // Simulates the real .then() guard: `if (controller.signal.aborted) return;`
+      revealCompleted = false;
+    });
+
+    // The admin selects 2024–2026 — excludes B's 2021 record.
+    const closed = tracker.closeIfOutOfScope(FILTER_2024_2026, () => popup.remove());
+
+    expect(closed).toBe(true);
+    expect(popup.isAttached()).toBe(false);
+    expect(controllerB.signal.aborted).toBe(true);
+    // The reveal never lands — its .then() would see signal.aborted and bail.
+    expect(revealCompleted).toBe(false);
+    expect(tracker.hasInFlightReveal()).toBe(false);
+    expect(tracker.getActiveDims()).toBeNull();
+    // And re-opening under "All" again confirms the tracker is in a clean
+    // state, not stuck from the prior sequence.
+    const tokenC = tracker.open(popup, MOCK_MAP, RRF_2021);
+    expect(investmentPopupOutOfScope(tracker.getActiveDims(), ALL_FILTER)).toBe(false);
+    expect(tracker.isActiveToken(tokenC)).toBe(true);
+  });
+
+  it("a GENUINE close (no replacement — e.g. the user's own X button) still clears state correctly", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+    tracker.open(popup, MOCK_MAP, RRF_2021);
+    popup.remove(); // genuine close, not a reuse
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("a THIRD reuse (A→B→C) never lets a stale close from A or B corrupt C's state", () => {
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+    const DIMS_C: InvestmentFilterDimensions = { year: 2023, funderType: "government", governmentFundingPurpose: "programmatic" };
+
+    tracker.open(popup, MOCK_MAP, RRF_2021); // A
+    tracker.open(popup, MOCK_MAP, RRF_2022); // B, reuse — A's stale close fires inside this call
+    const tokenC = tracker.open(popup, MOCK_MAP, DIMS_C); // C, reuse — B's stale close fires inside this call
+
+    expect(tracker.getActiveDims()).toEqual(DIMS_C);
+    expect(tracker.isActiveToken(tokenC)).toBe(true);
+  });
+
+  it("mock fidelity: remove() on an ALREADY-detached popup still fires close UNCONDITIONALLY (mapbox-gl 3.18.1's actual behavior) without corrupting tracker state", () => {
+    // This is the exact divergence Sol round 3 caught: the round-2 mock
+    // gated close-firing behind an `attached` check, which real mapbox-gl
+    // does not do (remove() unconditionally calls `this.fire(new Event('close'))`).
+    // A double-remove (or a remove on a never-attached popup) must be a safe
+    // no-op for the tracker, not a crash or a corruption.
+    const popup = new MockMapboxPopup();
+    expect(popup.isAttached()).toBe(false);
+    // remove() on a never-attached popup still fires "close" (no listeners
+    // registered yet, so this is an observably-empty but real event).
+    expect(() => popup.remove()).not.toThrow();
+
+    const tracker = new InvestmentPopupTracker();
+    tracker.open(popup, MOCK_MAP, RRF_2021);
+    popup.remove(); // genuine close #1
+    expect(tracker.getActiveDims()).toBeNull();
+    // A second remove() on the now-already-detached popup — real mapbox-gl
+    // fires close again here too — must remain a harmless no-op (the
+    // one-shot listener already fired and detached itself).
+    expect(() => popup.remove()).not.toThrow();
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("API shape (Sol gate round 3) — open() is the tracker's ONLY public method that can attach/track a popup; no register-only escape hatch exists", () => {
+    const publicMethods = Object.getOwnPropertyNames(InvestmentPopupTracker.prototype)
+      .filter((name) => name !== "constructor")
+      .sort();
+    // The complete, intentional public surface. Anything NOT in this list
+    // (e.g. a hypothetical "registerClose" or "track" method usable without
+    // also calling addTo) would reintroduce the ordering hazard by API shape
+    // — this list is a deliberate tripwire against that.
+    expect(publicMethods).toEqual(
+      [
+        "closeIfOutOfScope",
+        "finishReveal",
+        "getActiveDims",
+        "hasInFlightReveal",
+        "isActiveToken",
+        "open",
+        "startReveal",
+      ].sort(),
+    );
+    // open() itself requires a popup AND a map — it cannot be called with
+    // dims alone, so a caller can never route content through the tracker
+    // without also supplying what addTo() needs.
+    expect(InvestmentPopupTracker.prototype.open.length).toBe(3);
+  });
+});
+
+describe("zipAggregateOverlaySourceInScope (deliverable 2 — Cook/BIG/Hospitality/B2B)", () => {
+  it("is in scope when the active year window includes the program's fixed year", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("cook-source-2023", {
+        yearRangeId: "2022-2023",
+        activeFunderTypes: ["government", "philanthropic", "private_development"],
+      }),
+    ).toBe(true);
+  });
+
+  it("goes OUT of scope the instant the active year window excludes the program's fixed year — audit finding 3's reproduction", () => {
+    // "select 2024 and enable overlays — 2020 BIG, 2021 RRF, 2022 B2B, and 2023
+    // Cook records remain visible" was the exact bug. 2024–2026 must exclude
+    // every ZIP-aggregate/citywide-only source below (none run in that window).
+    const filter2024 = {
+      yearRangeId: "2024-2026",
+      activeFunderTypes: ["government", "philanthropic", "private_development"] as const,
+    };
+    expect(zipAggregateOverlaySourceInScope("cook-source-2023", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-big", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-hospitality-emergency", filter2024)).toBe(false);
+    expect(zipAggregateOverlaySourceInScope("illinois-b2b", filter2024)).toBe(false);
+  });
+
+  it("goes out of scope when the government funderType checkbox is off", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("illinois-b2b", {
+        yearRangeId: "all",
+        activeFunderTypes: ["philanthropic", "private_development"],
+      }),
+    ).toBe(false);
+  });
+
+  it("goes out of scope when the programmatic purpose checkbox is off", () => {
+    expect(
+      zipAggregateOverlaySourceInScope("illinois-big", {
+        yearRangeId: "all",
+        activeFunderTypes: ["government", "philanthropic", "private_development"],
+        activeGovernmentFundingPurposes: ["capital_project"],
+      }),
+    ).toBe(false);
   });
 });
 
@@ -653,6 +1097,103 @@ describe("fetchCountyReliefRecipients", () => {
     ]);
     expect(result.recipientCount).toBe(1);
     expect(result.sourceLink).toBeNull();
+  });
+});
+
+// ── Deliverable 1 (audit finding 9 / consult F6 + Q2): lazy RRF retrieval ──────
+
+describe("fetchInvestmentRecipientRecord", () => {
+  it("requests exactly one record id and returns its revealed identity", async () => {
+    const fetchImpl = fetchStub(200, {
+      id: "rrf-point",
+      recipient: "Restaurant recipient",
+      logLine: "Legal business: Restaurant Recipient LLC",
+    });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=recipient-record&id=rrf-point`,
+    );
+    expect(result).toEqual({
+      status: "ready",
+      id: "rrf-point",
+      recipient: "Restaurant recipient",
+      logLine: "Legal business: Restaurant Recipient LLC",
+    });
+  });
+
+  it("maps an expired admin session to an empty unauthorized result", async () => {
+    const fetchImpl = fetchStub(401, { error: "Unauthorized" });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+    expect(result.status).toBe("unauthorized");
+    expect(result.recipient).toBeNull();
+  });
+
+  it("maps an unknown/non-lazy id to a not_found result, never a thrown error", async () => {
+    const fetchImpl = fetchStub(404, { error: "Not found" });
+    const result = await fetchInvestmentRecipientRecord("cdg-point", { fetchImpl });
+    expect(result.status).toBe("not_found");
+    expect(result.recipient).toBeNull();
+  });
+
+  it("never fetches without an id — no bulk/blank lookup", async () => {
+    const fetchImpl = fetchStub(200, { recipients: [] });
+    const result = await fetchInvestmentRecipientRecord("", { fetchImpl });
+    expect(result.status).toBe("not_found");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("treats a malformed response body as unavailable rather than throwing", async () => {
+    const fetchImpl = fetchStub(200, { recipient: 12345 });
+    const result = await fetchInvestmentRecipientRecord("rrf-point", { fetchImpl });
+    expect(result.status).toBe("unavailable");
+  });
+});
+
+describe("investmentRevealButtonStateForResult (Sol gate blocker 4 — every fetch outcome)", () => {
+  it("unauthorized (session lost) — non-retryable label, and signals the popup should close", () => {
+    const state = investmentRevealButtonStateForResult("unauthorized");
+    expect(state.closePopup).toBe(true);
+    expect(state.disabled).toBe(true);
+    expect(state.label).not.toBe("Loading…");
+  });
+
+  it("not_found — permanent, non-retryable label, popup stays open", () => {
+    const state = investmentRevealButtonStateForResult("not_found");
+    expect(state).toEqual({ label: "Recipient unavailable", disabled: true, closePopup: false });
+  });
+
+  it("unavailable (non-2xx/non-404, malformed body, or a caught network rejection) — RETRYABLE, never stuck on Loading", () => {
+    const state = investmentRevealButtonStateForResult("unavailable");
+    expect(state.disabled).toBe(false);
+    expect(state.closePopup).toBe(false);
+    expect(state.label).not.toBe("Loading…");
+    expect(state.label.toLowerCase()).toContain("retry");
+  });
+
+  it("is exhaustive over every non-ready InvestmentRecipientRecordStatus — no outcome is left unhandled", () => {
+    const statuses: Exclude<InvestmentRecipientRecordStatus, "ready">[] = [
+      "unauthorized",
+      "not_found",
+      "unavailable",
+    ];
+    for (const status of statuses) {
+      const state = investmentRevealButtonStateForResult(status);
+      expect(state.label.length).toBeGreaterThan(0);
+      // Every state is either disabled (a terminal/loading state) or an
+      // enabled retry — never left ambiguous.
+      expect(typeof state.disabled).toBe("boolean");
+    }
+  });
+
+  it("loading and out-of-scope states are both disabled, but read as DIFFERENT statuses, not both 'Loading…'", () => {
+    const loading = investmentRevealButtonLoadingState();
+    const outOfScope = investmentRevealButtonOutOfScopeState();
+    expect(loading.label).toBe("Loading…");
+    expect(outOfScope.label).not.toBe("Loading…");
+    expect(loading.disabled).toBe(true);
+    expect(outOfScope.disabled).toBe(true);
+    expect(outOfScope.closePopup).toBe(false);
   });
 });
 

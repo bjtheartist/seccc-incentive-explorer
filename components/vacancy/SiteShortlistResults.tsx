@@ -44,6 +44,13 @@ import {
 } from "@/lib/site-shortlist";
 import { shortlistCardDomId } from "@/lib/shortlist-map-layers";
 import { shortlistCriteriaAnalyticsMetadata } from "@/lib/shortlist-criteria";
+import {
+  candidateMatchesShortlistZoningFilters,
+  shortlistDistrictTypeFilterOptions,
+  shortlistExactZoningFilterOptions,
+  shortlistFamilyFilterOptions,
+} from "@/lib/shortlist-zoning-filter";
+import { DISTRICT_FILTER_DISCLAIMER } from "@/lib/zoning-districts";
 import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
 import SiteShortlistMap from "./SiteShortlistMap";
 
@@ -451,6 +458,36 @@ export default function SiteShortlistResults({
 }) {
   const [enrich, setEnrich] = useState<EnrichState>({ status: "idle" });
   const [badgeFilter, setBadgeFilter] = useState<ZoningBadge | "all">("all");
+  const [familyFilter, setFamilyFilter] = useState("");
+  const [districtTypeFilter, setDistrictTypeFilter] = useState("");
+  const [exactZoningFilter, setExactZoningFilter] = useState("");
+
+  const familyOptions = useMemo(() => shortlistFamilyFilterOptions(ranked), [ranked]);
+  const districtTypeOptions = useMemo(
+    () => shortlistDistrictTypeFilterOptions(ranked, familyFilter),
+    [ranked, familyFilter],
+  );
+  const exactZoningOptions = useMemo(
+    () => shortlistExactZoningFilterOptions(ranked, familyFilter, districtTypeFilter),
+    [ranked, familyFilter, districtTypeFilter],
+  );
+  const exactZoningPublishedCount = useMemo(
+    () => exactZoningOptions.reduce((sum, option) => sum + option.count, 0),
+    [exactZoningOptions],
+  );
+
+  const zoningFiltered = useMemo(
+    () =>
+      ranked.filter((candidate) =>
+        candidateMatchesShortlistZoningFilters(
+          candidate,
+          familyFilter,
+          districtTypeFilter,
+          exactZoningFilter,
+        ),
+      ),
+    [ranked, familyFilter, districtTypeFilter, exactZoningFilter],
+  );
 
   const badgeCounts = useMemo(() => {
     const counts: Record<ZoningBadge, number> = {
@@ -459,14 +496,26 @@ export default function SiteShortlistResults({
       "planned-development": 0,
       unresolved: 0,
     };
-    for (const candidate of ranked) counts[candidate.badge] += 1;
+    for (const candidate of zoningFiltered) counts[candidate.badge] += 1;
     return counts;
-  }, [ranked]);
+  }, [zoningFiltered]);
 
   const visible = useMemo(
-    () => (badgeFilter === "all" ? ranked : ranked.filter((candidate) => candidate.badge === badgeFilter)),
-    [ranked, badgeFilter],
+    () =>
+      badgeFilter === "all"
+        ? zoningFiltered
+        : zoningFiltered.filter((candidate) => candidate.badge === badgeFilter),
+    [zoningFiltered, badgeFilter],
   );
+  const visibleCandidateKeys = useMemo(
+    () => visible.map((candidate) => candidate.key),
+    [visible],
+  );
+  const anyDisplayFilterActive =
+    badgeFilter !== "all" ||
+    familyFilter !== "" ||
+    districtTypeFilter !== "" ||
+    exactZoningFilter !== "";
 
   // Fire the generation event once per mount, mirroring the exactly-once
   // discipline of vacancy_web_report_viewed (VacancyReportMap). Metadata is
@@ -590,6 +639,13 @@ export default function SiteShortlistResults({
     });
   }
 
+  function resetDisplayFilters() {
+    setBadgeFilter("all");
+    setFamilyFilter("");
+    setDistrictTypeFilter("");
+    setExactZoningFilter("");
+  }
+
   return (
     <div>
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -599,7 +655,7 @@ export default function SiteShortlistResults({
           disabled={ranked.length === 0}
           className="min-h-10 border border-[#2563EB] px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Download the shortlist (CSV)
+          Download the full shortlist (CSV)
         </button>
         {allUnavailable && (
           <span className="text-[11px] leading-relaxed text-[#A45B00]">
@@ -609,7 +665,122 @@ export default function SiteShortlistResults({
         )}
       </div>
 
-      <SiteShortlistMap zip={zip} ranked={ranked} boundary={boundary} centroid={centroid} />
+      <section className="mt-8 border border-[#0C1B33]/12 bg-white p-4 sm:p-5" aria-labelledby="shortlist-zoning-filter-heading">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2
+              id="shortlist-zoning-filter-heading"
+              className="font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/70"
+            >
+              Filter map and cards by zoning
+            </h2>
+            <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-[#0C1B33]/50">
+              Start with a zoning family, choose a district type, then narrow to an exact published
+              code. Filters change this display only; rank numbers and the full CSV stay unchanged.
+            </p>
+          </div>
+          {anyDisplayFilterActive ? (
+            <button
+              type="button"
+              onClick={resetDisplayFilters}
+              className="border border-[#0C1B33]/25 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/60 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33]"
+            >
+              Reset all filters
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <label htmlFor="shortlist-zoning-family" className="min-w-0">
+            <span className="mb-1 block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              Zoning family
+            </span>
+            <select
+              id="shortlist-zoning-family"
+              aria-describedby="shortlist-zoning-disclaimer"
+              value={familyFilter}
+              onChange={(event) => {
+                setFamilyFilter(event.target.value);
+                setDistrictTypeFilter("");
+                setExactZoningFilter("");
+              }}
+              className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[12px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+            >
+              <option value="">All candidates ({ranked.length})</option>
+              {familyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label htmlFor="shortlist-zoning-district-type" className="min-w-0">
+            <span className="mb-1 block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              District type
+            </span>
+            <select
+              id="shortlist-zoning-district-type"
+              aria-describedby="shortlist-zoning-disclaimer"
+              value={districtTypeFilter}
+              disabled={districtTypeOptions.length === 0}
+              onChange={(event) => {
+                setDistrictTypeFilter(event.target.value);
+                setExactZoningFilter("");
+              }}
+              className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[12px] text-[#0C1B33] outline-none focus:border-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:text-[#0C1B33]/40"
+            >
+              <option value="">All district types</option>
+              {districtTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label htmlFor="shortlist-zoning-code" className="min-w-0">
+            <span className="mb-1 block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              Exact published code
+            </span>
+            <select
+              id="shortlist-zoning-code"
+              aria-describedby="shortlist-zoning-disclaimer"
+              value={exactZoningFilter}
+              disabled={exactZoningOptions.length === 0}
+              onChange={(event) => setExactZoningFilter(event.target.value)}
+              className="w-full min-w-0 border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[12px] text-[#0C1B33] outline-none focus:border-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#F7F8FA] disabled:text-[#0C1B33]/40"
+            >
+              <option value="">All published codes ({exactZoningPublishedCount})</option>
+              {exactZoningOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-2 border-t border-[#0C1B33]/8 pt-3">
+          <p aria-live="polite" className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/55">
+            Showing {visible.length} of {ranked.length} ranked candidates
+          </p>
+          <p
+            id="shortlist-zoning-disclaimer"
+            className="max-w-2xl text-[10px] leading-relaxed text-[#0C1B33]/45"
+          >
+            {DISTRICT_FILTER_DISCLAIMER}
+          </p>
+        </div>
+      </section>
+
+      <SiteShortlistMap
+        zip={zip}
+        ranked={ranked}
+        visibleCandidateKeys={visibleCandidateKeys}
+        boundary={boundary}
+        centroid={centroid}
+      />
 
       <section className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -622,27 +793,30 @@ export default function SiteShortlistResults({
           {scored
             ? "One ranked list, screened against your brief."
             : "One list, screened against your brief, ordered by record completeness — add a transit criterion to rank by fit."}{" "}
-          The badge on every card is a broad district-family screen only — filter by it below, but
-          it never removes a record from the list above.
+          The badge on every card is a broad project-to-district-family screen only. The zoning
+          selects narrow by the City&rsquo;s published designation; neither control reranks the list or
+          determines whether a specific use is permitted.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter by zoning badge">
           <button
             type="button"
             onClick={() => setBadgeFilter("all")}
+            aria-pressed={badgeFilter === "all"}
             className={`border px-2.5 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] transition-colors ${
               badgeFilter === "all"
                 ? "border-[#0C1B33] bg-[#0C1B33] text-white"
                 : "border-[#0C1B33]/25 text-[#0C1B33]/60 hover:border-[#0C1B33]/50"
             }`}
           >
-            All ({ranked.length})
+            All ({zoningFiltered.length})
           </button>
           {BADGE_FILTER_ORDER.map((badge) => (
             <button
               key={badge}
               type="button"
               onClick={() => setBadgeFilter(badge)}
+              aria-pressed={badgeFilter === badge}
               disabled={badgeCounts[badge] === 0}
               className={`border px-2.5 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 badgeFilter === badge
@@ -656,9 +830,21 @@ export default function SiteShortlistResults({
         </div>
 
         {visible.length === 0 ? (
-          <p className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-            No records match this filter
-          </p>
+          <div
+            role="status"
+            className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center"
+          >
+            <p className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              No records match these filters
+            </p>
+            <button
+              type="button"
+              onClick={resetDisplayFilters}
+              className="mt-3 border border-[#0C1B33]/25 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/65 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33]"
+            >
+              Reset all filters
+            </button>
+          </div>
         ) : (
           <ul className="mt-4 grid gap-3">
             {visible.map((candidate) => (

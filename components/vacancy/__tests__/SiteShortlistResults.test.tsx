@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { shortlistCriterionById } from "@/lib/shortlist-criteria";
 import { createEmptySiteMatchCriteria, type SiteMatchCriteria } from "@/lib/site-matchmaker";
 import type { CandidateOverlays, DecoratedShortlistCandidate } from "@/lib/shortlist-engine";
@@ -15,13 +15,24 @@ import type { CandidateOverlays, DecoratedShortlistCandidate } from "@/lib/short
  * the helper altogether, with every existing test still green.
  */
 
-const { trackEventMock } = vi.hoisted(() => ({ trackEventMock: vi.fn() }));
+const { shortlistCsvMock, trackEventMock } = vi.hoisted(() => ({
+  shortlistCsvMock: vi.fn(() => "csv-output"),
+  trackEventMock: vi.fn(),
+}));
 
 vi.mock("@/lib/analytics-events", () => ({ trackEvent: trackEventMock }));
+vi.mock("@/lib/shortlist-csv", () => ({
+  shortlistCsv: shortlistCsvMock,
+  shortlistCsvFilename: (zip: string) => `site-shortlist-${zip}.csv`,
+}));
 // SiteShortlistMap pulls in raw mapbox-gl (WebGL/worker APIs jsdom does not
 // provide) — replaced with a no-op exactly like the page-level fail-closed
 // tests already do for the whole results component.
-vi.mock("@/components/vacancy/SiteShortlistMap", () => ({ default: () => null }));
+vi.mock("@/components/vacancy/SiteShortlistMap", () => ({
+  default: ({ visibleCandidateKeys }: { visibleCandidateKeys: readonly string[] }) => (
+    <output data-testid="mock-map-keys">{visibleCandidateKeys.join(",")}</output>
+  ),
+}));
 
 import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
 
@@ -85,6 +96,7 @@ function neverResolvingFetchMock() {
 
 beforeEach(() => {
   trackEventMock.mockReset();
+  shortlistCsvMock.mockClear();
 });
 
 afterEach(() => {
@@ -387,5 +399,138 @@ describe("SiteShortlistResults — overlay coverage disclosure (review5 S2)", ()
 
     expect(screen.getByText(/Not checked/)).toBeTruthy();
     expect(screen.queryByText(/none mapped/i)).toBeNull();
+  });
+});
+
+describe("SiteShortlistResults — shared zoning filters", () => {
+  function zoningCandidates(): DecoratedShortlistCandidate[] {
+    return [
+      candidate({ key: "rank-1", address: "1 B STREET", zoningDistrict: "B3-2", badge: "aligned" }),
+      candidate({ key: "rank-2", address: "2 C ONE STREET", zoningDistrict: "C1-1", badge: "not-aligned" }),
+      candidate({ key: "rank-3", address: "3 C TWO STREET", zoningDistrict: "C1-2", badge: "aligned" }),
+      candidate({ key: "rank-4", address: "4 R STREET", zoningDistrict: "RS-2", badge: "aligned" }),
+      candidate({
+        key: "rank-5",
+        address: "5 UNKNOWN STREET",
+        zoningDistrict: null,
+        zoningStatus: "unresolved",
+        badge: "unresolved",
+      }),
+    ];
+  }
+
+  function renderZoningResults() {
+    const ranked = zoningCandidates();
+    const fetchMock = neverResolvingFetchMock();
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <SiteShortlistResults
+        zip="60619"
+        criteria={baseCriteria()}
+        scored={false}
+        source={null}
+        buildId="build-1"
+        ranked={ranked}
+        boundary={null}
+        centroid={{ lat: 41.75, lon: -87.605 }}
+      />,
+    );
+    return { fetchMock, ranked };
+  }
+
+  function visibleHeadings(): string[] {
+    return screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent ?? "");
+  }
+
+  it("filters cards and mocked map through family, type, exact code, and badge while keeping original ranks", () => {
+    const { fetchMock } = renderZoningResults();
+    const family = screen.getByLabelText("Zoning family") as HTMLSelectElement;
+    const type = screen.getByLabelText("District type") as HTMLSelectElement;
+    const exact = screen.getByLabelText("Exact published code") as HTMLSelectElement;
+
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe(
+      "rank-1,rank-2,rank-3,rank-4,rank-5",
+    );
+    expect(family.getAttribute("aria-describedby")).toBe("shortlist-zoning-disclaimer");
+
+    fireEvent.change(family, { target: { value: "commercial" } });
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-1,rank-2,rank-3");
+    expect(visibleHeadings()).toEqual(["1 B Street", "2 C One Street", "3 C Two Street"]);
+
+    fireEvent.change(type, { target: { value: "C1" } });
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-2,rank-3");
+
+    fireEvent.change(exact, { target: { value: "zoning-code:C1-2" } });
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-3");
+    expect(visibleHeadings()).toEqual(["3 C Two Street"]);
+    expect(document.getElementById("shortlist-card-rank-3")?.textContent).toContain("03");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Broad family alignment/ }));
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-3");
+    expect(
+      screen.getByRole("button", { name: /^Broad family alignment/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears incompatible descendants, exposes unresolved records, and resets every filter", () => {
+    renderZoningResults();
+    const family = screen.getByLabelText("Zoning family") as HTMLSelectElement;
+    const type = screen.getByLabelText("District type") as HTMLSelectElement;
+    const exact = screen.getByLabelText("Exact published code") as HTMLSelectElement;
+
+    fireEvent.change(family, { target: { value: "commercial" } });
+    fireEvent.change(type, { target: { value: "C1" } });
+    fireEvent.change(exact, { target: { value: "zoning-code:C1-2" } });
+    fireEvent.change(family, { target: { value: "residential" } });
+    expect(type.value).toBe("");
+    expect(exact.value).toBe("");
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-4");
+
+    fireEvent.change(family, { target: { value: "zoning:unresolved" } });
+    expect(type.disabled).toBe(true);
+    expect(exact.disabled).toBe(true);
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("rank-5");
+    expect(visibleHeadings()).toEqual(["5 Unknown Street"]);
+
+    const resetButtons = screen.getAllByRole("button", { name: "Reset all filters" });
+    fireEvent.click(resetButtons[resetButtons.length - 1]);
+    expect(family.value).toBe("");
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe(
+      "rank-1,rank-2,rank-3,rank-4,rank-5",
+    );
+    expect(screen.getByText("Showing 5 of 5 ranked candidates")).toBeTruthy();
+  });
+
+  it("combines filters into an accessible zero state with a working reset", () => {
+    renderZoningResults();
+    fireEvent.click(screen.getByRole("button", { name: /^No broad family alignment/ }));
+    fireEvent.change(screen.getByLabelText("Zoning family"), {
+      target: { value: "residential" },
+    });
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe("");
+    expect(screen.getByText("No records match these filters")).toBeTruthy();
+    const resetButtons = screen.getAllByRole("button", { name: "Reset all filters" });
+    fireEvent.click(resetButtons[resetButtons.length - 1]);
+    expect(screen.queryByText("No records match these filters")).toBeNull();
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe(
+      "rank-1,rank-2,rank-3,rank-4,rank-5",
+    );
+  });
+
+  it("keeps CSV membership and order on the full ranked shortlist after filtering", () => {
+    const { ranked } = renderZoningResults();
+    fireEvent.change(screen.getByLabelText("Zoning family"), {
+      target: { value: "residential" },
+    });
+    const OriginalURL = URL;
+    class TestURL extends OriginalURL {
+      static createObjectURL = vi.fn(() => "blob:test");
+      static revokeObjectURL = vi.fn();
+    }
+    vi.stubGlobal("URL", TestURL);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Download the full shortlist (CSV)" }));
+    expect(shortlistCsvMock).toHaveBeenCalledWith(ranked, expect.any(Object));
   });
 });

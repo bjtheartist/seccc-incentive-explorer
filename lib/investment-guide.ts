@@ -48,7 +48,7 @@ export const INVESTMENT_TOUR_STEPS: InvestmentTourStep[] = [
     selector: '[data-tour="investment-status-cards"]',
     title: "Three ways to read the money",
     description:
-      "Awarded dollars are documented public commitments. Announced capital is self-reported private development cost. Disbursements are actual payments — no source in this dataset reports those yet, so that card stays empty rather than showing a misleading zero. These three are never added together, and an award means a commitment on paper, not money received.",
+      "Awarded dollars are documented public commitments. Announced capital is self-reported private development cost. Disbursements are actual payments — only closed recovery programs report those, citywide, and ordinary award/foundation/TIF/HUD/tax-credit/appropriation sources don't. These three are never added together, and an award means a commitment on paper, not money received.",
     side: "bottom",
   },
   {

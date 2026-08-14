@@ -1,0 +1,24 @@
+{
+ "design": "SRS without replacement, seeded, over the FINAL EXPORTED foundation universe",
+ "seed": 20260813,
+ "universe_rows": 26501,
+ "chicago_prize_excluded_from_universe": 18,
+ "sample_n": 2401,
+ "counts": {
+  "ok": 2399,
+  "filing_unavailable": 2
+ },
+ "evaluable_rows": 2399,
+ "ok_rate_of_evaluable": 1.0,
+ "unresolved_rows": 2,
+ "unresolved_pct_of_sample": 0.000833,
+ "unresolved_by_funder": {
+  "Polk Bros Foundation": 1,
+  "Sidley Austin Foundation": 1
+ },
+ "citable_statement": "Zero mismatches among 2,399 evaluable rows (2,399 verified, 0 actual recipient/amount mismatch(es)) out of a 2,401-row seeded SRS over the full 26,501-row exported foundation universe; 2 row(s) (0.1%) could not be resolved to a filing in this run and are excluded from the evaluable denominator, not silently dropped from the sample.",
+ "nonresponse_note": "Unresolved rows are NOT randomly distributed across funders \u2014 concentrated in 2 funder(s): Polk Bros Foundation (1), Sidley Austin Foundation (1); the largest single funder accounts for 50.0% of all unresolved rows. A population-wide margin-of-error claim (e.g. \"+/-2% at 95% confidence\") is NOT valid here because that framing assumes random sampling error, not funder-concentrated nonresponse \u2014 use the citable_statement field instead, never a bare universe-level accuracy percentage.",
+ "bound_export_content_hash": "b79c1653c7c3bd09eb080e20e74699a2219ea1269c683e54d7e0980304177761",
+ "bound_manifest_hash": "1ee06e08a0ed512d895fe44e683e58621d20f9f6af43923164d78f0e64798446",
+ "note": "Supersedes foundation_audit_2026-08-04.json (n=2,401 over base+tier1+phase2 only, ~21.8k rows). This audit covers the FULL four-file exported foundation universe (base+tier1+phase2+phase3), bound to the export's own content hash. Chicago Prize (18 rows) is reported separately -- see chicago_prize_census_check.json -- as a census check, not part of this SRS (consult Q3)."
+}

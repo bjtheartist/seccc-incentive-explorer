@@ -679,13 +679,211 @@ function toActivePurposeSet(
     : new Set(activePurposes as readonly GovernmentFundingPurpose[]);
 }
 
+/**
+ * Deliverable 2 (audit finding 3 / consult F2) — the ONE predicate every
+ * investment overlay, legend total, citywide count, popup total, and
+ * recipient drilldown must pass through. Before this, state capital / RRF /
+ * Cook / BIG / B2B each reloaded their own complete cached dataset,
+ * independent of the year/funderType/purpose controls — reproducible by
+ * selecting a year and watching an out-of-range BIG/RRF/B2B/Cook record stay
+ * visible. `matchesInvestmentFilter` is the single source of truth those five
+ * overlays, the base Dots/Arcs/Density source, and the legend's citywide
+ * summary all now call. Pure / deterministic.
+ */
+export interface InvestmentFilterState {
+  yearRangeId: string;
+  activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
+  activeGovernmentFundingPurposes?:
+    | ReadonlySet<GovernmentFundingPurpose>
+    | readonly GovernmentFundingPurpose[];
+}
+
+/** The three filterable dimensions of one record/entry — everything
+ * `matchesInvestmentFilter` needs, independent of geometry/shape. */
+export interface InvestmentFilterDimensions {
+  year: number | null;
+  funderType: FunderType | string;
+  /** null for a non-government record; "unclassified" is a real, filterable
+   * value for a government record whose purpose the exporter couldn't assign. */
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
+}
+
 function governmentFundingPurposeActive(
-  feature: InvestmentPointFeature,
+  dims: InvestmentFilterDimensions,
   activeSet: ReadonlySet<GovernmentFundingPurpose> | null,
 ): boolean {
-  if (!activeSet || feature.properties.funderType !== "government") return true;
-  const purpose = feature.properties.governmentFundingPurpose ?? "unclassified";
+  if (!activeSet || dims.funderType !== "government") return true;
+  const purpose = dims.governmentFundingPurpose ?? "unclassified";
   return activeSet.has(purpose);
+}
+
+/**
+ * Whether one record/entry (year, funderType, governmentFundingPurpose)
+ * passes the active year-range / funderType / purpose filter. THE single
+ * predicate — every overlay, legend total, citywide count, popup total, and
+ * recipient drilldown must call this (or its convenience wrappers below)
+ * rather than re-deriving its own filter logic. Pure / deterministic.
+ */
+export function matchesInvestmentFilter(
+  dims: InvestmentFilterDimensions,
+  filter: InvestmentFilterState,
+): boolean {
+  const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === filter.yearRangeId) ?? null;
+  const activeSet = toActiveSet(filter.activeFunderTypes);
+  const activePurposeSet = filter.activeGovernmentFundingPurposes
+    ? toActivePurposeSet(filter.activeGovernmentFundingPurposes)
+    : null;
+  if (!funderTypeActive(dims.funderType, activeSet)) return false;
+  if (!governmentFundingPurposeActive(dims, activePurposeSet)) return false;
+  return yearInRange(dims.year, range);
+}
+
+/**
+ * Sol gate blocker 1 — filtering must not stop at rendered sources/counts.
+ * Whether an ALREADY-OPEN popup/panel showing a record with these filter
+ * dimensions must close (or refuse a lazy reveal) under the CURRENT filter.
+ * `dims === null` means "the open popup isn't filter-scoped" (an
+ * owner-cluster popup, or the Megaprojects popup — which is deliberately
+ * exempt from year/funder/purpose, matching its own disclosed caption) — such
+ * a popup never closes on a filter change. Pure / deterministic, so the exact
+ * reproduction (an actual 2021 RRF point surviving a switch to "2024–2026")
+ * is unit-testable without mapbox.
+ */
+export function investmentPopupOutOfScope(
+  dims: InvestmentFilterDimensions | null,
+  filter: InvestmentFilterState,
+): boolean {
+  if (dims === null) return false;
+  return !matchesInvestmentFilter(dims, filter);
+}
+
+/**
+ * The subset of mapboxgl.Popup's interface InvestmentPopupTracker needs —
+ * `.once("close", …)` and `.addTo(map)`. Kept minimal and structural (not
+ * imported from "mapbox-gl") so this module never pulls the mapbox-gl
+ * package into a non-map bundle, and so a test can supply a plain object
+ * without importing the real library either. `map` is `unknown` for the same
+ * reason — the tracker never inspects it, only forwards it to `addTo`.
+ */
+export interface InvestmentPopupLike {
+  once(event: "close", handler: () => void): void;
+  addTo(map: unknown): unknown;
+}
+
+/**
+ * Sol gate round 2, finding 1 (and round 3's durability follow-up) — the
+ * Mapbox popup-REUSE lifecycle hole. Reusing a shared mapboxgl.Popup calls
+ * `.addTo(map)` on an ALREADY-open instance, which mapbox-gl 3.18.1
+ * implements as (verified directly against
+ * node_modules/mapbox-gl/dist/mapbox-gl-unminified.js):
+ *
+ *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); }
+ *   remove() { ...; this.fire(new Event('close')); return this; }  // ALWAYS fires close
+ *
+ * So `.addTo()` on an already-open popup fires "close" for the OLD content
+ * SYNCHRONOUSLY, as the very first thing it does, before doing anything else.
+ * THE INVARIANT THIS CLASS ENFORCES: a NEW popup's own close listener must
+ * never be registered before that `.addTo()` call, or it would be exposed to
+ * — and immediately self-consumed by — the SAME close event that opens it.
+ *
+ * Round 2 tried to uphold this invariant by convention (call `.addTo()` at
+ * each of the 8 call sites, THEN call a separate tracking method) — Sol round
+ * 3 correctly flagged that a scan/convention doesn't stop a future call site
+ * from getting the order backwards, and the class's own doc comment still
+ * described the WRONG (pre-addTo) order. This version closes it
+ * structurally: `open()` is the ONLY exported way to attach a popup through
+ * this tracker, and it calls `popup.addTo(map)` ITSELF, before registering
+ * the close listener — there is no register-only method to misuse, so the
+ * ordering bug is impossible by construction, not just convention.
+ *
+ * Every open is tagged with a monotonically increasing token; each open's
+ * `.once("close", …)` clears state ONLY when the tracker's current token
+ * still matches its own captured token — i.e. only for a GENUINE close of
+ * the popup that is CURRENTLY active, never a stale side-effect of a LATER
+ * reuse (whose own `open()` call already bumped the token by the time its
+ * OWN close listener could fire).
+ */
+export class InvestmentPopupTracker {
+  private token = 0;
+  private active: { token: number; dims: InvestmentFilterDimensions | null } | null = null;
+  private reveal: { token: number; controller: AbortController } | null = null;
+
+  /**
+   * THE single entry point for opening a tracked popup. Performs
+   * `popup.addTo(map)` itself — BEFORE registering this open's close
+   * listener — so the caller can never invert the order. The caller is
+   * responsible for `popup.setLngLat(...).setHTML(...)` BEFORE calling this
+   * (addTo only positions/attaches the popup; it doesn't accept content).
+   * `dims` is null for non-filter-scoped content (owner-cluster,
+   * Megaprojects — exempt by design). Returns the token this open was
+   * tagged with, for a reveal handler to key its in-flight fetch to.
+   */
+  open(popup: InvestmentPopupLike, map: unknown, dims: InvestmentFilterDimensions | null): number {
+    popup.addTo(map); // fires "close" for whatever was previously open, BEFORE any tracking below
+    const token = ++this.token;
+    // A NEW popup opening always invalidates whatever reveal was in flight
+    // for the PREVIOUS popup. Abort it HERE, unconditionally, rather than
+    // relying on the close event fired by addTo() above — belt and
+    // suspenders alongside that event's own token-gated handler.
+    if (this.reveal) {
+      this.reveal.controller.abort();
+      this.reveal = null;
+    }
+    this.active = { token, dims };
+    popup.once("close", () => {
+      if (this.token !== token) return; // stale reuse close — a newer open already owns the state
+      this.active = null;
+      if (this.reveal?.token === token) {
+        this.reveal.controller.abort();
+        this.reveal = null;
+      }
+    });
+    return token;
+  }
+
+  /** The filter dimensions of whatever is CURRENTLY the active popup, or null. */
+  getActiveDims(): InvestmentFilterDimensions | null {
+    return this.active?.dims ?? null;
+  }
+
+  /** Whether `token` still identifies the currently active popup (not replaced/closed). */
+  isActiveToken(token: number): boolean {
+    return this.active?.token === token;
+  }
+
+  /** Begin tracking an in-flight reveal fetch, tagged to `token`. */
+  startReveal(token: number, controller: AbortController): void {
+    if (this.reveal) this.reveal.controller.abort();
+    this.reveal = { token, controller };
+  }
+
+  /** Stop tracking a reveal once it settles — a no-op if it was superseded. */
+  finishReveal(token: number, controller: AbortController): void {
+    if (this.reveal?.token === token && this.reveal.controller === controller) {
+      this.reveal = null;
+    }
+  }
+
+  hasInFlightReveal(): boolean {
+    return this.reveal !== null;
+  }
+
+  /**
+   * Close the active popup (via the caller-supplied `remove`) and abort its
+   * in-flight reveal, ONLY when its dims are out of the given filter's
+   * scope. Returns whether it closed. Called from the out-of-scope closing
+   * effect on every filter change.
+   */
+  closeIfOutOfScope(filter: InvestmentFilterState, remove: () => void): boolean {
+    if (!investmentPopupOutOfScope(this.getActiveDims(), filter)) return false;
+    if (this.reveal) {
+      this.reveal.controller.abort();
+      this.reveal = null;
+    }
+    remove();
+    this.active = null;
+    return true;
+  }
 }
 
 /**
@@ -694,29 +892,24 @@ function governmentFundingPurposeActive(
  * rebuilds the source data with setData rather than a layer filter. A feature
  * passes when its funderType is active (see funderTypeActive — unknown types
  * follow the "all on" state) AND (the year range is unbounded, or the feature's
- * year falls inside the inclusive window). Pure / deterministic.
+ * year falls inside the inclusive window). Pure / deterministic. Thin wrapper
+ * over matchesInvestmentFilter — kept as its own export because every overlay
+ * effect in MapView.tsx already filters an InvestmentPointFeature array.
  */
 export function filterInvestmentPointFeatures(
   features: readonly InvestmentPointFeature[],
-  opts: {
-    yearRangeId: string;
-    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
-    activeGovernmentFundingPurposes?:
-      | ReadonlySet<GovernmentFundingPurpose>
-      | readonly GovernmentFundingPurpose[];
-  }
+  opts: InvestmentFilterState,
 ): InvestmentPointFeature[] {
-  const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null;
-  const activeSet = toActiveSet(opts.activeFunderTypes);
-  const activePurposeSet = opts.activeGovernmentFundingPurposes
-    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
-    : null;
-  return features.filter((f) => {
-    const p = f.properties;
-    if (!funderTypeActive(p.funderType, activeSet)) return false;
-    if (!governmentFundingPurposeActive(f, activePurposeSet)) return false;
-    return yearInRange(p.year, range);
-  });
+  return features.filter((f) =>
+    matchesInvestmentFilter(
+      {
+        year: f.properties.year,
+        funderType: f.properties.funderType,
+        governmentFundingPurpose: f.properties.governmentFundingPurpose ?? null,
+      },
+      opts,
+    ),
+  );
 }
 
 /** A FeatureCollection wrapper for GeoJSONSource.setData. Pure. */
@@ -812,35 +1005,64 @@ export function summarizeCitywideInvestment(
  */
 export function summarizeCitywideEntries(
   entries: readonly CitywideInvestmentEntry[],
-  opts: {
-    yearRangeId: string;
-    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
-    activeGovernmentFundingPurposes?:
-      | ReadonlySet<GovernmentFundingPurpose>
-      | readonly GovernmentFundingPurpose[];
-  } | null
+  opts: InvestmentFilterState | null,
 ): CitywideInvestmentSummary {
-  const range = opts ? INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null : null;
-  const activeSet = opts ? toActiveSet(opts.activeFunderTypes) : null;
-  const activePurposeSet = opts?.activeGovernmentFundingPurposes
-    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
-    : null;
   let count = 0;
   let totalDollars = 0;
   for (const e of entries) {
-    if (activeSet && !funderTypeActive(e.funderType, activeSet)) continue;
     if (
-      activePurposeSet &&
-      e.funderType === "government" &&
-      !activePurposeSet.has(e.governmentFundingPurpose ?? "unclassified")
+      opts &&
+      !matchesInvestmentFilter(
+        { year: e.year, funderType: e.funderType, governmentFundingPurpose: e.governmentFundingPurpose },
+        opts,
+      )
     ) {
       continue;
     }
-    if (!yearInRange(e.year, range)) continue;
     count += 1;
     if (e.amountAwarded != null) totalDollars += e.amountAwarded;
   }
   return { count, totalDollars };
+}
+
+// ── ZIP-aggregate / citywide-only overlay scope (deliverable 2) ────────────────
+
+/**
+ * The fixed (year, funderType, governmentFundingPurpose) of the ZIP-aggregate
+ * and citywide-only historical recovery sources — every record within one of
+ * these sources shares the SAME year/funderType/purpose (verified against the
+ * exporter: scripts/export-community-investment.ts hard-codes one `year` per
+ * program and SOURCE_GOVERNMENT_FUNDING_PURPOSE assigns one purpose per
+ * source). Because the dimensions are homogeneous, a single scope check is
+ * EQUIVALENT to filtering every record individually — this is not a source
+ * that "lacks" a dimension, it is one whose dimension never varies.
+ */
+export const ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE: Readonly<
+  Record<HistoricalRecoveryRecipientSource | "illinois-hospitality-emergency", InvestmentFilterDimensions>
+> = {
+  "cook-source-2023": { year: 2023, funderType: "government", governmentFundingPurpose: "programmatic" },
+  "illinois-big": { year: 2020, funderType: "government", governmentFundingPurpose: "programmatic" },
+  "illinois-hospitality-emergency": {
+    year: 2020,
+    funderType: "government",
+    governmentFundingPurpose: "programmatic",
+  },
+  "illinois-b2b": { year: 2022, funderType: "government", governmentFundingPurpose: "programmatic" },
+};
+
+/**
+ * Whether a ZIP-aggregate/citywide-only historical source is IN SCOPE under
+ * the active year/funderType/purpose filter — the gate MapView applies before
+ * rendering that source's ZIP polygons or held-citywide count. Out of scope
+ * means the overlay renders NOTHING (not a stale unfiltered total), fixing
+ * the reproduction the audit gave: selecting 2024 must hide 2020 BIG, 2021
+ * RRF, 2022 B2B, and 2023 Cook entirely. Pure / deterministic.
+ */
+export function zipAggregateOverlaySourceInScope(
+  sourceId: keyof typeof ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE,
+  filter: InvestmentFilterState,
+): boolean {
+  return matchesInvestmentFilter(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE[sourceId], filter);
 }
 
 export type CommunityInvestmentLayerStatus = "ready" | "unauthorized" | "unavailable" | "error";
@@ -1096,6 +1318,103 @@ export async function fetchHistoricalRecoveryRecipients(
         : null,
     recipients,
   };
+}
+
+export type InvestmentRecipientRecordStatus = "ready" | "unauthorized" | "not_found" | "unavailable";
+
+export interface InvestmentRecipientRecordResult {
+  status: InvestmentRecipientRecordStatus;
+  id: string | null;
+  recipient: string | null;
+  logLine: string | null;
+}
+
+/**
+ * Deliverable 1 (audit finding 9 / consult F6 + Q2) — fetch exactly ONE RRF
+ * point's withheld identity (recipient name + logLine), authenticated, after
+ * an admin clicks that specific point. No bulk prefetch: this is called once
+ * per popup open, never eagerly, and the response never grows beyond a single
+ * record no matter how the id is chosen (see the route's `view=recipient-record`
+ * handler, which 404s an id that isn't enrolled in lazy retrieval).
+ */
+export async function fetchInvestmentRecipientRecord(
+  id: string,
+  opts?: { signal?: AbortSignal; fetchImpl?: typeof fetch },
+): Promise<InvestmentRecipientRecordResult> {
+  const emptyResult = (status: Exclude<InvestmentRecipientRecordStatus, "ready">): InvestmentRecipientRecordResult => ({
+    status,
+    id: null,
+    recipient: null,
+    logLine: null,
+  });
+  if (!id) return emptyResult("not_found");
+
+  const doFetch = opts?.fetchImpl ?? fetch;
+  const params = new URLSearchParams({ view: "recipient-record", id });
+  const res = await doFetch(
+    `${COMMUNITY_INVESTMENT_ENDPOINT}?${params.toString()}`,
+    opts?.signal ? { signal: opts.signal } : undefined,
+  );
+  if (res.status === 401) return emptyResult("unauthorized");
+  if (res.status === 404) return emptyResult("not_found");
+  if (!res.ok) return emptyResult("unavailable");
+
+  const data = (await res.json()) as Partial<InvestmentRecipientRecordResult>;
+  if (typeof data.id !== "string" || typeof data.recipient !== "string") {
+    return emptyResult("unavailable");
+  }
+  return {
+    status: "ready",
+    id: data.id,
+    recipient: data.recipient,
+    logLine: typeof data.logLine === "string" ? data.logLine : null,
+  };
+}
+
+/** The "Reveal recipient name" button's post-outcome state. */
+export interface InvestmentRevealButtonState {
+  label: string;
+  disabled: boolean;
+  /** true only for "unauthorized" — MapView closes the popup outright rather
+   * than leaving a dead-end control an unauthenticated visitor could keep
+   * clicking. */
+  closePopup: boolean;
+}
+
+/**
+ * Sol gate blocker 4 — the reveal button's state for every possible fetch
+ * OUTCOME (a resolved, non-"ready" InvestmentRecipientRecordStatus).
+ * Exhaustive by construction (the switch has no default), so a future status
+ * added to InvestmentRecipientRecordStatus is a compile error here rather
+ * than a silently-stuck button. "unavailable" also covers a malformed
+ * response body (fetchInvestmentRecipientRecord normalizes both to this
+ * status) and is the SAME state used for a genuinely rejected fetch (offline,
+ * DNS failure, etc. — MapView's .catch() calls this with "unavailable" too).
+ * Only "not_found" is non-retryable in place — the id itself will not
+ * resolve differently on a second attempt.
+ */
+export function investmentRevealButtonStateForResult(
+  status: Exclude<InvestmentRecipientRecordStatus, "ready">,
+): InvestmentRevealButtonState {
+  switch (status) {
+    case "unauthorized":
+      return { label: "Session expired", disabled: true, closePopup: true };
+    case "not_found":
+      return { label: "Recipient unavailable", disabled: true, closePopup: false };
+    case "unavailable":
+      return { label: "Couldn't load — tap to retry", disabled: false, closePopup: false };
+  }
+}
+
+/** The reveal button's state while its fetch is in flight. */
+export function investmentRevealButtonLoadingState(): InvestmentRevealButtonState {
+  return { label: "Loading…", disabled: true, closePopup: false };
+}
+
+/** The reveal button's state when the record has fallen out of the active
+ * filter scope by click time (Sol gate blocker 1's "refuses to reveal"). */
+export function investmentRevealButtonOutOfScopeState(): InvestmentRevealButtonState {
+  return { label: "No longer in the selected filters", disabled: true, closePopup: false };
 }
 
 /** Backward-compatible wrapper retained for the existing Cook County callers. */

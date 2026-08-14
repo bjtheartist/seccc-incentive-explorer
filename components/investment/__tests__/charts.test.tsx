@@ -58,8 +58,14 @@ describe("investment analysis charts (visx substrate)", () => {
     expect(html).toContain("$400.0M"); // peak year label
     expect(html).not.toContain("$137.0M"); // non-peak years are not directly labeled
     expect(html).toContain("<title>");
-    expect(html).toContain("2026 · Partial year");
+    // Deliverable 3 (audit finding 11 / consult F8): the badge no longer
+    // claims ordinary calendar "YTD" — a foundation row in this bucket would
+    // be grouped by its own (possibly already-complete, non-calendar) filer
+    // tax year, not a still-accumulating calendar year.
+    expect(html).toContain("2026 · Partial source/reporting-year coverage");
+    expect(html).not.toContain("· Partial year<");
     expect(html).toContain("August 4, 2026");
+    expect(html).toContain("source/reporting year");
     expect(html).toContain("Closed CARES and ARPA recipient files");
     expect(html).not.toMatch(FORBIDDEN);
   });
