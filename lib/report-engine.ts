@@ -174,7 +174,22 @@ export interface ReportItem {
   programId?: string;
   partnerId?: string;
   color?: string;
-  whoQualifies?: string;
+  /**
+   * review6 S11 investigation: this field used to carry raw
+   * `program.whoQualifies` catalog prose — the exact internal-only field
+   * `lib/program-public.ts`'s `PublicProgramView` deliberately excludes,
+   * and for the identical reason (it can assert/imply a determination
+   * this tool has no authority to make). `programReportItem()` and the
+   * TIF-deadline item builder both used to populate it, and
+   * app/report/page.tsx / components/report/ReportDisplay.tsx both
+   * rendered it verbatim under "Published Applicant Requirements" — a
+   * real, live leak, independent of the /api/programs/engine-source
+   * route S11 is about. `eligibilityRules` below (rendered as the safe,
+   * structured "Requirements" list right next to where this used to
+   * render) already carries the same underlying fact, safely. Removed
+   * rather than fixed-in-place: no legitimate caller should ever
+   * repopulate this with raw prose again.
+   */
   eligibilityRules?: { description: string; required: boolean }[];
   url?: string;
   level?: string;
@@ -1057,6 +1072,15 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
           void _notVerified;
           void _matchedRules;
           void _projectFit;
+          // review6 S11 investigation: `whoQualifies` was removed from
+          // ReportItem's type (it carried raw internal catalog prose,
+          // rendered verbatim — see the type's own doc comment), but a
+          // report SAVED before this fix can still carry the key in its
+          // persisted JSON blob. Strip it defensively here too, the same
+          // way the other now-legacy fields above are stripped, so an
+          // old saved report never re-surfaces it.
+          const legacyItem = publicItem as ReportItem & { whoQualifies?: string };
+          if ("whoQualifies" in legacyItem) delete legacyItem.whoQualifies;
           const supportSummaryItem =
             item.label === "Community Support" || item.label.startsWith("Local Support in ");
           const normalizedItem: ReportItem = {
@@ -1430,7 +1454,6 @@ function programReportItem(
     availability: availability.state,
     availabilityNote,
     programId: program.id,
-    whoQualifies: program.whoQualifies,
     eligibilityRules: program.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
       description: r.description,
       required: r.required,
@@ -2671,7 +2694,6 @@ function buildDeadlinesSection(
       programId: item.programId,
       url: program?.url,
       level: program?.level,
-      whoQualifies: program?.whoQualifies,
       eligibilityRules: program?.eligibilityRules?.map((r) => ({
         description: r.description,
         required: r.required,
@@ -3895,9 +3917,22 @@ function generateDeveloperAnalysis(
       if (!docProgramMap[doc]) docProgramMap[doc] = new Set();
       docProgramMap[doc].add(p.name);
     }
+    // review6 S11 investigation: was `value: p.whoQualifies` — the raw
+    // internal-only catalog field, rendered as this item's PRIMARY,
+    // most-prominent text (not even behind an accordion). Section 1
+    // above (`stackingItems`) already uses the safe pattern for this
+    // exact function — a generic value plus `program.summary` in detail
+    // — so this now derives from the same reviewed, structured
+    // `eligibilityRules[]` PublicProgramView itself is built from,
+    // falling back to the already-public `summary` when a program has no
+    // structured rules on file.
+    const publishedCriteria = (p.eligibilityRules ?? [])
+      .map((rule) => rule.description.trim())
+      .filter(Boolean)
+      .join(" ");
     allQualifications.push({
       ...programReportItem(p, undefined, undefined, undefined, publicEvidenceForProgram(p, state)),
-      value: p.whoQualifies,
+      value: publishedCriteria || p.summary,
     });
   }
 

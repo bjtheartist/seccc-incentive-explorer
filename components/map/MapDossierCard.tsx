@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
-import type { ProgramCheckResult } from "@/lib/types";
+import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
-import type { LocationContextMapSummary } from "@/lib/location-context";
+import type { SafeLocationContextMapSummary } from "@/lib/location-context";
 import type {
   MapDossierAction,
   MapDossierSelection,
@@ -42,9 +42,9 @@ export interface MapDossierCardProps {
   snapshotLabel: string;
   snapshotLat?: number | null;
   snapshotLon?: number | null;
-  snapshotPrograms: ProgramCheckResult[];
+  snapshotPrograms: SafeMapProgramMatch[];
   snapshotTifFinance: TifFinanceContext | null;
-  snapshotContextSummary?: LocationContextMapSummary | null;
+  snapshotContextSummary?: SafeLocationContextMapSummary | null;
   /** review5 S2/S3: non-null when one or more Zone Evidence v2 layers
    *  could not be resolved for this location. Must render ALONGSIDE
    *  snapshotPrograms (known positives), regardless of how many programs
@@ -80,7 +80,7 @@ interface NextStepPresentation {
   generateReport: boolean;
 }
 
-function mappedProgramReason(result: ProgramCheckResult): string {
+function mappedProgramReason(result: SafeMapProgramMatch): string {
   return result.program.zoneKey
     ? "Mapped boundary intersects this location."
     : "Included from the program catalog for further review.";

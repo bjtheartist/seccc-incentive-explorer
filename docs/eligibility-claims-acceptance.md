@@ -1436,3 +1436,175 @@ mode, but is a different query param outside that finding's literal scope
 cannot, via static import-graph analysis alone) verify the server-side
 full-fidelity-in/safe-output-out boundary for engine-source consumers
 (S10).
+
+---
+
+## Review 6 (`scratchpad/battle-test/review6-out.md`) — VERDICT FIX-FIRST, S11–S16 all blocking
+
+### S11 (CRITICAL, reopens S1) — `/api/programs/engine-source` served all 71 full internal records, unauthenticated
+
+**Finding:** S1's original fix bundled the full internal catalog into a
+GET route (`/api/programs/engine-source`) so three client-side engines
+(`runConfidenceEngine()` for the map, `generateReportData()` for the
+report wizard, `scoreSurvey()` for the pre-qualification survey) could
+run in the browser. That route returned every field of all 71 `Program`
+records — `whoQualifies`, `eligibilityRules`, `verificationSteps`,
+`contacts`, suspension notes, everything — to any unauthenticated
+caller, from its DB path, its static-fallback path, and its error path
+alike. The "bounded exception" S1 documented for this route was never a
+safe boundary; it was the exact leak S1 was supposed to close, just
+moved one hop away from the three engines that actually needed the data.
+
+**Fix — chosen architecture (Sol's option (a), not (b)):** investigated
+actual per-engine field usage before choosing between "move execution
+server-side" and "a bounded engine DTO." `runConfidenceEngine()`'s own
+field needs are narrow (~7 fields), but `generateReportData()`'s are not
+— it legitimately touches most of `Program`'s shape to build a complete
+report, so a "bounded DTO" for it would not have been meaningfully
+narrower than the full record, making that option not genuinely
+protective for all three engines uniformly. Moved engine EXECUTION
+server-side instead, for all three:
+- **`app/api/programs/match/route.ts`** (new) — replaces MapView's
+  direct `runConfidenceEngine()` call. Runs server-side against
+  `getProgramsSync()`, then strips `ProgramCheckResult`'s embedded full
+  `Program` down to a new narrow type, `SafeMapProgramMatch`
+  (`lib/types.ts`) — `{programId, program: {id, name, level, zoneKey,
+  url, sourceUrl?}}`, exactly the fields `MapDossierCard.tsx`/
+  `MapSnapshotPanel.tsx` actually read (confirmed by direct grep of
+  both). `components/map/MapView.tsx` now POSTs `{zones, zoneNames,
+  parcel}` and receives only `SafeMapProgramMatch[]` back.
+- **`app/api/report/generate/route.ts`** (new) — replaces
+  `app/report/page.tsx`'s five `generateReportData(state, programs,
+  ctx)` call sites. Runs server-side against `getProgramsSync()`;
+  `GeneratedReport`'s type has no raw `Program` embed (a flattened
+  label/value/detail structure), so it's returned directly, no
+  stripping needed. All five call sites (instant, corridor, share,
+  compare, quick-refine) converted to `await
+  fetch("/api/report/generate", ...)`; the client-side `programs` state
+  and its load-on-mount effect (which used to hit `engine-source`) are
+  gone entirely.
+- **`app/api/survey/score/route.ts`** (new) — replaces
+  `lib/survey-engine.ts`'s old `fetchProgramDetails()` (which called
+  `engine-source` directly from inside the engine module). The pure
+  scoring logic was split into `scoreSurveyWithPrograms(answers,
+  programDetails: Map<string, Program>)`, callable server-side with the
+  full catalog; the exported `scoreSurvey(answers)` used by
+  `PreQualSurvey.tsx` is now a thin `fetch("/api/survey/score", ...)`
+  wrapper. `SurveyResult`'s `ProgramMatch.program` shape
+  (`{name, short, level}`) was already narrow by original design — no
+  output-stripping needed there, only the execution boundary moved.
+- **`app/api/programs/engine-source/route.ts` deleted outright** — not
+  re-bounded, not gated, removed. Confirmed zero functional references
+  remain (`grep -rn "api/programs/engine-source\""` and a fetch-call
+  grep both empty) before deletion; every remaining textual mention
+  across the repo is a comment explicitly describing it as removed.
+
+**Additional leak found during S11's own investigation (not in
+review6's finding text, fixed as part of properly closing S11):**
+`ReportItem.whoQualifies?: string` (`lib/report-engine.ts`) was raw
+catalog prose (`program.whoQualifies`), populated at three call sites
+and rendered verbatim under "Published Applicant Requirements" in both
+`app/report/page.tsx`'s and `components/report/ReportDisplay.tsx`'s
+renderers. Moving engine execution server-side alone would not have
+stopped this field from still being served in the report JSON and shown
+on screen — it was never gated by the engine-source route in the first
+place, just riding along inside `GeneratedReport`. Removed the field
+from `ReportItem`'s type, removed the two rendering blocks, and
+replaced the one call site that used it as a value
+(`generateDeveloperAnalysis()`'s "Project Requirements" section) with
+the same already-safe `eligibilityRules`-derived pattern Section 1 of
+that same function already used. `normalizePublicReportForDisplay()`
+also strips a legacy `whoQualifies` key defensively per-item, in case a
+report saved before this fix still carries it in a persisted JSON blob.
+
+**Judgment call — corrected one assertion inside the "settled" 13-test
+safety suite:** `lib/__tests__/public-report-safety.test.ts` had a test
+asserting `whoQualifies` SURVIVED normalization (i.e., encoding the bug
+just fixed above). Consistent with the S4/S6 precedent already
+established in this pass — a fix doesn't exist until a test asserts the
+correct behavior, and a test asserting the old bug is not "settled,"
+it's stale — rewrote that one test's assertions to confirm stripping
+instead of survival, preserving the suite's exact size (13/13) and
+all-passing status.
+
+**Redundant computation eliminated (found during investigation, not a
+separate leak):** `MapView.tsx`'s `snapshotContextSummary` used to call
+`buildLocationContext()`/`summarizeLocationContextForMap()`, which
+internally re-ran `runConfidenceEngine()` a SECOND time against the same
+inputs `handleMapClick` already used for `snapshotPrograms` — confirmed
+by reading the code that no project-goal reordering ever applies for
+MapView's minimal `LocationContextState`, so the two computations always
+produced an identical program list. `snapshotContextSummary` now reuses
+`snapshotPrograms` directly plus the already-independent
+`siteSignals`/`transport`/`tifFinance` state, removing both the
+duplicate work and the client-side `Program[]`/engine dependency it
+required. This left three now-write-only state variables
+(`locationZoneNames`, `snapshotParcelData`, `snapshotCityZoning` — their
+only reader was the removed call) which were removed along with their
+setter call sites; `zoneNames`/`parcelData` still flow into the
+`/api/programs/match` POST body as local values, and `zoningInfo`
+(unaffected) still drives the zoning display.
+
+**Tests added:**
+- `app/api/programs/match/route.test.ts` (7 tests) — every match's
+  `program` object has ONLY `{id, name, level, zoneKey, url,
+  sourceUrl}` keys; no internal-only key (24-entry blocklist including
+  `whoQualifies`, `contacts`, `eligibilityRules`, `matchedRules`,
+  `relevance`, `notVerified`, etc.) appears anywhere in the serialized
+  response across many zones; caps at 3 results; malformed JSON → 400;
+  missing/invalid `zones` → 400; non-boolean zone values → 400; empty
+  zones → 200 with an empty array.
+- `app/api/report/generate/route.test.ts` (5 tests) — a real
+  site-incentives request generates a report with no internal-only key
+  anywhere in the response; malformed JSON → 400; missing `state` → 400;
+  missing `ctx` defaults to `{}` → 200; a corridor-intelligence report
+  generates without zones/parcel.
+- `app/api/survey/score/route.test.ts` (6 tests) — a real answer set
+  returns a `SurveyResult` with `program` narrowed to exactly `{name,
+  short, level}`; no internal-only key appears anywhere (`lastVerifiedAt`
+  is deliberately excluded from this blocklist — it's a legitimate part
+  of `PublicMatchExplanation`'s safe contract, not the raw catalog field
+  of the same name); malformed JSON → 400; wrong-shape/missing
+  `answers` → 400; empty answers → 200 with only the universal bucket.
+- `lib/__tests__/public-report-safety.test.ts` — rewritten test (see
+  judgment call above) now asserts a legacy `whoQualifies` key on an
+  already-saved report is stripped, not preserved; suite stays 13/13.
+- `lib/__tests__/survey-engine.test.ts` — rewritten to call
+  `scoreSurveyWithPrograms(answers, programDetails)` synchronously
+  (module-level `Map` built from the fixture catalog) instead of
+  stubbing `fetch` around the old async `scoreSurvey()`; all 14 original
+  tests/assertions preserved, now synchronous.
+- `app/report/__tests__/report-page-live-renderer.test.tsx` — the
+  `useState`-call-order harness's `REPORT_WIZARD_PAGE_STATE_ORDER` array
+  and `defaultSlotValues()` updated to drop the removed `programs`
+  state slot; all 8 tests re-verified passing (confirms no hook-order
+  desync from removing that `useState` call).
+
+**Stale-comment cleanup:** every remaining textual reference to
+`engine-source` across the repo (`app/api/programs/match/route.ts`,
+`app/api/report/generate/route.ts`, `app/api/survey/score/route.ts` and
+their tests, `app/report/page.tsx`, `components/map/MapView.tsx`,
+`components/survey/PreQualSurvey.tsx`, `lib/report-engine.ts`,
+`lib/survey-engine.ts`, `lib/__tests__/survey-engine.test.ts`,
+`lib/public-claim-surfaces-verify.ts`) is now an explanatory comment
+describing it as removed, not a live dependency; verified by repo-wide
+grep for both the path string and any `fetch(...engine-source...)` call
+before deleting the route file. `lib/public-claim-surfaces-verify.ts`'s
+own doc comment (previously describing engine-source as S1's "documented,
+bounded exception") rewritten to describe S11's actual architecture —
+full fidelity stays server-side inside the three new route handlers and
+the engine modules they call, nothing serializes the raw catalog to the
+client anymore — and to flag that this data-flow boundary is still not
+mechanically provable by the file's own static import-graph check
+(narrowed further by S16, next).
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors, 5
+warnings, confirmed identical (via `git stash`) to the 5 pre-existing
+warnings on the pre-S11 commit — no new warnings introduced; full `npx
+vitest run` — **322 test files, 3810 passed, 2 skipped** (up from S10's
+319/3792 — the +3 files/+18 tests are the three new route test files
+above); `npm run programs:public:check` clean
+(`public/data/programs-public.json` still matches
+`data/programs-internal.json`, unaffected by this finding — it was never
+the leak; the leak was a separate route serving the internal file
+directly).

@@ -262,6 +262,31 @@ export interface ProgramCheckResult {
   matchedRules: string[];
 }
 
+/**
+ * review6 S11 (CRITICAL, S1 reopened) — the network-safe shape for a map
+ * click-snapshot program match. `ProgramCheckResult.program: Program`
+ * above embeds the FULL internal record (whoQualifies, eligibilityRules,
+ * contacts, requiredDocs, ...) — fine when `runConfidenceEngine()` runs
+ * server-side and this type stays server-internal, but never safe to
+ * serialize to an unauthenticated client. `components/map/MapDossierCard.tsx`
+ * and `components/map/MapSnapshotPanel.tsx` only ever read
+ * `.program.zoneKey`, `.program.name`, `.program.sourceUrl`/`.program.url`
+ * (confirmed by direct grep of both files) — this narrows to exactly
+ * that, nothing else, and is the ONLY shape app/api/programs/match/route.ts
+ * is allowed to return.
+ */
+export interface SafeMapProgramMatch {
+  programId: string;
+  program: {
+    id: string;
+    name: string;
+    level: string;
+    zoneKey: string;
+    url: string;
+    sourceUrl?: string;
+  };
+}
+
 export interface TopAction {
   label: string;
   type: "call" | "gather" | "book" | "check";

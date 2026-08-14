@@ -25,8 +25,12 @@ import {
 
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
+// review6 S11 investigation: `whoQualifies` added — it carried raw
+// internal catalog prose onto ReportItem (removed from the type; this
+// regex additionally guards against it resurfacing on an
+// already-persisted saved report's JSON blob).
 const PRIVATE_MATCH_FIELDS =
-  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFit|projectFitLabel|projectFitReason)"/i;
+  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFit|projectFitLabel|projectFitReason|whoQualifies)"/i;
 
 function savedReport(sections: GeneratedReport["sections"]): GeneratedReport {
   return {
@@ -357,7 +361,22 @@ describe("public report safety", () => {
     expect(section.items[1].detail).not.toMatch(/Status:|Active resource|Verified current web presence/i);
   });
 
-  it("preserves deadline and project-requirement facts while stripping private item payloads", () => {
+  it("preserves deadline and project-requirement facts while stripping private item payloads, including a legacy whoQualifies key on an already-saved report", () => {
+    // review6 S11 investigation: this test previously asserted that
+    // `whoQualifies` SURVIVED normalization — i.e. that raw internal
+    // catalog prose was safe to preserve and display. That was the exact
+    // defect under review: `whoQualifies` is the same internal-only field
+    // `lib/program-public.ts`'s PublicProgramView deliberately excludes,
+    // for the same reason (it can assert/imply a determination this tool
+    // has no authority to make), and it was being rendered verbatim under
+    // "Published Applicant Requirements" in both ReportDisplay forks. The
+    // field was removed from `ReportItem`'s type entirely; this fixture
+    // still supplies it (cast through `as ReportItem` below) specifically
+    // to prove an ALREADY-SAVED report from before this fix — which can
+    // still carry the key in its persisted JSON blob — gets it stripped
+    // defensively, the same way the other now-legacy fields here already
+    // are. `value`/`detail` (genuinely safe, already-public fields)
+    // still survive unchanged.
     const normalized = normalizePublicReportForDisplay(savedReport([
       {
         title: "Upcoming Deadlines Near This Address",
@@ -366,13 +385,13 @@ describe("public report safety", () => {
           value: "December 15, 2026",
           detail: "Confirm the current filing window.",
           programId: "deadline-program",
-          whoQualifies: "Eligible applicants must file before the published deadline.",
           confidenceLevel: "appears_eligible",
           confidenceLabel: "High Match",
           whyOneLine: "You qualify.",
           matchedRules: ["Reported industry: manufacturing"],
           notVerified: ["Confirm timing"],
           projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+          ...({ whoQualifies: "Eligible applicants must file before the published deadline." } as object),
         }],
       },
       {
@@ -382,8 +401,8 @@ describe("public report safety", () => {
           value: "Eligible businesses must document a qualifying rehabilitation project.",
           detail: "Factual program requirement.",
           programId: "requirement-program",
-          whoQualifies: "Eligible businesses must document a qualifying rehabilitation project.",
           projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+          ...({ whoQualifies: "Eligible businesses must document a qualifying rehabilitation project." } as object),
         }],
       },
       {
@@ -398,17 +417,17 @@ describe("public report safety", () => {
       },
     ]));
 
-    const deadline = normalized.sections[0].items[0];
-    const requirement = normalized.sections[1].items[0];
+    const deadline = normalized.sections[0].items[0] as GeneratedReport["sections"][number]["items"][number] & {
+      whoQualifies?: string;
+    };
+    const requirement = normalized.sections[1].items[0] as typeof deadline;
     expect(deadline.value).toBe("December 15, 2026");
-    expect(deadline.whoQualifies).toBe(
-      "Eligible applicants must file before the published deadline.",
-    );
+    expect(deadline.whoQualifies).toBeUndefined();
     expect(deadline.matchExplanation).toBeUndefined();
     expect(requirement.value).toBe(
       "Eligible businesses must document a qualifying rehabilitation project.",
     );
-    expect(requirement.whoQualifies).toBe(requirement.value);
+    expect(requirement.whoQualifies).toBeUndefined();
     expect(requirement.matchExplanation).toBeUndefined();
     expect(JSON.stringify(normalized)).not.toMatch(PRIVATE_MATCH_FIELDS);
   });

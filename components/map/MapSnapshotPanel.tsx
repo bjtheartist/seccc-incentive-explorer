@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
-import type { ProgramCheckResult } from "@/lib/types";
+import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
-import type { LocationContextMapSummary } from "@/lib/location-context";
+import type { SafeLocationContextMapSummary } from "@/lib/location-context";
 import { formatMiles } from "@/lib/transport-access";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
@@ -15,9 +15,9 @@ interface MapSnapshotPanelProps {
   snapshotLabel: string;
   snapshotLat?: number | null;
   snapshotLon?: number | null;
-  snapshotPrograms: ProgramCheckResult[];
+  snapshotPrograms: SafeMapProgramMatch[];
   snapshotTifFinance: TifFinanceContext | null;
-  snapshotContextSummary?: LocationContextMapSummary | null;
+  snapshotContextSummary?: SafeLocationContextMapSummary | null;
   tifFinanceLoading: boolean;
   zoningInfo: string | null;
   isGeneratingSnapshot: boolean;
@@ -27,7 +27,7 @@ interface MapSnapshotPanelProps {
   onGenerateSnapshot: () => void;
 }
 
-function mappedProgramReason(result: ProgramCheckResult): string {
+function mappedProgramReason(result: SafeMapProgramMatch): string {
   return result.program.zoneKey
     ? "Mapped boundary intersects this location."
     : "Included from the program catalog for further review.";

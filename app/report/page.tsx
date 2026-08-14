@@ -49,13 +49,13 @@ import type {
 } from "@/lib/report-wizard-config";
 import {
   CONFIRMED_PROGRAMS_SECTION_ID,
-  generateReportData,
   normalizePublicReportForDisplay,
   SECTION_IDS,
 } from "@/lib/report-engine";
 import type {
   GeneratedReport,
   ReportCensusData,
+  ReportContext,
   ReportZoningData,
   CorridorMetric,
   CorridorOwnerCluster,
@@ -63,6 +63,34 @@ import type {
   ReportSection,
   ReportItem,
 } from "@/lib/report-engine";
+
+/**
+ * review6 S11 (CRITICAL, S1 reopened) — replaces every direct
+ * `generateReportData(state, programs, ctx)` call in this file.
+ * `generateReportData()` used to run client-side against the full
+ * internal catalog fetched from the now-removed
+ * /api/programs/engine-source route (an unauthenticated endpoint
+ * returning all 71 full internal Program records). Report generation now
+ * runs server-side (POST /api/report/generate) — `state`/`ctx` are
+ * already client-side, non-catalog data (zones, census, parcel,
+ * districts, site signals, etc.), so nothing sensitive crosses the
+ * network in the REQUEST either; only the already-safe `GeneratedReport`
+ * comes back.
+ */
+async function generateReportRemote(
+  state: WizardState,
+  ctx: ReportContext,
+): Promise<GeneratedReport> {
+  const res = await fetch("/api/report/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state, ctx }),
+  });
+  if (!res.ok) {
+    throw new Error(`generateReportRemote: /api/report/generate returned ${res.status}`);
+  }
+  return (await res.json()) as GeneratedReport;
+}
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
 import { StartHereCard } from "@/components/report/StartHereCard";
 import { ActionRoadmapSection } from "@/components/report/ActionRoadmapSection";
@@ -164,7 +192,6 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import type {
-  Program,
   ParcelData,
   DistrictData,
   StackingRule,
@@ -672,7 +699,11 @@ function ReportWizardPage() {
   const [compareNeighborhoodEconomicsZip, setCompareNeighborhoodEconomicsZip] = useState<string | null>(null);
 
   // Data state
-  const [programs, setPrograms] = useState<Program[]>([]);
+  // review6 S11 (CRITICAL, S1 reopened): the client-side `programs: Program[]`
+  // state that used to live here (fetched from the now-removed
+  // /api/programs/engine-source route) is gone — report generation is
+  // server-side now (generateReportRemote() -> POST /api/report/generate),
+  // so the client never needs the raw catalog at all.
   const [zones, setZones] = useState<Record<string, boolean> | null>(null);
   const [zoneNames, setZoneNames] = useState<Record<string, string> | null>(null);
   const [zoneUnknowns, setZoneUnknowns] = useState<string[]>([]);
@@ -804,20 +835,11 @@ function ReportWizardPage() {
     [compareAddressInput, compareGeoResult?.display_name, compareParcel?.address, compareParcel?.zip]
   );
 
-  // Load programs on mount. review5 S1: /api/programs now returns the
-  // sanitized PublicProgramView projection; the client-side report engine
-  // (generateReportData / runConfidenceEngine) needs full record fidelity
-  // (howToApply, requiredDocs, verificationSteps, eligibilityRules, ...) to
-  // synthesize its own already-constrained output, so it fetches the
-  // explicitly-scoped /api/programs/engine-source instead — see that
-  // route's doc comment and docs/eligibility-claims-acceptance.md's S1
-  // resolution note for why this is a documented, bounded exception rather
-  // than a silent gap.
-  useEffect(() => {
-    cachedFetch<Program[]>("/api/programs/engine-source")
-      .then(setPrograms)
-      .catch(() => {});
-  }, []);
+  // review6 S11 (CRITICAL, S1 reopened): the "load programs on mount"
+  // effect that used to live here is gone. Report generation
+  // (generateReportRemote() -> POST /api/report/generate) and the map's
+  // confidence-engine matching (now server-side too) no longer need the
+  // client to hold the full catalog at all.
 
   // Load zone data when address has lat/lon
   // Uses the API first, then falls back to client-side Turf.js if the API fails.
@@ -1147,12 +1169,13 @@ function ReportWizardPage() {
 
   // Generate comparison report once compare data is ready
   useEffect(() => {
-    if (!compareGeoResult || !compareZones || programs.length === 0) return;
+    if (!compareGeoResult || !compareZones) return;
     if (
       compareZoningKey !==
       zoningLookupKey(compareGeoResult.lat, compareGeoResult.lon)
     ) return;
     if (compareZip && compareNeighborhoodEconomicsZip !== compareZip) return;
+    let cancelled = false;
     const timer = setTimeout(() => {
       const compareState: WizardState = {
         ...wizardState,
@@ -1160,7 +1183,7 @@ function ReportWizardPage() {
         lat: compareGeoResult.lat,
         lon: compareGeoResult.lon,
       };
-      const generated = generateReportData(compareState, programs, {
+      generateReportRemote(compareState, {
         zones: compareZones ?? undefined,
         zoneNames: compareZoneNames ?? undefined,
         unknownZones: compareZoneUnknowns,
@@ -1168,17 +1191,25 @@ function ReportWizardPage() {
         cityZoning: compareZoning ?? undefined,
         parcel: compareParcel ?? undefined,
         neighborhoodEconomics: compareNeighborhoodEconomics ?? undefined,
-      });
-      setCompareReport(generated);
+      })
+        .then((generated) => {
+          if (!cancelled) setCompareReport(generated);
+        })
+        .catch((error) => {
+          console.error("comparison report generation failed:", error);
+        });
     }, 400);
-    return () => clearTimeout(timer);
-  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareZoningKey, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareZoningKey, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, wizardState]);
 
-  // Instant mode: auto-generate report once programs + zones are loaded
+  // Instant mode: auto-generate report once zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
   useEffect(() => {
     if (!isInstantMode || !instantLoading) return;
-    if (programs.length === 0 || !zones) return;
+    if (!zones) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
     if (
       wizardState.lat != null &&
@@ -1191,10 +1222,11 @@ function ReportWizardPage() {
     if (wizardState.lat && wizardState.lon && mobilityAccess === undefined) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        const generated = generateReportData(wizardState, programs, {
+        const generated = await generateReportRemote(wizardState, {
           zones: zones ?? undefined,
           zoneNames: zoneNames ?? undefined,
           unknownZones: zoneUnknowns,
@@ -1213,11 +1245,13 @@ function ReportWizardPage() {
           transport: transportAccess ?? undefined,
           mobilityAccess: mobilityAccess ?? undefined,
         });
+        if (cancelled) return;
         setReport(generated);
         // Funnel completion (location_snapshot_generated) is fired by the
         // generated-report effect above, gated by report identity — do not
         // trackEvent here or the snapshot double-counts.
       } catch (err) {
+        if (cancelled) return;
         // Stay on loading — but make the failure visible to engineering
         // instead of looking identical to "still loading" in the data (ED4).
         console.error("instant report generation failed:", err);
@@ -1232,31 +1266,39 @@ function ReportWizardPage() {
           },
         });
       } finally {
-        setIsGenerating(false);
-        setInstantLoading(false);
+        if (!cancelled) {
+          setIsGenerating(false);
+          setInstantLoading(false);
+        }
       }
     }, 600);
-    return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isInstantMode, instantLoading, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
   useEffect(() => {
     if (!isCorridorMode || corridorAutoGenerated) return;
-    if (programs.length === 0 || corridorLoading) return;
+    if (corridorLoading) return;
 
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        const generated = generateReportData(wizardState, programs, {
+        const generated = await generateReportRemote(wizardState, {
           corridorMetrics: corridorMetric ?? undefined,
           corridorOwnerClusters,
           reportZip: reportZip ?? undefined,
           stats: areaStats ?? undefined,
         });
+        if (cancelled) return;
         setReport(generated);
         setCorridorAutoGenerated(true);
       } catch (err) {
+        if (cancelled) return;
         console.error("corridor report generation failed:", err);
         trackEvent("report_generation_failed", {
           source: "corridor",
@@ -1267,17 +1309,19 @@ function ReportWizardPage() {
           },
         });
       } finally {
-        setIsGenerating(false);
+        if (!cancelled) setIsGenerating(false);
       }
     }, 300);
-    return () => clearTimeout(timer);
-  }, [isCorridorMode, corridorAutoGenerated, programs, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, areaStats, wizardState]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isCorridorMode, corridorAutoGenerated, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, areaStats, wizardState]);
 
-  // Share mode: auto-generate report once programs + zones are loaded
+  // Share mode: auto-generate report once zones are loaded
   const [shareAutoGenerated, setShareAutoGenerated] = useState(false);
   useEffect(() => {
     if (!isShareMode || shareAutoGenerated) return;
-    if (programs.length === 0) return;
     // For address-based reports, wait for zones
     if (!zones && wizardState.lat) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
@@ -1293,10 +1337,11 @@ function ReportWizardPage() {
     if (wizardState.reportType === "corridor-intelligence" && corridorLoading) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        const generated = generateReportData(wizardState, programs, {
+        const generated = await generateReportRemote(wizardState, {
           zones: zones ?? undefined,
           zoneNames: zoneNames ?? undefined,
           unknownZones: zoneUnknowns,
@@ -1317,9 +1362,11 @@ function ReportWizardPage() {
           transport: transportAccess ?? undefined,
           mobilityAccess: mobilityAccess ?? undefined,
         });
+        if (cancelled) return;
         setReport(generated);
         setShareAutoGenerated(true);
       } catch (err) {
+        if (cancelled) return;
         console.error("shared report generation failed:", err);
         trackEvent("report_generation_failed", {
           source: "shared_report",
@@ -1332,11 +1379,14 @@ function ReportWizardPage() {
           },
         });
       } finally {
-        setIsGenerating(false);
+        if (!cancelled) setIsGenerating(false);
       }
     }, 600);
-    return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isShareMode, shareAutoGenerated, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -1613,7 +1663,7 @@ function ReportWizardPage() {
         }
       }
 
-      const generated = generateReportData(stateForReport, programs, {
+      const generated = await generateReportRemote(stateForReport, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
         unknownZones: zoneUnknowns,
@@ -1621,7 +1671,7 @@ function ReportWizardPage() {
         census: censusData ?? undefined,
         cityZoning: zoningForReport ?? undefined,
         parcel: parcelData ?? undefined,
-          reportZip: reportZip ?? undefined,
+        reportZip: reportZip ?? undefined,
         districts: districtsData ?? undefined,
         stackingRules: stackingRules ?? undefined,
         communityAssets: communityAssets ?? undefined,
@@ -1642,7 +1692,7 @@ function ReportWizardPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
+  }, [wizardState, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
 
   const handlePrepareGatedReport = useCallback(
     async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
@@ -1807,7 +1857,6 @@ function ReportWizardPage() {
           reportB={compareReport}
           onStartOver={handleStartOver}
           wizardState={wizardState}
-          programs={programs}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
           onRefineA={handleRefine}
           onRefineB={handleRefineCompareB}
@@ -1867,7 +1916,6 @@ function ReportWizardPage() {
           onCompareGeocode={handleCompareGeocode}
           compareGeoResult={compareGeoResult}
           analyticsSource={reportSource}
-          programs={programs}
         />
         {hasResolvedAddress && (
           <SiteActivityCard
@@ -3364,7 +3412,6 @@ function ComparisonDisplay({
   reportB,
   onStartOver,
   wizardState: _reportWizardState,
-  programs = [],
   isInstantMode,
   onRefineA,
   onRefineB,
@@ -3373,7 +3420,6 @@ function ComparisonDisplay({
   reportB: GeneratedReport;
   onStartOver: () => void;
   wizardState?: WizardState;
-  programs?: Program[];
   isInstantMode?: boolean;
   onRefineA?: () => void;
   onRefineB?: () => void;
@@ -3415,7 +3461,6 @@ function ComparisonDisplay({
             report={reportA}
             onStartOver={onStartOver}
             compact
-            programs={programs}
             isInstantMode={isInstantMode}
             onRefine={onRefineA}
             refineContext="compare_a"
@@ -3424,7 +3469,6 @@ function ComparisonDisplay({
             report={reportB}
             onStartOver={onStartOver}
             compact
-            programs={programs}
             isInstantMode={isInstantMode}
             onRefine={onRefineB}
             refineContext="compare_b"
@@ -3455,7 +3499,6 @@ function ReportDisplay({
   compareGeocoding,
   onCompareGeocode,
   compareGeoResult,
-  programs = [],
   analyticsSource = "instant_report",
 }: {
   report: GeneratedReport;
@@ -3483,7 +3526,6 @@ function ReportDisplay({
   compareGeocoding?: boolean;
   onCompareGeocode?: () => void;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
-  programs?: Program[];
   /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
   analyticsSource?: string;
 }) {
@@ -3504,10 +3546,15 @@ function ReportDisplay({
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
-  const programById = useMemo(
-    () => new Map(programs.map((program) => [program.id, program])),
-    [programs],
-  );
+  // review6 S11 (CRITICAL, S1 reopened): the `programById` fallback map
+  // that used to live here (built from a client-side `programs: Program[]`
+  // prop) is gone. `programReportItem()` (lib/report-engine.ts) already
+  // sets applicationPortals/verificationSteps/sourceUrl/status directly on
+  // every program-linked report item at generation time — this was
+  // always the PRIMARY source (see ReportNavigationLinks's own
+  // `item.applicationPortals || program?.applicationPortals` fallback
+  // ordering); losing the secondary fallback only affects a report item
+  // built through some OTHER path that didn't set those fields itself.
   const viewedSupportKeyRef = useRef<string | null>(null);
 
   // ── Persona lens (Tier 1b, audit BM4) ──
@@ -4802,19 +4849,20 @@ function ReportDisplay({
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5">
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
-                          const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
                           const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
                           const isDeadlineItem = sectionMatchesIdOrTitle(section, SECTION_IDS.upcomingDeadlines, "Upcoming Deadlines Near This Address");
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
                           const hasSideValue = Boolean(item.value && !hasGroupedDetail);
+                          // review6 S11 (CRITICAL, S1 reopened): the `itemProgram`
+                          // fallback (a client-side `Program` lookup) is gone —
+                          // `reportItem.*` alone, which programReportItem()
+                          // (lib/report-engine.ts) already sets at generation
+                          // time, is now the only source.
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
-                            itemProgram?.sourceUrl ||
                             reportItem.applicationPortals?.length ||
-                            itemProgram?.applicationPortals?.length ||
-                            reportItem.verificationSteps?.length ||
-                            itemProgram?.verificationSteps?.length,
+                            reportItem.verificationSteps?.length,
                           );
 
                           return (
@@ -4888,7 +4936,7 @@ function ReportDisplay({
                             )}
 
                             {/* Public program evidence and official navigation */}
-                            {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (
+                            {!isSupportNetworkItem && (item.matchExplanation || item.eligibilityRules || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -4896,16 +4944,14 @@ function ReportDisplay({
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
                                     <MatchExplanationDetails explanation={item.matchExplanation} />
-                                    {item.whoQualifies && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
-                                          Published Applicant Requirements
-                                        </span>
-                                        <span className="text-[#0C1B33]/45 text-[11px] leading-relaxed block">
-                                          {item.whoQualifies}
-                                        </span>
-                                      </div>
-                                    )}
+                                    {/* review6 S11 investigation: the raw `item.whoQualifies`
+                                        block that used to render here (labeled "Published
+                                        Applicant Requirements") was removed — it displayed
+                                        unfiltered internal catalog prose verbatim, the exact
+                                        field PublicProgramView deliberately excludes and for
+                                        the same reason. `item.eligibilityRules` below covers
+                                        the same underlying fact through the reviewed,
+                                        structured form. */}
                                     {item.eligibilityRules && item.eligibilityRules.length > 0 && (
                                       <div>
                                         <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
@@ -4933,7 +4979,7 @@ function ReportDisplay({
                                         More information
                                       </a>
                                     )}
-                                    <ReportNavigationLinks item={reportItem} program={itemProgram} />
+                                    <ReportNavigationLinks item={reportItem} />
                                     {item.lastVerifiedAt && (
                                       <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
                                     )}

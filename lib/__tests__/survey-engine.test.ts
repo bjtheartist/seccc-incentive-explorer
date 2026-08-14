@@ -1,41 +1,33 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import programs from "../../data/programs-internal.json";
-import { scoreSurvey, SURVEY_QUESTIONS } from "../survey-engine";
+import { scoreSurveyWithPrograms, SURVEY_QUESTIONS } from "../survey-engine";
 import { resolveAvailability } from "../program-gating";
 import type { Program } from "../types";
 
-// review5 S1: scoreSurvey() now fetches /api/programs/engine-source at
-// submit time instead of a build-time static import. Stub fetch to return
-// the SAME internal catalog fixture these tests already import directly —
-// tests are allowed to see the internal catalog (they run in Node, never
-// ship to a browser); this proves the engine's own logic, not the network
-// boundary (that boundary is covered by
-// app/api/programs/engine-source/route.test.ts and the client-transitive-
-// import guard test).
-beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      if (String(input).includes("/api/programs/engine-source")) {
-        return new Response(JSON.stringify(programs), { status: 200 });
-      }
-      return new Response("not found", { status: 404 });
-    }),
-  );
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+// review6 S11 (CRITICAL, S1 reopened): scoreSurvey() used to fetch
+// /api/programs/engine-source client-side — an unauthenticated route that
+// turned out to return all 71 FULL internal Program records, reopening
+// the exact exposure S1 was supposed to close. Scoring now runs
+// server-side (app/api/survey/score/route.ts), calling the pure,
+// synchronous scoreSurveyWithPrograms() tested directly here — no fetch
+// mock needed. Tests are allowed to see the internal catalog fixture
+// (they run in Node, never ship to a browser); this proves the engine's
+// own logic, not the network boundary (that boundary is covered by
+// app/api/survey/score/route.test.ts and the client-transitive-import
+// guard test).
+const programDetails = new Map((programs as Program[]).map((p) => [p.id, p]));
 
 describe("survey public results", () => {
-  it("keeps private ordering data out of the public result", async () => {
-    const result = await scoreSurvey({
-      industry: "manufacturing",
-      property: "own",
-      activities: ["renovations", "hiring"],
-      size: "over10m",
-    });
+  it("keeps private ordering data out of the public result", () => {
+    const result = scoreSurveyWithPrograms(
+      {
+        industry: "manufacturing",
+        property: "own",
+        activities: ["renovations", "hiring"],
+        size: "over10m",
+      },
+      programDetails,
+    );
 
     expect(result.matches.length).toBeGreaterThan(0);
     const serialized = JSON.stringify(result);
@@ -51,13 +43,16 @@ describe("survey public results", () => {
     }
   });
 
-  it("labels selected facts as user answers and leaves requirements open", async () => {
-    const result = await scoreSurvey({
-      industry: "hairBeauty",
-      property: "own",
-      activities: ["renovations"],
-      size: "500kTo10m",
-    });
+  it("labels selected facts as user answers and leaves requirements open", () => {
+    const result = scoreSurveyWithPrograms(
+      {
+        industry: "hairBeauty",
+        property: "own",
+        activities: ["renovations"],
+        size: "500kTo10m",
+      },
+      programDetails,
+    );
     const sbif = result.matches.find((match) => match.programId === "sbif");
 
     expect(sbif).toBeDefined();
@@ -73,13 +68,16 @@ describe("survey public results", () => {
     expect(JSON.stringify(sbif)).not.toMatch(/confirmed/i);
   });
 
-  it("uses only program ids backed by the production catalog", async () => {
-    const result = await scoreSurvey({
-      industry: "nonprofit",
-      property: "none",
-      activities: ["expanding"],
-      size: "preRevenue",
-    });
+  it("uses only program ids backed by the production catalog", () => {
+    const result = scoreSurveyWithPrograms(
+      {
+        industry: "nonprofit",
+        property: "none",
+        activities: ["expanding"],
+        size: "preRevenue",
+      },
+      programDetails,
+    );
     const productionIds = new Set(programs.map((program) => program.id));
 
     expect(result.matches.some((match) => match.programId === "workforceSolutions")).toBe(true);
@@ -87,11 +85,11 @@ describe("survey public results", () => {
     expect(result.universal.every((match) => productionIds.has(match.programId))).toBe(true);
   });
 
-  it("keeps every answer path free of public ranking and determination language", async () => {
+  it("keeps every answer path free of public ranking and determination language", () => {
     for (const question of SURVEY_QUESTIONS) {
       for (const option of question.options) {
         const answer = question.type === "multi" ? [option.id] : option.id;
-        const result = await scoreSurvey({ [question.id]: answer });
+        const result = scoreSurveyWithPrograms({ [question.id]: answer }, programDetails);
         const serialized = JSON.stringify(result);
 
         expect(serialized).not.toMatch(
@@ -115,12 +113,12 @@ describe("survey honesty — F12", () => {
     expect(sizeIds).not.toContain("under500k");
   });
 
-  it("an answer value with no catalog rule (inert-only answers) fabricates no matches and is disclosed in unusedAnswers, never silently absorbed", async () => {
+  it("an answer value with no catalog rule (inert-only answers) fabricates no matches and is disclosed in unusedAnswers, never silently absorbed", () => {
     // A value that cannot be selected through the current UI (its option
     // was removed) but exercises the SAME code path a future un-ruled
     // option would hit — proves the disclosure mechanism itself, not just
     // today's absence of inert options.
-    const result = await scoreSurvey({ industry: "professional" as never });
+    const result = scoreSurveyWithPrograms({ industry: "professional" as never }, programDetails);
     expect(result.unusedAnswers).toContain("industry:professional");
     expect(result.usedAnswers).not.toContain("industry:professional");
     // No fabricated match attributed to an answer with zero rules — only
@@ -128,20 +126,20 @@ describe("survey honesty — F12", () => {
     expect(result.matches).toEqual([]);
   });
 
-  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`, and is present even with an unrelated answer", async () => {
-    const result = await scoreSurvey({ activities: ["expanding"] });
+  it("separates universal navigation (Small Business Source) from answer-derived matches — it never appears in `matches`, and is present even with an unrelated answer", () => {
+    const result = scoreSurveyWithPrograms({ activities: ["expanding"] }, programDetails);
     expect(result.matches.some((m) => m.programId === "smallBizSource")).toBe(false);
     expect(result.universal.some((m) => m.programId === "smallBizSource")).toBe(true);
   });
 
-  it("Small Business Source is universal navigation, present even with NO answers at all — it was never actually answer-derived", async () => {
-    const result = await scoreSurvey({});
+  it("Small Business Source is universal navigation, present even with NO answers at all — it was never actually answer-derived", () => {
+    const result = scoreSurveyWithPrograms({}, programDetails);
     expect(result.universal.some((m) => m.programId === "smallBizSource")).toBe(true);
     expect(result.matches).toEqual([]);
   });
 
-  it("every match (including universal) carries a status object with a non-empty label, visible before the card is opened", async () => {
-    const result = await scoreSurvey({ industry: "manufacturing", activities: ["hiring"] });
+  it("every match (including universal) carries a status object with a non-empty label, visible before the card is opened", () => {
+    const result = scoreSurveyWithPrograms({ industry: "manufacturing", activities: ["hiring"] }, programDetails);
     for (const match of [...result.matches, ...result.universal]) {
       expect(match.status).toBeDefined();
       expect(match.status.label.length).toBeGreaterThan(0);
@@ -149,9 +147,9 @@ describe("survey honesty — F12", () => {
     }
   });
 
-  it("a lapsed program never surfaces in matches without its status recorded (catalystGrant, intakeStatus lapsed)", async () => {
+  it("a lapsed program never surfaces in matches without its status recorded (catalystGrant, intakeStatus lapsed)", () => {
     // activities:equipment rules catalystGrant medium confidence.
-    const result = await scoreSurvey({ activities: ["equipment"] });
+    const result = scoreSurveyWithPrograms({ activities: ["equipment"] }, programDetails);
     const catalyst = result.matches.find((m) => m.programId === "catalystGrant");
     if (catalyst) {
       expect(catalyst.status.intakeStatus).toBe("lapsed");
@@ -159,14 +157,14 @@ describe("survey honesty — F12", () => {
     }
   });
 
-  it("expired programs (resolveAvailability) never surface as a survey starting point, for every single-option answer across every question", async () => {
+  it("expired programs (resolveAvailability) never surface as a survey starting point, for every single-option answer across every question", () => {
     const today = new Date();
     const catalogById = new Map((programs as Program[]).map((p) => [p.id, p]));
     let expiredProgramExists = false;
     for (const question of SURVEY_QUESTIONS) {
       for (const option of question.options) {
         const answer = question.type === "multi" ? [option.id] : option.id;
-        const result = await scoreSurvey({ [question.id]: answer });
+        const result = scoreSurveyWithPrograms({ [question.id]: answer }, programDetails);
         for (const match of [...result.matches, ...result.universal]) {
           const record = catalogById.get(match.programId);
           expect(record).toBeDefined();
@@ -204,9 +202,9 @@ describe("survey engine — universal navigation carries no answer-derived reaso
     expect(activitiesQuestion.options.some((o) => o.id === "advice")).toBe(false);
   });
 
-  it("Small Business Source's universal-bucket explanation carries NO answer-derived reasons — 'advice selected vs not' comparison via the surviving smallBizSource-routing answer (size:preRevenue)", async () => {
-    const withAnswer = await scoreSurvey({ size: "preRevenue" });
-    const withoutAnswer = await scoreSurvey({});
+  it("Small Business Source's universal-bucket explanation carries NO answer-derived reasons — 'advice selected vs not' comparison via the surviving smallBizSource-routing answer (size:preRevenue)", () => {
+    const withAnswer = scoreSurveyWithPrograms({ size: "preRevenue" }, programDetails);
+    const withoutAnswer = scoreSurveyWithPrograms({}, programDetails);
 
     const universalWithAnswer = withAnswer.universal.find((m) => m.programId === "smallBizSource");
     const universalWithoutAnswer = withoutAnswer.universal.find((m) => m.programId === "smallBizSource");
@@ -230,8 +228,8 @@ describe("survey engine — universal navigation carries no answer-derived reaso
     expect(fullExplanationJson).not.toContain("Pre-revenue");
   });
 
-  it("selecting size:preRevenue still keeps smallBizSource out of `matches` (unchanged from before this fix) — only its reason text was the defect", async () => {
-    const result = await scoreSurvey({ size: "preRevenue" });
+  it("selecting size:preRevenue still keeps smallBizSource out of `matches` (unchanged from before this fix) — only its reason text was the defect", () => {
+    const result = scoreSurveyWithPrograms({ size: "preRevenue" }, programDetails);
     expect(result.matches.some((m) => m.programId === "smallBizSource")).toBe(false);
   });
 });

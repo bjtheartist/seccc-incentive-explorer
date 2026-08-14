@@ -13,9 +13,12 @@ export function PreQualSurvey() {
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [results, setResults] = useState<SurveyResult | null>(null);
   const [direction, setDirection] = useState(1);
-  // review5 S1: scoreSurvey() is now async (it fetches program details from
-  // /api/programs/engine-source only at submit time, rather than bundling
-  // the full internal catalog into every /qualify page load).
+  // review5 S1 / review6 S11: scoreSurvey() is async — it POSTs the raw
+  // answers to /api/survey/score (server-side scoring against the full
+  // internal catalog, narrow SurveyResult returned) rather than bundling
+  // the full internal catalog into every /qualify page load, or (as of
+  // S11) fetching it client-side from the now-removed unauthenticated
+  // /api/programs/engine-source route.
   const [scoring, setScoring] = useState(false);
 
   const totalSteps = SURVEY_QUESTIONS.length;

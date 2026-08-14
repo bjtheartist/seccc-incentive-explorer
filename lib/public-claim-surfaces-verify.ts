@@ -35,11 +35,19 @@
  *     registry are NOT checked by this rule — several (report-pdf,
  *     owner-file-pdf, the survey/report engines) legitimately need full
  *     `Program` fidelity server-side to synthesize their own
- *     already-DTO-safe output, the same documented, bounded exception S1
- *     established for the engine-source route. Verifying THAT boundary
- *     (full fidelity in, safe output out) is a data-flow property, not an
- *     import-graph property, and is out of this executable check's
- *     reach — flagged here, not silently assumed proven.
+ *     already-DTO-safe output — the same documented, bounded exception S1
+ *     established, now realized as review6 S11's architecture: full
+ *     internal fidelity stays server-side (`getProgramsSync()` inside
+ *     app/api/{report/generate,programs/match,survey/score}/route.ts and
+ *     the engine modules they call), only the already-safe RESULT crosses
+ *     the network. There is no longer any route that serializes the raw
+ *     catalog to the client (the old /api/programs/engine-source route
+ *     S1 bounded is deleted outright, not just re-bounded). Verifying THAT
+ *     boundary (full fidelity in, safe output out) is a data-flow
+ *     property, not an import-graph property, and is out of this
+ *     executable check's reach — flagged here, not silently assumed
+ *     proven; review6 S16 adds a repo-wide prohibited-source check that
+ *     narrows this gap further.
  *   - "reviewed-copy" has no executable check, by the registry's own
  *     original design: its safety is established by a dedicated
  *     rendered-output test per surface, not a schema this file could

@@ -17,6 +17,7 @@ import type {
   ParcelData,
   Program,
   ProgramCheckResult,
+  SafeMapProgramMatch,
   StackingRule,
   Stats,
 } from "./types";
@@ -552,4 +553,24 @@ export function summarizeLocationContextForMap(context: LocationContext): Locati
     transport: context.site.transport?.value ?? null,
     tifFinance: context.site.tifFinance?.value ?? null,
   };
+}
+
+/**
+ * review6 S11 (CRITICAL, S1 reopened) — the network-safe sibling of
+ * `LocationContextMapSummary`: `programs` is `SafeMapProgramMatch[]`
+ * (narrowed to `{id, name, level, zoneKey, url, sourceUrl}` — no embedded
+ * full `Program`), not `ProgramCheckResult[]`. `components/map/MapView.tsx`
+ * now builds this directly from its own already-safe state
+ * (`snapshotPrograms` from POST /api/programs/match, plus
+ * siteSignals/transport/tifFinance it already had client-side and never
+ * needed the catalog for) instead of calling `buildLocationContext()` +
+ * `summarizeLocationContextForMap()` — both of which required a
+ * client-side `Program[]`. `MapDossierCard.tsx`/`MapSnapshotPanel.tsx`
+ * take this type instead of `LocationContextMapSummary`.
+ */
+export interface SafeLocationContextMapSummary {
+  programs: SafeMapProgramMatch[];
+  siteSignals: SiteSignals | null;
+  transport: TransportAccess | null;
+  tifFinance: LocationContextTifFinance | null;
 }

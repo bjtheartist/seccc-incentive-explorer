@@ -233,7 +233,11 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
   "compareParcel",
   "compareNeighborhoodEconomics",
   "compareNeighborhoodEconomicsZip",
-  "programs",
+  // review6 S11 (CRITICAL, S1 reopened): "programs" (client-side
+  // Program[] state) removed here — report generation moved server-side
+  // (POST /api/report/generate); this slot no longer exists in
+  // ReportWizardPage. Removed from this order array in the SAME change,
+  // per this file's own maintenance warning above.
   "zones",
   "zoneNames",
   "zoneUnknowns",
@@ -323,7 +327,6 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     compareParcel: null,
     compareNeighborhoodEconomics: null,
     compareNeighborhoodEconomicsZip: null,
-    programs: [],
     zones: null,
     zoneNames: null,
     zoneUnknowns: [],

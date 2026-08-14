@@ -1,17 +1,23 @@
-// review5 S1 (CRITICAL): this module previously statically imported
-// data/programs-internal.json — the full internal catalog, unconditionally
-// bundled into EVERY page that transitively imports this module (any page
-// reachable from /qualify), regardless of whether that visitor ever
-// submits the survey. `scoreSurvey()` genuinely needs full record fidelity
-// (requiredDocs, eligibilityRules, contacts, lastVerifiedAt, sourceUrl) to
-// build its already-safe, structured `PublicMatchExplanation` via
-// buildPublicMatchExplanation() — the DTO does not carry those fields, by
-// PR1 design. Rather than bundle them anyway, scoreSurvey() is now async
-// and fetches /api/programs/engine-source (the same explicitly-scoped,
-// documented route the report engine and map snapshot use) ONLY at the
-// moment a visitor actually submits — never bundled, never fetched
-// speculatively. See app/api/programs/engine-source/route.ts and
-// docs/eligibility-claims-acceptance.md's S1 resolution note.
+// review5 S1 (CRITICAL) / review6 S11 (CRITICAL, S1 reopened): this module
+// previously statically imported data/programs-internal.json, then (S1's
+// fix) fetched /api/programs/engine-source client-side at submit time —
+// but that route turned out to be an UNAUTHENTICATED endpoint returning
+// all 71 FULL internal Program records (whoQualifies, eligibilityRules,
+// verificationSteps, contacts, suspension notes...) to anyone, which
+// reopened the exact exposure S1 was supposed to close (review6 S11).
+//
+// Fixed properly this time: SCORING now runs server-side, never the raw
+// catalog. `scoreSurveyWithPrograms()` below is the pure, synchronous
+// engine (unchanged logic) — it now lives behind
+// app/api/survey/score/route.ts, which reads the full catalog on the
+// server (never serialized to the network) and returns only the already-
+// safe `SurveyResult` (via `toProgramMatch()`, whose `program` field was
+// always narrow — {name, short, level} — and whose `explanation` comes
+// from `buildPublicMatchExplanation()`, the same safe-transformation
+// boundary the report engine uses). `scoreSurvey()` is now the CLIENT-
+// facing wrapper: it POSTs `{answers}` to that route and returns the
+// parsed `SurveyResult` — components/survey/PreQualSurvey.tsx's call
+// site (`scoreSurvey(answers)`) is unchanged.
 import { buildPublicMatchExplanation } from "./match-transparency";
 import { resolveAvailability } from "./program-gating";
 import type {
@@ -176,16 +182,6 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
 
 // ─── Internal Ordering ───────────────────────────────────────────────
 
-/** Fetched fresh on each scoreSurvey() call — never bundled, never cached
- *  across calls (a stale cache could serve pre-correction facts after the
- *  catalog changes; this endpoint is short/cheap enough that re-fetching
- *  per submission is not a real cost). */
-async function fetchProgramDetails(): Promise<Map<string, Program>> {
-  const res = await fetch("/api/programs/engine-source");
-  const programs = (await res.json()) as Program[];
-  return new Map(programs.map((program) => [program.id, program]));
-}
-
 /** Short collapsed-row label from a program's intakeStatus (build-spec.md
  *  2.6: status must show BEFORE the card is opened, never only inside). */
 function statusLabel(intakeStatus: IntakeStatus): string {
@@ -233,8 +229,16 @@ function toProgramMatch(
   };
 }
 
-export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult> {
-  const programDetails = await fetchProgramDetails();
+/**
+ * The pure, synchronous scoring engine — SERVER-ONLY caller
+ * (app/api/survey/score/route.ts) supplies `programDetails` from a
+ * full, server-side catalog read. Exported so the route can call it
+ * directly without an intermediate network hop.
+ */
+export function scoreSurveyWithPrograms(
+  answers: SurveyAnswers,
+  programDetails: Map<string, Program>,
+): SurveyResult {
   const matchMap: Record<string, { confidence: Confidence; reasons: string[] }> = {};
   const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
   // Every answer key the caller actually gave, e.g. "industry", "activities:hiring".
@@ -316,4 +320,22 @@ export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult>
   });
 
   return { matches, universal, usedAnswers, unusedAnswers };
+}
+
+/**
+ * CLIENT-facing entry point (components/survey/PreQualSurvey.tsx). Never
+ * touches the catalog directly — POSTs the answers to the server route,
+ * which runs `scoreSurveyWithPrograms()` above and returns only the
+ * already-safe `SurveyResult`.
+ */
+export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult> {
+  const res = await fetch("/api/survey/score", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ answers }),
+  });
+  if (!res.ok) {
+    throw new Error(`scoreSurvey: /api/survey/score returned ${res.status}`);
+  }
+  return (await res.json()) as SurveyResult;
 }
