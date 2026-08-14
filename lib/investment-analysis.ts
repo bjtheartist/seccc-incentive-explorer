@@ -37,6 +37,7 @@ import {
   sumAnnouncedInvestment,
   sumAuthorizedByClass,
   sumCreditCapital,
+  sumPublishedStateAppropriation,
   type CapitalClass,
   type CommunityInvestmentRecord,
   type FunderType,
@@ -154,6 +155,18 @@ export interface InvestmentEquity {
   citywideTotal: number;
   /** thisTotal / citywideTotal (0 when the citywide total is 0). */
   share: number;
+  /**
+   * Foundation-source (funderType philanthropic) dollars within this
+   * community's totalAwarded — computed LIVE from the same in-window records
+   * as totalAwarded, never a hand-typed literal (audit finding 5 / consult
+   * Q4). Powers the rank disclosure: a community rank can be dominated by
+   * where a foundation's grantee HEADQUARTERS sits rather than where the
+   * money was spent, so the figure quantifies exactly how much of THIS
+   * community's total comes from foundation rows.
+   */
+  foundationDollars: number;
+  /** foundationDollars / totalAwarded (0 when totalAwarded is 0). */
+  foundationShare: number;
 }
 
 /** The full analysis for one community area. */
@@ -187,6 +200,18 @@ export interface CommunityInvestmentAnalysis {
   /** All-time tax-credit capital (LIHTC + NMTC) stamped to this community — a
    * SEPARATE measure from totalAwarded, never summed with awarded dollars. */
   creditCapital: number;
+  /**
+   * Sol gate blocker 2 — the published state appropriation balance
+   * (capitalClass "state_appropriation") POINT-SITED to this community only
+   * (`mine`, the same community-filtered set every other capital-class field
+   * here uses). The committed export's 620 appropriation rows are 563 held
+   * CITYWIDE (no communityArea — they carry NO community, and belong ONLY to
+   * the landing page's meta.totalPublishedStateAppropriation) and 57
+   * point-sited; passing the citywide total here would show every community
+   * the full state figure regardless of whether any appropriation was
+   * actually sited there. A SEPARATE measure, never summed with anything else.
+   */
+  publishedStateAppropriation: number;
   /** GRANT-CLASS records in the since-2020 view (in-window yeared + unYeared) —
    * the hero's "grants & projects". Excludes the non-grant capital classes
    * (tif_subsidy / federal_program / tax_credit), which have their own count-free
@@ -222,6 +247,15 @@ export interface CommunityInvestmentRankRow {
    * stamp even though they are citywide geometry and never plot on the map.
    */
   creditCapital: number;
+  /**
+   * Foundation-source (funderType philanthropic) dollars within this row's
+   * totalAwarded, computed live over the same since-2020 window (audit
+   * finding 5 / consult Q4) — lets the landing ranking disclose exactly how
+   * much of the TOP-ranked community's total is recipient-office
+   * concentration rather than neighborhood-wide funding, without a
+   * hand-typed literal.
+   */
+  foundationDollars: number;
 }
 
 /** The all-communities index used by the landing page and by equity ranking. */
@@ -310,6 +344,7 @@ export function buildInvestmentIndex(
       // over the full record list (not the since-2020 window) and never folded into
       // totalAwarded. Citywide-but-CA-stamped NMTC records contribute here.
       creditCapital: sumCreditCapital(list),
+      foundationDollars: sumInWindowAwarded(list.filter((r) => r.funderType === "philanthropic")),
     });
   }
 
@@ -505,6 +540,11 @@ export function analyzeCommunityArea(
   const idx = index ?? buildInvestmentIndex(records, generatedAt);
   const rankIndex = idx.rows.findIndex((row) => row.communityArea === communityArea);
   const medianCA = median(idx.rows.map((row) => row.totalAwarded));
+  // Audit finding 5 / consult Q4: computed live from the SAME in-window
+  // records as totalAwarded, over funderType "philanthropic" — the only
+  // philanthropic-mapped source is "foundation" (lib/community-investment.ts
+  // SOURCE_FUNDER_TYPE), so this is exactly "foundation rows" in plain terms.
+  const foundationDollars = sumInWindowAwarded(inWindow.filter((r) => r.funderType === "philanthropic"));
   const equity: InvestmentEquity = {
     rank: rankIndex >= 0 ? rankIndex + 1 : idx.rows.length,
     totalCAs: idx.rows.length,
@@ -512,6 +552,8 @@ export function analyzeCommunityArea(
     thisVsMedian: medianCA > 0 ? totalAwarded / medianCA : 0,
     citywideTotal: idx.citywideTotal,
     share: idx.citywideTotal > 0 ? totalAwarded / idx.citywideTotal : 0,
+    foundationDollars,
+    foundationShare: totalAwarded > 0 ? foundationDollars / totalAwarded : 0,
   };
 
   return {
@@ -530,6 +572,9 @@ export function analyzeCommunityArea(
     // measure, summed over every record (not the since-2020 window), never folded
     // into totalAwarded.
     creditCapital: sumCreditCapital(mine),
+    // Sol gate blocker 2 — COMMUNITY-scoped, from `mine` (point-sited rows
+    // only carry a communityArea) — never the citywide meta total.
+    publishedStateAppropriation: sumPublishedStateAppropriation(mine),
     // "N grants & projects" — grant-class records ONLY (non-grant capital classes
     // are counted in the capital row, never here).
     recordCount: grantInView.length,

@@ -85,6 +85,17 @@ describe("buildInvestmentIndex", () => {
       ["Alpha", 350000],
     ]);
   });
+
+  it("computes foundationDollars live per row (audit finding 5 / consult Q4) — never a hand-typed literal", () => {
+    const alpha = index.rows.find((r) => r.communityArea === "Alpha")!;
+    const beta = index.rows.find((r) => r.communityArea === "Beta")!;
+    // Alpha: only a3 ($50k, 2023, foundation) is in-window philanthropic — the
+    // pre-2020 a4 ($999k) and null-year a6 ($30k) are excluded, matching the
+    // same in-window basis as totalAwarded.
+    expect(alpha.foundationDollars).toBe(50000);
+    // Beta has no philanthropic record at all.
+    expect(beta.foundationDollars).toBe(0);
+  });
 });
 
 describe("analyzeCommunityArea — Alpha", () => {
@@ -157,6 +168,13 @@ describe("analyzeCommunityArea — Alpha", () => {
     expect(a.equity.thisVsMedian).toBeCloseTo(350000 / 425000, 10);
     expect(a.equity.citywideTotal).toBe(850000);
     expect(a.equity.share).toBeCloseTo(350000 / 850000, 10);
+  });
+
+  it("computes the rank disclosure's foundation-share stat live (audit finding 5 / consult Q4)", () => {
+    // Same basis as the buildInvestmentIndex row above: only a3 ($50k) is
+    // in-window philanthropic.
+    expect(a.equity.foundationDollars).toBe(50000);
+    expect(a.equity.foundationShare).toBeCloseTo(50000 / 350000, 10);
   });
 
   it("produces an output shape free of banned derived-figure keys", () => {
@@ -354,6 +372,55 @@ describe("analysis carries the non-grant capital measures + median award", () =>
     // The awarded total is grant-only — unchanged by any of the above.
     expect(a.totalAwarded).toBe(350_000);
     expect(findBannedFigureKeys(a)).toEqual([]);
+  });
+
+  it("Sol gate blocker 2 — publishedStateAppropriation is COMMUNITY-scoped: a community with sited rows gets exactly its own subset sum, a community with none gets zero", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      rec({
+        id: "appro1",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 750_000,
+        year: 2026,
+        communityArea: "Alpha",
+        recipient: "Point-sited appropriation line",
+      }),
+      rec({
+        id: "appro2",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 250_000,
+        year: 2026,
+        communityArea: "Alpha",
+        recipient: "Second point-sited appropriation line",
+      }),
+      // Held-citywide appropriation rows carry NO communityArea — they must
+      // never leak into any community's subset sum (they belong only to the
+      // landing page's meta.totalPublishedStateAppropriation).
+      rec({
+        id: "appro-citywide",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 900_000_000,
+        year: 2026,
+        communityArea: undefined,
+        geometry: { kind: "citywide" },
+        recipient: "Held-citywide appropriation line",
+      }),
+    ];
+    const alpha = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    const beta = analyzeCommunityArea(recs, "Beta", GEN)!;
+    // Alpha: exactly its own two sited rows summed — never the citywide row.
+    expect(alpha.publishedStateAppropriation).toBe(1_000_000);
+    // Beta has no sited appropriation row — zero, not the citywide figure.
+    expect(beta.publishedStateAppropriation).toBe(0);
   });
 });
 

@@ -464,6 +464,34 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).toContain("Disbursed");
   });
 
+  it("deliverable 1 — renders a reveal button (not a fabricated name) for a withheld RRF identity", () => {
+    const html = buildInvestmentPopupHtml({
+      id: "rrf-point",
+      source: "sba-rrf",
+      recoverySourceId: "sba-rrf",
+      recipient: "", // withheld by the route (see route.ts LAZY_RECORD_SOURCES)
+      funderName: "U.S. Small Business Administration Restaurant Revitalization Fund",
+      funderType: "government",
+      capitalClass: "grant",
+      amountAwarded: null,
+      historicalRecoveryAmount: 125_000,
+      status: "disbursed",
+      year: 2021,
+    });
+    expect(html).toContain('data-investment-reveal-recipient="rrf-point"');
+    expect(html).toContain("Reveal recipient name");
+    expect(html).not.toContain("Recipient unavailable");
+    // The rest of the record's non-identifying facts still render normally.
+    expect(html).toContain("$125,000");
+    expect(html).toContain("Disbursed");
+  });
+
+  it("still renders the ordinary title line for a non-RRF record with an empty recipient (never a reveal button)", () => {
+    const html = buildInvestmentPopupHtml({ ...full, source: "cdg", recipient: "" });
+    expect(html).not.toContain("data-investment-reveal-recipient");
+    expect(html).toContain("Recipient unavailable");
+  });
+
   it("adds an 'Analyze this community →' link to the record's community area", () => {
     const html = buildInvestmentPopupHtml({ ...full, communityArea: "Auburn Gresham" });
     expect(html).toContain("Analyze this community");

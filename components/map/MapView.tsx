@@ -60,7 +60,16 @@ import {
 import {
   fetchCommunityInvestmentLayer,
   fetchHistoricalRecoveryRecipients,
+  fetchInvestmentRecipientRecord,
   filterInvestmentPointFeatures,
+  InvestmentPopupTracker,
+  investmentPopupOutOfScope,
+  investmentRevealButtonLoadingState,
+  investmentRevealButtonOutOfScopeState,
+  investmentRevealButtonStateForResult,
+  zipAggregateOverlaySourceInScope,
+  ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE,
+  type InvestmentRevealButtonState,
   investmentFeatureCollection,
   summarizeCitywideEntries,
   DEFAULT_INVESTMENT_YEAR_RANGE,
@@ -74,6 +83,7 @@ import {
   megaprojectFeatureCollection,
   summarizeMegaprojects,
   MEGAPROJECT_STATUS_GROUP_COLORS,
+  type InvestmentFilterDimensions,
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
   type CountyReliefZipSummary,
@@ -398,6 +408,58 @@ export default function MapView() {
   const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
     null
   );
+  /**
+   * Deliverable 2 (audit finding 3 / consult F2) — the ONE filter state every
+   * public-investment overlay, popup, and recipient panel reads through
+   * matchesInvestmentFilter / filterInvestmentPointFeatures /
+   * zipAggregateOverlaySourceInScope / investmentPopupOutOfScope. Declared
+   * early (above the recipients-panel teardown effect, Sol gate blocker 1)
+   * so every consumer — no matter where in this component it lives — reads
+   * the SAME up-to-date value, never a stale one from before this hook ran.
+   */
+  const investmentFilterState = useMemo(
+    () => ({
+      yearRangeId: investmentYearRange,
+      activeFunderTypes: new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k])),
+      activeGovernmentFundingPurposes: new Set<GovernmentFundingPurpose>(
+        MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter((purpose) => investmentGovernmentFundingPurposes[purpose]),
+      ),
+    }),
+    [investmentYearRange, investmentFunderTypes, investmentGovernmentFundingPurposes],
+  );
+  // A ref mirror of investmentFilterState so click handlers registered ONCE
+  // inside the map-init effect (which does not re-run on filter changes) can
+  // read the LATEST filter value instead of a stale closure — used by the
+  // RRF lazy-reveal button's live scope re-check (Sol gate blocker 1).
+  const investmentFilterStateRef = useRef(investmentFilterState);
+  useEffect(() => {
+    investmentFilterStateRef.current = investmentFilterState;
+  }, [investmentFilterState]);
+  /**
+   * Sol gate round 2, finding 1 — the Mapbox popup-REUSE lifecycle hole.
+   * Reusing the shared popup calls `.addTo(map)` on an ALREADY-open instance,
+   * which mapbox-gl implements as `remove()` (firing "close") THEN
+   * re-attach. That "close" fires AFTER a click handler has already assigned
+   * the NEW popup's dims, so a single un-gated "close" listener would wipe
+   * the fresh state for the popup actually on screen — the replacement
+   * popup would then never close on a filter change, and its own later
+   * reveal fetch would never abort. InvestmentPopupTracker
+   * (lib/community-investment-layer.ts) is the token-guarded fix, extracted
+   * into a standalone class so it's unit-testable against a real emulation
+   * of mapbox-gl's addTo()/remove()/close semantics. One instance is created
+   * once the shared popup exists (inside the map-init effect below).
+   */
+  const investmentPopupTrackerRef = useRef<InvestmentPopupTracker | null>(null);
+  // Sol gate blocker 1 — close (or refuse to reveal) an already-open
+  // investment popup the instant it falls out of the active year/funderType/
+  // purpose scope. This is a SEPARATE, lean effect (not inside the giant
+  // map-init effect, which only runs once) so it re-runs on every filter
+  // change and always sees the current investmentFilterState.
+  useEffect(() => {
+    investmentPopupTrackerRef.current?.closeIfOutOfScope(investmentFilterState, () => {
+      sharedDotPopupRef.current?.remove();
+    });
+  }, [investmentFilterState]);
   // All plotted point features from the last fetch, kept in a ref so the
   // year/funderType filter effect can rebuild the source (setData) without a
   // re-fetch — mirrors VacancyReportMap's featuresRef distress-filter pattern.
@@ -496,6 +558,13 @@ export default function MapView() {
   const countyReliefByZipRef = useRef<CountyReliefZipSummary[]>([]);
   const state2020ReliefByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
   const stateRecoveryByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
+  // Deliverable 2 (audit finding 3 / consult F2): the RAW, unfiltered
+  // Hospitality held-citywide count from the fetch, kept separately from the
+  // displayed state so the state_2020_relief overlay effect can re-scope the
+  // DISPLAYED value to zero when illinois-hospitality-emergency's fixed
+  // 2020/government/programmatic dimensions fall outside the active filter,
+  // without losing the raw count needed to restore it when back in scope.
+  const state2020HospitalityCitywideCountRawRef = useRef(0);
   const countyReliefBoundariesRef = useRef<ZipBoundaryFeatureCollection | null>(null);
   const [stateCapitalPlottedCount, setStateCapitalPlottedCount] = useState(0);
   const [stateCapitalCitywideCount, setStateCapitalCitywideCount] = useState(0);
@@ -621,6 +690,14 @@ export default function MapView() {
         communityInvestmentVisible,
         overlays: publicInvestmentOverlays,
         sourceId: countyReliefRecipientsPanel.sourceId,
+        // Sol gate blocker 1 — a Cook/BIG/B2B panel open before a year/purpose
+        // change must close (and its in-flight fetch abort, via
+        // closeCountyReliefRecipients below) the instant its source's fixed
+        // program year/purpose falls outside the active filter.
+        filterInScope: zipAggregateOverlaySourceInScope(
+          countyReliefRecipientsPanel.sourceId,
+          investmentFilterState,
+        ),
       })
     ) {
       return;
@@ -632,6 +709,7 @@ export default function MapView() {
     adminSessionActive,
     communityInvestmentVisible,
     publicInvestmentOverlays,
+    investmentFilterState,
     closeCountyReliefRecipients,
   ]);
 
@@ -1836,6 +1914,28 @@ export default function MapView() {
       // Exposed via ref so the deck view-mode effect can close it when entering
       // Arcs/Density (deck's picking tooltip replaces the mapbox dot popup there).
       sharedDotPopupRef.current = sharedDotPopup;
+      // Sol gate round 2 finding 1 / round 3 durability follow-up — the
+      // token-guarded popup lifecycle tracker (lib/community-investment-layer.ts).
+      // `.open(popup, map, dims)` performs `sharedDotPopup.addTo(map)` ITSELF
+      // (see the class's own doc comment) — every click handler below calls
+      // ONLY this wrapper in place of a direct `.addTo(map)` call, so the
+      // ordering invariant cannot be inverted at a call site.
+      investmentPopupTrackerRef.current = new InvestmentPopupTracker();
+      const openInvestmentPopupTracked = (dims: InvestmentFilterDimensions | null): number =>
+        investmentPopupTrackerRef.current!.open(sharedDotPopup, map, dims);
+      // Coerce a clicked investment point feature's mapbox-serialized
+      // properties (JSON-primitive coerced) into InvestmentFilterDimensions,
+      // for the popup-retention check (Sol gate blocker 1). Local to this
+      // effect — the shape mirrors InvestmentPointProps.
+      const investmentPointPopupDims = (
+        p: Record<string, unknown>,
+      ): InvestmentFilterDimensions => ({
+        year: p.year != null && p.year !== "" && !Number.isNaN(Number(p.year)) ? Number(p.year) : null,
+        funderType: String(p.funderType || ""),
+        governmentFundingPurpose: p.governmentFundingPurpose
+          ? (String(p.governmentFundingPurpose) as GovernmentFundingPurpose)
+          : null,
+      });
 
       // Click on cluster to zoom in
       map.on("click", "vacant-clusters", (e) => {
@@ -2021,8 +2121,10 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildOwnerClusterPopupHtml(p))
-          .addTo(map);
+          .setHTML(buildOwnerClusterPopupHtml(p));
+        // Not filter-scoped (null dims) — openInvestmentPopupTracked performs
+        // .addTo(map) itself, in the correct order (Sol gate round 3).
+        openInvestmentPopupTracked(null);
       });
 
       map.on("click", "owner-clusters-clusters", (e) => {
@@ -2089,8 +2191,8 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildCountyReliefPopupHtml(properties))
-          .addTo(map);
+          .setHTML(buildCountyReliefPopupHtml(properties));
+        openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["cook-source-2023"]);
         const recipientsButton = sharedDotPopup
           .getElement()
           ?.querySelector<HTMLButtonElement>("[data-county-relief-recipients]");
@@ -2145,8 +2247,8 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
-          .addTo(map);
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties));
+        openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-big"]);
         const recipientsButton = sharedDotPopup
           .getElement()
           ?.querySelector<HTMLButtonElement>("[data-historical-recovery-recipients]");
@@ -2202,8 +2304,8 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
-          .addTo(map);
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties));
+        openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-b2b"]);
         const recipientsButton = sharedDotPopup
           .getElement()
           ?.querySelector<HTMLButtonElement>("[data-historical-recovery-recipients]");
@@ -2291,8 +2393,8 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(p))
-          .addTo(map);
+          .setHTML(buildInvestmentPopupHtml(p));
+        openInvestmentPopupTracked(investmentPointPopupDims(p));
       });
 
       map.on("mouseenter", "community-investment-points", () => { map.getCanvas().style.cursor = "pointer"; });
@@ -2320,8 +2422,8 @@ export default function MapView() {
         if (!e.features?.length) return;
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
-          .addTo(map);
+          .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}));
+        openInvestmentPopupTracked(investmentPointPopupDims(e.features[0].properties || {}));
       });
       map.on("mouseenter", "community-investment-state-capital-points", () => {
         map.getCanvas().style.cursor = "pointer";
@@ -2356,10 +2458,80 @@ export default function MapView() {
         "community-investment-federal-restaurant-relief-points",
         (e) => {
           if (!e.features?.length) return;
+          const p = e.features[0].properties || {};
+          const dims = investmentPointPopupDims(p);
           sharedDotPopup
             .setLngLat(e.lngLat)
-            .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
-            .addTo(map);
+            .setHTML(buildInvestmentPopupHtml(p));
+          const token = openInvestmentPopupTracked(dims);
+          // Deliverable 1 (audit finding 9 / consult F6 + Q2) + Sol gate
+          // blockers 1 and 4. RRF's recipient name is withheld from the bulk
+          // payload, so buildInvestmentPopupHtml renders a "Reveal recipient
+          // name" button instead. The handler below:
+          //   (1) REFUSES to fetch if this popup is no longer the CURRENTLY
+          //       ACTIVE one (token mismatch — a reuse replaced it between
+          //       open and click) or the record has fallen out of the active
+          //       filter scope by click time.
+          //   (2) Tracks the in-flight request on the tracker (startReveal/
+          //       finishReveal), tagged with this popup's OWN token, so the
+          //       closing effect / the popup's own genuine "close" / a later
+          //       reuse can abort it — an out-of-scope (or replaced) reveal
+          //       must never land after the fact.
+          //   (3) Handles EVERY outcome — ready, unauthorized, not_found,
+          //       unavailable (covers a malformed body — see
+          //       fetchInvestmentRecipientRecord), and a rejected fetch
+          //       (e.g. offline) — restoring an actionable, RETRYABLE button
+          //       state for every failure that isn't permanent, rather than
+          //       leaving "Loading…" forever.
+          const revealButton = sharedDotPopup
+            .getElement()
+            ?.querySelector<HTMLButtonElement>("[data-investment-reveal-recipient]");
+          if (!revealButton) return;
+          const applyRevealButtonState = (state: InvestmentRevealButtonState) => {
+            revealButton.textContent = state.label;
+            revealButton.disabled = state.disabled;
+            if (state.closePopup) sharedDotPopup.remove();
+          };
+          revealButton.addEventListener("click", () => {
+            const id = revealButton.dataset.investmentRevealRecipient || String(p.id || "");
+            if (!id) return;
+            const tracker = investmentPopupTrackerRef.current;
+            if (
+              !tracker?.isActiveToken(token) ||
+              investmentPopupOutOfScope(dims, investmentFilterStateRef.current)
+            ) {
+              applyRevealButtonState(investmentRevealButtonOutOfScopeState());
+              return;
+            }
+            const controller = new AbortController();
+            tracker.startReveal(token, controller);
+            applyRevealButtonState(investmentRevealButtonLoadingState());
+            fetchInvestmentRecipientRecord(id, { signal: controller.signal })
+              .then((result) => {
+                if (controller.signal.aborted) return;
+                if (result.status === "ready") {
+                  sharedDotPopup.setHTML(
+                    buildInvestmentPopupHtml({
+                      ...p,
+                      recipient: result.recipient ?? p.recipient,
+                      logLine: result.logLine ?? p.logLine,
+                    }),
+                  );
+                  return;
+                }
+                applyRevealButtonState(investmentRevealButtonStateForResult(result.status));
+              })
+              .catch(() => {
+                if (controller.signal.aborted) return;
+                // A genuinely rejected fetch (network down, DNS failure,
+                // etc.) — same retryable state as a resolved "unavailable",
+                // never a stuck "Loading…".
+                applyRevealButtonState(investmentRevealButtonStateForResult("unavailable"));
+              })
+              .finally(() => {
+                tracker.finishReveal(token, controller);
+              });
+          });
         },
       );
       map.on(
@@ -2445,8 +2617,11 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(p))
-          .addTo(map);
+          .setHTML(buildInvestmentPopupHtml(p));
+        // Megaprojects is deliberately EXEMPT from year/funder/purpose (its own
+        // disclosed caption already says so — accepted, unchanged by this gate) —
+        // never close this popup on a filter change.
+        openInvestmentPopupTracked(null);
       });
       map.on("mouseenter", "community-investment-megaproject-points", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "community-investment-megaproject-points", () => { map.getCanvas().style.cursor = ""; });
@@ -3337,6 +3512,7 @@ export default function MapView() {
           state2020ReliefByZipRef.current = result.state2020ReliefByZip;
           stateRecoveryByZipRef.current = result.stateRecoveryByZip;
           setStateCapitalCitywideCount(result.stateCapitalCitywideCount);
+          state2020HospitalityCitywideCountRawRef.current = result.state2020HospitalityCitywideCount;
           setState2020HospitalityCitywideCount(
             result.state2020HospitalityCitywideCount,
           );
@@ -3426,7 +3602,10 @@ export default function MapView() {
 
   /* Additional public-investment overlays. They deliberately render through
      their own mapbox sources so neither Dots/Arcs/Density nor awarded-dollar
-     density calculations can absorb them. */
+     density calculations can absorb them. Each is now threaded through
+     investmentFilterState (deliverable 2) — before this fix they reloaded
+     their complete cached dataset regardless of the year/funder/purpose
+     controls, so selecting a year left every out-of-range record visible. */
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
@@ -3441,7 +3620,21 @@ export default function MapView() {
     if (map.getLayer(layerId)) {
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
-    const features = visible ? stateCapitalFeaturesRef.current : [];
+    // The plotted subset carries real per-record year/funderType/purpose, so
+    // it is filtered exactly like the base Dots source. The held-CITYWIDE
+    // remainder (stateCapitalCitywideCount, set from the fetch below) is a
+    // single server-computed aggregate integer with no per-record breakdown
+    // shipped to the client — unlike the ZIP-aggregate recovery programs
+    // (whose one-time-only historical year is a permanent fact, safe to gate
+    // as a whole), DCEO's appropriation year is a live "current state," not a
+    // constant this client module should hard-code. So it stays UNFILTERED,
+    // and the legend caption below (MapLegendPanel) discloses that the
+    // held-unplotted count does not re-scope with the filters — the
+    // Megaprojects-style disclosed exception the consult allows for a source
+    // whose full remainder genuinely isn't refilterable client-side.
+    const features = visible
+      ? filterInvestmentPointFeatures(stateCapitalFeaturesRef.current, investmentFilterState)
+      : [];
     source?.setData(investmentFeatureCollection(features));
     setStateCapitalPlottedCount(features.length);
   }, [
@@ -3449,6 +3642,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_capital_projects,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3468,7 +3662,9 @@ export default function MapView() {
     if (map.getLayer(layerId)) {
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
-    const features = visible ? federalRestaurantReliefFeaturesRef.current : [];
+    const features = visible
+      ? filterInvestmentPointFeatures(federalRestaurantReliefFeaturesRef.current, investmentFilterState)
+      : [];
     source?.setData(investmentFeatureCollection(features));
     setFederalRestaurantReliefPlottedCount(features.length);
   }, [
@@ -3476,6 +3672,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.federal_restaurant_relief,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3483,11 +3680,18 @@ export default function MapView() {
     const map = mapRef.current;
     if (!map || !loaded) return;
     const source = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): every Cook County 2023
+    // Source Grant record shares the SAME (2023, government, programmatic)
+    // dimensions, so a single scope check re-scopes this overlay exactly as
+    // filtering each record individually would — fixing the reproduction
+    // "select 2024, 2023 Cook records remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("cook-source-2023", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.county_relief_awards;
+      publicInvestmentOverlays.county_relief_awards &&
+      inScope;
 
     for (const layerId of [COUNTY_RELIEF_FILL_LAYER_ID, COUNTY_RELIEF_LINE_LAYER_ID]) {
       if (map.getLayer(layerId)) {
@@ -3536,6 +3740,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.county_relief_awards,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3545,11 +3750,18 @@ export default function MapView() {
     const source = map.getSource(STATE_2020_RELIEF_SOURCE_ID) as
       | mapboxgl.GeoJSONSource
       | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): illinois-big (mapped by
+    // ZIP) and illinois-hospitality-emergency (held citywide — no ZIP) share
+    // the SAME fixed (2020, government, programmatic) dimensions, so one
+    // scope check re-scopes both halves of this overlay together — fixing the
+    // reproduction "select 2024, 2020 BIG records remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("illinois-big", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.state_2020_relief;
+      publicInvestmentOverlays.state_2020_relief &&
+      inScope;
 
     for (const layerId of [
       STATE_2020_RELIEF_FILL_LAYER_ID,
@@ -3559,6 +3771,12 @@ export default function MapView() {
         map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
       }
     }
+    // Hospitality never plots (no ZIP), so its filter is expressed entirely
+    // through this displayed count, re-scoped to zero exactly when the ZIP
+    // polygons above also go out of scope (same shared dimensions).
+    setState2020HospitalityCitywideCount(
+      visible ? state2020HospitalityCitywideCountRawRef.current : 0,
+    );
     if (!visible) {
       source?.setData(EMPTY_FC);
       setState2020ReliefZipCount(0);
@@ -3605,6 +3823,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_2020_relief,
+    investmentFilterState,
     loaded,
   ]);
 
@@ -3614,11 +3833,17 @@ export default function MapView() {
     const source = map.getSource(STATE_RECOVERY_SOURCE_ID) as
       | mapboxgl.GeoJSONSource
       | undefined;
+    // Deliverable 2 (audit finding 3 / consult F2): every Illinois Back to
+    // Business record shares the SAME (2022, government, programmatic)
+    // dimensions — fixing the reproduction "select 2024, 2022 B2B records
+    // remain visible".
+    const inScope = zipAggregateOverlaySourceInScope("illinois-b2b", investmentFilterState);
     const visible =
       adminSessionActive &&
       communityInvestmentVisible &&
       communityInvestmentLoaded &&
-      publicInvestmentOverlays.state_recovery_awards;
+      publicInvestmentOverlays.state_recovery_awards &&
+      inScope;
 
     for (const layerId of [
       STATE_RECOVERY_FILL_LAYER_ID,
@@ -3674,6 +3899,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.state_recovery_awards,
+    investmentFilterState,
     loaded,
   ]);
 

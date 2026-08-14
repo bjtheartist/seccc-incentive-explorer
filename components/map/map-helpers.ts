@@ -307,6 +307,9 @@ export function buildOwnerClusterPopupHtml(p: OwnerClusterPopupProperties): stri
  * optional/nullable to tolerate the coercion.
  */
 export interface InvestmentPopupProperties {
+  /** Record id — read only to power the deliverable-1 lazy-reveal button on a
+   * LAZY_RECORD_SOURCES point (currently RRF) whose recipient was withheld. */
+  id?: string;
   source?: string;
   recipient?: string;
   funderName?: string;
@@ -446,6 +449,14 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
       ? GOVERNMENT_FUNDING_PURPOSE_LABELS[fundingPurpose] ??
         GOVERNMENT_FUNDING_PURPOSE_LABELS.unclassified
       : "";
+  // Deliverable 1 (audit finding 9 / consult F6 + Q2): a LAZY_RECORD_SOURCES
+  // point (RRF) ships with an EMPTY recipient string in the bulk payload —
+  // never the real name — so the popup shows a lazy-reveal action instead of
+  // "Recipient unavailable" (which would misreport a genuine data gap). The
+  // reveal button's click is wired by the map click handler, which fetches
+  // exactly this one record (fetchInvestmentRecipientRecord) and re-renders
+  // this same function with the real name filled in.
+  const isWithheldIdentity = p.source === "sba-rrf" && !p.recipient;
   const recipient = escapePopupHtml(p.recipient || "Recipient unavailable");
   const funderName = p.funderName ? escapePopupHtml(p.funderName) : "";
 
@@ -497,9 +508,13 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   const communityArea = p.communityArea ? String(p.communityArea).trim() : "";
   const analyzeHref = communityArea ? `/investment/${encodeURIComponent(communityArea)}` : "";
 
+  const recipientLine = isWithheldIdentity
+    ? `<button type="button" data-investment-reveal-recipient="${escapePopupHtml(String(p.id || ""))}" style="display:block;width:100%;margin-top:0;padding:6px 8px;border:1px solid #BE123C33;background:#BE123C0D;color:#9F1239;font-size:11px;font-weight:600;cursor:pointer;text-align:left">Reveal recipient name</button>`
+    : `<div style="font-size:14px;font-weight:600;color:#0C1B33">${recipient}</div>`;
+
   return `<div style="font-family:Inter,sans-serif">
     <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${accent};margin-bottom:4px;font-weight:500">Admin · Community Investment</div>
-    <div style="font-size:14px;font-weight:600;color:#0C1B33">${recipient}</div>
+    ${recipientLine}
     ${funderName ? `<div style="font-size:11px;color:#5A6478;margin-top:4px">${funderName}</div>` : ""}
     <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
       <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">${escapePopupHtml(moneyLabel)}</span>

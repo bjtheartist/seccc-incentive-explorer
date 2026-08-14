@@ -27,14 +27,22 @@ const flowRows: FlowRow[] = [
 ];
 
 describe("StatusCards — three-status grammar", () => {
+  const capital = {
+    authorizedTif: 6_600_000_000,
+    federalProgram: 1_640_000_000,
+    creditCapital: 1_870_000_000,
+    publishedStateAppropriation: 715_300_000,
+  };
+
   const html = renderToStaticMarkup(
     <StatusCards
       awarded={1_787_353_617}
       announced={74_900_000_000}
-      capital={{ authorizedTif: 6_600_000_000, federalProgram: 1_640_000_000, creditCapital: 1_870_000_000 }}
+      capital={capital}
       asOf="2026-07-28T10:00:00.000Z"
       coverageHref="#methodology"
       animate={false}
+      disbursement={{ scope: "not-applicable" }}
     />,
   );
 
@@ -44,21 +52,52 @@ describe("StatusCards — three-status grammar", () => {
     expect(html).toContain("Reported disbursements");
   });
 
-  it("renders the empty disbursement slot as text, never $0", () => {
-    expect(html).toContain("Not yet reported by any source");
+  it("renders the not-applicable-scope disbursement slot as text, never $0", () => {
+    expect(html).toContain("Not shown on this page");
     expect(html).not.toContain("$0");
   });
 
-  it("carries the non-grant capital-class row under its own nouns", () => {
+  it("carries the non-grant capital-class row under its own nouns, including the fifth class (consult F8)", () => {
     expect(html).toContain("TIF authorized");
     expect(html).toContain("Federal program (CDBG/HOME)");
     expect(html).toContain("Tax-credit capital (LIHTC/NMTC)");
+    expect(html).toContain("State appropriation");
   });
 
   it("renders the awarded figure and an as-of / coverage line, no banned language", () => {
     expect(html).toContain("$1,787,353,617");
     expect(html).toContain("Coverage &amp; methodology");
     expect(html).not.toMatch(FORBIDDEN);
+  });
+});
+
+describe("StatusCards — citywide disbursement scope (audit finding 6 / consult F5)", () => {
+  const html = renderToStaticMarkup(
+    <StatusCards
+      awarded={2_219_913_961.84}
+      announced={74_900_000_000}
+      capital={{
+        authorizedTif: 6_435_096_232.67,
+        federalProgram: 1_526_489_712.89,
+        creditCapital: 1_874_379_288.43,
+        publishedStateAppropriation: 715_314_337.33,
+      }}
+      asOf="2026-08-12T10:00:00.000Z"
+      coverageHref="#coverage"
+      animate={false}
+      disbursement={{ scope: "citywide", totalRecoveryDisbursed: 923_413_575.69 }}
+    />,
+  );
+
+  it("renders the consult's exact F5 sentence, with the dollar figure read from the live total", () => {
+    expect(html).toContain(
+      "Closed recovery-program files report $923.4M disbursed; ordinary award, foundation, TIF, HUD, tax-credit, and appropriation sources do not report recipient receipts.",
+    );
+    expect(html).toContain("$923,413,576"); // formatFullDollars rounds .69 up
+  });
+
+  it("never shows the citywide-only placeholder when the figure IS shown", () => {
+    expect(html).not.toContain("Not shown on this page");
   });
 });
 

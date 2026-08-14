@@ -30,6 +30,17 @@ const VALID_SOURCES = new Set<string>(INVESTMENT_SOURCES);
 const COUNTY_RELIEF_RECIPIENTS_VIEW = "county-relief-recipients";
 const HISTORICAL_RECOVERY_RECIPIENTS_VIEW = "historical-recovery-recipients";
 /**
+ * Deliverable 1 (audit finding 9 / consult F6 + Q2) — the single-record lazy
+ * retrieval view. RRF publishes real street addresses, so its points stay
+ * PLOTTED in the default map payload (unlike the ZIP/citywide-only aggregate
+ * sources), but the recipient BUSINESS NAME is withheld from that bulk
+ * payload (see LAZY_RECORD_SOURCES + projectRecordForMapView below) and is
+ * fetchable only one record at a time, authenticated, after an admin clicks
+ * that specific point. No bulk prefetch: the client never receives more than
+ * one record's identity per request.
+ */
+const RECIPIENT_RECORD_VIEW = "recipient-record";
+/**
  * The ONLY value that unlocks raw, recipient-level rows. Everything else — a
  * missing `view`, a misspelling, a renamed enum, a copy-pasted URL that lost the
  * param — resolves to the projected, nameless shape. See `projectedView` in GET.
@@ -99,6 +110,18 @@ const CITYWIDE_WITHHELD_SOURCES: ReadonlySet<string> = new Set([
   "dceo-capital",
   "sba-rrf",
 ]);
+
+/**
+ * Deliverable 1 (audit finding 9 / consult F6 + Q2) — sources whose PLOTTED
+ * point records stay on the default map (they publish real street addresses,
+ * so ZIP aggregation would understate what the source published), but whose
+ * recipient BUSINESS NAME is withheld from that bulk payload. The consult was
+ * explicit that "the single-ZIP rule should not be absolute for a source that
+ * legitimately publishes point addresses" — RRF is exactly that source, so it
+ * gets its own lazy, per-record, authenticated retrieval (RECIPIENT_RECORD_VIEW
+ * below) instead of being folded into the ZIP-aggregate drilldown pattern.
+ */
+const LAZY_RECORD_SOURCES: ReadonlySet<string> = new Set(["sba-rrf"]);
 
 /** Whether a record may appear as an individual row in the projected map payload. */
 function isVisibleInProjectedView(record: {
@@ -174,6 +197,7 @@ type ProjectedMapCitywideRecord = Pick<
 
 function projectRecordForMapView(
   record: CommunityInvestmentRecord,
+  opts?: { revealIdentity?: boolean },
 ): ProjectedMapPointRecord | ProjectedMapCitywideRecord {
   const {
     source,
@@ -197,16 +221,25 @@ function projectRecordForMapView(
   }
   // The popup renders only the FIRST http(s) link (InvestmentPointProps.sourceLink).
   const sourceLink = record.links.find((link) => /^https?:\/\//i.test(link));
+  // Deliverable 1: a LAZY_RECORD_SOURCES point (currently RRF only) keeps its
+  // plottable geometry/amount/status in the bulk payload but withholds its
+  // recipient BUSINESS NAME — and `logLine`, which can itself embed the legal
+  // business name ("Legal business: X") — unless the caller explicitly asked
+  // to reveal identity (the single-record RECIPIENT_RECORD_VIEW fetch below,
+  // triggered only after an authenticated admin clicks THAT point). An empty
+  // string (never the real name) signals "withheld" to the client, which shows
+  // a "Reveal recipient name" action instead (components/map/map-helpers.ts).
+  const withholdIdentity = LAZY_RECORD_SOURCES.has(source) && !opts?.revealIdentity;
   const projected: ProjectedMapPointRecord = {
     id: record.id,
     source,
     funderType,
     governmentFundingPurpose,
     funderName: record.funderName,
-    recipient: record.recipient,
+    recipient: withholdIdentity ? "" : record.recipient,
     capitalClass: record.capitalClass,
     amountAwarded,
-    logLine: record.logLine,
+    logLine: withholdIdentity ? null : record.logLine,
     year,
     geometry,
     status: record.status,
@@ -257,10 +290,20 @@ function loadFunderHqs(): FunderHq[] {
  */
 export async function GET(req: NextRequest) {
   if (!isOwnerFilesAdminConfigured()) {
-    return NextResponse.json({ error: "Owner Files admin auth is not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Owner Files admin auth is not configured" },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
   if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Sol gate blocker 3 — every failure path off this gate (including the
+    // recipient-record lazy-reveal view below) must carry private/no-store,
+    // not just the success paths. This is the single 401 every view branch
+    // shares, since auth happens before any view is dispatched.
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
 
   const data = loadCommunityInvestment();
@@ -329,6 +372,35 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  if (view === RECIPIENT_RECORD_VIEW) {
+    // Deliverable 1 (audit finding 9 / consult F6 + Q2) — the lazy, per-record,
+    // authenticated identity fetch for a LAZY_RECORD_SOURCES point (RRF). Auth
+    // already happened above, before `data` was ever loaded. No bulk prefetch:
+    // this returns EXACTLY the fields the popup withheld for ONE record id,
+    // never a list, never every RRF record, and only for a source enrolled in
+    // LAZY_RECORD_SOURCES — a non-enrolled id (or an unknown id) 404s rather
+    // than confirming/denying whether that id exists, so this endpoint cannot
+    // be used to probe ids belonging to a different, unrelated gate.
+    const id = req.nextUrl.searchParams.get("id")?.trim() ?? "";
+    if (!id) {
+      return NextResponse.json(
+        { error: "A record id is required" },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+    const record = data.records.find((r) => r.id === id);
+    if (!record || !LAZY_RECORD_SOURCES.has(record.source)) {
+      return NextResponse.json(
+        { error: "Not found" },
+        { status: 404, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+    return NextResponse.json(
+      { id: record.id, recipient: record.recipient, logLine: record.logLine },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  }
+
   const sourceParam = req.nextUrl.searchParams.get("source");
   const sources = sourceParam
     ? sourceParam
@@ -367,7 +439,7 @@ export async function GET(req: NextRequest) {
         // on source, so it cannot fail open on a geometry change. The surviving
         // records are then field-projected (projectRecordForMapView) down to
         // what the map client actually renders.
-        records: filtered.records.filter(isVisibleInProjectedView).map(projectRecordForMapView),
+        records: filtered.records.filter(isVisibleInProjectedView).map((r) => projectRecordForMapView(r)),
         countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
         state2020ReliefByZip: summarizeHistoricalRecoveryByZip(
           filtered.records,
