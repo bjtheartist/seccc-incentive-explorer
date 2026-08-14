@@ -3190,7 +3190,10 @@ function buildZoningReportItem(
       ? `Published ordinance date: ${cityZoning.ordinanceDate.slice(0, 10)}.`
       : null,
     "This report does not determine whether a proposed use is permitted.",
-    "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the City.",
+    // review5 S5: routed through authorityReferenceLine("zoning") — was
+    // "...and with the City", the exact generic-City-without-ZBA shape
+    // for a zoning-classification/use-permission sentence.
+    `Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the ${authorityReferenceLine("zoning")}.`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -3390,7 +3393,14 @@ function generateBestLocation(
     sections.push({
       id: SECTION_IDS.zoningRegulatoryReview,
       title: "Zoning & Regulatory Review",
-      description: "Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the City before relying on them.",
+      // review5 S5: the final sentence names the ZONING authority
+      // (authorityReferenceLine("zoning") = "Chicago Zoning Board of
+      // Appeals (ZBA)") explicitly for the use-verification instruction —
+      // an earlier ZBA mention in this same description does not excuse
+      // THIS sentence's own generic-City phrasing, per the sentence-by-
+      // sentence doctrine build-spec.md F10/S4 established for the
+      // concierge validator and now applied here too.
+      description: `Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the ${authorityReferenceLine("zoning")} before relying on them.`,
       items: zoningItems,
     });
   }
@@ -3560,7 +3570,10 @@ function generateBestLocation(
       "zoning-compatibility": (_p, _z) => ({
         label: "Zoning Compatibility",
         value: "Check city zoning",
-        detail: "Verify that the current city zoning classification supports your intended use. See Zoning & Regulatory Review section.",
+        // review5 S5: a zoning-classification/use-permission sentence —
+        // routed through authorityReferenceLine("zoning") rather than a
+        // generic "verify with the city" instruction.
+        detail: `Verify that the current city zoning classification supports your intended use with the ${authorityReferenceLine("zoning")}. See Zoning & Regulatory Review section.`,
       }),
       "property-condition": (p) => ({
         label: "Property Condition",
@@ -5052,7 +5065,10 @@ export function generateReportData(
       : {
           tier: "do-this-week",
           label: "Retry the published zoning lookup before making a site commitment",
-          description: "No zoning conclusion is available in this report. Consult the cited City zoning source and confirm the current district and controlling records before relying on the site analysis.",
+          // review5 S5: not-found/unavailable branch — routed through
+          // authorityReferenceLine("zoning") like the resolved branch
+          // above, not a generic "the City" reference.
+          description: `No zoning conclusion is available in this report. Confirm the current district and controlling records directly with the ${authorityReferenceLine("zoning")} before relying on the site analysis.`,
         };
     const existingRoadmap = report.actionRoadmap ?? [];
     if (!existingRoadmap.some((item) => item.label === zoningAction.label)) {
@@ -5060,8 +5076,8 @@ export function generateReportData(
     }
     unresolvedZoningQuestion = {
       question: cityZoning.zoneClass
-        ? `What is the exact proposed use, and which Title 17 use category does the City place it in for ${cityZoning.zoneClass}?`
-        : "What does the current published zoning district record at this site, and has it been verified with the City?",
+        ? `What is the exact proposed use, and which Title 17 use category does the ${authorityReferenceLine("zoning")} place it in for ${cityZoning.zoneClass}?`
+        : `What does the current published zoning district record at this site, and has it been verified with the ${authorityReferenceLine("zoning")}?`,
       confirmationLabel: zoningAction.label,
       confirmationDescription: zoningAction.description,
     };

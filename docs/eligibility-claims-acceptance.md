@@ -1032,3 +1032,58 @@ count vanished on every deploy/restart.
 same 5 pre-existing warnings; full `npx vitest run` — **317 test files,
 3733 passed, 2 skipped** (up from S3's 316/3698); `npm run
 programs:public:check` clean.
+
+### S5 (HIGH) — every zoning-classification/use-permission sentence through authorityReferenceLine("zoning")
+
+**Finding:** `lib/report-engine.ts` had five remaining zoning-
+classification/use-permission sentences naming a generic "the City"
+(or no specific authority at all) instead of routing through
+`authorityReferenceLine("zoning")` — the same binding doctrine
+`lib/authority-routing.ts` documents and S4 just enforced sentence-by-
+sentence for the concierge validator. Two usages already existed
+correctly (the resolved-zoning action-roadmap item and its paired
+`unresolvedZoningQuestion`, both already citing ZBA); the gaps were in
+copy the coordinator's earlier build passes hadn't reached.
+
+**Fix — five sentences, in `lib/report-engine.ts`:**
+- The "Zoning & Regulatory Review" section's resolved-zoning item detail
+  (`buildZoningReportItem`'s available branch): "...against the current
+  Chicago Zoning Ordinance and with the City." → "...and with the
+  Chicago Zoning Board of Appeals (ZBA)."
+- The "Decision Factors" `zoning-compatibility` priority assessor's
+  detail: "Verify that the current city zoning classification supports
+  your intended use..." now routes through `authorityReferenceLine`.
+- The not-found/unavailable branch of the action-roadmap zoning item
+  (`unresolvedZoningQuestion`'s companion action): "Consult the cited
+  City zoning source..." → "...directly with the Chicago Zoning Board of
+  Appeals (ZBA)..."
+- Both branches of `unresolvedZoningQuestion.question` (available AND
+  not-available): "...does the City place it in..." / "...verified with
+  the City?" → both now name ZBA.
+
+**Tests added:** `lib/__tests__/report-engine.test.ts` — a new
+`describe` block with an independent detector
+(`hasGenericCityWithoutZba`, written fresh rather than imported from
+`lib/concierge/output-validator.ts`, so this proves the REPORT's actual
+generated copy is clean, not just that the validator's own logic is
+internally consistent), plus:
+- One test per named zoning branch — **AVAILABLE**, **NOT-FOUND**, and
+  **UNAVAILABLE** (`cityZoning.status`) — exactly the coordinator's "all
+  zoning branches" TEST requirement, each asserting both the zoning
+  section item's detail AND the action-roadmap item's description are
+  clean and explicitly name ZBA.
+- A dedicated test for the `unresolvedZoningQuestion` text in both its
+  available and not-available forms.
+- A dedicated test for the "Decision Factors" `zoning-compatibility` item
+  (required `reportType: "dev-feasibility"` — that section is built by
+  `generateBestLocation`, not the default `site-incentives` path
+  (`generateLocationIncentives`), a routing detail this test file's
+  earlier zoning tests hadn't needed to know).
+- An adversarial self-test proving the detector itself actually flags the
+  exact pre-fix sentence shape ("...and with the City.") and passes a
+  correctly-ZBA-named equivalent — not a vacuously-passing check.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **317 test files,
+3739 passed, 2 skipped** (up from S4's 317/3733); `npm run
+programs:public:check` clean.

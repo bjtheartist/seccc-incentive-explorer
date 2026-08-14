@@ -1889,3 +1889,149 @@ describe("generateReportData — unknown zone layers never render as a confirmed
     expect(report.verdict!.subheadline).toMatch(/could not be checked/i);
   });
 });
+
+/**
+ * review5 S5: "every zoning-classification/use-permission sentence
+ * through authorityReferenceLine('zoning')." TEST: all zoning branches
+ * (available/not-found/unavailable) fail on generic-City-without-ZBA.
+ *
+ * `hasGenericCityWithoutZba` mirrors (independently, not by import — this
+ * proves the REPORT's own generated copy, not just the concierge
+ * validator's detection logic) the same doctrine
+ * lib/authority-routing.ts/lib/concierge/output-validator.ts encode: a
+ * zoning-classification/use-permission sentence that names a bare "the
+ * City" without ALSO naming the Zoning Board of Appeals is a violation.
+ */
+describe("generateReportData — zoning copy never names a generic City without ZBA (review5 S5)", () => {
+  function hasGenericCityWithoutZba(text: string): boolean {
+    const zoningQuestionPattern = /\b(zoning classification|use category|Title 17 use|permitted use|zoning relief|zoning district|zoning ordinance|intended use)\b/i;
+    const genericCityPattern = /\bthe City\b(?!\s+of\s+Chicago['’]s\s+Zoning)/;
+    const mentionsZba = /\bZBA\b|Zoning Board of Appeals/.test(text);
+    return zoningQuestionPattern.test(text) && genericCityPattern.test(text) && !mentionsZba;
+  }
+
+  it("AVAILABLE branch: the resolved-district zoning section names ZBA, not a bare 'the City', for its use-verification sentence", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      { zones, zoneNames, cityZoning: { zoneClass: "B3-2", zoneType: "Business" } },
+    );
+    const zoningSection = report.sections.find((s) => s.title === "Zoning & Regulatory Review");
+    const detail = zoningSection?.items[0]?.detail ?? "";
+    expect(detail).toContain("Zoning Board of Appeals (ZBA)");
+    expect(hasGenericCityWithoutZba(detail)).toBe(false);
+  });
+
+  it("AVAILABLE branch: the action-roadmap zoning item and unresolvedZoningQuestion name ZBA, not the City, for the use-category question", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      { zones, zoneNames, cityZoning: { zoneClass: "B3-2", zoneType: "Business" } },
+    );
+    const zoningRoadmapItem = report.actionRoadmap?.find((item) =>
+      item.label.includes("verify its use category"),
+    );
+    expect(zoningRoadmapItem).toBeDefined();
+    expect(hasGenericCityWithoutZba(zoningRoadmapItem!.description)).toBe(false);
+    expect(zoningRoadmapItem!.description).toContain("Zoning Board of Appeals (ZBA)");
+
+    const question = report.startHere?.unresolvedQuestions.find((q) => /zoning|use category/i.test(q)) ?? "";
+    expect(hasGenericCityWithoutZba(question)).toBe(false);
+    expect(question).toContain("Zoning Board of Appeals (ZBA)");
+  });
+
+  it("NOT-FOUND branch: the zoning report item's copy never names a generic City for a use-permission claim", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "not_found",
+          zoneClass: null,
+          zoneType: null,
+          source: {
+            id: "chicago-arcgis-zoning",
+            label: "Chicago ArcGIS Zoning",
+            url: "https://example.test/zoning",
+            retrievedAt: "2026-08-13T00:00:00.000Z",
+            recordUpdatedAt: null,
+          },
+          message: "No published Chicago zoning district was returned for this location.",
+        },
+      },
+    );
+    const zoningSection = report.sections.find((s) => s.title === "Zoning & Regulatory Review");
+    const detail = zoningSection?.items[0]?.detail ?? "";
+    expect(hasGenericCityWithoutZba(detail)).toBe(false);
+
+    const zoningRoadmapItem = report.actionRoadmap?.find((item) =>
+      item.label.includes("Retry the published zoning lookup"),
+    );
+    expect(zoningRoadmapItem).toBeDefined();
+    expect(hasGenericCityWithoutZba(zoningRoadmapItem!.description)).toBe(false);
+    expect(zoningRoadmapItem!.description).toContain("Zoning Board of Appeals (ZBA)");
+
+    const question = report.startHere?.unresolvedQuestions.find((q) => /zoning|use category/i.test(q)) ?? "";
+    expect(hasGenericCityWithoutZba(question)).toBe(false);
+    expect(question).toContain("Zoning Board of Appeals (ZBA)");
+  });
+
+  it("UNAVAILABLE branch: the zoning report item's copy never names a generic City for a use-permission claim", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "unavailable",
+          zoneClass: null,
+          zoneType: null,
+          source: null,
+          message: "Published Chicago zoning data could not be retrieved.",
+        },
+      },
+    );
+    const zoningSection = report.sections.find((s) => s.title === "Zoning & Regulatory Review");
+    const detail = zoningSection?.items[0]?.detail ?? "";
+    expect(hasGenericCityWithoutZba(detail)).toBe(false);
+
+    const zoningRoadmapItem = report.actionRoadmap?.find((item) =>
+      item.label.includes("Retry the published zoning lookup"),
+    );
+    expect(zoningRoadmapItem).toBeDefined();
+    expect(hasGenericCityWithoutZba(zoningRoadmapItem!.description)).toBe(false);
+    expect(zoningRoadmapItem!.description).toContain("Zoning Board of Appeals (ZBA)");
+  });
+
+  it("zoning-compatibility decision-factor detail names ZBA when that priority is selected", () => {
+    // "Decision Factors" is built by generateBestLocation (dev-feasibility/
+    // best-location reportType), not generateLocationIncentives — the
+    // default "site-incentives" report never reaches this section.
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", locationPriorities: ["zoning-compatibility"] }),
+      [makeProgram()],
+      { zones, zoneNames, cityZoning: { zoneClass: "B3-2", zoneType: "Business" } },
+    );
+    const decisionSection = report.sections.find((s) => s.title === "Decision Factors");
+    const item = decisionSection?.items.find((i) => i.label === "Zoning Compatibility");
+    expect(item).toBeDefined();
+    expect(hasGenericCityWithoutZba(item!.detail as string)).toBe(false);
+    expect(item!.detail).toContain("Zoning Board of Appeals (ZBA)");
+  });
+
+  it("ADVERSARIAL SELF-TEST: the detector itself actually catches the pre-fix shape (\"...and with the City.\") — proves the check is not vacuously passing", () => {
+    expect(
+      hasGenericCityWithoutZba(
+        "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the City.",
+      ),
+    ).toBe(true);
+    expect(
+      hasGenericCityWithoutZba(
+        "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the Chicago Zoning Board of Appeals (ZBA).",
+      ),
+    ).toBe(false);
+  });
+});
