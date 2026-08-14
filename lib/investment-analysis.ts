@@ -37,6 +37,7 @@ import {
   sumAnnouncedInvestment,
   sumAuthorizedByClass,
   sumCreditCapital,
+  sumPublishedStateAppropriation,
   type CapitalClass,
   type CommunityInvestmentRecord,
   type FunderType,
@@ -199,6 +200,18 @@ export interface CommunityInvestmentAnalysis {
   /** All-time tax-credit capital (LIHTC + NMTC) stamped to this community — a
    * SEPARATE measure from totalAwarded, never summed with awarded dollars. */
   creditCapital: number;
+  /**
+   * Sol gate blocker 2 — the published state appropriation balance
+   * (capitalClass "state_appropriation") POINT-SITED to this community only
+   * (`mine`, the same community-filtered set every other capital-class field
+   * here uses). The committed export's 620 appropriation rows are 563 held
+   * CITYWIDE (no communityArea — they carry NO community, and belong ONLY to
+   * the landing page's meta.totalPublishedStateAppropriation) and 57
+   * point-sited; passing the citywide total here would show every community
+   * the full state figure regardless of whether any appropriation was
+   * actually sited there. A SEPARATE measure, never summed with anything else.
+   */
+  publishedStateAppropriation: number;
   /** GRANT-CLASS records in the since-2020 view (in-window yeared + unYeared) —
    * the hero's "grants & projects". Excludes the non-grant capital classes
    * (tif_subsidy / federal_program / tax_credit), which have their own count-free
@@ -559,6 +572,9 @@ export function analyzeCommunityArea(
     // measure, summed over every record (not the since-2020 window), never folded
     // into totalAwarded.
     creditCapital: sumCreditCapital(mine),
+    // Sol gate blocker 2 — COMMUNITY-scoped, from `mine` (point-sited rows
+    // only carry a communityArea) — never the citywide meta total.
+    publishedStateAppropriation: sumPublishedStateAppropriation(mine),
     // "N grants & projects" — grant-class records ONLY (non-grant capital classes
     // are counted in the capital row, never here).
     recordCount: grantInView.length,

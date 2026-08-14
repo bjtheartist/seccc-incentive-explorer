@@ -210,7 +210,9 @@ export default async function InvestmentBriefPrintPage({
                     authorizedTif: analysis.authorizedTif,
                     federalProgram: analysis.federalProgram,
                     creditCapital: analysis.creditCapital,
-                    publishedStateAppropriation: meta?.totalPublishedStateAppropriation ?? 0,
+                    // Sol gate blocker 2 — COMMUNITY-scoped, same as the area
+                    // page; never the citywide meta.totalPublishedStateAppropriation.
+                    publishedStateAppropriation: analysis.publishedStateAppropriation,
                   }}
                   asOf={analysis.generatedAt}
                   coverageHref="#brief-methodology"

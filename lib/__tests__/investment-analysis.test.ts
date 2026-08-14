@@ -373,6 +373,55 @@ describe("analysis carries the non-grant capital measures + median award", () =>
     expect(a.totalAwarded).toBe(350_000);
     expect(findBannedFigureKeys(a)).toEqual([]);
   });
+
+  it("Sol gate blocker 2 — publishedStateAppropriation is COMMUNITY-scoped: a community with sited rows gets exactly its own subset sum, a community with none gets zero", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      rec({
+        id: "appro1",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 750_000,
+        year: 2026,
+        communityArea: "Alpha",
+        recipient: "Point-sited appropriation line",
+      }),
+      rec({
+        id: "appro2",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 250_000,
+        year: 2026,
+        communityArea: "Alpha",
+        recipient: "Second point-sited appropriation line",
+      }),
+      // Held-citywide appropriation rows carry NO communityArea — they must
+      // never leak into any community's subset sum (they belong only to the
+      // landing page's meta.totalPublishedStateAppropriation).
+      rec({
+        id: "appro-citywide",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        funderType: "government",
+        amountAwarded: null,
+        publishedBalance: 900_000_000,
+        year: 2026,
+        communityArea: undefined,
+        geometry: { kind: "citywide" },
+        recipient: "Held-citywide appropriation line",
+      }),
+    ];
+    const alpha = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    const beta = analyzeCommunityArea(recs, "Beta", GEN)!;
+    // Alpha: exactly its own two sited rows summed — never the citywide row.
+    expect(alpha.publishedStateAppropriation).toBe(1_000_000);
+    // Beta has no sited appropriation row — zero, not the citywide figure.
+    expect(beta.publishedStateAppropriation).toBe(0);
+  });
 });
 
 // ── GRANT-CLASS FIREWALL: non-grant capital never enters awarded breakdowns ───

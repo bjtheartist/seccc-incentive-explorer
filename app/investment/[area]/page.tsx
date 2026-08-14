@@ -181,7 +181,11 @@ export default async function InvestmentAreaPage({
                   authorizedTif: analysis.authorizedTif,
                   federalProgram: analysis.federalProgram,
                   creditCapital: analysis.creditCapital,
-                  publishedStateAppropriation: meta?.totalPublishedStateAppropriation ?? 0,
+                  // Sol gate blocker 2 — COMMUNITY-scoped (57 point-sited rows
+                  // carry a communityArea), never meta.totalPublishedStateAppropriation
+                  // (the citywide total, which includes the 563 held-citywide rows
+                  // that belong to no single community and to the landing page only).
+                  publishedStateAppropriation: analysis.publishedStateAppropriation,
                 }}
                 asOf={analysis.generatedAt}
                 coverageHref="#methodology"
