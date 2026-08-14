@@ -1707,3 +1707,106 @@ confirming no regression for rows that already carried real `unknown`
 values); `npm run programs:public:check` clean (unaffected by this
 finding, same as S11 — this is the shortlist universe pipeline, not the
 programs catalog).
+
+---
+
+### S13 (HIGH) — refine=true skipped coordinate validation; (0,0) silently dropped by a truthy check; parseFloat accepted suffix-garbage
+
+**Finding:** review5 S9 built `isValidInstantCoordinatePair` +
+`parseInstantCoordinateParam` and applied both to `instant=true` only.
+Three distinct gaps surfaced under review6: (1) `isRefineEntry` checked
+only `instantLat != null && instantLon != null` — never the full strict
+predicate — so an out-of-range or NaN pair (e.g.
+`?refine=true&lat=999&lon=999`) was accepted as a valid refine entry and
+flowed unvalidated into `wizardState`; (2) BOTH the instant-mode and
+refine-mode `wizardState` seeding branches guarded on
+`instantLat && instantLon` — a JS truthy check that evaluates a
+perfectly valid, in-range `(0, 0)` pair as falsy, silently failing to
+seed coordinates into `wizardState` even when the mode itself had
+already engaged; (3) `parseInstantCoordinateParam` used `parseFloat`,
+which parses only a valid numeric PREFIX and silently discards trailing
+garbage (`parseFloat("41.75garbage") === 41.75`).
+
+**Fix:**
+- **`lib/instant-report-coords.ts`**: `parseInstantCoordinateParam`
+  changed from `parseFloat(raw)` to `Number(raw.trim())` (with an
+  explicit empty-after-trim → `null` guard, since `Number("")` and
+  `Number("  ")` are both `0`, not `NaN` — a JS quirk that would
+  otherwise fabricate a coordinate from whitespace). `Number()` requires
+  the ENTIRE string to be numeric, so both prefix- and suffix-garbage now
+  produce `NaN`, correctly rejected downstream by
+  `isValidInstantCoordinatePair`'s `Number.isFinite` check. New exported
+  `resolveInstantWizardCoordinateSeed(address, lat, lon)`: returns
+  `{reportType: "site-incentives", address, lat, lon}` when both
+  coordinates are non-null (`!= null`, never `&&`), `null` otherwise —
+  extracted so BOTH page.tsx call sites share ONE null-check
+  implementation instead of two independently-written (and, it turned
+  out, independently-buggy) truthy checks.
+- **`app/report/page.tsx`**: `isRefineEntry` now requires
+  `requestedRefineMode && hasValidInstantCoords` (the SAME strict
+  predicate `isInstantMode` uses), not a bare null-check. Added
+  `requestedRefineMode`/`refineModeCoordinateError`, mirroring
+  `requestedInstantMode`/`instantModeCoordinateError` exactly, so an
+  invalid refine link now falls back to address entry with the SAME
+  `INSTANT_MODE_COORDINATE_ERROR_MESSAGE` the instant-mode path already
+  used (wired into `geocodeError`'s seed:
+  `instantModeCoordinateError ?? refineModeCoordinateError` — exactly
+  one can be non-null at a time, since refine requires `!isInstantMode`).
+  Both `wizardState`-seeding branches (instant, refine) now call
+  `resolveInstantWizardCoordinateSeed` instead of each re-deriving the
+  seed object with its own truthy check.
+
+**Judgment call — scope boundary, documented not silently assumed:** a
+THIRD `wizardState` init branch (`if (urlAddress) { ...lat: instantLat,
+lon: instantLon }`, for plain address-only links carrying no
+`instant`/`refine` param) still passes `instantLat`/`instantLon`
+through WITHOUT validation. Left unchanged: this branch serves the
+ordinary manual wizard flow (a user-typed or search-selected address),
+never auto-engages the report-generation effect chain the "hang
+forever" risk this whole finding-family is about, and is genuinely
+outside `instant=true`/`refine=true` — the finding's literal scope. A
+malformed lat/lon reaching this branch is inert until the user manually
+re-geocodes.
+
+**Tests added:**
+- `lib/__tests__/instant-report-coords.test.ts` (extended, now 46
+  tests — was 26): suffix-garbage and prefix-garbage cases for
+  `parseInstantCoordinateParam` (`Number()` vs the old `parseFloat`);
+  whitespace-only → `null`, not a fabricated `0`; a new
+  `resolveInstantWizardCoordinateSeed` describe block proving `(0, 0)`
+  resolves to a real seed; a new `computeRefineEntry` composition
+  (mirroring page.tsx's exact current logic, matching the file's
+  existing `computeInstantMode` pattern) exercised against all eight
+  malformed classes, including the literal `lat=999&lon=999` regression
+  case, `(0,0)` accepted, and refine correctly ignored/no-error when
+  instant mode already claimed the request.
+- `app/report/__tests__/instant-refine-coordinate-live-composition.test.tsx`
+  (new, 26 tests) — the coordinator's "not a test-local mirror"
+  directive, satisfied literally: renders the REAL, unmodified
+  `app/report/page.tsx` default export via `renderToStaticMarkup`, with
+  `useSearchParams()` mocked to real per-test query strings and `react`
+  itself left UNMOCKED (every `useState` initializer runs for real —
+  the opposite technique from `report-page-live-renderer.test.tsx`,
+  which replaces every `useState` with a seeded value specifically to
+  bypass this exact logic). Proves, per malformed class
+  (missing/partial/malformed/suffix-garbage/out-of-range), under BOTH
+  `instant=true` and `refine=true`: the instant-mode spinner never shows
+  for an invalid pair; the wizard never skips ahead to the si-industry
+  step for an invalid refine pair. A dedicated `(0, 0)` + `refine=true`
+  + NO `addr` param test is the discriminating proof for the
+  truthiness-vs-null-check bug specifically — verified empirically (not
+  just by code-reading) by `git stash`-ing the fix and re-running this
+  exact file: 9 of 26 assertions failed against the pre-fix code
+  (suffix-garbage ×2, refine's missing range check ×3, the literal
+  `lat=999&lon=999` case, and the `(0,0)`-no-addr case — which failed by
+  falling into the page's Suspense `"Loading..."` fallback, consistent
+  with the predicted mechanism: `currentStepIndex` jumps to the
+  si-industry index while `wizardState.reportType` stays `null` under
+  the old code, so `steps[currentStepIndex]` is `undefined` and
+  `currentStep.title` throws); all 26 pass against the restored fix.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **324 test files,
+3922 passed, 2 skipped** (up from S12's 323/3876); `npm run
+programs:public:check` clean (unaffected — this finding touches only
+`app/report/page.tsx`'s coordinate handling, not the programs catalog).

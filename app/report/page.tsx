@@ -171,6 +171,7 @@ import {
   INSTANT_MODE_COORDINATE_ERROR_MESSAGE,
   isValidInstantCoordinatePair,
   parseInstantCoordinateParam,
+  resolveInstantWizardCoordinateSeed,
 } from "@/lib/instant-report-coords";
 import {
   extractChicagoZipCode,
@@ -561,6 +562,19 @@ function ReportWizardPage() {
   const instantModeCoordinateError =
     requestedInstantMode && !hasValidInstantCoords ? INSTANT_MODE_COORDINATE_ERROR_MESSAGE : null;
   const urlAddress = searchParams.get("addr") || "";
+  // review6 S13 (HIGH): a refine link with `refine=true` used to check
+  // only `instantLat != null && instantLon != null` — never the full
+  // `isValidInstantCoordinatePair` predicate instant mode gets. An
+  // out-of-range or otherwise malformed refine coordinate (e.g.
+  // `?refine=true&lat=999&lon=999`) sailed straight through as "valid"
+  // and into wizardState.lat/lon. `requestedRefineMode`/
+  // `refineModeCoordinateError` below mirror `requestedInstantMode`/
+  // `instantModeCoordinateError` exactly, so a bad refine link now gets
+  // the identical fallback: address entry with an explanatory error,
+  // never a bogus coordinate silently accepted.
+  const requestedRefineMode = searchParams.get("refine") === "true" && !isInstantMode;
+  const refineModeCoordinateError =
+    requestedRefineMode && !hasValidInstantCoords ? INSTANT_MODE_COORDINATE_ERROR_MESSAGE : null;
   const instantAddr = urlAddress;
   // Landing page that launched this snapshot (set by AddressSearch / SEO CTAs).
   const instantSrc = searchParams.get("src") || "";
@@ -574,11 +588,10 @@ function ReportWizardPage() {
   const isCorridorMode = Boolean(corridorParam && isCorridorPreview);
   // Refine entry: a saved snapshot (Workspace) re-entering the refine flow
   // with its address preserved (audit RF1).
-  const isRefineEntry =
-    searchParams.get("refine") === "true" &&
-    !isInstantMode &&
-    instantLat != null &&
-    instantLon != null;
+  // review6 S13: now gated on the SAME strict `hasValidInstantCoords`
+  // predicate as instant mode (finite + in-range, not just non-null) —
+  // see requestedRefineMode/refineModeCoordinateError above.
+  const isRefineEntry = requestedRefineMode && hasValidInstantCoords;
 
   // Try to hydrate wizard state from URL params.
   // Corridor Intelligence is a first-class report type (audit RF7/WU7), so
@@ -605,14 +618,18 @@ function ReportWizardPage() {
     if (shareWizardState && !isInstantMode) {
       return shareWizardState;
     }
-    if (isInstantMode && instantLat && instantLon) {
-      return {
-        ...INITIAL_WIZARD_STATE,
-        reportType: "site-incentives",
-        address: instantAddr,
-        lat: instantLat,
-        lon: instantLon,
-      };
+    // review6 S13: was `instantLat && instantLon` in each of the two
+    // branches below (independently) — a truthy check that silently
+    // REJECTS a validated (0, 0) pair (0 is falsy in JS), even though
+    // `isInstantMode`/`isRefineEntry` being true already proves
+    // `isValidInstantCoordinatePair(instantLat, instantLon)` passed. Both
+    // branches now call the SAME extracted, independently-tested
+    // resolver (`resolveInstantWizardCoordinateSeed`, `!= null` not
+    // `&&`) instead of duplicating the null-check, so they can never
+    // re-diverge on this again — see that function's own doc comment.
+    const instantCoordinateSeed = resolveInstantWizardCoordinateSeed(instantAddr, instantLat, instantLon);
+    if (isInstantMode && instantCoordinateSeed) {
+      return { ...INITIAL_WIZARD_STATE, ...instantCoordinateSeed };
     }
     if (isCorridorMode) {
       return {
@@ -621,14 +638,8 @@ function ReportWizardPage() {
         neighborhood: corridorParam,
       };
     }
-    if (isRefineEntry && instantLat && instantLon) {
-      return {
-        ...INITIAL_WIZARD_STATE,
-        reportType: "site-incentives",
-        address: instantAddr,
-        lat: instantLat,
-        lon: instantLon,
-      };
+    if (isRefineEntry && instantCoordinateSeed) {
+      return { ...INITIAL_WIZARD_STATE, ...instantCoordinateSeed };
     }
     if (urlAddress) {
       return {
@@ -745,11 +756,15 @@ function ReportWizardPage() {
       : null,
   );
   const [isGeocoding, setIsGeocoding] = useState(false);
-  // review5 S9: seeded from the coordinate-validation error computed
-  // above, so an invalid instant-mode link surfaces an explanation in the
-  // SAME error UI the normal address-entry flow already uses, instead of
-  // silently falling back with no feedback.
-  const [geocodeError, setGeocodeError] = useState<string | null>(instantModeCoordinateError);
+  // review5 S9 / review6 S13: seeded from the coordinate-validation error
+  // computed above, so an invalid instant-mode OR refine-mode link
+  // surfaces an explanation in the SAME error UI the normal address-entry
+  // flow already uses, instead of silently falling back with no feedback.
+  // Exactly one of the two can be non-null at a time (requestedRefineMode
+  // requires `!isInstantMode`), so there's no precedence question.
+  const [geocodeError, setGeocodeError] = useState<string | null>(
+    instantModeCoordinateError ?? refineModeCoordinateError,
+  );
 
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
