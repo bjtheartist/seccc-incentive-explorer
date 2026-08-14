@@ -1681,16 +1681,30 @@ function computeVerdict(
   // checked. When layers are unknown (source unavailable, malformed
   // geometry, etc.), the correct claim is that the check was incomplete —
   // never that the address was confirmed clear.
+  //
+  // review5 S3: this must hold even when zoneCount > 0. Before this fix,
+  // ANY known positive zone silenced the unknown-layer disclosure
+  // entirely — an address with 3 confirmed zones and 2 layers that failed
+  // to resolve rendered a headline/subheadline that never mentioned the 2
+  // unknown layers at all. Known positives and the unavailable-layer
+  // notice must both render, regardless of match count.
   const hasUnknownZones = (ctx.unknownZones?.length ?? 0) > 0;
+  const unknownZoneCaveat = hasUnknownZones
+    ? `${ctx.unknownZones!.length} additional zone layer${ctx.unknownZones!.length !== 1 ? "s" : ""} could not be checked right now (checked ${ctx.zoneCheckedAt ?? new Date().toISOString().slice(0, 10)})`
+    : "";
   const headline =
     zoneCount > 0
-      ? "Mapped incentive zones were found at this address"
+      ? hasUnknownZones
+        ? `Mapped incentive zones were found at this address — ${unknownZoneCaveat}`
+        : "Mapped incentive zones were found at this address"
       : hasUnknownZones
         ? `${ctx.unknownZones!.length} zone layer${ctx.unknownZones!.length !== 1 ? "s" : ""} could not be checked right now (checked ${ctx.zoneCheckedAt ?? new Date().toISOString().slice(0, 10)})`
         : "No mapped zone-based programs were found at this address";
 
   const subheadline = programCount > 0
-    ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
+    ? hasUnknownZones
+      ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm. Some additional incentive-zone layers could not be checked and may not be reflected here."
+      : "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
     : zoneCount === 0 && hasUnknownZones
       ? "Some incentive-zone layers could not be checked; this is not confirmation the address is outside them. Try again shortly or confirm directly with the administering agency."
       : "Broader programs may still be worth exploring with a local business-support organization.";

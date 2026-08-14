@@ -244,7 +244,16 @@ export async function buildDeterministicConciergeResponse({
         .slice(0, 10)
         .map((zone) => `- ${zone.name || zone.key}`)
         .join("\n");
-      return `The current report coordinates intersect these mapped overlays:\n\n${names}\n\nCoverage means a program may be worth exploring; it does not confirm eligibility. Verify the current boundary and project rules with administrators.`;
+      // review5 S3: known positives AND an unavailable-layer notice must
+      // both render, regardless of match count — a nonzero `zones.length`
+      // must not silence the fact that some OTHER layer could not be
+      // checked. Before this fix, `unknownCount` was computed above but
+      // never read again once at least one zone matched.
+      const unknownNote =
+        unknownCount > 0
+          ? `\n\nNote: ${unknownCount} additional mapped-zone layer(s) could not be checked right now, so this list may be incomplete.`
+          : "";
+      return `The current report coordinates intersect these mapped overlays:\n\n${names}\n\nCoverage means a program may be worth exploring; it does not confirm eligibility. Verify the current boundary and project rules with administrators.${unknownNote}`;
     }
     return "I need a report location before I can check mapped zone coverage. [Build a report for the address](/report), then ask me again. Coverage is not an eligibility determination.";
   }

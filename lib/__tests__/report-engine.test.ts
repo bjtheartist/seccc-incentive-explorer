@@ -1859,6 +1859,33 @@ describe("generateReportData — unknown zone layers never render as a confirmed
       unknownZones: ["nof"],
     });
 
-    expect(report.verdict!.headline).toBe("Mapped incentive zones were found at this address");
+    // The known positive is preserved verbatim in the headline...
+    expect(report.verdict!.headline).toContain("Mapped incentive zones were found at this address");
+    // The zone COUNT itself is the confirmed-positive count — an unrelated
+    // unknown layer does not inflate or shrink it.
+    expect(report.verdict!.topReasons[0]).toMatch(/^1 mapped incentive zone/);
+  });
+
+  it("review5 S3: known positives AND the unavailable-layer notice both render together — a nonzero zoneCount must never silence the unknown-layer disclosure", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones: { tif: true, sbif: false },
+      zoneNames: { tif: "Test TIF" },
+      unknownZones: ["nof"],
+      zoneCheckedAt: "2026-08-13",
+    });
+
+    expect(report.verdict!.headline).toContain("Mapped incentive zones were found at this address");
+    expect(report.verdict!.headline).toMatch(/could not be checked/i);
+    expect(report.verdict!.headline).toContain("2026-08-13");
+  });
+
+  it("review5 S3: with programs also matched, the subheadline discloses the unknown layer instead of only the standard eligibility-confirmation sentence", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones: { tif: true, sbif: false },
+      zoneNames: { tif: "Test TIF" },
+      unknownZones: ["nof"],
+    });
+
+    expect(report.verdict!.subheadline).toMatch(/could not be checked/i);
   });
 });

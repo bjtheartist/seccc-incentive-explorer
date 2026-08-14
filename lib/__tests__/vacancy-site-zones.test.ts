@@ -86,6 +86,26 @@ describe("siteZonesSummary / siteZoneLine", () => {
     expect(text.toLowerCase()).not.toContain("you can");
   });
 
+  it("review5 S3: discloses unknown layers ALONGSIDE known positives — a nonzero match count must never silence the caveat", () => {
+    const text = siteZonesSummary(
+      [
+        { key: "tif", label: "TIF District", name: "X" },
+        { key: "ssa", label: "Special Service Area", name: "Y" },
+      ],
+      ["federalOZ", "nmtcEligible"],
+    );
+    // The known positives are still counted...
+    expect(text).toContain("Inside 2 mapped incentive geographies");
+    // ...and the unknown-layer caveat is not silently dropped.
+    expect(text).toContain("2 layers could not be checked");
+  });
+
+  it("review5 S3: singular positive + singular unknown both render in the same sentence", () => {
+    const text = siteZonesSummary([{ key: "tif", label: "TIF District", name: "X" }], ["hubzone"]);
+    expect(text).toContain("Inside 1 mapped incentive geography");
+    expect(text).toContain("1 layer could not be checked");
+  });
+
   it("renders layer + feature name, falling back to the layer alone when unnamed", () => {
     expect(
       siteZoneLine({ key: "tif", label: "TIF District", name: "Madison/Austin Corridor TIF (T-75)" }),

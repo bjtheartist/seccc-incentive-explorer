@@ -135,20 +135,33 @@ export function matchesFromEvidenceV2(raw: unknown): {
  *  geography." / the honest empty statement — or, when the empty result
  *  cannot be trusted because some layers were never actually checked, an
  *  honest incomplete-check statement instead of a negative claim (audit F2).
- *  Never claims eligibility. */
+ *  Never claims eligibility.
+ *
+ * review5 S3: known positives and an unavailable-layer notice must BOTH
+ * render regardless of match count — a nonzero `matches.length` must never
+ * cause `unknownKeys` to go unmentioned. Before this fix, any unknown
+ * layer's disclosure only appeared when `matches` was empty; a site with
+ * 3 confirmed geographies AND 2 layers that failed to resolve rendered
+ * ONLY "Inside 3 mapped incentive geographies:", silently dropping the
+ * fact that 2 more layers were never actually checked. */
 export function siteZonesSummary(
   matches: readonly SiteZoneMatch[],
   unknownKeys: readonly string[] = [],
   checkedAt?: string,
 ): string {
+  const dateNote = checkedAt ? ` (checked ${checkedAt.slice(0, 10)})` : "";
+  const unknownNote =
+    unknownKeys.length > 0
+      ? ` ${unknownKeys.length} layer${unknownKeys.length !== 1 ? "s" : ""} could not be checked right now${dateNote}.`
+      : "";
+
   if (matches.length === 0 && unknownKeys.length > 0) {
-    const dateNote = checkedAt ? ` (checked ${checkedAt.slice(0, 10)})` : "";
-    return `${unknownKeys.length} layer${unknownKeys.length !== 1 ? "s" : ""} could not be checked right now${dateNote}.`;
+    return unknownNote.trim();
   }
   if (matches.length === 0) return "Not inside a mapped incentive geography.";
   return `Inside ${matches.length} mapped incentive ${
     matches.length === 1 ? "geography" : "geographies"
-  }:`;
+  }:${unknownNote}`;
 }
 
 /** One rendered line: "TIF District — Madison/Austin Corridor TIF (T-75)", or

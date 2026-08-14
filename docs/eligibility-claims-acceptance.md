@@ -881,3 +881,72 @@ un-scoped follow-up, not silently claimed fixed here.
 5 pre-existing warnings as S1 (unrelated files/lines); full `npx vitest
 run` — **316 test files, 3691 passed, 2 skipped** (up from S1's 314/3670);
 `npm run programs:public:check` clean.
+
+### S3 (HIGH) — mixed evidence: known positives AND an unavailable-layer notice must both render
+
+**Finding:** three consumers had ALREADY built the zero-match caveat
+correctly (per S1/S2's own doctrine — "never claim absence when a layer is
+unknown") but every one of them silenced that same caveat the moment ANY
+zone/program matched. A site with 3 confirmed incentive geographies and 2
+layers that failed to resolve rendered a summary that mentioned only the
+3 — the 2 unknown layers vanished from the response entirely, so a reader
+had no way to know the list might be incomplete. This is a narrower,
+more specific defect than S1/S2's "silent false negative" — it is a
+silent *incomplete positive*.
+
+- **`lib/vacancy-site-zones.ts`'s `siteZonesSummary()`** (feeds
+  `components/vacancy/vacancy-site-card.ts`'s Property Map site cards):
+  previously the unknown-layer caveat only appended when `matches.length
+  === 0`. Now it appends to BOTH the zero-match sentence and the
+  positive-count sentence whenever `unknownKeys.length > 0` — e.g. "Inside
+  2 mapped incentive geographies: 2 layers could not be checked right now
+  (checked 2026-08-13)."
+- **`lib/report-engine.ts`'s `computeVerdict()`, ~line 1679** (the
+  coordinator's named location): `headline` and `subheadline` previously
+  disclosed `hasUnknownZones` only in the `zoneCount === 0` branch. Now
+  both branches append the caveat: a positive `headline` becomes "Mapped
+  incentive zones were found at this address — N additional zone layer(s)
+  could not be checked right now (checked ...)", and the matching
+  `subheadline` adds "Some additional incentive-zone layers could not be
+  checked and may not be reflected here" alongside the standard
+  eligibility-confirmation sentence.
+- **`lib/concierge/fallback.ts`'s zone-check branch, ~line 222-250**: the
+  `zones.length > 0` response path listed the matched overlays but never
+  read the already-computed `unknownCount` again once at least one zone
+  matched. Now appends "Note: N additional mapped-zone layer(s) could not
+  be checked right now, so this list may be incomplete." to the positive
+  response when `unknownCount > 0`.
+
+**Judgment call:** an existing `lib/__tests__/report-engine.test.ts` test
+(`"a known positive match is unaffected by an unrelated unknown layer"`)
+asserted the OLD, now-incorrect behavior verbatim (`headline` exactly
+equal to the plain positive sentence with no caveat). Per this finding
+that assertion encoded the bug, not a contract to preserve — updated to
+assert the positive text is still CONTAINED in the headline (still
+unaffected/preserved) rather than that the headline is exactly that one
+sentence, and two new tests assert the caveat is now also present.
+
+**Tests added:**
+- `lib/__tests__/vacancy-site-zones.test.ts` — two new cases: mixed
+  positive+unknown discloses both (plural and singular phrasing).
+- `lib/__tests__/report-engine.test.ts` — the existing "known positive
+  unaffected" test updated (see judgment call above) plus two new cases:
+  headline shows both the positive claim and the caveat with the checked
+  date; subheadline discloses the unknown layer even when programs also
+  matched.
+- `tests/concierge/fallback.test.ts` — new `describe` block, mocking
+  `resolveZoneEvidenceV2` at the module boundary (Hard Rule: no live DB,
+  no dependence on real static GeoJSON matching a real test point) since
+  this exact branch had ZERO prior test coverage (no fixture in the file
+  ever set `pageContext.lat`/`lon`). Three cases: zero-match still
+  discloses unknown layers (pre-existing correct behavior, now guarded);
+  a known-positive TIF match AND an unknown SSA layer both appear in the
+  same response; and a fully-resolved response never mentions "could not
+  be checked" (no phantom caveat).
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors, same
+5 pre-existing warnings; full `npx vitest run` — **316 test files, 3698
+passed, 2 skipped** (up from S2's 316/3691 — same file count, 7 new tests
+added to existing files plus the new `describe` block in
+`tests/concierge/fallback.test.ts`); `npm run programs:public:check`
+clean.
