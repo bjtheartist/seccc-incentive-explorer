@@ -576,15 +576,14 @@ this is a pointer index, oldest to newest:
 
 1. **F2 / shortlist-universe export schema** — not version-bumped or
    regenerated (Neon access forbidden). See above.
-2. **Malformed `/report?instant=true` parameters** (named in build-spec.md
-   2.7's AddressSearch test list) — verified by code inspection only
-   (`parseFloat` of a malformed lat/lon produces `NaN`, which every
-   downstream `!wizardState.lat` guard already treats as absent/falsy), not
-   by a dedicated automated test. The existing live-renderer test harness
-   for `app/report/page.tsx` requires exact `useState` call-order matching
-   across a 5000+ line file; building that out for this one case was judged
-   lower-value than the rest of the adversarial test matrix given the time
-   remaining.
+2. ~~**Malformed `/report?instant=true` parameters**~~ — **CLOSED by
+   review5 S9.** The validation logic was pulled out of
+   `app/report/page.tsx` into a pure, independently-testable module
+   (`lib/instant-report-coords.ts`), avoiding the live-renderer harness's
+   `useState` call-order fragility entirely rather than building it out
+   for this one case. See S9's own section below for the fix and its
+   26-test coverage of all four malformed classes (missing, malformed/NaN,
+   out-of-range, partial).
 3. **F8 neighborhoods page and F13** — copy fixed, no bespoke new test (see
    decisions above).
 4. **`businessToLookupResult()` / `enrichEmployment()`** — now-unused
@@ -1271,3 +1270,77 @@ merely anywhere in the scanned source.
 same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
 3761 passed, 2 skipped** (up from S7's 318/3755); `npm run
 programs:public:check` clean.
+
+### S9 (MEDIUM) — validate instant-mode coordinates before engaging; never hang
+
+**Finding:** `app/report/page.tsx`'s instant-mode report-generation effect
+waits on SEVERAL independent async effects (parcel lookup, city zoning,
+local business support, site signals, transport access, mobility access)
+all reaching a resolved state before it will generate a report — all
+keyed off `wizardState.lat`/`wizardState.lon`. The prior implementation
+only guarded against a fully-missing coordinate (`instantLat &&
+instantLon`, which happens to also reject `NaN` since `NaN` is falsy) but
+never validated an out-of-range value (`lat=200`) or checked malformed/
+partial pairs explicitly. An out-of-range or otherwise bogus pair could
+enter `wizardState` and, if any ONE of those downstream effects never
+reached a defined "resolved" state for that nonsensical point, leave
+"Generating Location Snapshot" spinning forever with no error and no way
+out for the visitor. This was previously a documented Known Gap —
+"verified by code inspection only," no dedicated test — because the
+live-renderer test harness for this 5000+ line file requires exact
+`useState` call-order matching that made testing this one case look
+higher-cost than it needed to be.
+
+**Fix:**
+- New `lib/instant-report-coords.ts` (pure, zero React/DOM dependency):
+  `isValidInstantCoordinatePair(lat, lon)` rejects all four malformed
+  classes — missing (`== null`), malformed (`!Number.isFinite`, catching
+  both `NaN` and `±Infinity`), out-of-range (outside `[-90,90]`×
+  `[-180,180]`), and partial (only one of the pair present, caught by the
+  same `== null` check on both) — plus `parseInstantCoordinateParam` (the
+  exact `parseFloat`-of-raw-string parsing app/report/page.tsx already
+  did, centralized) and the shared `INSTANT_MODE_COORDINATE_ERROR_MESSAGE`.
+- `app/report/page.tsx`: `isInstantMode` is no longer just "the URL asked
+  for instant mode" — it now additionally requires
+  `isValidInstantCoordinatePair(instantLat, instantLon)`. A
+  request for instant mode with invalid coordinates now falls through to
+  the normal address-entry wizard instead of ever entering the
+  multi-effect wait chain — `instantLoading`'s initial state derives from
+  the (now-validated) `isInstantMode`, so the loading screen never
+  renders for an invalid link. `geocodeResult`'s initial seeding (a
+  second, independent `instantLat && instantLon` truthy check) was fixed
+  the same way. `geocodeError`'s initial state is seeded with
+  `INSTANT_MODE_COORDINATE_ERROR_MESSAGE` when applicable, so the SAME
+  error UI the normal address-entry flow already uses explains what
+  happened, rather than a silent, unexplained fallback.
+- **Documented, out-of-scope adjacent risk, not silently fixed:** the
+  separate `isRefineEntry` code path (`?refine=true`, a different query
+  param from `?instant=true`) has the same `instantLat != null &&
+  instantLon != null` pattern WITHOUT range/finiteness validation — the
+  identical architectural bug in a path this finding's literal scope
+  (`/report?instant=true`) does not cover. Flagged here rather than
+  silently left unmentioned; not fixed in this pass.
+
+**Tests added:** `lib/__tests__/instant-report-coords.test.ts` (new, 26
+tests) — the coordinator's exact TEST requirement: all four malformed
+classes (missing, malformed/NaN/Infinity, out-of-range, partial) proven
+individually against `isValidInstantCoordinatePair`, PLUS a
+`computeInstantMode` helper that mirrors app/report/page.tsx's own
+`isInstantMode = requestedInstantMode && isValidInstantCoordinatePair(...)`
+composition exactly, run against every malformed class to prove the
+PAGE-LEVEL behavior (never engages, always surfaces the fallback error —
+terminates, never hangs), a genuinely-valid pair case (does engage, no
+error), the `instant` param absent case (never an error regardless of
+garbage lat/lon), and a documented non-case ((0,0) — a common
+"geocoding failed" sentinel some APIs return — is technically in-range
+and intentionally NOT rejected by this function; it is neither missing,
+NaN, nor out-of-range, so it is out of this finding's four named
+classes). The existing `app/report/__tests__/report-page-live-renderer.test.tsx`
+(the fragile `useState`-order-dependent harness) was re-run and confirmed
+NOT desynced by these changes — only initializer EXPRESSIONS changed on
+existing `useState` calls, no hooks added/removed/reordered.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings (line numbers shifted, same 4 files/lines);
+full `npx vitest run` — **319 test files, 3787 passed, 2 skipped** (up
+from S8's 318/3761); `npm run programs:public:check` clean.

@@ -140,6 +140,11 @@ import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
 import {
+  INSTANT_MODE_COORDINATE_ERROR_MESSAGE,
+  isValidInstantCoordinatePair,
+  parseInstantCoordinateParam,
+} from "@/lib/instant-report-coords";
+import {
   extractChicagoZipCode,
   mergeCommunityAnchorsIntoNeighborhoodEconomics,
   mergeTifFinanceIntoNeighborhoodEconomics,
@@ -513,9 +518,21 @@ function ReportWizardPage() {
   const router = useRouter();
 
   // Instant mode detection
-  const isInstantMode = searchParams.get("instant") === "true";
-  const instantLat = searchParams.get("lat") ? parseFloat(searchParams.get("lat")!) : null;
-  const instantLon = searchParams.get("lon") ? parseFloat(searchParams.get("lon")!) : null;
+  const requestedInstantMode = searchParams.get("instant") === "true";
+  const instantLat = parseInstantCoordinateParam(searchParams.get("lat"));
+  const instantLon = parseInstantCoordinateParam(searchParams.get("lon"));
+  // review5 S9: missing, malformed (NaN), out-of-range, or partial
+  // coordinates must never be allowed to enter instant mode's effect
+  // chain (parcel/zoning/support/signals/transport/mobility all gate the
+  // report-generation effect on wizardState.lat/lon) — one of those
+  // effects never resolving for a bogus point would hang "Generating
+  // Location Snapshot" forever with no error and no way out. See
+  // lib/instant-report-coords.ts for the full rationale and the pure,
+  // independently-tested validator.
+  const hasValidInstantCoords = isValidInstantCoordinatePair(instantLat, instantLon);
+  const isInstantMode = requestedInstantMode && hasValidInstantCoords;
+  const instantModeCoordinateError =
+    requestedInstantMode && !hasValidInstantCoords ? INSTANT_MODE_COORDINATE_ERROR_MESSAGE : null;
   const urlAddress = searchParams.get("addr") || "";
   const instantAddr = urlAddress;
   // Landing page that launched this snapshot (set by AddressSearch / SEO CTAs).
@@ -687,11 +704,21 @@ function ReportWizardPage() {
     lat: number;
     lon: number;
     display_name: string;
-  } | null>(instantLat && instantLon && (shareWizardState?.address || urlAddress)
-    ? { lat: instantLat, lon: instantLon, display_name: shareWizardState?.address || urlAddress }
-    : null);
+  } | null>(
+    // review5 S9: was a raw `instantLat && instantLon` truthy check
+    // (independent of isInstantMode) — an out-of-range or otherwise
+    // invalid pair could still seed geocodeResult here even when instant
+    // mode itself correctly declined to engage.
+    hasValidInstantCoords && instantLat != null && instantLon != null && (shareWizardState?.address || urlAddress)
+      ? { lat: instantLat, lon: instantLon, display_name: shareWizardState?.address || urlAddress }
+      : null,
+  );
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+  // review5 S9: seeded from the coordinate-validation error computed
+  // above, so an invalid instant-mode link surfaces an explanation in the
+  // SAME error UI the normal address-entry flow already uses, instead of
+  // silently falling back with no feedback.
+  const [geocodeError, setGeocodeError] = useState<string | null>(instantModeCoordinateError);
 
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
