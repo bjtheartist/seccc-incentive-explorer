@@ -424,25 +424,27 @@ describe("investmentPopupOutOfScope (Sol gate blocker 1 — open popup/panel ret
 });
 
 /**
- * Sol gate round 2, finding 1 — the Mapbox popup-REUSE lifecycle hole.
- * `MockMapboxPopup` is a minimal, FAITHFUL emulation of the real
- * mapbox-gl-js `Popup` class's addTo()/remove()/close semantics — verified
- * directly against node_modules/mapbox-gl/dist/mapbox-gl-unminified.js:
+ * Sol gate round 2 finding 1 / round 3 durability follow-up — the Mapbox
+ * popup-REUSE lifecycle hole. `MockMapboxPopup` is a minimal, FAITHFUL
+ * emulation of the real mapbox-gl-js 3.18.1 `Popup` class's
+ * addTo()/remove()/close semantics — verified directly against the
+ * INSTALLED package source, node_modules/mapbox-gl/dist/mapbox-gl-unminified.js:
  *
- *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); }
- *   remove() { if (this._map) { this._map = undefined; ...; fire('close'); } }
+ *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); return this; }
+ *   remove() { ...; this.fire(new Event('close')); return this; }
  *
- * The load-bearing behavior under test: calling `.addTo()` on an
- * ALREADY-attached popup instance calls `remove()` FIRST (synchronously
- * firing "close" for whatever was previously showing) and only THEN
- * re-attaches — i.e. reusing the shared popup for a new feature fires
- * "close" for the OLD content as a side effect of opening the NEW one. A
- * `.once()` listener registered for the OLD popup, still pending at that
- * moment, fires and must be able to tell "this is my own close" apart from
- * "an unrelated future close of whatever replaced me."
+ * Two load-bearing behaviors, both reproduced exactly:
+ *   1. `.addTo()` on an ALREADY-attached popup calls `remove()` FIRST
+ *      (synchronously firing "close" for whatever was previously showing)
+ *      and only THEN re-attaches — reusing the shared popup for a new
+ *      feature fires "close" for the OLD content as a side effect of
+ *      opening the NEW one.
+ *   2. `remove()` ALWAYS fires "close" — UNCONDITIONALLY, even when the
+ *      popup was never attached (`_map` already undefined). Round 2's mock
+ *      wrongly gated this behind an `attached` check (a real divergence Sol
+ *      round 3 caught); this version fires every time, matching the source.
  */
 class MockMapboxPopup implements InvestmentPopupLike {
-  private attached = false;
   private closeHandlers: Array<() => void> = [];
 
   once(event: "close", handler: () => void): void {
@@ -454,23 +456,23 @@ class MockMapboxPopup implements InvestmentPopupLike {
     this.closeHandlers.push(wrapped);
   }
 
-  /** Mirrors real mapbox-gl-js Popup.addTo(): remove() FIRST if already attached. */
-  addTo(): this {
+  /** Mirrors mapbox-gl-js 3.18.1 Popup.addTo(): remove() FIRST if already attached. */
+  addTo(_map: unknown): this {
     if (this.attached) this.remove();
     this.attached = true;
     return this;
   }
 
-  /** Mirrors real mapbox-gl-js Popup.remove(): fires "close" only if attached. */
+  /** Mirrors mapbox-gl-js 3.18.1 Popup.remove(): fires "close" UNCONDITIONALLY. */
   remove(): this {
-    if (this.attached) {
-      this.attached = false;
-      const handlers = this.closeHandlers;
-      this.closeHandlers = [];
-      for (const handler of handlers) handler();
-    }
+    this.attached = false;
+    const handlers = this.closeHandlers;
+    this.closeHandlers = [];
+    for (const handler of handlers) handler();
     return this;
   }
+
+  private attached = false;
 
   isAttached(): boolean {
     return this.attached;
@@ -497,26 +499,33 @@ describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse li
     governmentFundingPurpose: "programmatic",
   };
 
-  it("REPRODUCES the caller's correct sequence (addTo THEN open — MapView.tsx's actual order) and confirms it does NOT self-consume", () => {
-    // This is the reuse sequence MapView.tsx now uses at every popup-opening
-    // call site: call .addTo() (which fires the reuse's own stale close)
-    // BEFORE tracker.open() registers the NEW popup's own close listener —
-    // so that listener is never exposed to the close event that opened it.
-    const popup = new MockMapboxPopup();
-    const tracker = new InvestmentPopupTracker(popup);
+  // A stand-in for mapboxgl.Map — the tracker/mock never inspect it, only
+  // forward it to addTo(), so any stable reference works.
+  const MOCK_MAP = { id: "mock-map" };
 
-    popup.addTo(); // first-ever open — no prior popup, no close fires
-    const tokenA = tracker.open(RRF_2021);
+  it("open() performs addTo() ITSELF, in the correct order, so a caller cannot get the ordering wrong (Sol gate round 3 — structural fix)", () => {
+    // tracker.open() is the ONLY way to attach+track a popup through this
+    // class — there is no separate register-only method a caller could call
+    // AFTER its own .addTo(), so the round-1/round-2 ordering bug (a close
+    // listener registered before addTo, self-consumed by the very open it
+    // was meant to track) is impossible by construction, not convention.
+    const popup = new MockMapboxPopup();
+    const tracker = new InvestmentPopupTracker();
+
+    const tokenA = tracker.open(popup, MOCK_MAP, RRF_2021);
+    expect(popup.isAttached()).toBe(true);
     expect(tracker.getActiveDims()).toEqual(RRF_2021);
 
-    // Reuse: open B on the SAME popup instance. addTo() fires "close" for A
-    // BEFORE B's tracker.open() runs — reproducing the exact Mapbox ordering.
-    popup.addTo(); // <-- fires "close" for A here, synchronously
-    const tokenB = tracker.open(RRF_2022);
+    // Reuse: open B on the SAME popup instance via the SAME single call.
+    // Internally this calls popup.addTo(MOCK_MAP) again, which — per the
+    // corrected mock (matching mapbox-gl 3.18.1 exactly) — calls remove()
+    // FIRST, firing "close" for A SYNCHRONOUSLY, before open() registers B's
+    // own close listener.
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2022);
 
     expect(tokenB).not.toBe(tokenA);
-    // (i) After the A→B reuse, the ref still holds B's dims — not wiped by
-    // A's stale close, and not self-consumed by B's own registration either.
+    // (i) After the A→B reuse, the tracker still holds B's dims — not wiped
+    // by A's stale close, and not self-consumed by B's own registration.
     expect(tracker.getActiveDims()).toEqual(RRF_2022);
     expect(tracker.isActiveToken(tokenB)).toBe(true);
     expect(tracker.isActiveToken(tokenA)).toBe(false);
@@ -524,12 +533,10 @@ describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse li
 
   it("(ii) a filter change that excludes B's record closes it and aborts B's in-flight reveal", () => {
     const popup = new MockMapboxPopup();
-    const tracker = new InvestmentPopupTracker(popup);
+    const tracker = new InvestmentPopupTracker();
 
-    popup.addTo();
-    tracker.open(RRF_2021); // A
-    popup.addTo(); // reuse — A's stale close fires here
-    const tokenB = tracker.open(RRF_2022); // B, year 2022
+    tracker.open(popup, MOCK_MAP, RRF_2021); // A
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2022); // B, reuse — A's stale close fires inside this call
 
     // B has an in-flight reveal fetch.
     const controllerB = new AbortController();
@@ -548,18 +555,16 @@ describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse li
 
   it("(iii) THE ORIGINAL REPRO: a real 2021 RRF popup, replaced via reuse then filtered by 2024–2026, ends closed with no reveal completion", () => {
     const popup = new MockMapboxPopup();
-    const tracker = new InvestmentPopupTracker(popup);
+    const tracker = new InvestmentPopupTracker();
 
     // Open the 2021 RRF popup (A).
-    popup.addTo();
-    tracker.open(RRF_2021);
+    tracker.open(popup, MOCK_MAP, RRF_2021);
     expect(tracker.getActiveDims()).toEqual(RRF_2021);
 
     // Replaced via reuse by a different RRF point, B — also 2021, so it
     // stays in scope under "All" (proves the reuse itself doesn't spuriously
     // close anything survivable).
-    popup.addTo();
-    const tokenB = tracker.open(RRF_2021);
+    const tokenB = tracker.open(popup, MOCK_MAP, RRF_2021);
     expect(tracker.getActiveDims()).toEqual(RRF_2021);
     expect(tracker.isActiveToken(tokenB)).toBe(true);
 
@@ -584,35 +589,78 @@ describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse li
     expect(tracker.getActiveDims()).toBeNull();
     // And re-opening under "All" again confirms the tracker is in a clean
     // state, not stuck from the prior sequence.
-    popup.addTo();
-    const tokenC = tracker.open(RRF_2021);
+    const tokenC = tracker.open(popup, MOCK_MAP, RRF_2021);
     expect(investmentPopupOutOfScope(tracker.getActiveDims(), ALL_FILTER)).toBe(false);
     expect(tracker.isActiveToken(tokenC)).toBe(true);
   });
 
   it("a GENUINE close (no replacement — e.g. the user's own X button) still clears state correctly", () => {
     const popup = new MockMapboxPopup();
-    const tracker = new InvestmentPopupTracker(popup);
-    popup.addTo();
-    tracker.open(RRF_2021);
+    const tracker = new InvestmentPopupTracker();
+    tracker.open(popup, MOCK_MAP, RRF_2021);
     popup.remove(); // genuine close, not a reuse
     expect(tracker.getActiveDims()).toBeNull();
   });
 
   it("a THIRD reuse (A→B→C) never lets a stale close from A or B corrupt C's state", () => {
     const popup = new MockMapboxPopup();
-    const tracker = new InvestmentPopupTracker(popup);
+    const tracker = new InvestmentPopupTracker();
     const DIMS_C: InvestmentFilterDimensions = { year: 2023, funderType: "government", governmentFundingPurpose: "programmatic" };
 
-    popup.addTo();
-    tracker.open(RRF_2021); // A
-    popup.addTo(); // A's stale close
-    tracker.open(RRF_2022); // B
-    popup.addTo(); // B's stale close
-    const tokenC = tracker.open(DIMS_C); // C
+    tracker.open(popup, MOCK_MAP, RRF_2021); // A
+    tracker.open(popup, MOCK_MAP, RRF_2022); // B, reuse — A's stale close fires inside this call
+    const tokenC = tracker.open(popup, MOCK_MAP, DIMS_C); // C, reuse — B's stale close fires inside this call
 
     expect(tracker.getActiveDims()).toEqual(DIMS_C);
     expect(tracker.isActiveToken(tokenC)).toBe(true);
+  });
+
+  it("mock fidelity: remove() on an ALREADY-detached popup still fires close UNCONDITIONALLY (mapbox-gl 3.18.1's actual behavior) without corrupting tracker state", () => {
+    // This is the exact divergence Sol round 3 caught: the round-2 mock
+    // gated close-firing behind an `attached` check, which real mapbox-gl
+    // does not do (remove() unconditionally calls `this.fire(new Event('close'))`).
+    // A double-remove (or a remove on a never-attached popup) must be a safe
+    // no-op for the tracker, not a crash or a corruption.
+    const popup = new MockMapboxPopup();
+    expect(popup.isAttached()).toBe(false);
+    // remove() on a never-attached popup still fires "close" (no listeners
+    // registered yet, so this is an observably-empty but real event).
+    expect(() => popup.remove()).not.toThrow();
+
+    const tracker = new InvestmentPopupTracker();
+    tracker.open(popup, MOCK_MAP, RRF_2021);
+    popup.remove(); // genuine close #1
+    expect(tracker.getActiveDims()).toBeNull();
+    // A second remove() on the now-already-detached popup — real mapbox-gl
+    // fires close again here too — must remain a harmless no-op (the
+    // one-shot listener already fired and detached itself).
+    expect(() => popup.remove()).not.toThrow();
+    expect(tracker.getActiveDims()).toBeNull();
+  });
+
+  it("API shape (Sol gate round 3) — open() is the tracker's ONLY public method that can attach/track a popup; no register-only escape hatch exists", () => {
+    const publicMethods = Object.getOwnPropertyNames(InvestmentPopupTracker.prototype)
+      .filter((name) => name !== "constructor")
+      .sort();
+    // The complete, intentional public surface. Anything NOT in this list
+    // (e.g. a hypothetical "registerClose" or "track" method usable without
+    // also calling addTo) would reintroduce the ordering hazard by API shape
+    // — this list is a deliberate tripwire against that.
+    expect(publicMethods).toEqual(
+      [
+        "closeIfOutOfScope",
+        "finishReveal",
+        "getActiveDims",
+        "hasInFlightReveal",
+        "isActiveToken",
+        "open",
+        "startReveal",
+      ].sort(),
+    );
+    // open() itself requires a popup AND a map — it cannot be called with
+    // dims alone, so a caller can never route content through the tracker
+    // without also supplying what addTo() needs.
+    expect(InvestmentPopupTracker.prototype.open.length).toBe(3);
   });
 });
 

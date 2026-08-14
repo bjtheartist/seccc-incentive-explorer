@@ -759,62 +759,78 @@ export function investmentPopupOutOfScope(
 
 /**
  * The subset of mapboxgl.Popup's interface InvestmentPopupTracker needs —
- * just `.once("close", …)`. Kept minimal and structural (not imported from
- * "mapbox-gl") so this module never pulls the mapbox-gl package into a
- * non-map bundle, and so a test can supply a plain object without importing
- * the real library either.
+ * `.once("close", …)` and `.addTo(map)`. Kept minimal and structural (not
+ * imported from "mapbox-gl") so this module never pulls the mapbox-gl
+ * package into a non-map bundle, and so a test can supply a plain object
+ * without importing the real library either. `map` is `unknown` for the same
+ * reason — the tracker never inspects it, only forwards it to `addTo`.
  */
 export interface InvestmentPopupLike {
   once(event: "close", handler: () => void): void;
+  addTo(map: unknown): unknown;
 }
 
 /**
- * Sol gate round 2, finding 1 — the Mapbox popup-REUSE lifecycle hole.
- * Reusing a shared mapboxgl.Popup calls `.addTo(map)` on an ALREADY-open
- * instance, which mapbox-gl implements as `remove()` (firing "close")
- * followed by re-attaching. That stale "close" fires AFTER a click handler
- * has already assigned the NEW popup's content/dims, so a single un-gated
- * "close" listener would wipe the fresh state for the popup actually on
- * screen — the replacement popup would then never close on a filter change,
- * and its own later reveal fetch would never abort.
+ * Sol gate round 2, finding 1 (and round 3's durability follow-up) — the
+ * Mapbox popup-REUSE lifecycle hole. Reusing a shared mapboxgl.Popup calls
+ * `.addTo(map)` on an ALREADY-open instance, which mapbox-gl 3.18.1
+ * implements as (verified directly against
+ * node_modules/mapbox-gl/dist/mapbox-gl-unminified.js):
  *
- * This class is the single source of truth for that lifecycle, extracted so
- * it is unit-testable against a minimal, faithful emulation of mapbox-gl's
- * addTo()/remove()/close semantics rather than a synthetic dims literal.
- * Every popup open is tagged with a monotonically increasing token; each
- * open registers its OWN one-shot "close" listener capturing that token in
- * closure, and the listener clears state ONLY when the tracker's current
- * token still matches its own — i.e. only for a GENUINE close of the
- * currently active popup, never a stale side-effect of a later reuse. This
- * holds in any event order because the token is bumped synchronously, before
- * the caller ever invokes `.addTo()`.
+ *   addTo(map) { if (this._map) this.remove(); this._map = map; ...; fire('open'); }
+ *   remove() { ...; this.fire(new Event('close')); return this; }  // ALWAYS fires close
+ *
+ * So `.addTo()` on an already-open popup fires "close" for the OLD content
+ * SYNCHRONOUSLY, as the very first thing it does, before doing anything else.
+ * THE INVARIANT THIS CLASS ENFORCES: a NEW popup's own close listener must
+ * never be registered before that `.addTo()` call, or it would be exposed to
+ * — and immediately self-consumed by — the SAME close event that opens it.
+ *
+ * Round 2 tried to uphold this invariant by convention (call `.addTo()` at
+ * each of the 8 call sites, THEN call a separate tracking method) — Sol round
+ * 3 correctly flagged that a scan/convention doesn't stop a future call site
+ * from getting the order backwards, and the class's own doc comment still
+ * described the WRONG (pre-addTo) order. This version closes it
+ * structurally: `open()` is the ONLY exported way to attach a popup through
+ * this tracker, and it calls `popup.addTo(map)` ITSELF, before registering
+ * the close listener — there is no register-only method to misuse, so the
+ * ordering bug is impossible by construction, not just convention.
+ *
+ * Every open is tagged with a monotonically increasing token; each open's
+ * `.once("close", …)` clears state ONLY when the tracker's current token
+ * still matches its own captured token — i.e. only for a GENUINE close of
+ * the popup that is CURRENTLY active, never a stale side-effect of a LATER
+ * reuse (whose own `open()` call already bumped the token by the time its
+ * OWN close listener could fire).
  */
 export class InvestmentPopupTracker {
   private token = 0;
   private active: { token: number; dims: InvestmentFilterDimensions | null } | null = null;
   private reveal: { token: number; controller: AbortController } | null = null;
 
-  constructor(private readonly popup: InvestmentPopupLike) {}
-
   /**
-   * Call at the START of every popup open — dims is null for non-filter-
-   * scoped content (owner-cluster, Megaprojects — exempt by design). Returns
-   * the token this open was tagged with, for a reveal handler to key its
-   * in-flight fetch to.
+   * THE single entry point for opening a tracked popup. Performs
+   * `popup.addTo(map)` itself — BEFORE registering this open's close
+   * listener — so the caller can never invert the order. The caller is
+   * responsible for `popup.setLngLat(...).setHTML(...)` BEFORE calling this
+   * (addTo only positions/attaches the popup; it doesn't accept content).
+   * `dims` is null for non-filter-scoped content (owner-cluster,
+   * Megaprojects — exempt by design). Returns the token this open was
+   * tagged with, for a reveal handler to key its in-flight fetch to.
    */
-  open(dims: InvestmentFilterDimensions | null): number {
+  open(popup: InvestmentPopupLike, map: unknown, dims: InvestmentFilterDimensions | null): number {
+    popup.addTo(map); // fires "close" for whatever was previously open, BEFORE any tracking below
     const token = ++this.token;
     // A NEW popup opening always invalidates whatever reveal was in flight
     // for the PREVIOUS popup. Abort it HERE, unconditionally, rather than
-    // relying on the close event — during a reuse the close event's ordering
-    // relative to this assignment cannot be trusted, but "a new popup is
-    // opening now" is always true at this exact point.
+    // relying on the close event fired by addTo() above — belt and
+    // suspenders alongside that event's own token-gated handler.
     if (this.reveal) {
       this.reveal.controller.abort();
       this.reveal = null;
     }
     this.active = { token, dims };
-    this.popup.once("close", () => {
+    popup.once("close", () => {
       if (this.token !== token) return; // stale reuse close — a newer open already owns the state
       this.active = null;
       if (this.reveal?.token === token) {

@@ -1914,14 +1914,15 @@ export default function MapView() {
       // Exposed via ref so the deck view-mode effect can close it when entering
       // Arcs/Density (deck's picking tooltip replaces the mapbox dot popup there).
       sharedDotPopupRef.current = sharedDotPopup;
-      // Sol gate round 2, finding 1 — the token-guarded popup lifecycle
-      // tracker (lib/community-investment-layer.ts), bound to THIS popup
-      // instance. `.open(dims)` at the start of every click handler below
-      // replaces direct ref manipulation; see InvestmentPopupTracker's own
-      // doc comment for why the guard is needed.
-      investmentPopupTrackerRef.current = new InvestmentPopupTracker(sharedDotPopup);
+      // Sol gate round 2 finding 1 / round 3 durability follow-up — the
+      // token-guarded popup lifecycle tracker (lib/community-investment-layer.ts).
+      // `.open(popup, map, dims)` performs `sharedDotPopup.addTo(map)` ITSELF
+      // (see the class's own doc comment) — every click handler below calls
+      // ONLY this wrapper in place of a direct `.addTo(map)` call, so the
+      // ordering invariant cannot be inverted at a call site.
+      investmentPopupTrackerRef.current = new InvestmentPopupTracker();
       const openInvestmentPopupTracked = (dims: InvestmentFilterDimensions | null): number =>
-        investmentPopupTrackerRef.current!.open(dims);
+        investmentPopupTrackerRef.current!.open(sharedDotPopup, map, dims);
       // Coerce a clicked investment point feature's mapbox-serialized
       // properties (JSON-primitive coerced) into InvestmentFilterDimensions,
       // for the popup-retention check (Sol gate blocker 1). Local to this
@@ -2120,12 +2121,9 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildOwnerClusterPopupHtml(p))
-          .addTo(map); // fires "close" for whatever was previously open — BEFORE tracking this one
-        // Not filter-scoped — tag this open (token bump + null dims) AFTER
-        // addTo() so the reuse's own stale "close" (fired above, still
-        // carrying the PREVIOUS token) cannot self-consume THIS registration
-        // — see InvestmentPopupTracker's doc comment (Sol gate round 2).
+          .setHTML(buildOwnerClusterPopupHtml(p));
+        // Not filter-scoped (null dims) — openInvestmentPopupTracked performs
+        // .addTo(map) itself, in the correct order (Sol gate round 3).
         openInvestmentPopupTracked(null);
       });
 
@@ -2193,8 +2191,7 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildCountyReliefPopupHtml(properties))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildCountyReliefPopupHtml(properties));
         openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["cook-source-2023"]);
         const recipientsButton = sharedDotPopup
           .getElement()
@@ -2250,8 +2247,7 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties));
         openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-big"]);
         const recipientsButton = sharedDotPopup
           .getElement()
@@ -2308,8 +2304,7 @@ export default function MapView() {
         const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties));
         openInvestmentPopupTracked(ZIP_AGGREGATE_OVERLAY_SOURCE_SCOPE["illinois-b2b"]);
         const recipientsButton = sharedDotPopup
           .getElement()
@@ -2398,8 +2393,7 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(p))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildInvestmentPopupHtml(p));
         openInvestmentPopupTracked(investmentPointPopupDims(p));
       });
 
@@ -2428,8 +2422,7 @@ export default function MapView() {
         if (!e.features?.length) return;
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}));
         openInvestmentPopupTracked(investmentPointPopupDims(e.features[0].properties || {}));
       });
       map.on("mouseenter", "community-investment-state-capital-points", () => {
@@ -2469,8 +2462,7 @@ export default function MapView() {
           const dims = investmentPointPopupDims(p);
           sharedDotPopup
             .setLngLat(e.lngLat)
-            .setHTML(buildInvestmentPopupHtml(p))
-            .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+            .setHTML(buildInvestmentPopupHtml(p));
           const token = openInvestmentPopupTracked(dims);
           // Deliverable 1 (audit finding 9 / consult F6 + Q2) + Sol gate
           // blockers 1 and 4. RRF's recipient name is withheld from the bulk
@@ -2625,8 +2617,7 @@ export default function MapView() {
         const p = e.features[0].properties || {};
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildInvestmentPopupHtml(p))
-          .addTo(map); // fires "close" for whatever was previously open, BEFORE tracking this one
+          .setHTML(buildInvestmentPopupHtml(p));
         // Megaprojects is deliberately EXEMPT from year/funder/purpose (its own
         // disclosed caption already says so — accepted, unchanged by this gate) —
         // never close this popup on a filter change.
