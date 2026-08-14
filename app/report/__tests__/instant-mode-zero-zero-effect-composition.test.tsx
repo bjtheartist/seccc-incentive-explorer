@@ -95,8 +95,25 @@ vi.mock("@/components/report/CrossLinkBanner", () => ({
   StickyCrossLinkBanner: () => <div />,
 }));
 vi.mock("@/components/report/ReportEmailGate", () => ({ ReportEmailGate: () => <div /> }));
+// review8 S23 (MEDIUM): the stub now RENDERS the lat/lon (and address)
+// props it actually received, as data-* attributes, instead of
+// discarding them — needed to assert the bridge's own props stay `0`
+// for a validated (0, 0) pair, not silently converted to `undefined` by
+// a truthy fallback. `ConciergePageContextBridge` itself only acts via
+// a `useEffect` calling context `setOverride` (no visible DOM otherwise,
+// and the real `ConciergeOverrideContext` is module-private/unexported,
+// so it can't be observed by wrapping the render in a matching
+// Provider) — capturing the props at the mock boundary is the only way
+// to assert on them from outside this module.
 vi.mock("@/components/concierge/SiteConciergeProvider", () => ({
-  ConciergePageContextBridge: () => <div />,
+  ConciergePageContextBridge: (props: { lat?: number; lon?: number; address?: string }) => (
+    <div
+      data-testid="stub-concierge-bridge"
+      data-lat={String(props.lat)}
+      data-lon={String(props.lon)}
+      data-address={String(props.address)}
+    />
+  ),
 }));
 vi.mock("@/components/report/RefineValuePanel", () => ({ RefineValuePanel: () => <div /> }));
 vi.mock("@/components/report/PersonaChips", () => ({ PersonaChips: () => <div /> }));
@@ -228,5 +245,78 @@ describe("instant=true with (0, 0): the full effect chain resolves — no infini
       },
       { timeout: 10_000 },
     );
+  });
+});
+
+/**
+ * review8 S23 (MEDIUM): S18 fixed every DOWNSTREAM effect's truthy
+ * coordinate check, but missed the `ConciergePageContextBridge` props
+ * at the bottom of the plain wizard-UI render — `lat={wizardState.lat
+ * || undefined}` / `lon={wizardState.lon || undefined}` silently
+ * converts a validated `(0, 0)` pair to `undefined`, disabling
+ * location-aware concierge checks for exactly the coordinate this whole
+ * finding chain exists to make work. Reached via the `urlAddress`-only
+ * wizard branch (no `instant=true`/`refine=true`) — the one branch S13
+ * explicitly left unvalidated as out of scope (it sets `lat`/`lon`
+ * directly, no truthy gate of its own), which is exactly why (0, 0)
+ * flows into `wizardState` correctly here and this test can isolate
+ * the bridge-prop bug specifically, independent of any generation gate.
+ */
+describe("the wizard-UI ConciergePageContextBridge keeps (0, 0), not undefined (review8 S23)", () => {
+  it("both bridge coordinates remain the number 0 — not the string 'undefined' a truthy fallback would produce", async () => {
+    await renderReportRouteForSearch("addr=Null+Island+Test&lat=0&lon=0");
+    const bridge = await waitFor(() => screen.getByTestId("stub-concierge-bridge"));
+    expect(bridge.getAttribute("data-lat")).toBe("0");
+    expect(bridge.getAttribute("data-lon")).toBe("0");
+    expect(bridge.getAttribute("data-address")).toBe("Null Island Test");
+  });
+
+  it("CONTROL: a genuinely valid non-zero pair also passes through correctly (proves the assertion above is meaningful, not vacuous)", async () => {
+    await renderReportRouteForSearch("addr=100+E+Test+St&lat=41.75&lon=-87.6");
+    const bridge = await waitFor(() => screen.getByTestId("stub-concierge-bridge"));
+    expect(bridge.getAttribute("data-lat")).toBe("41.75");
+    expect(bridge.getAttribute("data-lon")).toBe("-87.6");
+  });
+
+  it("no coordinates at all: both bridge props stay undefined (the correct, non-buggy case for a genuinely missing pair)", async () => {
+    await renderReportRouteForSearch("addr=Somewhere");
+    const bridge = await waitFor(() => screen.getByTestId("stub-concierge-bridge"));
+    expect(bridge.getAttribute("data-lat")).toBe("undefined");
+    expect(bridge.getAttribute("data-lon")).toBe("undefined");
+  });
+});
+
+/**
+ * review8 S23 (MEDIUM): "the new [S18] suite also exercises only
+ * instant mode, so reverting the separate share-mode gate stays green."
+ * S18 found and fixed an IDENTICAL, independently-copied truthy-check
+ * bug in the share-mode auto-generation effect (never explicitly named
+ * by S18's own finding text, discovered while sweeping the file for the
+ * same pattern) — but never added a share-mode test, so a future
+ * regression in THAT gate specifically would have gone undetected by
+ * the existing suite. A share-mode link uses the `wv=2`/`rt=`/`lat=`/
+ * `lon=` query scheme (`lib/url-state.ts`'s `decodeWizardState`), not
+ * `instant=true`/`refine=true`.
+ */
+describe("share mode (wv=2) with (0, 0): the generation gate fires — the same fix S18 made for instant mode, now covered for share mode too (review8 S23)", () => {
+  it("calls /api/report/generate (POST) for a share-mode (0, 0) link", async () => {
+    const { calls } = await renderReportRouteForSearch(
+      "wv=2&rt=si&addr=Null+Island+Test&lat=0&lon=0",
+    );
+    await waitFor(
+      () => {
+        expect(calls.some((c) => c.startsWith("POST") && c.includes("/api/report/generate"))).toBe(true);
+      },
+      { timeout: 10_000 },
+    );
+  });
+
+  it("also calls the v2 zone route with lat=0&lon=0 for a share-mode link", async () => {
+    const { calls } = await renderReportRouteForSearch(
+      "wv=2&rt=si&addr=Null+Island+Test&lat=0&lon=0",
+    );
+    await waitFor(() => {
+      expect(calls.some((c) => c.includes("/api/zones/check/v2") && c.includes("lat=0") && c.includes("lon=0"))).toBe(true);
+    });
   });
 });

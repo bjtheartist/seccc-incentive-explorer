@@ -2692,3 +2692,76 @@ S21 `c417dd6`, S22 `0d93fb8`):** `npx tsc --noEmit` clean; `npx eslint .`
 — 0 errors, 5 pre-existing warnings; full `npx vitest run` — **326 test
 files, 4042 passed, 2 skipped**; `npm run programs:public:check` clean;
 `git status` clean at each commit boundary; nothing pushed or merged.
+
+---
+
+## Review 8 (`scratchpad/battle-test/review8-out.md`) — VERDICT FIX-FIRST, S23–S27 all blocking
+
+S17–S22 confirmed otherwise verified going into this round; everything
+prior remains fenced. This round's own verification note: the
+coordinator's `tsc --noEmit --incremental false`, targeted ESLint, and
+`git diff --check` passed, but Vitest could not collect tests in the
+review sandbox (read-only, denied SSR/client temp dirs) — so every test
+claim below is independently confirmed here for the first time in a
+sandbox where Vitest actually runs.
+
+### S23 (MEDIUM) — the wizard-UI concierge bridge still turned `(0, 0)` into `undefined`
+
+**Finding:** `app/report/page.tsx`'s third `ConciergePageContextBridge`
+usage (~line 2216 — the plain wizard-UI bridge, the one that fires
+before a `report` exists, reached only via the `urlAddress`-only branch
+identified as nonblocking back in S13/Review 7) still passed
+`wizardState.lat || undefined` / `wizardState.lon || undefined` — a
+truthy fallback that silently turns a validated `(0, 0)` coordinate pair
+into `undefined`, disabling location-aware concierge checks for exactly
+the coordinate class S13 fixed everywhere else in this file. Separately,
+the S18 regression suite for this file only exercised instant mode, so
+the share-mode `(0, 0)` generation gate had no test coverage protecting
+it from a silent future regression.
+
+**Fix:** changed both `lat`/`lon` props on that one bridge usage from
+`||` to `?? undefined` — a real null-check instead of a truthiness
+check, matching `ConciergePageContext`'s `lat?: number; lon?: number`
+type exactly (no `null` in the type, so `?? undefined` is the correct
+conversion for `wizardState.lat`/`.lon`'s `number | null`). `address`
+was deliberately left on `||`, since an empty string genuinely is the
+correct "no address" fallback there — not a false-negative risk the way
+`0` is for coordinates. The other two `ConciergePageContextBridge`
+usages in this file (comparison mode ~1905, report-display mode ~1990)
+already read `report.metadata?.lat`/`.lon` via optional chaining and
+were never affected.
+
+**Tests added:**
+`app/report/__tests__/instant-mode-zero-zero-effect-composition.test.tsx`
+(extended from S18's 4 tests to 9): upgraded the existing
+`SiteConciergeProvider` mock from a no-op stub to one that captures and
+re-renders the `lat`/`lon`/`address` props it receives as `data-*`
+attributes (the real component only acts via a `useEffect` into a
+module-private React Context with no exported Provider to substitute,
+so prop capture via the mock was the only way to assert on what the
+bridge actually sends). New coverage:
+- the wizard-UI bridge keeps `(0, 0)` as `0`, not `undefined`, for the
+  `urlAddress`-only branch (plus a valid non-zero control and a
+  missing-coords control);
+- share mode (`wv=2`) with `(0, 0)` composed into the URL still fires
+  `POST /api/report/generate` and calls the v2 zone-check route with
+  `lat=0&lon=0` — closing the coverage gap the finding named, even
+  though this half of the fix was already correct pre-S23 (confirmed
+  below).
+
+**Verification:** `npx tsc --noEmit` clean. Empirical regression check
+via `git stash push --keep-index -- app/report/page.tsx` (S13/S18/S22
+discipline — stash only the source fix, keep the test-file changes):
+exactly 1 of the 9 tests (the bridge-props "(0, 0) stays 0" assertion)
+failed against the pre-fix code; the other 8, including both new
+share-mode tests, already passed against old code too — confirming the
+share-mode half of this finding was a genuine test-coverage gap, not a
+live bug (S18's share-mode fix was already correct), while the
+wizard-UI bridge half was a real, live regression this fix closes.
+`git stash pop` restored the fix; re-ran `tsc --noEmit` (clean) and all
+three `app/report/__tests__/*` files together (43/43 passed). Full
+repo `npx eslint .` — 0 errors, the same 5 pre-existing warnings (4 in
+`app/report/page.tsx`, 1 in `components/report/StartHereCard.tsx`).
+Full `npx vitest run` — **326 test files, 4047 passed, 2 skipped** (up
+from Review 7's 326/4042 — the 5 new tests). `npm run
+programs:public:check` clean.

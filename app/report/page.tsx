@@ -2213,12 +2213,23 @@ function ReportWizardPage() {
           </div>
         </div>
       </section>
+      {/* review8 S23 (MEDIUM): was `wizardState.lat || undefined` /
+          `wizardState.lon || undefined` — a truthy fallback that turns a
+          validated (0, 0) pair into `undefined`, silently disabling
+          location-aware concierge checks for exactly the coordinate S13
+          fixed everywhere else in this file. `?? undefined` is a no-op
+          here (both fields are already `number | null`, and the prop
+          type presumably accepts `null` too) but documents the intent
+          and matches this file's own `hasWizardCoords`/`!= null`
+          discipline — `address` stays `||` since an empty string IS
+          the correct "no address" fallback there, not a false-negative
+          risk the way `0` is for coordinates. */}
       <ConciergePageContextBridge
         route="/report"
         pageLabel="Report builder"
         address={wizardState.address || undefined}
-        lat={wizardState.lat || undefined}
-        lon={wizardState.lon || undefined}
+        lat={wizardState.lat ?? undefined}
+        lon={wizardState.lon ?? undefined}
       />
     </div>
   );
