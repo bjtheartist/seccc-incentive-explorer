@@ -30,7 +30,25 @@
  * `GeneratedReport.startHere` for how the canonical model is attached.
  */
 
-import type { ProgramCheckResult, ProgramContact } from "./types";
+import type { Program, ProgramCheckResult, ProgramContact } from "./types";
+import { toPublicProgramView } from "./program-public";
+
+/**
+ * build-spec.md 2.2 (audit consult item 2's "StartHere descriptions" row):
+ * a StartHere action's description previously passed raw `program.summary`
+ * straight through regardless of status. For a program whose intake is not
+ * currently open/rolling, this pairs the summary with the same binding
+ * qualifier sentence every other public surface uses (lib/program-public.ts's
+ * benefitQualifier) so a "Call the agency about the Catalyst Grant" action
+ * doesn't read as if a round is currently open when it isn't.
+ */
+function describeProgram(program: Program): string {
+  const view = toPublicProgramView(program, new Date().toISOString());
+  if (view.intake.status === "open" || view.intake.status === "rolling") {
+    return program.summary;
+  }
+  return `${program.summary} ${view.benefit.qualifier}`.trim();
+}
 
 /**
  * What kind of action this is. Used only to decide how to *render* the
@@ -140,7 +158,7 @@ function candidateActionsFromResults(results: ProgramCheckResult[]): StartHereAc
     if (contact?.phone) {
       candidates.push({
         label: `Call ${contact.agency || contact.abbreviation} about ${result.program.name}`,
-        description: result.program.summary,
+        description: describeProgram(result.program),
         kind: "call-agency",
         programId: result.programId,
         contact,
@@ -148,7 +166,7 @@ function candidateActionsFromResults(results: ProgramCheckResult[]): StartHereAc
     } else if (contact?.url) {
       candidates.push({
         label: `Confirm with the administering agency whether ${result.program.name} applies to this project`,
-        description: result.program.summary,
+        description: describeProgram(result.program),
         kind: "confirm-with-agency",
         programId: result.programId,
         contact,
@@ -167,7 +185,7 @@ function advisingFallback(results: ProgramCheckResult[]): StartHereAction | null
   const contact: ProgramContact | undefined = sbs.program.contacts?.[0];
   return {
     label: "Book free business advising",
-    description: sbs.program.summary,
+    description: describeProgram(sbs.program),
     kind: "book-advising",
     programId: "smallBizSource",
     contact,

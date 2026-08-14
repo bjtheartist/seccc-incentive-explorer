@@ -1,28 +1,26 @@
 import type { Program } from "./types";
+import { slugifyProgramName } from "./program-slug";
 
-export async function getPrograms(): Promise<Program[]> {
-  const res = await fetch("/data/programs.json");
-  return res.json();
-}
+// review5 S1: the client fetch variant that used to live here
+// (`getPrograms()`) was dead code (zero callers, confirmed by grep) and
+// its return-type annotation (`Program[]`) would have silently lied about
+// what /api/programs now actually returns (PublicProgramView[], since
+// that route projects through the DTO — see app/api/programs/route.ts).
+// Removed rather than left as a misleading, unused export.
 
-// For server components
+// review5 S1: slugifyProgramName() moved to lib/program-slug.ts (a module
+// with zero data dependency) so a client component that only needs the
+// slug function never has to import a file that ALSO require()s the full
+// internal catalog. Re-exported here for the server-only callers below
+// that legitimately want both.
+export { slugifyProgramName };
+
+// For server components — reads data/programs-internal.json directly
+// (server-only per PR1 section 1.2's next.config.ts outputFileTracingIncludes;
+// every caller of this function is a server component or route handler).
 export function getProgramsSync(): Program[] {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require("../public/data/programs.json") as Program[];
-}
-
-/**
- * Build a clean URL slug from a program name.
- * Strips a trailing parenthetical abbreviation so
- * "Neighborhood Opportunity Fund (NOF)" -> "neighborhood-opportunity-fund".
- */
-export function slugifyProgramName(name: string): string {
-  return name
-    .replace(/\([^)]*\)\s*$/, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return require("../data/programs-internal.json") as Program[];
 }
 
 // Lazily-built slug maps (server-only; avoids top-level require in client bundles).

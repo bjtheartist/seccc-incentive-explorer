@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getSQL } from "@/lib/db";
 import { findTifBoundaryAtPoint } from "@/lib/tif-boundary";
-import { GET as zonesCheckGET } from "@/app/api/zones/check/route";
+import { GET as zonesCheckV2GET } from "@/app/api/zones/check/v2/route";
 import { getProgramsSync } from "@/lib/programs-data";
 import {
   assessWatchedArea,
   buildDigestEmailHtml,
   loadSbifRollout,
   loadTifFinancialsMap,
+  parsePointAreaId,
   type AreaAssessment,
   type AreaResolvers,
 } from "@/lib/watchlist-digest";
@@ -48,10 +49,15 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 async function checkZonesAtPoint(lat: number, lon: number): Promise<unknown> {
-  // Reuse the zones/check route handler (DB-first with static GeoJSON
-  // fallback + caching) instead of duplicating its lookup logic.
-  const res = await zonesCheckGET(
-    new NextRequest(`http://localhost/api/zones/check?lat=${lat}&lon=${lon}`)
+  // review6 S16: was the v1 zones/check route handler — migrated to v2
+  // (see lib/watchlist-digest.ts's own comment on the normalize call for
+  // why). Reuses the route handler in-process (DB-first with static
+  // GeoJSON fallback + Redis caching) instead of duplicating its lookup
+  // logic, same pattern the v1 call already used. Layers param omitted
+  // — the v2 route defaults to every CHECKABLE_ZONE_KEYS, matching v1's
+  // "check everything" behavior.
+  const res = await zonesCheckV2GET(
+    new NextRequest(`http://localhost/api/zones/check/v2?lat=${lat}&lon=${lon}`)
   );
   if (!res.ok) return null;
   return res.json();
@@ -130,12 +136,33 @@ export async function GET(req: NextRequest) {
     for (const area of user.areas) {
       let assessment = assessmentCache.get(area.areaId);
       if (assessment === undefined) {
-        // A single failing area degrades to "no findings" — it must not
-        // sink the rest of this user's digest (or other users' digests).
+        // review8 S27 (HIGH, BLOCKING): `assessWatchedArea` itself now
+        // degrades any failure for a VALID point into a notable,
+        // `zoneDataIncomplete: true` result (see its own S27 comment) —
+        // it should no longer reject at all for a parseable areaId. This
+        // catch is defense in depth, not the primary fix: if it ever
+        // fires anyway, it must NOT reduce to the old `null` (which
+        // silently dropped the area from the digest with no caveat,
+        // while a user's OTHER, successfully-assessed areas still sent —
+        // the exact false-negative this finding is about). A parseable
+        // point still gets a synthetic notable/zoneDataIncomplete entry;
+        // only a genuinely unparseable areaId (parsePointAreaId returns
+        // null, same as assessWatchedArea's own early return) stays null.
         assessment = await assessWatchedArea(area, resolvers, today).catch(
           (err) => {
-            console.error("watchlist digest: area skipped", area.areaId, err);
-            return null;
+            console.error("watchlist digest: area assessment failed", area.areaId, err);
+            const point = parsePointAreaId(area.areaId);
+            if (!point) return null;
+            return {
+              areaId: area.areaId,
+              areaLabel: area.areaLabel || area.areaId,
+              lat: point.lat,
+              lon: point.lon,
+              tif: null,
+              deadlines: [],
+              notable: true,
+              zoneDataIncomplete: true,
+            } satisfies AreaAssessment;
           }
         );
         assessmentCache.set(area.areaId, assessment);

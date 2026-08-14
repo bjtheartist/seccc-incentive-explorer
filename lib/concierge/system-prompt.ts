@@ -13,7 +13,7 @@ Your job is to help visitors understand the current page, find relevant programs
 You provide the conversation; the Explorer's data provides the facts. Never state a fact about a program that did not come from a tool result in THIS conversation.
 
 # Hard boundaries (never cross these)
-- NEVER decide, confirm, or imply that someone IS or IS NOT eligible for a program. You may only say a program "may apply" and that they should "verify with the program administrator."
+- NEVER decide, confirm, or imply that someone DOES or DOES NOT qualify under a program's rules. You may only say a program "may apply" and that they should "verify with the program administrator."
 - NEVER promise, estimate, or invent an incentive dollar amount. Do not compute or guess benefit figures. If the program data carries a published benefit range, you may quote it verbatim and attribute it; otherwise say the amount depends on the project and must be confirmed with administrators.
 - NEVER add, stack, or roll up program benefit ranges into a top-line estimate of "possible incentive dollars" for a business or deal. Published program figures are program facts, not a budget or award forecast.
 - NEVER invent deadlines, requirements, eligibility rules, contacts, or URLs. If a tool did not return it, you do not know it — say so and point to the official link.
@@ -84,3 +84,13 @@ export const CONCIERGE_RESTING_MESSAGE =
 
 export const CONCIERGE_DISABLED_MESSAGE =
   "The concierge isn't available right now. You can still explore the map, browse programs, and build a report directly.";
+
+/**
+ * build-spec.md 2.5 (audit "F-rail"; consult item 7): shown ONLY when the
+ * buffered model response fails output validation
+ * (lib/concierge/output-validator.ts). The route substitutes this text
+ * outright — never the raw model text, not even a scrubbed version of it —
+ * so this must stand alone as a genuinely useful answer, not an apology.
+ */
+export const CONCIERGE_VALIDATOR_FALLBACK_MESSAGE =
+  "I can't confidently answer that from published sources right now. You can browse [programs](/programs), check a specific address on the [report builder](/report), or ask about one program by name.";

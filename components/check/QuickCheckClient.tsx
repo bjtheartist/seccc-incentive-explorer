@@ -283,7 +283,7 @@ function ZonePanel({ zones }: { zones: SiteZoneState }) {
           ) : (
             <>
               <p className="text-[13.5px] leading-snug text-[#0C1B33]">
-                {siteZonesSummary(zones.matches)}
+                {siteZonesSummary(zones.matches, zones.unknownKeys, zones.checkedAt)}
               </p>
               {zones.matches.length > 0 && (
                 <ul className="mt-2 space-y-1">

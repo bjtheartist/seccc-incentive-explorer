@@ -1,5 +1,14 @@
 import type { QuizQuestion } from "./quiz-data";
 
+// review5 S6: the §48D CHIPS Investment Tax Credit rate was stated
+// correctly (35%) in quiz id 22 but stayed stale at "25%" in id 92's
+// explanation (the two questions were written at different times and
+// never cross-checked). data/programs-internal.json's "chips48d" record
+// agrees with 35% (summary, benefits[0], and benefitRange all say it).
+// A single shared constant — used everywhere this quiz bank repeats the
+// fact — means a future rate change is one edit, not a grep-and-hope.
+export const QUIZ_48D_CREDIT_RATE = "35%";
+
 export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
   // ---------- FEDERAL (18) — ids 11-28 ----------
   {
@@ -135,10 +144,9 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     id: 22,
     topic: "Federal",
     question: "What is the credit rate of the CHIPS Investment Tax Credit (§48D)?",
-    choices: ["10%", "20%", "25%", "30%"],
-    correctIndex: 2,
-    explanation:
-      "§48D provides a 25% credit for qualifying investments in semiconductor manufacturing facilities or specialized equipment, with direct-pay eligibility. The investment must be initiated by the end of 2026 to qualify.",
+    choices: ["20%", "25%", "30%", QUIZ_48D_CREDIT_RATE],
+    correctIndex: 3,
+    explanation: `§48D provides a ${QUIZ_48D_CREDIT_RATE} credit for qualifying semiconductor manufacturing facilities or specialized equipment placed in service after 2025, with direct-pay eligibility.`,
   },
   {
     id: 23,
@@ -198,7 +206,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "EDA Build to Scale awards $500K to $5M to nonprofits, EDOs, and universities for regional tech-ecosystem capacity. The FY 2026 cycle closed; the next NOFO is expected late summer 2026.",
+      "EDA Build to Scale awards $500K to $5M to nonprofits, EDOs, and universities for regional tech-ecosystem capacity. The most recent competition (FY 2024) closed October 28, 2024; EDA's program page announces no upcoming NOFO and no expected date.",
   },
   {
     id: 28,
@@ -721,7 +729,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "MMRP migrated to the Department of Housing and now functions primarily as a homeownership program: $30K down-payment grants via Neighborhood Housing Services. The original 'commercial-storefront activation' framing is outdated.",
+      "MMRP migrated to the Department of Housing and now functions primarily as a homeownership program: $15,000 down-payment grants via Neighborhood Housing Services (formerly branded MMRP; the program is now the Chicago Neighborhood Recovery Program, CNRP). The original 'commercial-storefront activation' framing is outdated.",
   },
   {
     id: 71,
@@ -913,7 +921,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
   {
     id: 86,
     topic: "Utility",
-    question: "Which type of site is eligible for ComEd's higher-tier 'EV Make-Ready' commercial rebate?",
+    question: "Which type of site does ComEd's higher-tier 'EV Make-Ready' commercial rebate target?",
     choices: [
       "Only single-family detached homes",
       "Only state government buildings",
@@ -998,7 +1006,11 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 3,
     explanation:
-      "There is no 'Federal Storefront Activation Voucher.' §48D (25% chip credit), HUD Section 108 (FY 2026 fee 0.58%), and SSBCI ($354.6M to Illinois) are all real federal programs. Chicago's storefront-activation program is CCSA — that one's a CITY program.",
+      // review5 S6: was "25%" — stale; the catalog (data/programs-internal.json
+      // id "chips48d") and quiz id 22's own explanation both say 35%. Two
+      // conflicting rates for the same credit in the same quiz bank is
+      // exactly what QUIZ_48D_CREDIT_RATE below exists to prevent.
+      `There is no 'Federal Storefront Activation Voucher.' §48D (${QUIZ_48D_CREDIT_RATE} chip credit), HUD Section 108 (FY 2026 fee 0.58%), and SSBCI ($354.6M to Illinois) are all real federal programs. Chicago's storefront-activation program is CCSA — that one's a CITY program.`,
   },
   {
     id: 93,
@@ -1105,6 +1117,6 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 2,
     explanation:
-      "Chicago had about 124 active TIF districts in 2026 (Civic Federation). TIF RDAs are negotiated and have no per-project cap; NOF's '$1.5M catalytic' tier was discontinued (large catalytic projects now route through CDG); and MMRP moved to the Department of Housing and now focuses on $30K down-payment grants, not storefronts.",
+      "Chicago had about 124 active TIF districts in 2026 (Civic Federation). TIF RDAs are negotiated and have no per-project cap; NOF's '$1.5M catalytic' tier was discontinued (large catalytic projects now route through CDG); and MMRP moved to the Department of Housing, was renamed the Chicago Neighborhood Recovery Program (CNRP), and now focuses on $15,000 down-payment grants, not storefronts.",
   },
 ];

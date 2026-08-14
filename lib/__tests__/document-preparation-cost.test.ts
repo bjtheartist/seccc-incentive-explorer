@@ -18,7 +18,7 @@ interface ProgramCatalogEntry {
 }
 
 const PROGRAM_CATALOG = JSON.parse(
-  readFileSync(join(process.cwd(), "public/data/programs.json"), "utf8"),
+  readFileSync(join(process.cwd(), "data/programs-internal.json"), "utf8"),
 ) as ProgramCatalogEntry[];
 
 const CATALOG_REQUIREMENTS = PROGRAM_CATALOG.flatMap((program) =>

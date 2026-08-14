@@ -113,14 +113,14 @@ export default async function NeighborhoodIncentivesPage({
                     vacancyCount === 1 ? "property" : "properties"
                   } in the area`
                 : ""
-            }. Exact eligibility depends on the specific address — generate a free location snapshot to confirm.`
-          : `Incentive eligibility in ${ca.name} depends on the specific address. ${
+            }. Zone boundaries are precise and address-specific — generate a free location snapshot to show which published boundaries contain the address.`
+          : `Zone boundaries in ${ca.name} are address-specific. ${
               vacancyCount > 0
                 ? `There are ${vacancyCount.toLocaleString()} tracked vacant ${
                     vacancyCount === 1 ? "property" : "properties"
                   } in the area. `
                 : ""
-            }Generate a free location snapshot to see the zones for any parcel.`,
+            }Generate a free location snapshot to show which published boundaries contain any parcel.`,
     },
     {
       question: `Where can a business in ${ca.name} get help applying?`,
@@ -211,9 +211,10 @@ export default async function NeighborhoodIncentivesPage({
             {ca.name} center
           </h2>
           <p className="text-[#0C1B33]/55 text-sm mb-6 max-w-2xl leading-relaxed">
-            Based on the neighborhood center point — verify the exact zones for
-            your specific address with a free snapshot. Zone boundaries are
-            irregular, so a parcel a few blocks away can qualify differently.
+            Based on the neighborhood center point — check the zones for your
+            specific address with a free snapshot. Zone boundaries are
+            irregular, so a parcel a few blocks away can show a different
+            boundary match.
           </p>
 
           {zones.length > 0 ? (
@@ -232,8 +233,8 @@ export default async function NeighborhoodIncentivesPage({
             <p className="text-[#0C1B33]/60 text-sm rounded-xl border border-[#0C1B33]/10 bg-white px-5 py-4 max-w-2xl leading-relaxed">
               The center point of {ca.name} doesn&apos;t fall inside a mapped
               incentive zone in our current data, but individual parcels may
-              still qualify. Run a free snapshot on a specific address to be
-              sure.
+              still sit inside one. Run a free snapshot on a specific address
+              to show which published boundaries contain it.
             </p>
           )}
         </div>

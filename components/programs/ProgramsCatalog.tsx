@@ -4,43 +4,86 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ExternalLink,
-  Phone,
   ChevronDown,
   ChevronUp,
   X,
   AlertTriangle,
-  CheckCircle2,
   ArrowRight,
   Printer,
   CalendarOff,
 } from "lucide-react";
 import Link from "next/link";
-import type { Program, ProgramLevel } from "@/lib/types";
+import type { PublicProgramView } from "@/lib/program-public";
 import { ZONE_COLORS, LEVEL_COLORS } from "@/lib/constants";
+import type { ProgramLevel } from "@/lib/types";
 import { INDUSTRIES, getIndustryById } from "@/lib/industries-data";
-import type { ProgramAvailability } from "@/lib/program-gating";
 import LevelBadge from "@/components/LevelBadge";
-import { ProgramCatalogActions } from "@/components/programs/ProgramCatalogActions";
-import { ProgramCatalogGuidance } from "@/components/programs/ProgramCatalogGuidance";
-import { ProgramDocumentRequirements } from "@/components/programs/ProgramDocumentRequirements";
-import { resolveConservativeProgramAvailability } from "@/components/programs/programAvailability";
+// review5 S1: imported from lib/program-slug.ts, NOT lib/programs-data.ts —
+// that module also exports getProgramsSync(), which require()s the full
+// internal catalog. This client component must never be reachable to that
+// file at all, not merely avoid calling the function.
+import { slugifyProgramName } from "@/lib/program-slug";
 import { useLiveNow } from "@/components/programs/useLiveNow";
-import programsData from "@/public/data/programs.json";
+// review5 S1 (CRITICAL — the earlier "hard cutover" claim did not hold):
+// this now imports the PUBLIC DTO envelope (public/data/programs-public.json,
+// PR1's committed build artifact), never the internal catalog
+// (data/programs-internal.json). Still a build-time static import, not a
+// runtime fetch — the catalog must render in the initial HTML with no
+// client data fetch (SEO/no-JS/no empty-flash — see
+// app/programs/page.test.tsx's "without a client data fetch" test), but the
+// BUNDLED CONTENT is now the sanitized DTO, not the full internal record.
+// This is a real trade-off from the richer Program-shaped card this
+// component rendered before: whoQualifies/benefits become
+// screening.publishedCriteria/benefit.qualifier, and internal-only detail
+// (requiredDocs, verificationSteps, applicationPortals, sunsetWarning,
+// suspensionNote, boundaryDisclaimer, contact, howToApply) is no longer
+// available at this layer — the expanded card links out to the full,
+// server-rendered `/programs/[slug]` detail page for that instead, which
+// already renders from data/programs-internal.json SERVER-SIDE only (see
+// app/programs/[slug]/page.tsx) and never ships that data to the client
+// bundle. See docs/eligibility-claims-acceptance.md's S1 resolution note.
+import programsPublicData from "@/public/data/programs-public.json";
 
 const LEVELS = ["All", "Federal", "State", "County", "City", "Utility"] as const;
-const INITIAL_PROGRAMS = programsData as unknown as Program[];
+const INITIAL_PROGRAMS = programsPublicData.programs as unknown as PublicProgramView[];
 
-interface LinkHealthEntry {
-  programId: string;
-  url: string;
-  language: string;
-  status: "ok" | "broken";
-  checkedAt: string;
+const OPEN_INTAKE_STATES = new Set(["open", "rolling"]);
+
+/** DTO-only availability approximation (review5 S1): the full
+ * `resolveAvailability`/`resolveConservativeProgramAvailability` machinery
+ * needs raw `deadlines[]`/`expiresOn`/`status` fields that PublicProgramView
+ * does not carry by design. A program whose published `nextWindow.expected`
+ * date has passed is treated as no-longer-current for display purposes —
+ * narrower than the full engine (it cannot detect every expiry shape the
+ * internal catalog can), but sourced ENTIRELY from DTO fields, never from a
+ * client-bundled internal record. */
+function isPastPublishedWindow(program: PublicProgramView, now: Date): boolean {
+  const expected = program.intake.nextWindow.expected;
+  if (!expected) return false;
+  const date = new Date(expected);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() < now.getTime();
 }
 
-interface LinkHealthFile {
-  checkedAt: string;
-  portals: LinkHealthEntry[];
+function programHref(program: PublicProgramView): string {
+  return `/programs/${slugifyProgramName(program.name) || program.id}`;
+}
+
+function statusLabel(
+  program: PublicProgramView,
+): { text: string; tone: "open" | "caution"; icon: "calendar" | "alert" } {
+  const status = program.intake.status;
+  if (OPEN_INTAKE_STATES.has(status)) return { text: "Open", tone: "open", icon: "alert" };
+  switch (status) {
+    case "closed":
+      return { text: "Closed", tone: "caution", icon: "calendar" };
+    case "lapsed":
+      return { text: "Lapsed", tone: "caution", icon: "calendar" };
+    case "pending":
+      return { text: "Pending", tone: "caution", icon: "alert" };
+    default:
+      return { text: "Status not established", tone: "caution", icon: "alert" };
+  }
 }
 
 export default function ProgramsCatalog({
@@ -55,51 +98,46 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
   const programs = INITIAL_PROGRAMS;
   const [filter, setFilter] = useState<string>("All");
   const [industryFilter, setIndustryFilter] = useState<string>("");
-  const [showExpired, setShowExpired] = useState(false);
-  const [linkHealth, setLinkHealth] = useState<Map<string, "ok" | "broken">>(
-    new Map(),
-  );
+  const [showUnavailable, setShowUnavailable] = useState(false);
   const now = useLiveNow(initialNowIso);
+  const nowDate = useMemo(() => (now ? now : new Date(initialNowIso)), [now, initialNowIso]);
 
-  // Availability gating: expired programs are hidden by default;
-  // window-closed / lapsed programs stay visible with a status badge.
-  const availabilityById = useMemo(() => {
-    const m = new Map<string, ProgramAvailability>();
-    for (const p of programs) {
-      const availability = resolveConservativeProgramAvailability(p, now);
-      if (availability) m.set(p.id, availability);
-    }
-    return m;
-  }, [programs, now]);
-
-  const expiredCount = useMemo(
-    () =>
-      programs.filter((p) => availabilityById.get(p.id)?.state === "expired")
-        .length,
-    [programs, availabilityById],
+  // Availability gating: a program whose published window has passed is
+  // hidden by default; still-open and closed/lapsed/pending-but-not-past-
+  // window programs stay visible with a status badge (build-spec.md 2.2,
+  // audit F4 — "available" means an open/rolling intake window).
+  const unavailableCount = useMemo(
+    () => programs.filter((p) => isPastPublishedWindow(p, nowDate)).length,
+    [programs, nowDate],
   );
 
   const visiblePrograms = useMemo(
     () =>
-      showExpired
+      showUnavailable
         ? programs
-        : programs.filter(
-            (p) => availabilityById.get(p.id)?.state !== "expired",
-          ),
-    [programs, availabilityById, showExpired],
+        : programs.filter((p) => !isPastPublishedWindow(p, nowDate)),
+    [programs, nowDate, showUnavailable],
   );
 
-  useEffect(() => {
-    fetch("/data/link-health.json")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: LinkHealthFile | null) => {
-        if (!d) return;
-        const m = new Map<string, "ok" | "broken">();
-        for (const p of d.portals) m.set(`${p.programId}:${p.url}`, p.status);
-        setLinkHealth(m);
-      })
-      .catch(() => {});
-  }, []);
+  const openIntakeCount = useMemo(
+    () => visiblePrograms.filter((p) => OPEN_INTAKE_STATES.has(p.intake.status)).length,
+    [visiblePrograms],
+  );
+
+  // review5 S1: the previous per-portal Submittable apply-button and its
+  // link-health badge (fetched here from /data/link-health.json, keyed by
+  // `${programId}:${applicationPortals[].url}`) are retired from this
+  // card. applicationPortals is internal-only and not on PublicProgramView
+  // by design, so this card can no longer render a Submittable button at
+  // all. KNOWN GAP, not silently dropped: neither this card nor
+  // app/programs/[slug]/page.tsx currently render a Submittable apply
+  // button — verified by grep, not assumed. A user who needs the apply
+  // flow still reaches it via the program's official source link
+  // (program.links.url / links.sourceUrl), just not the one-click
+  // Submittable shortcut. Rebuilding that flow server-side (so it can
+  // safely read applicationPortals + link-health.json again) is a real,
+  // scoped piece of follow-up work, deliberately left out of this pass —
+  // it is not one of the S1-S10 findings this branch was asked to fix.
 
   const selectedIndustry = industryFilter
     ? getIndustryById(industryFilter)
@@ -134,7 +172,7 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
           <p className="text-white/50 text-base max-w-xl">
             {selectedIndustry
               ? `${filtered.length} programs relevant to ${selectedIndustry.name} businesses.`
-              : `Multiple programs available to Chicago businesses across federal, state, county, and city levels.`}
+              : `${visiblePrograms.length} sourced federal, state, county, and city incentive programs — ${openIntakeCount} with an intake window currently open or rolling.`}
           </p>
         </div>
       </div>
@@ -176,9 +214,11 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
             <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
               Incentive zones are <strong>geographic designations</strong> drawn
               by federal, state, or city agencies on census tracts or
-              neighborhood boundaries. Being <em>inside</em> a zone is the
-              first eligibility gate — it determines which programs you can
-              access. A single address can fall within multiple overlapping
+              neighborhood boundaries. A geocoded point that falls{" "}
+              <em>inside</em> a zone is a location signal for the programs
+              that reference that boundary — review the current program
+              source for the boundary&apos;s role and any remaining
+              criteria. A single address can fall within multiple overlapping
               zones (e.g., TIF + Opportunity Zone + Enterprise Zone).
             </p>
           </div>
@@ -237,17 +277,17 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
           </div>
         </div>
 
-        {/* Availability toggle — expired programs are hidden by default */}
-        {expiredCount > 0 && (
+        {/* Availability toggle — programs past their published window are hidden by default */}
+        {unavailableCount > 0 && (
           <label className="mb-4 flex items-center gap-2 cursor-pointer select-none w-fit">
             <input
               type="checkbox"
-              checked={showExpired}
-              onChange={(e) => setShowExpired(e.target.checked)}
+              checked={showUnavailable}
+              onChange={(e) => setShowUnavailable(e.target.checked)}
               className="h-3.5 w-3.5 accent-[#2563EB]"
             />
             <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/45">
-              Show expired programs ({expiredCount} hidden)
+              Show programs past their published window ({unavailableCount} hidden)
             </span>
           </label>
         )}
@@ -279,12 +319,7 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
         {/* Program Cards */}
         <div className="space-y-3">
           {filtered.map((program) => (
-            <ProgramCard
-              key={program.id}
-              program={program}
-              linkHealth={linkHealth}
-              availability={availabilityById.get(program.id)}
-            />
+            <ProgramCard key={program.id} program={program} />
           ))}
         </div>
       </div>
@@ -292,22 +327,16 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
   );
 }
 
-function ProgramCard({
-  program,
-  linkHealth,
-  availability,
-}: {
-  program: Program;
-  linkHealth: Map<string, "ok" | "broken">;
-  availability?: ProgramAvailability;
-}) {
+function ProgramCard({ program }: { program: PublicProgramView }) {
   const [expanded, setExpanded] = useState(false);
-  const color = ZONE_COLORS[program.zoneKey] || "#6b7280";
+  const color = ZONE_COLORS[program.zoneKey ?? ""] || "#6b7280";
+  const status = statusLabel(program);
+  const criteriaFrame = program.links.administeringAgency
+    ? `Published criteria — confirm with ${program.links.administeringAgency}`
+    : "Published criteria — confirm with the administering agency";
 
   return (
-    <div
-      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden"
-    >
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden">
       <button
         className="w-full px-6 py-5 text-left flex items-start gap-4"
         onClick={() => setExpanded(!expanded)}
@@ -320,67 +349,19 @@ function ProgramCard({
           <div className="flex items-center gap-3 flex-wrap mb-1.5">
             <h2 className="text-[#0C1B33] text-base font-medium">{program.name}</h2>
             <LevelBadge level={program.level} />
-            {program.status === "verify" && (
-              <span
-                title="Status pending verification — see notes."
-                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-amber-700 bg-amber-100 inline-flex items-center gap-1"
-              >
-                <AlertTriangle className="w-3 h-3" /> Verify
-              </span>
-            )}
-            {program.status === "sunset" && (
-              <span
-                /* The 'Lapsed' pill below is suppressed for sunset cards, so this
-                   pill has to carry the availability note: a sunset record with
-                   no sunsetWarning gets no "Heads up" banner either, and the
-                   note would otherwise be unreachable in the catalog. */
-                title={
-                  availability?.state === "lapsed-notice"
-                    ? availability.note
-                    : undefined
-                }
-                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100"
-              >
-                Sunset
-              </span>
-            )}
-            {program.status === "pending" && (
-              <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-slate-600 bg-slate-100">
-                Watch
-              </span>
-            )}
-            {availability?.state === "window-closed" && (
-              <span
-                title={availability.note}
-                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-amber-700 bg-amber-100 inline-flex items-center gap-1"
-              >
-                <CalendarOff className="w-3 h-3" /> Applications closed
-              </span>
-            )}
-            {/* 'lapsed-notice' covers BOTH status "lapsed" and status "sunset"
-                (see lib/program-gating.ts), but a sunset is a termination, not
-                a lapse. The Sunset pill above already labels those cards; a
-                "Lapsed" pill beside it would tell the reader the program both
-                terminated and merely lapsed. */}
-            {availability?.state === "lapsed-notice" &&
-              program.status !== "sunset" && (
-                <span
-                  title={availability.note}
-                  className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100 inline-flex items-center gap-1"
-                >
-                  <AlertTriangle className="w-3 h-3" /> Lapsed
-                </span>
-              )}
-            {availability?.state === "expired" && (
-              <span
-                title={availability.note}
-                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-slate-500 bg-slate-200"
-              >
-                Expired
-              </span>
-            )}
+            <span
+              className={`font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full inline-flex items-center gap-1 ${
+                status.tone === "open"
+                  ? "text-emerald-700 bg-emerald-100"
+                  : "text-amber-700 bg-amber-100"
+              }`}
+            >
+              {status.tone === "caution" && status.icon === "calendar" && <CalendarOff className="w-3 h-3" />}
+              {status.tone === "caution" && status.icon === "alert" && <AlertTriangle className="w-3 h-3" />}
+              {status.text}
+            </span>
           </div>
-          <p className="text-sm text-[#0C1B33]/50 leading-relaxed">{program.summary}</p>
+          <p className="text-sm text-[#0C1B33]/50 leading-relaxed">{program.benefit.qualifier}</p>
         </div>
         <span className="shrink-0 mt-1 text-[#0C1B33]/25">
           {expanded ? (
@@ -393,146 +374,59 @@ function ProgramCard({
 
       {expanded && (
         <div className="px-6 pb-6 space-y-5 border-t border-[#0C1B33]/5 pt-5 ml-4">
-          {/* Status banners — window status / sunset / suspension / OZ 2.0 / boundary disclaimer */}
-          {(availability?.state === "window-closed" ||
-            availability?.state === "expired") &&
-            availability.note && (
-              <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 flex gap-2.5">
-                <CalendarOff className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[12px] text-amber-800 leading-relaxed">
-                  <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">
-                    {availability.state === "expired" ? "Expired" : "Window status"}
-                  </span>
-                  {availability.note}
-                </p>
-              </div>
-            )}
-          {program.sunsetWarning && (
-            <div className="border border-red-200 bg-red-50 rounded-lg p-3 flex gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-red-800 leading-relaxed">
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">Heads up</span>
-                {program.sunsetWarning}
-              </p>
-            </div>
-          )}
-          {program.suspensionNote && (
-            <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 flex gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-amber-800 leading-relaxed">
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">Paused</span>
-                {program.suspensionNote}
-              </p>
-            </div>
-          )}
-          {program.oz2Note && (
-            <div className="border border-purple-200 bg-purple-50 rounded-lg p-3 flex gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-purple-900 leading-relaxed">
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">OZ 2.0 watch</span>
-                {program.oz2Note}
-              </p>
-            </div>
-          )}
-          {program.boundaryDisclaimer && (
-            <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 flex gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-slate-700 leading-relaxed">
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">Boundary note</span>
-                {program.boundaryDisclaimer}
-              </p>
-            </div>
-          )}
-          {program.expirationNote && (
-            <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 flex gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-slate-700 leading-relaxed">
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">Timeline</span>
-                {program.expirationNote}
-              </p>
+          {program.benefit.summary && (
+            <div>
+              <h3 className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/35 mb-2">
+                Range on file
+              </h3>
+              <p className="text-sm text-[#0C1B33]/60">{program.benefit.summary}</p>
+              <p className="text-[11px] text-[#0C1B33]/45 mt-1">{program.benefit.qualifier}</p>
             </div>
           )}
 
-          {/* Who Qualifies */}
+          {/* Published criteria (build-spec.md DTO design: never raw whoQualifies) */}
           <div className="bg-[#EFF3FB] rounded-lg p-4">
             <h3 className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#2563EB]/60 mb-2">
-              Who Qualifies
+              {criteriaFrame}
             </h3>
-            <p className="text-sm text-[#0C1B33]/60">{program.whoQualifies}</p>
-          </div>
-
-          {/* Benefits */}
-          <div>
-            <h3 className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/35 mb-3">
-              Benefits
-            </h3>
-            <ul className="text-sm space-y-2">
-              {program.benefits.map((b, i) => (
-                <li key={i} className="flex gap-2.5 text-[#0C1B33]/60">
-                  <span className="w-5 h-5 rounded-full bg-[#16a34a]/10 text-[#16a34a] flex items-center justify-center text-xs shrink-0">+</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <ProgramCatalogGuidance
-            program={program}
-            availability={availability}
-          />
-
-          <ProgramDocumentRequirements requiredDocs={program.requiredDocs} />
-
-          {/* Verification / next-step links — discovery, not compliance */}
-          {program.verificationSteps && program.verificationSteps.length > 0 && (
-            <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] rounded-lg p-4">
-              <h3 className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/55 mb-2 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3 h-3" />
-                Official next steps
-              </h3>
-              <p className="text-[11px] text-[#0C1B33]/55 mb-3 leading-relaxed">
-                Some incentives require certification, pre-approval, or reporting through the administering agency. Verify current requirements with the official source before applying, purchasing materials, or beginning work.
-              </p>
-              <ul className="space-y-2">
-                {program.verificationSteps.map((step, i) => (
-                  <li key={i} className="text-[12px]">
-                    <a
-                      href={step.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#2563EB] hover:underline inline-flex items-center gap-1"
-                    >
-                      {step.label} <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <span className="text-[#0C1B33]/45"> — {step.agency}</span>
-                    {step.note && (
-                      <p className="text-[11px] text-[#0C1B33]/50 mt-0.5">{step.note}</p>
-                    )}
+            {program.screening.publishedCriteria.length > 0 ? (
+              <ul className="text-sm space-y-1.5">
+                {program.screening.publishedCriteria.map((criterion, i) => (
+                  <li key={i} className="text-[#0C1B33]/60">
+                    {criterion}
                   </li>
                 ))}
               </ul>
+            ) : (
+              <p className="text-sm text-[#0C1B33]/60">
+                See the official source for published criteria.
+              </p>
+            )}
+          </div>
+
+          {/* Full detail (requirements, application steps, contacts, notices) lives
+              on the server-rendered program page, which reads the internal
+              catalog server-side only — never bundled here. */}
+          <Link
+            href={programHref(program)}
+            className="inline-flex items-center gap-2 font-mono-bureau text-[11px] text-[#2563EB] uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors"
+          >
+            View full program details
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+
+          {program.links.url && (
+            <div className="pt-2 border-t border-[#0C1B33]/5">
+              <a
+                href={program.links.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[#2563EB] text-sm hover:underline"
+              >
+                Official source <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           )}
-
-          {/* Contact + Apply / Official Source */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#0C1B33]/5 text-sm">
-            <div className="flex flex-col gap-1">
-              <span className="text-[#0C1B33]/35 flex items-center gap-1.5 font-mono-bureau text-[10px]">
-                <Phone className="w-3 h-3" />
-                {program.contact}
-              </span>
-              {program.lastVerifiedAt && (
-                <span className="text-[#0C1B33]/30 font-mono-bureau text-[9px] tracking-[0.1em] uppercase">
-                  Last verified {program.lastVerifiedAt}
-                </span>
-              )}
-            </div>
-            <ProgramCatalogActions
-              program={program}
-              linkHealth={linkHealth}
-              availability={availability}
-            />
-          </div>
         </div>
       )}
     </div>
@@ -559,19 +453,14 @@ function IndustryQuerySync({
 
 const CHEAT_LEVELS: ProgramLevel[] = ["Federal", "State", "County", "City", "Utility"];
 
-/** All programs at a given gov level, sorted with 'active' first then by recency. */
-function programsByLevel(all: Program[], level: ProgramLevel): Program[] {
+/** All programs at a given gov level, open/rolling first then by name. */
+function programsByLevel(all: PublicProgramView[], level: ProgramLevel): PublicProgramView[] {
   return all
     .filter((p) => p.level === level)
     .sort((a, b) => {
-      // Active first, then by last verified desc, then by name for stability
-      const aActive = (a.status ?? "active") === "active" ? 0 : 1;
-      const bActive = (b.status ?? "active") === "active" ? 0 : 1;
-      if (aActive !== bActive) return aActive - bActive;
-      const aDate = a.lastVerifiedAt ?? "";
-      const bDate = b.lastVerifiedAt ?? "";
-      const dateCmp = bDate.localeCompare(aDate);
-      if (dateCmp !== 0) return dateCmp;
+      const aOpen = OPEN_INTAKE_STATES.has(a.intake.status) ? 0 : 1;
+      const bOpen = OPEN_INTAKE_STATES.has(b.intake.status) ? 0 : 1;
+      if (aOpen !== bOpen) return aOpen - bOpen;
       return a.name.localeCompare(b.name);
     });
 }
@@ -580,7 +469,7 @@ function CheatSheetSection({
   programs,
   asOf,
 }: {
-  programs: Program[];
+  programs: PublicProgramView[];
   asOf: Date | null;
 }) {
   // Active gov-level tab on mobile. Desktop (lg+) shows all 5 columns;
@@ -631,13 +520,13 @@ function CheatSheetSection({
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#2563EB]/60 mr-1.5">
             Zones
           </span>
-          Geographic designations (TIF, OZ, Enterprise Zone, etc.). The eligibility gate — a single address can sit in multiple overlapping zones.
+          Geographic designations (TIF, OZ, Enterprise Zone, etc.). A location signal for the programs that reference them — a single address can sit in multiple overlapping zones.
         </div>
         <div>
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#059669]/70 mr-1.5">
             Programs
           </span>
-          The actual benefits (grants, tax credits, financing) administered by an agency. Apply once your address sits inside the right zone.
+          The actual benefits (grants, tax credits, financing) administered by an agency. Review the current program source for the boundary&apos;s role and any remaining criteria before applying.
         </div>
       </div>
 
@@ -694,24 +583,26 @@ function CheatSheetSection({
                 </span>
               </div>
               <ul className="space-y-3">
-                {programsAtLevel.map((p) => (
-                  <li key={p.id} className="text-[11px]">
-                    <div className="text-[#0C1B33] font-medium leading-snug mb-0.5">
-                      {p.name}
-                    </div>
-                    {p.benefitRange && (
-                      <div className="text-[#0C1B33]/55 text-[10.5px] leading-snug mb-0.5">
-                        {p.benefitRange}
+                {programsAtLevel.map((p) => {
+                  const s = statusLabel(p);
+                  return (
+                    <li key={p.id} className="text-[11px]">
+                      <div className="text-[#0C1B33] font-medium leading-snug mb-0.5">
+                        {p.name}
+                        {s.tone === "caution" && (
+                          <span className="ml-1.5 font-mono-bureau text-[8.5px] tracking-[0.1em] uppercase text-amber-700/80">
+                            · {s.text}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {p.fastestConfirmingStep && (
-                      // Screen-only: dropped in print so the sheet fits one page
-                      <div className="print:hidden text-[#0C1B33]/40 text-[10px] italic leading-snug">
-                        → {p.fastestConfirmingStep}
-                      </div>
-                    )}
-                  </li>
-                ))}
+                      {p.benefit.summary && (
+                        <div className="text-[#0C1B33]/55 text-[10.5px] leading-snug mb-0.5">
+                          {p.benefit.summary}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
                 {programsAtLevel.length === 0 && (
                   <li className="text-[10px] text-[#0C1B33]/30 italic">
                     None listed yet
@@ -729,7 +620,15 @@ function CheatSheetSection({
           <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
           <span>
             <strong className="text-[#0C1B33]/70">Verify with the official source.</strong>{" "}
-            This is a discovery tool — not legal, tax, or eligibility advice. Confirm current requirements with the administering agency before applying, certifying, or relying on any program listed here.
+            This is a discovery tool — not legal, tax, or eligibility advice.{" "}
+            {
+              // Locked verification copy, verbatim — lib/outreach-letter.ts's
+              // VERIFICATION_DISCLAIMER re-uses this exact sentence for every
+              // per-parcel program mention in the outreach letter (see
+              // lib/__tests__/outreach-letter.test.ts's byte-for-byte lock),
+              // so this string must never be paraphrased here independently.
+              "Some incentives require certification, pre-approval, or reporting through the administering agency. Verify current requirements with the official source before applying, purchasing materials, or beginning work."
+            }
           </span>
         </div>
         <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30">

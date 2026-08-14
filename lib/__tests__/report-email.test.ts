@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deliverReportByEmail,
+  programCount,
   reportEmailGateKey,
   reportRequiresEmailGate,
 } from "../report-email";
@@ -92,5 +93,47 @@ describe("report email client", () => {
     });
     expect(body.pdfBase64).toMatch(/^JVBER/);
     expect(JSON.stringify(body)).not.toContain('"score"');
+  });
+});
+
+/**
+ * build-spec.md 2.4 (audit F14): programCount must count distinct
+ * programIds, never the number of narrative sections — the exact bug the
+ * shared-modal refactor introduced by wiring report.sections.length in.
+ */
+describe("programCount", () => {
+  it("counts distinct programIds, not sections.length, when a report has more sections than unique programs", () => {
+    const report = fixture({
+      sections: [
+        {
+          title: "Overview",
+          items: [{ label: "Community Area", value: "South Chicago" }],
+        },
+        {
+          title: "Programs to Review",
+          items: [
+            { label: "EDGE", value: "x", programId: "edge" },
+            { label: "TIF", value: "x", programId: "tif" },
+          ],
+        },
+        {
+          title: "Also Worth Reviewing",
+          items: [{ label: "EDGE (again)", value: "x", programId: "edge" }],
+        },
+      ],
+    });
+    expect(report.sections.length).toBe(3);
+    expect(programCount(report)).toBe(2);
+    expect(programCount(report)).not.toBe(report.sections.length);
+  });
+
+  it("returns 0 for a report with sections but no programId items, never the section count", () => {
+    const report = fixture({
+      sections: [
+        { title: "A", items: [{ label: "x", value: "y" }] },
+        { title: "B", items: [{ label: "x", value: "y" }] },
+      ],
+    });
+    expect(programCount(report)).toBe(0);
   });
 });

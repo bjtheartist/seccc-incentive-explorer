@@ -30,7 +30,7 @@ const ZONING_PREFIXES: ReadonlyArray<readonly [string, string]> = [
 /**
  * Plain-language gloss for a Chicago zoning district code, always ending in an
  * eligibility caution. Examples:
- *   "C1-1" -> "C1-1 — neighborhood commercial uses; verify project-specific eligibility."
+ *   "C1-1" -> "C1-1 — neighborhood commercial uses; confirm project-specific requirements."
  *   "XZ-9" -> "Zoning XZ-9 — verify allowable uses."   (unrecognized prefix)
  *   null / "" -> null                                   (nothing to gloss)
  */
@@ -42,7 +42,7 @@ export function zoningGloss(zoningClass: string | null): string | null {
   const upper = code.toUpperCase();
   for (const [prefix, gloss] of ZONING_PREFIXES) {
     if (upper.startsWith(prefix)) {
-      return `${code} — ${gloss}; verify project-specific eligibility.`;
+      return `${code} — ${gloss}; confirm project-specific requirements.`;
     }
   }
   return `Zoning ${code} — verify allowable uses.`;

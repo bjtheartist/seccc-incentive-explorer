@@ -34,7 +34,7 @@
  * so the rollout-matching logic lives in exactly one place.
  */
 
-import type { Program, ProgramDeadlineEntry } from "./types";
+import type { Program, ProgramAvailabilityFields, ProgramDeadlineEntry } from "./types";
 import { findSbifWindow, type SbifWindow } from "./deadlines";
 
 // ── Output types ──────────────────────────────────────────────────────────────
@@ -122,9 +122,16 @@ const WINDOW_OPEN_LABEL = /\bopen(s|ed|ing)?\b/i;
 /**
  * Resolve a program card's availability as of `today`.
  * Pure — inject `new Date()` in production and fixed dates in tests.
+ *
+ * review6 S17: typed to `ProgramAvailabilityFields` (the exact 7 fields
+ * this function reads), not `Program` — a full `Program` structurally
+ * satisfies the narrower type for free, so every existing caller keeps
+ * compiling unchanged, while a client-safe `ProgramApplicationView`
+ * (lib/types.ts) can also be passed without a cast. See that type's own
+ * doc comment for the full rationale (the RSC-boundary leak this closes).
  */
 export function resolveAvailability(
-  program: Program,
+  program: ProgramAvailabilityFields,
   today: Date,
   opts: ResolveAvailabilityOpts = {}
 ): ProgramAvailability {
@@ -269,7 +276,7 @@ export function resolveAvailability(
 
 /** Convenience: true when the program should be hidden everywhere. */
 export function isExpired(
-  program: Program,
+  program: ProgramAvailabilityFields,
   today: Date,
   opts?: ResolveAvailabilityOpts
 ): boolean {

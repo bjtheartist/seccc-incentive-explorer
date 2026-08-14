@@ -455,3 +455,46 @@ describe("startHere vocabulary rails", () => {
     }
   });
 });
+
+/**
+ * build-spec.md 2.2 (audit consult item 2, "StartHere descriptions" row):
+ * a StartHere action description must not read as if a closed/lapsed
+ * program's round is currently open.
+ */
+describe("StartHere action descriptions carry the PublicProgramView qualifier for non-open programs", () => {
+  it("appends the binding qualifier sentence for a lapsed program's description", () => {
+    const lapsed = makeProgram({
+      id: "lapsedProgram",
+      name: "Lapsed Program",
+      intakeStatus: "lapsed",
+      benefitTermsStatus: "historical",
+      statusAsOf: "2026-08-01",
+      contacts: [{ agency: "Test Agency", abbreviation: "TA", phone: "312-555-0000" }],
+    });
+    const results = runConfidenceEngine([lapsed], zones, zoneNames);
+    const startHere = buildStartHere({ results, audience: "site-incentives" });
+    const allText = [
+      startHere.primary.description,
+      ...startHere.secondary.map((a) => a.description),
+    ].join(" ");
+    expect(allText).toMatch(/no round currently open as of/i);
+  });
+
+  it("does NOT append a qualifier for an open/rolling program's description", () => {
+    const open = makeProgram({
+      id: "openProgram",
+      name: "Open Program",
+      intakeStatus: "open",
+      benefitTermsStatus: "current",
+      statusAsOf: "2026-08-01",
+      contacts: [{ agency: "Test Agency", abbreviation: "TA", phone: "312-555-0000" }],
+    });
+    const results = runConfidenceEngine([open], zones, zoneNames);
+    const startHere = buildStartHere({ results, audience: "site-incentives" });
+    const allText = [
+      startHere.primary.description,
+      ...startHere.secondary.map((a) => a.description),
+    ].join(" ");
+    expect(allText).not.toMatch(/no round currently open/i);
+  });
+});

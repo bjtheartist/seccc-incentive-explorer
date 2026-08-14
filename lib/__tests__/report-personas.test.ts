@@ -338,7 +338,7 @@ describe("personaSelectionEvent — exactly once per selection", () => {
 
 describe("persona tags stay in sync with the static dataset", () => {
   const programs = JSON.parse(
-    readFileSync(join(process.cwd(), "public/data/programs.json"), "utf8"),
+    readFileSync(join(process.cwd(), "data/programs-internal.json"), "utf8"),
   ) as { id: string; personas?: PersonaId[] }[];
   const validPersonas = new Set<string>(
     PERSONA_CHIPS.map((c) => c.id).filter((id) => id !== "all"),

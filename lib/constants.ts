@@ -134,17 +134,26 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   tif: "Tax Increment Financing redirects property-tax growth to fund public improvements in designated districts.",
   federalOZ: "Federal tax incentive that defers and reduces capital gains taxes for investments in low-income census tracts. Illinois supports OZ projects through DCEO grants and scoring preferences, not a separate state OZ income-tax deduction.",
   enterprise: "State-designated areas offering tax credits, sales tax exemptions, and utility tax exemptions for qualifying businesses.",
-  stateIncentiveZones: "Census tracts eligible for Illinois EDGE (job creation credits), REV (EV/clean energy), MICRO (semiconductor), and Data Center tax incentives.",
+  // consult item 12 (build-spec.md 2.4): this boundary is a proxy — REV,
+  // EDGE, MICRO, and Data Center are negotiated, project-by-project state
+  // programs, not zone-gated. The polygon is a high-unemployment-tract
+  // approximation the Explorer uses to surface those programs for review,
+  // not a boundary the programs themselves are gated by.
+  stateIncentiveZones: "A high-unemployment-tract proxy boundary the Explorer uses to surface Illinois EDGE, REV, MICRO, and Data Center incentives for review. These are negotiated, project-by-project state programs, not zone-gated — being inside this boundary does not by itself determine eligibility.",
   ssa: "Locally funded service areas where businesses self-tax to fund streetscaping, marketing, and security improvements.",
-  highUnemployment: "Census tracts with unemployment rates significantly above the national average, triggering additional federal eligibility.",
+  // consult item 12: an information overlay, not itself an eligibility
+  // trigger — WOTC's Empowerment-Zone-residency category is one of several
+  // non-geographic target groups, and the credit's authorizing statute has
+  // lapsed as of this catalog's last verification.
+  highUnemployment: "Census tracts with unemployment rates significantly above the national average — an information overlay used by some federal programs' target-group criteria, not itself an eligibility trigger.",
   ccsa: "City corridor activation program that may provide reimbursable support for storefront improvements and technical assistance in selected commercial corridors. Application status and eligible corridors should be verified with Chicago DPD.",
   industrialCorridors: "City-designated corridors preserved for manufacturing, logistics, and industrial uses with zoning protections.",
   microMarketRecovery: "Department of Housing program focused on home purchase and rehab assistance in designated Micro Market Recovery areas.",
   nof: "City reimbursement grants for qualifying commercial projects on NOF eligible and priority corridors on Chicago's South, Southwest, and West Sides.",
-  nmtcEligible: "Census tracts eligible for New Markets Tax Credits, a federal program for investments in low-income communities.",
+  nmtcEligible: "Census tracts designated for New Markets Tax Credits, a federal program for investments in low-income communities.",
   qct: "HUD-designated census tracts where 50%+ of households earn below 60% of area median income, boosting LIHTC credits.",
   landmarkDistricts: "Chicago-designated historic districts where property owners may access local preservation tax incentives.",
-  nrhpDistricts: "Federally recognized historic districts qualifying for the 20% federal Historic Tax Credit on certified rehab costs.",
+  nrhpDistricts: "Federally recognized historic districts. A property here may qualify for review under the 20% federal Historic Tax Credit on certified rehabilitation costs, subject to Secretary of the Interior's Standards review and the building being income-producing.",
   brownfields: "Former industrial or commercial properties tracked in EPA's brownfields program (ACRES). Redevelopment may qualify for EPA assessment/cleanup grants and Illinois Site Remediation Program tax credits.",
   energyCommunities: "Clean energy projects located in an IRA energy community can receive a 10 percentage point bonus on the federal Investment Tax Credit or a 10% Production Tax Credit boost, subject to IRS rules and project eligibility.",
   hubzone: "Small businesses with a principal office in a HUBZone, and at least 35% of employees living in one, can compete for federal contract set-asides and receive a 10% price preference in full and open bidding.",

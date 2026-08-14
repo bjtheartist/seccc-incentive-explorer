@@ -38,8 +38,13 @@ function toCell(label: string, cell: VacancyMatrixCell, fmt: (v: number | null) 
 
 /** Fixed copy templates driven only by real fields — no projections, ever.
  * Exported so the web report (app/vacancy/[zip]/page.tsx) renders the same
- * three decisions as the PDF without duplicating the copy logic. */
-export function buildDecisions(edition: VacancyIndexEdition): VacancyIndexDecision[] {
+ * three decisions as the PDF without duplicating the copy logic.
+ * `dataRevision` is the export's own `generatedAt` (ISO date), used only in
+ * the F1 binding-copy revision parenthetical below. */
+export function buildDecisions(
+  edition: VacancyIndexEdition,
+  dataRevision?: string,
+): VacancyIndexDecision[] {
   const { headline } = edition;
   const candidates: VacancyIndexDecision[] = [];
 
@@ -73,9 +78,12 @@ export function buildDecisions(edition: VacancyIndexEdition): VacancyIndexDecisi
   }
 
   if (candidates.length < 3 && headline.inIncentiveZoneCount > 0) {
+    // F1 binding replacement copy (build-spec.md 2.4; audit's clearest
+    // prohibited determination — do not weaken, do not strengthen).
+    const revisionNote = dataRevision ? ` (revision ${dataRevision.slice(0, 10)})` : "";
     candidates.push({
       title: "Lead with the incentive context",
-      body: `${headline.inIncentiveZoneCount.toLocaleString("en-US")} sites sit inside at least one mapped incentive zone — open every conversation with what the location already qualifies for.`,
+      body: `${headline.inIncentiveZoneCount.toLocaleString("en-US")} tracked site points intersect at least one boundary in the Explorer dataset${revisionNote}. Use those overlaps to prioritize programs for review; they do not establish eligibility, current intake, or an award.`,
     });
   }
 
@@ -161,7 +169,7 @@ export function buildVacancyIndexPdfInput(
   });
 
   const total = headline.vacantPropertyCount;
-  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} carry unverified ownership (311-reported vacant buildings not yet parcel-matched); ${headline.inIncentiveZoneCount.toLocaleString("en-US")} sit inside at least one mapped incentive zone. The site index highlights featured parcels so a corridor manager can start with the clearest next contact.`;
+  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} carry unverified ownership (311-reported vacant buildings not yet parcel-matched); ${headline.inIncentiveZoneCount.toLocaleString("en-US")} tracked site points intersect at least one boundary in the Explorer dataset. Use those overlaps to prioritize programs for review; they do not establish eligibility, current intake, or an award. The site index highlights featured parcels so a corridor manager can start with the clearest next contact.`;
 
   return {
     neighborhood: edition.neighborhood,
@@ -175,7 +183,7 @@ export function buildVacancyIndexPdfInput(
       inIncentiveZones: headline.inIncentiveZoneCount,
     },
     brief,
-    decisions: buildDecisions(edition),
+    decisions: buildDecisions(edition, exportData.generatedAt),
     ownerTypeDistribution,
     reconciledOwnerTypeDistribution,
     reconciliationNote,

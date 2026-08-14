@@ -717,8 +717,8 @@ export default function VacancyDirectory({
           : ""}
       </p>
       <p className="mt-1.5 text-[11px] leading-relaxed text-[#0C1B33]/45">
-        {neighborhood} &middot; ZIP {zip}. Records indicate; verify current ownership, eligibility,
-        timing, and approval requirements with the administering organization before relying.
+        {neighborhood} &middot; ZIP {zip}. Records indicate; confirm current ownership, program requirements,
+        timing, and approval steps with the administering organization before relying.
       </p>
     </div>
   );

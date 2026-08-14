@@ -9,7 +9,7 @@
 
 import { ExternalLink } from "lucide-react";
 import type { GeneratedReport } from "@/lib/report-engine";
-import type { ApplicationPortal, Program, VerificationStep } from "@/lib/types";
+import type { ApplicationPortal, VerificationStep } from "@/lib/types";
 
 export type ReportNavigationItem = GeneratedReport["sections"][number]["items"][number] & {
   applicationPortals?: ApplicationPortal[];
@@ -27,21 +27,35 @@ export function FreshnessBadge({ lastVerifiedAt, isStale }: { lastVerifiedAt: st
   );
 }
 
+// review7 S20 (MEDIUM) — the optional `program?: Program` fallback prop
+// was removed here. review6 S11's investigation of
+// `programReportItem()` (lib/report-engine.ts) already confirmed every
+// program-linked `ReportItem` sets `applicationPortals`/
+// `verificationSteps`/`sourceUrl` directly at generation time, so the
+// `item.X || program?.X` fallback was ALREADY redundant for the real
+// code path — S11 dropped the prop from app/report/page.tsx's own
+// ReportDisplay fork's call site, but not from
+// components/report/ReportDisplay.tsx (the SEPARATE shared fork this
+// component's own doc comment above says was deliberately never
+// consolidated) or from this component's own signature. The
+// strengthened review7 S20 client-Program-reference guard caught both
+// remaining occurrences as real, live raw-`Program` prop types with no
+// actual caller ever populating them (confirmed: neither fork passes
+// `program=` anymore after this fix) — genuinely dead code, not just an
+// unused type.
 export function ReportNavigationLinks({
   item,
-  program,
 }: {
   item: ReportNavigationItem;
-  program?: Program;
 }) {
-  const officialSourceUrl = item.sourceUrl || program?.sourceUrl;
+  const officialSourceUrl = item.sourceUrl;
   const officialSourceLabel = item.sourceLabel
     ? `${item.sourceLabel} source`
     : "Official source";
-  const applicationPortals = (item.applicationPortals || program?.applicationPortals || []).filter(
+  const applicationPortals = (item.applicationPortals || []).filter(
     (portal) => portal.url,
   );
-  const verificationSteps = (item.verificationSteps || program?.verificationSteps || []).filter(
+  const verificationSteps = (item.verificationSteps || []).filter(
     (step) => step.url,
   );
 

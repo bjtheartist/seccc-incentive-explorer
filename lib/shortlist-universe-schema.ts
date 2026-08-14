@@ -100,11 +100,51 @@ const RowZoningSchema = z.object({
  * and — when it is — the feature's own name (Finding 12). `name` is
  * `null` both when `present` is false AND when the source geometry
  * carries no name for a present match (an unnamed feature is a real,
- * honest state, never coerced to a placeholder string). */
-const OverlayMembershipSchema = z.object({
-  present: z.boolean(),
-  name: z.string().nullable(),
-});
+ * honest state, never coerced to a placeholder string).
+ *
+ * review5 S2: `unknown` distinguishes "the export process could not
+ * determine membership for this layer" (no coordinates to check against,
+ * a missing/unreadable source file, a malformed feature) from a genuine
+ * `present: false`. Before this field existed, both collapsed into the
+ * same `present: false`, indistinguishable from a confirmed non-match —
+ * exactly the v1 anti-pattern this finding targets.
+ *
+ * review6 S12 (CRITICAL): review5 S2's original `.default(false)` for
+ * backward compatibility with already-committed export files that predate
+ * this field was ITSELF the same anti-pattern one level up — every one of
+ * the 125,184 overlay objects across the 9 committed
+ * data/exports/shortlist-universe/*.json files omits `unknown` entirely
+ * (confirmed by direct inspection), so `.default(false)` silently turned
+ * every single one of them into a trusted "confirmed not mapped," exactly
+ * what S2 was written to prevent. Fixed to fail closed the OTHER
+ * direction: an omitted `unknown` defaults to `!present` — a legacy row
+ * that already claims `present: true` stays trusted (a real geometry
+ * match published by the export process is not in doubt merely because
+ * the field predates this schema version), while a legacy `present:
+ * false` with no `unknown` value reads as "never actually checked," not
+ * "confirmed absent." A file that explicitly writes `unknown` (any export
+ * run from the day this field was added onward) always uses that value
+ * verbatim, regardless of `present`. KNOWN, DOCUMENTED LIMITATION
+ * (unchanged from S2): a genuinely-uncheckable layer in an
+ * already-committed file still cannot be distinguished from one the
+ * export process never bothered to check, absent from `present: true` —
+ * both this default AND S2's are informed guesses about legacy files
+ * that predate the field; only re-running the export against a live DB
+ * branch (forbidden by the Hard Rules this session) produces a real
+ * value. This default is the ONE of the two guesses that fails closed
+ * for a public claims surface: it never lets an unchecked layer read as
+ * a confirmed negative. */
+const OverlayMembershipSchema = z
+  .object({
+    present: z.boolean(),
+    name: z.string().nullable(),
+    unknown: z.boolean().optional(),
+  })
+  .transform(({ present, name, unknown }) => ({
+    present,
+    name,
+    unknown: unknown ?? !present,
+  }));
 
 const RowOverlaysSchema = z.object({
   ssa: OverlayMembershipSchema,

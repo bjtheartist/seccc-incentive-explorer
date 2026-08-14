@@ -13,6 +13,13 @@ export function PreQualSurvey() {
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [results, setResults] = useState<SurveyResult | null>(null);
   const [direction, setDirection] = useState(1);
+  // review5 S1 / review6 S11: scoreSurvey() is async — it POSTs the raw
+  // answers to /api/survey/score (server-side scoring against the full
+  // internal catalog, narrow SurveyResult returned) rather than bundling
+  // the full internal catalog into every /qualify page load, or (as of
+  // S11) fetching it client-side from the now-removed unauthenticated
+  // /api/programs/engine-source route.
+  const [scoring, setScoring] = useState(false);
 
   const totalSteps = SURVEY_QUESTIONS.length;
   const currentQuestion = SURVEY_QUESTIONS[currentStep - 1];
@@ -35,7 +42,10 @@ export function PreQualSurvey() {
       setDirection(1);
       setCurrentStep((s) => s + 1);
     } else {
-      setResults(scoreSurvey(answers));
+      setScoring(true);
+      scoreSurvey(answers)
+        .then(setResults)
+        .finally(() => setScoring(false));
     }
   }, [canProceed, currentStep, totalSteps, answers]);
 
@@ -88,14 +98,14 @@ export function PreQualSurvey() {
 
         <button
           onClick={handleNext}
-          disabled={!canProceed}
+          disabled={!canProceed || scoring}
           className={`inline-flex items-center gap-2 font-mono-bureau text-[11px] uppercase tracking-[0.1em] px-6 py-3 border cursor-pointer transition-colors ${
-            canProceed
+            canProceed && !scoring
               ? "bg-[#0C1B33] text-white border-[#0C1B33] hover:bg-[#2563EB] hover:border-[#2563EB]"
               : "bg-transparent text-[#0C1B33]/15 border-[#0C1B33]/8 cursor-default"
           }`}
         >
-          {currentStep === totalSteps ? "See Results" : "Next"}
+          {scoring ? "Reviewing…" : currentStep === totalSteps ? "See Results" : "Next"}
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

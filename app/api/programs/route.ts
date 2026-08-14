@@ -6,25 +6,50 @@ import type { Program } from "@/lib/types";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { preferStaticProgramDefinitions } from "@/lib/programs-merge";
+import { toPublicProgramView, type PublicProgramView } from "@/lib/program-public";
 
 const PROGRAMS_CACHE_CONTROL = "public, max-age=0, s-maxage=300, stale-while-revalidate=3600";
 
 /**
+ * review5 S1 (CRITICAL): this route previously returned raw `Program[]` —
+ * every internal-only field (whoQualifies, benefits, requiredDocs,
+ * verificationSteps, applicationPortals, contacts, howToApply,
+ * boundaryDisclaimer, sunsetWarning, ...) over the wire to any client. It
+ * now projects every record through `toPublicProgramView()` before
+ * returning — this is the ONE public HTTP boundary every remaining client
+ * fetch of program data goes through, so it is the actual enforcement
+ * point of the "hard cutover", not just a relocated file read.
+ */
+function toPublicView(program: Program, asOf: string): PublicProgramView {
+  return toPublicProgramView(program, asOf);
+}
+
+/**
  * GET /api/programs
  *
- * Returns all programs with enhanced fields (contacts, eligibility rules, etc.).
- * DB-first with static JSON fallback.
+ * Returns the public program projection (PublicProgramView[]) — DB-first
+ * with static JSON fallback, sourced from data/programs-internal.json
+ * server-side only.
  */
 async function getStaticPrograms(): Promise<Program[]> {
-  const file = join(process.cwd(), "public", "data", "programs.json");
+  // build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted;
+  // data/programs-internal.json (server-only, PR1 section 1.2) is the
+  // source of truth. This route is the one server boundary every client
+  // surface now fetches from instead of reading the deleted public file.
+  const file = join(process.cwd(), "data", "programs-internal.json");
   const data = JSON.parse(await readFile(file, "utf8")) as Program[];
   return safeParseArray(ProgramSchema, data, "programs-static") as Program[];
+}
+
+function projectAll(programs: Program[]): PublicProgramView[] {
+  const asOf = new Date().toISOString();
+  return programs.map((p) => toPublicView(p, asOf));
 }
 
 export async function GET() {
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(await getStaticPrograms(), {
+    return NextResponse.json(projectAll(await getStaticPrograms()), {
       headers: {
         "Cache-Control": PROGRAMS_CACHE_CONTROL,
       },
@@ -76,14 +101,17 @@ export async function GET() {
       return safeParseArray(ProgramSchema, programs, "programs-api") as Program[];
     });
 
-    return NextResponse.json(preferStaticProgramDefinitions(staticPrograms, databasePrograms), {
-      headers: {
-        "Cache-Control": PROGRAMS_CACHE_CONTROL,
+    return NextResponse.json(
+      projectAll(preferStaticProgramDefinitions(staticPrograms, databasePrograms)),
+      {
+        headers: {
+          "Cache-Control": PROGRAMS_CACHE_CONTROL,
+        },
       },
-    });
+    );
   } catch (err) {
     console.error("programs API error:", err);
-    return NextResponse.json(await getStaticPrograms(), {
+    return NextResponse.json(projectAll(await getStaticPrograms()), {
       headers: {
         "Cache-Control": PROGRAMS_CACHE_CONTROL,
       },

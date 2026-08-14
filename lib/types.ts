@@ -262,6 +262,80 @@ export interface ProgramCheckResult {
   matchedRules: string[];
 }
 
+/**
+ * review6 S11 (CRITICAL, S1 reopened) — the network-safe shape for a map
+ * click-snapshot program match. `ProgramCheckResult.program: Program`
+ * above embeds the FULL internal record (whoQualifies, eligibilityRules,
+ * contacts, requiredDocs, ...) — fine when `runConfidenceEngine()` runs
+ * server-side and this type stays server-internal, but never safe to
+ * serialize to an unauthenticated client. `components/map/MapDossierCard.tsx`
+ * and `components/map/MapSnapshotPanel.tsx` only ever read
+ * `.program.zoneKey`, `.program.name`, `.program.sourceUrl`/`.program.url`
+ * (confirmed by direct grep of both files) — this narrows to exactly
+ * that, nothing else, and is the ONLY shape app/api/programs/match/route.ts
+ * is allowed to return.
+ */
+export interface SafeMapProgramMatch {
+  programId: string;
+  program: {
+    id: string;
+    name: string;
+    level: string;
+    zoneKey: string;
+    url: string;
+    sourceUrl?: string;
+  };
+}
+
+/**
+ * review6 S17 (CRITICAL) — `lib/program-gating.ts`'s `resolveAvailability`
+ * (and its client-safe wrapper `requiresLiveProgramAvailability` in
+ * components/programs/programAvailability.ts) only ever reads these 7
+ * fields off a `Program` to compute intake availability — confirmed by
+ * direct reading of every branch of that function. Extracting the exact
+ * dependency as its own interface (rather than typing the parameter as
+ * `Program`) means `Program` structurally satisfies it for free — every
+ * EXISTING server-side caller that already passes a full `Program`
+ * (app/programs/[slug]/page.tsx's static-params filter, lib/report-
+ * engine.ts, lib/survey-engine.ts, scripts/smoke-report.ts) keeps
+ * compiling with zero changes — while a genuinely narrow object built
+ * from ONLY these fields is now also a valid argument, which is what
+ * lets `ProgramApplicationView` below stay narrow instead of widening
+ * back to `Program` just to satisfy this function's old signature.
+ */
+export interface ProgramAvailabilityFields {
+  id: string;
+  status?: ProgramStatus;
+  suspensionNote?: string;
+  sunsetWarning?: string;
+  deadlines?: ProgramDeadlineEntry[];
+  oneTime?: boolean;
+  expiresOn?: string;
+  recurring?: boolean;
+}
+
+/**
+ * review6 S17 (CRITICAL) — `components/programs/ProgramApplicationSection.tsx`
+ * is a `"use client"` component; `app/programs/[slug]/page.tsx` (a server
+ * component) used to pass it a full raw `Program` prop — whoQualifies,
+ * eligibilityRules, contacts, requiredDocs, verificationSteps, and every
+ * other internal-only field, serialized into the page's RSC payload and
+ * reachable by inspecting it, exactly the S11 leak shape but via a PROP
+ * instead of a network route. This is the full, exact field set that
+ * component (and the `resolveAvailability`/`resolveConservativeProgram
+ * Availability` gating calls it makes) actually reads — confirmed by
+ * direct reading of the component's source — nothing more.
+ * `components/programs/programAvailability.ts`'s `toProgramApplicationView`
+ * builds this from a full `Program` server-side; it is the ONLY shape
+ * that component's `program` prop is allowed to receive.
+ */
+export interface ProgramApplicationView extends ProgramAvailabilityFields {
+  howToApply: string[];
+  fastestConfirmingStep?: string;
+  sourceUrl?: string;
+  url: string;
+}
+
 export interface TopAction {
   label: string;
   type: "call" | "gather" | "book" | "check";
@@ -653,6 +727,17 @@ export interface LookupResult {
   zones: Record<string, boolean>;
   zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
+  /**
+   * Zone Evidence v2 cutover (build-spec.md 2.3; audit F2): layer keys whose
+   * check could not be completed (source unavailable, malformed geometry, DB
+   * layer missing) — NOT confirmed absent. `zones[key]` stays `false` for
+   * these keys for backward compatibility with existing truthy-check
+   * consumers (mirrors lib/zone-response.ts's NormalizedZoneCheck.unknownLayers
+   * precedent from PR1). A negative summary MUST check this list before
+   * asserting "not mapped"/"no zones found" — see report-engine's
+   * buildKeyFindings and vacancy-site-zones's siteZonesSummary.
+   */
+  unknownZones?: string[];
   cityZoning?: CityZoning;
   cityZoningStatus?: ZoningLookupStatus;
   sector?: string; // user-selected business sector ID
@@ -665,10 +750,10 @@ export interface LookupResult {
   parcel?: ParcelData;
 }
 
-export interface ZoneCheckResult {
-  key: string;
-  name: string;
-}
+// review7 S21 (MEDIUM): `ZoneCheckResult` removed — it was the v1
+// positives-only-array shape (`{key, name}`), used only by
+// lib/data.ts's now-deleted, zero-caller `checkZonesAPI` function. See
+// that removal's own comment for the full rationale.
 
 export interface CommunityAsset {
   id: string;
@@ -727,10 +812,37 @@ export interface ProgramMatch {
   programId: string;
   program: { name: string; short: string; level: string };
   explanation: PublicMatchExplanation;
+  /**
+   * build-spec.md 2.6 (audit F12): status shown in the COLLAPSED row, not
+   * only inside the expanded detail — a lapsed program must never surface
+   * looking identical to an open one before the card is opened.
+   */
+  status: {
+    intakeStatus: IntakeStatus;
+    /** Short label for the collapsed row, e.g. "Lapsed", "Closed", "Open". */
+    label: string;
+  };
 }
 
 export interface SurveyResult {
+  /** Answer-derived matches (never includes the always-present universal entry). */
   matches: ProgramMatch[];
+  /**
+   * build-spec.md 2.6: universal navigation (Small Business Source) shown
+   * separately from answer-derived matches — it is not a consequence of
+   * anything the user answered, and mixing it into `matches` implied it was.
+   */
+  universal: ProgramMatch[];
+  /** Answer keys (e.g. "industry", "activities:hiring") that changed the result. */
+  usedAnswers: string[];
+  /**
+   * Answer keys given but with no catalog rule behind them — build-spec.md
+   * 2.6's honesty requirement: "No catalog rule currently uses this answer
+   * to order programs." Empty today (the inert options were removed), but
+   * the mechanism stays general so a future added option without a rule is
+   * caught and disclosed rather than silently doing nothing.
+   */
+  unusedAnswers: string[];
 }
 
 /* ── Executive Summary (for reports) ── */

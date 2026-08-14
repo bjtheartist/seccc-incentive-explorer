@@ -25,6 +25,8 @@
  * one stage before extending. The type widens when other stages ship.
  */
 
+import { buildZoningOfficialLinks } from "./authority-routing";
+
 export type HandoffStage = "zoning";
 
 export interface StageHandoffLink {
@@ -142,14 +144,17 @@ export function buildZoningHandoff(input: ZoningHandoffInput): StageHandoff {
     });
   }
 
-  const links = (input.officialLinks ?? []).filter((l) => l.label.trim() && l.url.trim());
-  if (links.length > 0) {
-    sections.push({
-      kind: "list",
-      heading: "Official sources:",
-      lines: links.map((l) => `- ${l.label.trim()}: ${l.url.trim()}`),
-    });
-  }
+  // F10 (audit; build-spec.md 2.4): the ZBA link is injected here — the
+  // caller's officialLinks cannot omit it, which is exactly how the
+  // original defect happened (ZoningReviewQuestions.tsx's supplied links
+  // never included ZBA).
+  const callerLinks = (input.officialLinks ?? []).filter((l) => l.label.trim() && l.url.trim());
+  const links = buildZoningOfficialLinks(callerLinks);
+  sections.push({
+    kind: "list",
+    heading: "Official sources:",
+    lines: links.map((l) => `- ${l.label.trim()}: ${l.url.trim()}`),
+  });
 
   if (input.reportUrl?.trim()) {
     sections.push({

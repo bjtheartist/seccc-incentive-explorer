@@ -27,7 +27,6 @@ import {
   type ReportSection,
   type ReportItem,
 } from "@/lib/report-engine";
-import type { Program } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
 import { StartHereCard } from "@/components/report/StartHereCard";
@@ -155,7 +154,6 @@ export function ReportDisplay({
   compareGeocoding,
   onCompareGeocode,
   compareGeoResult,
-  programs = [],
   analyticsSource = "workspace",
 }: {
   report: GeneratedReport;
@@ -178,7 +176,11 @@ export function ReportDisplay({
   compareGeocoding?: boolean;
   onCompareGeocode?: () => void;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
-  programs?: Program[];
+  // review7 S20 (MEDIUM): `programs?: Program[]` removed — see
+  // ReportNavigationLinks.tsx's own comment on why it was already dead
+  // (no real caller ever populated it; `programReportItem()` already
+  // sets every field the `programById` lookup below used to fall back
+  // to, confirmed during review6 S11).
   /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
   analyticsSource?: string;
 }) {
@@ -198,10 +200,6 @@ export function ReportDisplay({
     useState<string | null>(null);
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
-  );
-  const programById = useMemo(
-    () => new Map(programs.map((program) => [program.id, program])),
-    [programs],
   );
   const supportSection = useMemo(
     () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
@@ -1314,19 +1312,21 @@ export function ReportDisplay({
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5">
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
-                          const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
                           const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
                           const isDeadlineItem = sectionMatchesIdOrTitle(section, SECTION_IDS.upcomingDeadlines, "Upcoming Deadlines Near This Address");
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
                           const hasSideValue = Boolean(item.value && !hasGroupedDetail);
+                          // review7 S20 (MEDIUM): the itemProgram/programById
+                          // fallback removed — see ReportNavigationLinks.tsx's
+                          // own comment; programReportItem() already sets
+                          // these fields directly on every program-linked
+                          // ReportItem, so the fallback was already dead
+                          // (confirmed during review6 S11's investigation).
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
-                            itemProgram?.sourceUrl ||
                             reportItem.applicationPortals?.length ||
-                            itemProgram?.applicationPortals?.length ||
-                            reportItem.verificationSteps?.length ||
-                            itemProgram?.verificationSteps?.length,
+                            reportItem.verificationSteps?.length,
                           );
 
                           return (
@@ -1401,7 +1401,7 @@ export function ReportDisplay({
                             )}
 
                             {/* Public program evidence and official navigation */}
-                            {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (
+                            {!isSupportNetworkItem && (item.matchExplanation || item.eligibilityRules || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -1409,16 +1409,14 @@ export function ReportDisplay({
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
                                     <MatchExplanationDetails explanation={item.matchExplanation} />
-                                    {item.whoQualifies && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
-                                          Published Applicant Requirements
-                                        </span>
-                                        <span className="text-[#0C1B33]/45 text-[11px] leading-relaxed block">
-                                          {item.whoQualifies}
-                                        </span>
-                                      </div>
-                                    )}
+                                    {/* review6 S11 investigation: the raw `item.whoQualifies`
+                                        block that used to render here (labeled "Published
+                                        Applicant Requirements") was removed — it displayed
+                                        unfiltered internal catalog prose verbatim, the exact
+                                        field PublicProgramView deliberately excludes and for
+                                        the same reason. `item.eligibilityRules` below covers
+                                        the same underlying fact through the reviewed,
+                                        structured form. */}
                                     {item.eligibilityRules && item.eligibilityRules.length > 0 && (
                                       <div>
                                         <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
@@ -1446,7 +1444,7 @@ export function ReportDisplay({
                                         More information
                                       </a>
                                     )}
-                                    <ReportNavigationLinks item={reportItem} program={itemProgram} />
+                                    <ReportNavigationLinks item={reportItem} />
                                     {item.lastVerifiedAt && (
                                       <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
                                     )}
@@ -1568,7 +1566,7 @@ export function ReportDisplay({
                 </div>
                 <hr className="border-[#0C1B33]/8 mb-5" />
                 <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-5 max-w-prose">
-                  This report draws on the following data sources to verify eligibility and provide location context.
+                  This report cites the sources used to show mapped screening signals and location context.
                 </p>
                 <ul className="space-y-3">
                   {report.dataSources.map((src) => (

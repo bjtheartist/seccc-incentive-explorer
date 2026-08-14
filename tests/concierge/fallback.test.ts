@@ -1,7 +1,25 @@
-import { describe, expect, it } from "vitest";
-import { buildDeterministicConciergeResponse } from "@/lib/concierge/fallback";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// review5 S3: mock at the resolveZoneEvidenceV2 boundary (Hard Rule — no
+// live DB, no dependence on real static GeoJSON files matching a real
+// point) so the zone-check branch of buildDeterministicConciergeResponse
+// (lib/concierge/fallback.ts ~line 222-250) can be exercised
+// deterministically for both a genuinely-empty and a mixed known-
+// positive/unknown-layer response.
+const { resolveZoneEvidenceV2Mock } = vi.hoisted(() => ({
+  resolveZoneEvidenceV2Mock: vi.fn(),
+}));
+vi.mock("@/lib/zones-check", () => ({
+  resolveZoneEvidenceV2: resolveZoneEvidenceV2Mock,
+}));
+
+const { buildDeterministicConciergeResponse } = await import("@/lib/concierge/fallback");
 
 const pageContext = { route: "/report" };
+
+beforeEach(() => {
+  resolveZoneEvidenceV2Mock.mockReset();
+});
 
 describe("deterministic concierge", () => {
   it("returns sourced program guidance for a common business goal", async () => {
@@ -231,5 +249,59 @@ describe("deterministic concierge", () => {
     expect(response).toContain("official instructions");
     expect(response).not.toMatch(/\bcontrols?\b|\bgatekeepers?\b/i);
     expect(response).not.toContain("https://");
+  });
+});
+
+describe("deterministic concierge — zone-check branch (review5 S3)", () => {
+  const locatedContext = { route: "/report", lat: 41.75, lon: -87.6 };
+
+  it("discloses unchecked layers when nothing matched (pre-existing correct behavior)", async () => {
+    resolveZoneEvidenceV2Mock.mockResolvedValue({
+      tif: { state: "unknown", reason: "source_unavailable" },
+      ssa: { state: "not_matched" },
+    });
+
+    const response = await buildDeterministicConciergeResponse({
+      userText: "What zones does this address cover?",
+      pageContext: locatedContext,
+      signedIn: false,
+    });
+
+    expect(response).toMatch(/could not be checked/i);
+    expect(response).not.toMatch(/did not return a mapped/i);
+  });
+
+  it("review5 S3: known-positive overlays AND the unavailable-layer notice both render together — a nonzero match count must not silence the disclosure", async () => {
+    resolveZoneEvidenceV2Mock.mockResolvedValue({
+      tif: { state: "matched", name: "Some TIF District" },
+      ssa: { state: "unknown", reason: "source_unavailable" },
+    });
+
+    const response = await buildDeterministicConciergeResponse({
+      userText: "What zones does this address cover?",
+      pageContext: locatedContext,
+      signedIn: false,
+    });
+
+    // The known positive is preserved...
+    expect(response).toContain("Some TIF District");
+    // ...and the unknown layer is disclosed too, not silently dropped.
+    expect(response).toMatch(/could not be checked/i);
+  });
+
+  it("does not mention unchecked layers when every layer actually resolved", async () => {
+    resolveZoneEvidenceV2Mock.mockResolvedValue({
+      tif: { state: "matched", name: "Some TIF District" },
+      ssa: { state: "not_matched" },
+    });
+
+    const response = await buildDeterministicConciergeResponse({
+      userText: "What zones does this address cover?",
+      pageContext: locatedContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("Some TIF District");
+    expect(response).not.toMatch(/could not be checked/i);
   });
 });

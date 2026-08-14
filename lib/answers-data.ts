@@ -48,7 +48,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     bullets: [
       "One address returns every overlapping incentive zone in one view.",
       "Covers city (TIF, SBIF, NOF, SSA), county (Cook 7a/7b), state (Enterprise Zone), and federal (Opportunity Zone, NMTC) layers.",
-      "Results are a starting point — verify exact eligibility with the administering agency before you spend money.",
+      "Results are a starting point — confirm current requirements with the administering agency before you spend money.",
       "No login or fee required.",
     ],
     relatedProgramSlugs: [],
@@ -64,7 +64,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "Is my business in a TIF district?",
     title: "Is My Business in a Chicago TIF District?",
     description:
-      "Check whether your Chicago address falls inside a Tax Increment Financing (TIF) district and what that may unlock — in a free location snapshot.",
+      "Check whether your Chicago address falls inside a Tax Increment Financing (TIF) district — a free location snapshot showing the boundary match and which programs reference it.",
     answer:
       "Enter your address into the Chicago Incentive Explorer to see whether it falls inside one of Chicago's TIF districts. TIF can support eligible building improvements and development; smaller storefront work often routes through the SBIF program.",
     bullets: [
@@ -133,7 +133,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
       "The Neighborhood Opportunity Fund covers commercial and industrial projects on Chicago's South, Southwest, and West Sides. Enter your address into the Chicago Incentive Explorer to see if it falls in an eligible NOF area before you apply.",
     bullets: [
       "NOF reimburses up to $250,000, covering 75% of eligible project costs.",
-      "Eligibility is geographic — only properties in qualifying community areas can apply.",
+      "Compare the geocoded point for this address with the boundary used in this screening. A match is a location signal; review the current program source for the boundary's role and remaining criteria.",
       "Funded by downtown development fees and administered by the Department of Planning and Development.",
       "Applications run through DPD's Submittable portal (English and Spanish).",
     ],
@@ -283,10 +283,10 @@ export const ANSWER_PAGES: AnswerPage[] = [
     description:
       "Chicago hiring support can include state EDGE credits, the Cook County Catalyst Grant, and the federal WOTC. Compare the published requirements for your hiring plan.",
     answer:
-      "Hiring support is usually a tax credit, not a grant. Illinois EDGE credits reward job creation against state withholding, the federal Work Opportunity Tax Credit rewards hiring from target groups, and Cook County's Catalyst Grant can fund new-hire salaries.",
+      "Hiring support is usually a tax credit, not a grant. Illinois EDGE credits reward job creation against state withholding, the federal Work Opportunity Tax Credit rewards hiring from target groups, and a prior Cook County Catalyst Grant round allowed salary and recruitment costs — no current round is open or anticipated in 2026–27.",
     bullets: [
       "EDGE provides 50% of state withholding for new jobs (25% for retained), up to 10 years.",
-      "The Catalyst Grant (up to $100,000) can cover salaries and recruitment for growing Cook County firms.",
+      "A prior Catalyst Grant round allowed up to $100,000 for salary and recruitment costs; no current round is open or anticipated in 2026–27.",
       "WOTC offered up to $9,600 per qualifying hire — but its authority lapsed 1/1/2026; keep filing Form 8850 to preserve retroactive eligibility.",
       "Most hiring incentives require documenting jobs created or retained.",
     ],
@@ -313,7 +313,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     bullets: [
       "Covers construction, renovation, and equipment for community-serving projects.",
       "An additional technical-assistance bonus (up to $50,000) is available with an approved TA provider.",
-      "Eligibility is geographic — your project must sit in a qualifying community area.",
+      "Compare the geocoded point for this address with the boundary used in this screening. A match is a location signal; review the current program source for the boundary's role and remaining criteria.",
       "Administered by the Department of Planning and Development with rolling, quarterly-evaluated applications.",
     ],
     relatedProgramSlugs: ["neighborhood-opportunity-fund"],
@@ -403,7 +403,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "What is the New Markets Tax Credit?",
     title: "What Is the New Markets Tax Credit (NMTC)?",
     description:
-      "The New Markets Tax Credit funds large projects in low-income census tracts through certified CDEs. Learn how it works and check your address eligibility.",
+      "The New Markets Tax Credit funds large projects in low-income census tracts through certified CDEs. Learn how it works and check whether your address sits in an eligible tract.",
     answer:
       "The New Markets Tax Credit (NMTC) attracts private investment into low-income communities by giving investors a 39% federal tax credit over seven years on equity invested through a certified Community Development Entity (CDE). It typically backs larger projects of $5M or more.",
     bullets: [
@@ -449,7 +449,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     description:
       "SBA HUBZone certification gives small businesses an edge on federal contracts. Check whether your Chicago address sits in a HUBZone in a free snapshot.",
     answer:
-      "A HUBZone is an SBA-designated Historically Underutilized Business Zone where certified small businesses get set-aside federal contracts and a 10% price preference. Many South and West Side Chicago corridors qualify — check your address to confirm.",
+      "A HUBZone is an SBA-designated Historically Underutilized Business Zone where certified small businesses get set-aside federal contracts and a 10% price preference. Many South and West Side Chicago corridors sit inside a mapped HUBZone boundary — that is a location signal only; SBA size status, employee residency, and certification are separate requirements to confirm directly with the SBA.",
     bullets: [
       "Your principal office must be in a HUBZone and 35% of employees must live in one.",
       "Certified firms can compete for HUBZone set-aside federal contracts.",
@@ -552,13 +552,21 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "How do incentives stack in Chicago?",
     title: "How Do Incentives Stack in Chicago?",
     description:
-      "A single Chicago address can sit in overlapping zones — TIF, Opportunity Zone, Enterprise Zone — letting programs combine. Learn how stacking works.",
+      "A single Chicago address can sit inside overlapping mapped boundaries — TIF, Opportunity Zone, Enterprise Zone. Overlap narrows a comparison list; it does not by itself show that benefits can be combined.",
+    // F11 binding replacement copy (build-spec.md 2.4; do not weaken, do not strengthen).
     answer:
-      "Incentives stack because zones overlap: one Chicago address can sit in a TIF district, an Opportunity Zone, and an Enterprise Zone at once. Programs at different government levels — city, county, state, federal — can often be combined on the same project.",
+      "Overlap shortens the comparison list; it does not show that benefits can be combined. Compare eligible-cost, timing, tax-basis, funding-source, and approval rules for the specific project.",
     bullets: [
-      "Zones are the eligibility gate; programs are the actual benefits you apply for.",
-      "Example: SBIF (city/TIF) can pair with Class 7a property tax relief (county) and an Enterprise Zone material exemption (state).",
-      "Federal credits like NMTC, historic, and Opportunity Zone are designed to combine with each other.",
+      "A mapped boundary is a location signal for the programs that reference it; each program's own eligibility, timing, and approval rules still apply separately.",
+      "Example worth comparing: SBIF (city/TIF), Class 7a property tax relief (county), and an Enterprise Zone material exemption (state) — but confirm eligible-cost and approval rules for each before assuming they combine.",
+      // review5 S6 (F11): was "...some are designed to work together, others
+      // are not" — an unauthorized paraphrase of the exact banned "designed
+      // to combine with each other" claim the F11 minimal fix removed
+      // elsewhere on this same page, undermining that fix by sitting right
+      // next to it. Rewritten to state only what is verifiably true (each
+      // credit has its own separate rules) without asserting knowledge of
+      // which combinations were "designed" to work.
+      "Federal credits like NMTC, historic, and Opportunity Zone each have their own separate combination rules — do not assume any two apply together; confirm with the administering agency for the specific project.",
       "Stacking rules and caps vary — confirm with each administering agency before assuming two programs combine.",
     ],
     relatedProgramSlugs: [

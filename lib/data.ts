@@ -3,7 +3,6 @@ import type {
   Program,
   Stats,
   CensusData,
-  ZoneCheckResult,
   CommunityAsset,
   StackingRule,
 } from "./types";
@@ -54,16 +53,15 @@ export async function getBusinesses(search?: string): Promise<Business[]> {
 /* ── Programs ───────────────────────────────── */
 
 export async function getPrograms(): Promise<Program[]> {
+  // build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted.
+  // /api/programs already falls back to data/programs-internal.json
+  // server-side if the DB is unreachable, so no second client-side fallback
+  // to a static public file is needed.
   try {
     const data = await fetchJSON<Program[]>(`${API_BASE}/api/programs`);
     return safeParseArray(ProgramSchema, data, "programs") as Program[];
   } catch {
-    try {
-      const data = await fetchJSON<Program[]>("/data/programs.json");
-      return safeParseArray(ProgramSchema, data, "programs-static") as Program[];
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 
@@ -117,19 +115,21 @@ export async function getStats(): Promise<Stats> {
 }
 
 /* ── Zone Check ─────────────────────────────── */
-
-export async function checkZonesAPI(
-  lat: number,
-  lon: number
-): Promise<ZoneCheckResult[]> {
-  try {
-    return await fetchJSON<ZoneCheckResult[]>(
-      `${API_BASE}/api/zones/check?lat=${lat}&lon=${lon}`
-    );
-  } catch {
-    return [];
-  }
-}
+// review7 S21 (MEDIUM): `checkZonesAPI` removed outright, not migrated.
+// It called the v1 `/api/zones/check` endpoint (v1 silently defaults an
+// unresolved layer to a confirmed non-match — the exact S1-S3 anti-
+// pattern this whole engagement exists to remove) via a template
+// literal with the endpoint text in a SPAN, not the head
+// (`${API_BASE}/api/zones/check?...`) — the exact shape
+// `lib/public-claim-surfaces-verify.ts`'s v1-endpoint scanner missed
+// until this finding (it only inspected a template's head). A
+// repo-wide grep confirmed `checkZonesAPI` had ZERO callers anywhere in
+// the codebase — genuinely dead code, so migrating it to v2 would have
+// preserved a v1-shaped dead function nobody calls; removing it
+// entirely closes the anti-pattern instead of relocating it. Also
+// removed the now-fully-unused `ZoneCheckResult` type import above and
+// its declaration in lib/types.ts (confirmed via repo-wide grep: this
+// function was its only consumer).
 
 /* ── Census Data ────────────────────────────── */
 

@@ -1,13 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { SHORTLIST_CSV_HEADERS, shortlistCsv, shortlistCsvFilename } from "../shortlist-csv";
+import { SHORTLIST_CSV_HEADERS, overlaysCell, shortlistCsv, shortlistCsvFilename } from "../shortlist-csv";
 import type { CandidateOverlays, DecoratedShortlistCandidate } from "../shortlist-engine";
+
+describe("overlaysCell — review5 S2", () => {
+  it("never prints 'None mapped' when every layer is unknown — prints 'Not checked' instead", () => {
+    const cell = overlaysCell({
+      ssa: { present: false, name: null, unknown: true },
+      ccsa: { present: false, name: null, unknown: true },
+      tif: { present: false, name: null, unknown: true },
+      nof: { present: false, name: null, unknown: true },
+    });
+    expect(cell).toBe("Not checked");
+    expect(cell).not.toMatch(/none mapped/i);
+  });
+
+  it("preserves a known positive AND discloses a different unknown layer in the same cell", () => {
+    const cell = overlaysCell({
+      ssa: { present: true, name: "Greater Chatham", unknown: false },
+      ccsa: { present: false, name: null, unknown: false },
+      tif: { present: false, name: null, unknown: true },
+      nof: { present: false, name: null, unknown: false },
+    });
+    expect(cell).toContain("SSA: Greater Chatham");
+    expect(cell).toContain("TIF not checked");
+  });
+
+  it("prints 'None mapped' only when every layer genuinely resolved and none matched", () => {
+    const cell = overlaysCell({
+      ssa: { present: false, name: null, unknown: false },
+      ccsa: { present: false, name: null, unknown: false },
+      tif: { present: false, name: null, unknown: false },
+      nof: { present: false, name: null, unknown: false },
+    });
+    expect(cell).toBe("None mapped");
+  });
+});
 
 function noOverlays(): CandidateOverlays {
   return {
-    ssa: { present: false, name: null },
-    ccsa: { present: false, name: null },
-    tif: { present: false, name: null },
-    nof: { present: false, name: null },
+    ssa: { present: false, name: null, unknown: false },
+    ccsa: { present: false, name: null, unknown: false },
+    tif: { present: false, name: null, unknown: false },
+    nof: { present: false, name: null, unknown: false },
   };
 }
 
@@ -31,7 +65,7 @@ function candidate(overrides: Partial<DecoratedShortlistCandidate> = {}): Decora
     violation: false,
     conflictingPropertyTypes: false,
     screenedPropertyType: "vacant_building",
-    overlays: { ...noOverlays(), ssa: { present: true, name: "Greater Chatham" }, tif: { present: true, name: null } },
+    overlays: { ...noOverlays(), ssa: { present: true, name: "Greater Chatham", unknown: false }, tif: { present: true, name: null, unknown: false } },
     transitScore: { networks: ["cta-rail"], stationName: "79th", stationSystem: "CTA", meters: 300, walkMinutes: 4, points: 25 },
     nearestRailDisplay: null,
     expresswayDisplay: { name: "Dan Ryan Expy (I-90/94)", miles: 0.4 },
@@ -59,8 +93,8 @@ describe("shortlistCsv", () => {
       candidate({
         overlays: {
           ...noOverlays(),
-          ssa: { present: true, name: "Greater Chatham" },
-          tif: { present: true, name: null },
+          ssa: { present: true, name: "Greater Chatham", unknown: false },
+          tif: { present: true, name: null, unknown: false },
         },
       }),
     ]);

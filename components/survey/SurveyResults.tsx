@@ -14,6 +14,26 @@ interface SurveyResultsProps {
   onRetake: () => void;
 }
 
+/**
+ * build-spec.md 2.6 (audit F12): "No catalog rule currently uses this
+ * answer to order programs." — shown for any given answer with no matching
+ * rule, so the survey stops implying every answer mattered. The mechanism
+ * stays general even though it renders nothing today (the inert options
+ * were removed in this same change) — a future added option without a
+ * rule is disclosed, not silently inert again.
+ */
+function UnusedAnswersDisclosure({ unusedAnswers }: { unusedAnswers: string[] }) {
+  if (unusedAnswers.length === 0) return null;
+  return (
+    <div
+      data-testid="survey-unused-answers-disclosure"
+      className="border border-amber-200 bg-amber-50 p-4 mb-8 text-[13px] text-amber-900/85 leading-relaxed"
+    >
+      No catalog rule currently uses this answer to order programs: {unusedAnswers.join(", ")}.
+    </div>
+  );
+}
+
 export function SurveyResults({ results, onRetake }: SurveyResultsProps) {
   return (
     <motion.div
@@ -34,11 +54,26 @@ export function SurveyResults({ results, onRetake }: SurveyResultsProps) {
         </p>
       </div>
 
-      <div className="space-y-2 mb-12" data-testid="survey-program-review-list">
+      <UnusedAnswersDisclosure unusedAnswers={results.unusedAnswers} />
+
+      <div className="space-y-2 mb-8" data-testid="survey-program-review-list">
         {results.matches.map((match) => (
           <ProgramCard key={match.programId} match={match} />
         ))}
       </div>
+
+      {results.universal.length > 0 && (
+        <div className="mb-12" data-testid="survey-universal-navigation">
+          <h3 className="font-mono-bureau text-[10px] text-[#0C1B33]/40 uppercase tracking-[0.14em] mb-2">
+            Always worth a call — not based on your answers
+          </h3>
+          <div className="space-y-2">
+            {results.universal.map((match) => (
+              <ProgramCard key={match.programId} match={match} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="border border-[#0C1B33]/8 bg-[#EFF3FB] p-6 sm:p-8 mb-6">
         <div className="flex items-start gap-4">
@@ -138,8 +173,19 @@ function ProgramCard({ match }: { match: ProgramMatch }) {
           <p className="font-mono-bureau text-[12px] text-[#0C1B33] uppercase tracking-[0.05em]">
             {match.program.name}
           </p>
-          <p className="font-mono-bureau text-[9px] text-[#0C1B33]/35 uppercase tracking-[0.12em] mt-1">
-            {match.program.level}
+          <p className="font-mono-bureau text-[9px] text-[#0C1B33]/35 uppercase tracking-[0.12em] mt-1 flex items-center gap-2">
+            <span>{match.program.level}</span>
+            {/* build-spec.md 2.6: status in the COLLAPSED row, not only inside — a lapsed program must not look identical to an open one before the card is opened. */}
+            <span
+              data-testid="survey-status-badge"
+              className={
+                match.status.intakeStatus === "open" || match.status.intakeStatus === "rolling"
+                  ? "text-emerald-600/70"
+                  : "text-amber-600/80"
+              }
+            >
+              · {match.status.label}
+            </span>
           </p>
         </div>
         <span className="inline-flex items-center gap-2 font-mono-bureau text-[9px] text-[#0C1B33]/40 uppercase tracking-[0.1em] flex-shrink-0">

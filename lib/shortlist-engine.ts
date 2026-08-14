@@ -147,6 +147,13 @@ export interface ShortlistEngineInputs {
 export interface OverlayMembership {
   present: boolean;
   name: string | null;
+  /** review5 S2: true when this layer could not be resolved (no
+   *  coordinates, missing/unreadable source, malformed geometry) —
+   *  distinct from a confirmed `present: false`. See
+   *  lib/shortlist-overlays.ts and lib/shortlist-universe-schema.ts's
+   *  OverlayMembershipSchema doc comment for the full rationale and the
+   *  known limitation on already-committed export files. */
+  unknown: boolean;
 }
 
 export interface CandidateOverlays {
@@ -638,7 +645,15 @@ export interface RankedShortlistCandidate {
   badge: ZoningBadge;
   badgeNote: string;
   ownerLabel: string;
-  incentiveCount: number;
+  /** review6 S12 (CRITICAL): stays `number | null`, never coerced. `null`
+   *  means the universe row itself never resolved a count (12,216 of
+   *  31,296 committed rows) — collapsing that into `0` at this boundary is
+   *  exactly how "0 incentive geographies mapped" ends up rendered for a
+   *  site nobody ever actually checked. The renderer
+   *  (components/vacancy/SiteShortlistResults.tsx) is responsible for
+   *  treating BOTH `null` and `0` as unaudited — see its own comment for
+   *  why a literal `0` is not yet trusted either. */
+  incentiveCount: number | null;
   saleYear: number | null;
   violation: boolean;
   /** True when this site carries BOTH land and building evidence (Finding
@@ -860,7 +875,9 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       badge,
       badgeNote: zoningBadgeNote(badge, row.zoning.district),
       ownerLabel: ownerAxesLabel(row.ownerStructure ?? "unresolved", row.ownerGeography ?? "unknown"),
-      incentiveCount: row.incentiveCount ?? 0,
+      // review6 S12: no `?? 0` — a null count must stay null all the way to
+      // the renderer, not be silently promoted to a trusted zero.
+      incentiveCount: row.incentiveCount,
       saleYear: row.saleYear,
       violation: row.violation,
       conflictingPropertyTypes: row.conflictingPropertyTypes,

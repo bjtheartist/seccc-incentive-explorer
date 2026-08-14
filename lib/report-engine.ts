@@ -85,6 +85,7 @@ import {
   SUPPORT_ORGANIZATIONS_SECTION_TITLE,
 } from "./support-organization-copy";
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
+import { authorityReferenceLine } from "./authority-routing";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -173,7 +174,22 @@ export interface ReportItem {
   programId?: string;
   partnerId?: string;
   color?: string;
-  whoQualifies?: string;
+  /**
+   * review6 S11 investigation: this field used to carry raw
+   * `program.whoQualifies` catalog prose — the exact internal-only field
+   * `lib/program-public.ts`'s `PublicProgramView` deliberately excludes,
+   * and for the identical reason (it can assert/imply a determination
+   * this tool has no authority to make). `programReportItem()` and the
+   * TIF-deadline item builder both used to populate it, and
+   * app/report/page.tsx / components/report/ReportDisplay.tsx both
+   * rendered it verbatim under "Published Applicant Requirements" — a
+   * real, live leak, independent of the /api/programs/engine-source
+   * route S11 is about. `eligibilityRules` below (rendered as the safe,
+   * structured "Requirements" list right next to where this used to
+   * render) already carries the same underlying fact, safely. Removed
+   * rather than fixed-in-place: no legitimate caller should ever
+   * repopulate this with raw prose again.
+   */
   eligibilityRules?: { description: string; required: boolean }[];
   url?: string;
   level?: string;
@@ -600,7 +616,11 @@ function joinLabels(labels: readonly string[]): string {
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
-function normalizePublicDeterminationText(value: string): string {
+// Exported (build-spec.md 2.5) so the concierge output validator
+// (lib/concierge/output-validator.ts) can run the SAME determination-
+// phrase normalizer over model-generated text before it is ever shown to
+// a visitor — one vocabulary, not a second copy tuned separately for chat.
+export function normalizePublicDeterminationText(value: string): string {
   return value
     .replace(/eligible incentive programs/gi, CONFIRMED_PROGRAMS_SECTION_TITLE)
     .replace(/other programs tied to this address/gi, OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE)
@@ -1052,6 +1072,15 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
           void _notVerified;
           void _matchedRules;
           void _projectFit;
+          // review6 S11 investigation: `whoQualifies` was removed from
+          // ReportItem's type (it carried raw internal catalog prose,
+          // rendered verbatim — see the type's own doc comment), but a
+          // report SAVED before this fix can still carry the key in its
+          // persisted JSON blob. Strip it defensively here too, the same
+          // way the other now-legacy fields above are stripped, so an
+          // old saved report never re-surfaces it.
+          const legacyItem = publicItem as ReportItem & { whoQualifies?: string };
+          if ("whoQualifies" in legacyItem) delete legacyItem.whoQualifies;
           const supportSummaryItem =
             item.label === "Community Support" || item.label.startsWith("Local Support in ");
           const normalizedItem: ReportItem = {
@@ -1425,7 +1454,6 @@ function programReportItem(
     availability: availability.state,
     availabilityNote,
     programId: program.id,
-    whoQualifies: program.whoQualifies,
     eligibilityRules: program.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
       description: r.description,
       required: r.required,
@@ -1671,13 +1699,38 @@ function computeVerdict(
   else if (zoneCount >= 2 && programCount >= 3) signal = "moderate";
   else signal = "limited";
 
-  const headline = zoneCount > 0
-    ? "Mapped incentive zones were found at this address"
-    : "No mapped zone-based programs were found at this address";
+  // build-spec.md 2.3 / audit F2: a genuinely empty zoneCount is only an
+  // honest "no mapped zones" claim when every relevant layer was actually
+  // checked. When layers are unknown (source unavailable, malformed
+  // geometry, etc.), the correct claim is that the check was incomplete —
+  // never that the address was confirmed clear.
+  //
+  // review5 S3: this must hold even when zoneCount > 0. Before this fix,
+  // ANY known positive zone silenced the unknown-layer disclosure
+  // entirely — an address with 3 confirmed zones and 2 layers that failed
+  // to resolve rendered a headline/subheadline that never mentioned the 2
+  // unknown layers at all. Known positives and the unavailable-layer
+  // notice must both render, regardless of match count.
+  const hasUnknownZones = (ctx.unknownZones?.length ?? 0) > 0;
+  const unknownZoneCaveat = hasUnknownZones
+    ? `${ctx.unknownZones!.length} additional zone layer${ctx.unknownZones!.length !== 1 ? "s" : ""} could not be checked right now (checked ${ctx.zoneCheckedAt ?? new Date().toISOString().slice(0, 10)})`
+    : "";
+  const headline =
+    zoneCount > 0
+      ? hasUnknownZones
+        ? `Mapped incentive zones were found at this address — ${unknownZoneCaveat}`
+        : "Mapped incentive zones were found at this address"
+      : hasUnknownZones
+        ? `${ctx.unknownZones!.length} zone layer${ctx.unknownZones!.length !== 1 ? "s" : ""} could not be checked right now (checked ${ctx.zoneCheckedAt ?? new Date().toISOString().slice(0, 10)})`
+        : "No mapped zone-based programs were found at this address";
 
   const subheadline = programCount > 0
-    ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
-    : "Broader programs may still be worth exploring with a local business-support organization.";
+    ? hasUnknownZones
+      ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm. Some additional incentive-zone layers could not be checked and may not be reflected here."
+      : "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
+    : zoneCount === 0 && hasUnknownZones
+      ? "Some incentive-zone layers could not be checked; this is not confirmation the address is outside them. Try again shortly or confirm directly with the administering agency."
+      : "Broader programs may still be worth exploring with a local business-support organization.";
 
   const topReasons: string[] = [];
   topReasons.push(`${zoneCount} mapped incentive zone${zoneCount !== 1 ? "s" : ""} intersect this location`);
@@ -2641,7 +2694,6 @@ function buildDeadlinesSection(
       programId: item.programId,
       url: program?.url,
       level: program?.level,
-      whoQualifies: program?.whoQualifies,
       eligibilityRules: program?.eligibilityRules?.map((r) => ({
         description: r.description,
         required: r.required,
@@ -3160,7 +3212,10 @@ function buildZoningReportItem(
       ? `Published ordinance date: ${cityZoning.ordinanceDate.slice(0, 10)}.`
       : null,
     "This report does not determine whether a proposed use is permitted.",
-    "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the City.",
+    // review5 S5: routed through authorityReferenceLine("zoning") — was
+    // "...and with the City", the exact generic-City-without-ZBA shape
+    // for a zoning-classification/use-permission sentence.
+    `Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the ${authorityReferenceLine("zoning")}.`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -3360,7 +3415,14 @@ function generateBestLocation(
     sections.push({
       id: SECTION_IDS.zoningRegulatoryReview,
       title: "Zoning & Regulatory Review",
-      description: "Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the City before relying on them.",
+      // review5 S5: the final sentence names the ZONING authority
+      // (authorityReferenceLine("zoning") = "Chicago Zoning Board of
+      // Appeals (ZBA)") explicitly for the use-verification instruction —
+      // an earlier ZBA mention in this same description does not excuse
+      // THIS sentence's own generic-City phrasing, per the sentence-by-
+      // sentence doctrine build-spec.md F10/S4 established for the
+      // concierge validator and now applied here too.
+      description: `Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the ${authorityReferenceLine("zoning")} before relying on them.`,
       items: zoningItems,
     });
   }
@@ -3524,13 +3586,16 @@ function generateBestLocation(
       "tax-incentive-value": (p, z) => ({
         label: "Tax Incentive Value",
         value: z.length >= 3 ? "High" : z.length >= 1 ? "Moderate" : "Limited",
-        detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification may unlock additional property tax incentives." : ""}`,
+        detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification is worth reviewing against additional property tax incentive programs." : ""}`,
         
       }),
       "zoning-compatibility": (_p, _z) => ({
         label: "Zoning Compatibility",
         value: "Check city zoning",
-        detail: "Verify that the current city zoning classification supports your intended use. See Zoning & Regulatory Review section.",
+        // review5 S5: a zoning-classification/use-permission sentence —
+        // routed through authorityReferenceLine("zoning") rather than a
+        // generic "verify with the city" instruction.
+        detail: `Verify that the current city zoning classification supports your intended use with the ${authorityReferenceLine("zoning")}. See Zoning & Regulatory Review section.`,
       }),
       "property-condition": (p) => ({
         label: "Property Condition",
@@ -3640,7 +3705,7 @@ function generateBestLocation(
   if (projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50) {
     recommendedActions.push({
       label: "Check historic designation eligibility",
-      description: "Contact the Illinois SHPO to determine if the building qualifies for the National Register and federal Historic Tax Credit.",
+      description: "Contact the Illinois SHPO to review the building against the National Register and federal Historic Tax Credit criteria.",
       priority: "high",
     });
   }
@@ -3852,9 +3917,22 @@ function generateDeveloperAnalysis(
       if (!docProgramMap[doc]) docProgramMap[doc] = new Set();
       docProgramMap[doc].add(p.name);
     }
+    // review6 S11 investigation: was `value: p.whoQualifies` — the raw
+    // internal-only catalog field, rendered as this item's PRIMARY,
+    // most-prominent text (not even behind an accordion). Section 1
+    // above (`stackingItems`) already uses the safe pattern for this
+    // exact function — a generic value plus `program.summary` in detail
+    // — so this now derives from the same reviewed, structured
+    // `eligibilityRules[]` PublicProgramView itself is built from,
+    // falling back to the already-public `summary` when a program has no
+    // structured rules on file.
+    const publishedCriteria = (p.eligibilityRules ?? [])
+      .map((rule) => rule.description.trim())
+      .filter(Boolean)
+      .join(" ");
     allQualifications.push({
       ...programReportItem(p, undefined, undefined, undefined, publicEvidenceForProgram(p, state)),
-      value: p.whoQualifies,
+      value: publishedCriteria || p.summary,
     });
   }
 
@@ -3964,7 +4042,7 @@ function generateDeveloperAnalysis(
   });
 
   recommendedActions.push({
-    label: "Verify zone eligibility for all selected programs",
+    label: "Confirm zone requirements for all selected programs",
     description:
       "Confirm that your project address is within the required zone boundaries for each selected program before beginning applications.",
     priority: "medium",
@@ -4383,7 +4461,7 @@ function generateCorridorIntelligence(
       },
       {
         id: SECTION_IDS.whatAFundedVersionUnlocks,
-        title: "What A Funded Version Unlocks",
+        title: "What A Funded Version Adds",
         description: "This hidden demo shows what is possible with one geography. A funded version would make it reliable across more places and partner workflows.",
         items: [
           {
@@ -4666,6 +4744,16 @@ export type ReportZoningData = ZoningLookupResponse | LegacyReportZoningData;
 export interface ReportContext {
   zones?: Record<string, boolean>;
   zoneNames?: Record<string, string>;
+  /**
+   * Zone Evidence v2 cutover (build-spec.md 2.3; audit F2): layer keys whose
+   * check could not be completed. A negative zone summary MUST NOT be
+   * rendered as a confirmed "no mapped zones" claim when this is non-empty
+   * — see computeVerdict's headline logic, which switches to an honest
+   * "N layers could not be checked" line instead.
+   */
+  unknownZones?: string[];
+  /** ISO date the zone evidence was actually checked (from the v2 envelope's checkedAt), used in the unknown-layers headline. */
+  zoneCheckedAt?: string;
   census?: ReportCensusData;
   cityZoning?: ReportZoningData;
   parcel?: ParcelData;
@@ -4843,7 +4931,7 @@ export function generateReportData(
         report.sections.unshift({
           id: SECTION_IDS.zoningUseStartingPoint,
           title: "Zoning & Use Starting Point",
-          description: "Start here before committing to a lease, design, or construction scope. The report shows the published district and cited City case records; it does not classify the proposed activity or determine that a use is permitted. Define the exact activity, then verify the controlling ordinance and current process with the City or a zoning professional.",
+          description: `Start here before committing to a lease, design, or construction scope. The report shows the published district and cited City case records; it does not classify the proposed activity or determine that a use is permitted. Define the exact activity, then verify the controlling ordinance and current process with the ${authorityReferenceLine("zoning")}.`,
           items: zoningContextItems,
         });
       }
@@ -5007,12 +5095,15 @@ export function generateReportData(
       ? {
           tier: "do-this-week",
           label: `Define the exact activity and verify its use category for ${cityZoning.zoneClass}`,
-          description: "List every primary and accessory activity at the site, then ask the City or a zoning professional to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+          description: `List every primary and accessory activity at the site, then ask the ${authorityReferenceLine("zoning")} to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.`,
         }
       : {
           tier: "do-this-week",
           label: "Retry the published zoning lookup before making a site commitment",
-          description: "No zoning conclusion is available in this report. Consult the cited City zoning source and confirm the current district and controlling records before relying on the site analysis.",
+          // review5 S5: not-found/unavailable branch — routed through
+          // authorityReferenceLine("zoning") like the resolved branch
+          // above, not a generic "the City" reference.
+          description: `No zoning conclusion is available in this report. Confirm the current district and controlling records directly with the ${authorityReferenceLine("zoning")} before relying on the site analysis.`,
         };
     const existingRoadmap = report.actionRoadmap ?? [];
     if (!existingRoadmap.some((item) => item.label === zoningAction.label)) {
@@ -5020,8 +5111,8 @@ export function generateReportData(
     }
     unresolvedZoningQuestion = {
       question: cityZoning.zoneClass
-        ? `What is the exact proposed use, and which Title 17 use category does the City place it in for ${cityZoning.zoneClass}?`
-        : "What does the current published zoning district record at this site, and has it been verified with the City?",
+        ? `What is the exact proposed use, and which Title 17 use category does the ${authorityReferenceLine("zoning")} place it in for ${cityZoning.zoneClass}?`
+        : `What does the current published zoning district record at this site, and has it been verified with the ${authorityReferenceLine("zoning")}?`,
       confirmationLabel: zoningAction.label,
       confirmationDescription: zoningAction.description,
     };

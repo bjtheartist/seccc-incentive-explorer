@@ -8,7 +8,8 @@ import {
 import type { TifBoundaryContext } from "@/lib/tif-boundary";
 import type { Program } from "@/lib/types";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
+import { bridgeZoneEvidenceV2ToBooleanMap } from "@/lib/zone-evidence-bridge";
 import { loadSbifRollout } from "@/lib/report-engine";
 
 /**
@@ -54,11 +55,31 @@ export interface AreaAssessment {
   deadlines: DeadlineItem[];
   /** True when this area contributes at least one item worth emailing about. */
   notable: boolean;
+  /**
+   * review7 S22 (HIGH, BLOCKING — not a separable UX enhancement): true
+   * when this area's zone evidence for the week was incomplete — either
+   * `checkZones` failed/returned an unparseable response entirely, one
+   * or more layers came back v2 `unknown` (bridged to `false` for the
+   * boolean map `runConfidenceEngine` requires, per
+   * `bridgeZoneEvidenceV2ToBooleanMap`'s own documented behavior), or the
+   * whole per-area assessment threw. `deadlines`/`tif` above are still
+   * whatever COULD be resolved (known positives are never discarded just
+   * because something else was incomplete) — this flag exists so the
+   * digest email can render a visible caveat instead of silently
+   * presenting a thin or empty result as a confirmed "nothing due,"
+   * which is the exact false-negative class this whole zone-evidence
+   * migration exists to close. `notable` below is TRUE whenever this is
+   * true, even with zero findings otherwise — an area where zone data
+   * could not be verified is always worth surfacing, specifically so the
+   * caveat has somewhere to render.
+   */
+  zoneDataIncomplete: boolean;
 }
 
 export interface AreaResolvers {
   findTifBoundary: (lat: number, lon: number) => Promise<TifBoundaryContext | null>;
-  /** Zone matches at the point, in /api/zones/check response shape. */
+  /** Zone evidence at the point, in /api/zones/check/v2 response shape
+   *  (review6 S16 — was v1's /api/zones/check response shape). */
   checkZones: (lat: number, lon: number) => Promise<unknown>;
   programs: Program[];
   tifFinancials: Record<string, TifFinancialsSlim> | null;
@@ -158,25 +179,55 @@ export async function assessWatchedArea(
   const point = parsePointAreaId(area.areaId);
   if (!point) return null;
 
-  // Every per-area lookup degrades to "no info for this facet" on failure —
-  // one bad area (e.g. a point that trips malformed source geometry) must
-  // never sink the user's whole digest email.
-  const [boundary, zoneResponse] = await Promise.all([
-    resolvers.findTifBoundary(point.lat, point.lon).catch(() => null),
-    resolvers.checkZones(point.lat, point.lon).catch(() => null),
-  ]);
-
   let tif: TifExpirationFinding | null = null;
   let deadlines: DeadlineItem[] = [];
+  // review7 S22 (HIGH, BLOCKING): was tracked nowhere — S16 migrated the
+  // zone lookup to v2 but discarded `unknownKeys`/`hasUnknown`
+  // immediately after bridging to the boolean map, so an area whose zone
+  // data was genuinely incomplete that week looked IDENTICAL to an area
+  // with a confirmed, fully-resolved zero findings. Sol's review ruled
+  // this the exact false-negative class the v1->v2 migration exists to
+  // close, not a separable UX nicety: a real deadline could be silently
+  // omitted while the email still reads as a complete, confirmed digest.
+  let zoneDataIncomplete = false;
   try {
+    // review8 S27 (HIGH, BLOCKING): this try block used to start AFTER
+    // `boundary`/`zoneResponse` were already resolved below — each
+    // resolver call had its own `.catch(() => null)`, but that only
+    // catches a REJECTED promise. A resolver that throws SYNCHRONOUSLY
+    // (before it ever returns a promise to attach `.catch()` to) isn't
+    // caught by that per-call `.catch()` at all — the throw propagates
+    // out of `assessWatchedArea` itself, rejecting the promise this
+    // function returns. The route's own outer `.catch(() => null)`
+    // (app/api/cron/watchlist-digest/route.ts) then converts that
+    // rejection to `null`, and the area is silently dropped from the
+    // digest with no caveat — even though this docstring's own
+    // `zoneDataIncomplete` comment already claimed "or the whole
+    // per-area assessment threw" as a covered case. It wasn't. Moving
+    // the resolver-invocation step INSIDE this try (rather than adding a
+    // second, separate try) means any failure anywhere in a valid
+    // point's assessment — a synchronous throw, a resolver's own
+    // rejected promise (the per-call `.catch(() => null)` below still
+    // absorbs those independently, so a single resolver failing doesn't
+    // discard the OTHER resolver's real result), or an internal
+    // computation error — lands in the SAME catch below and produces a
+    // valid, notable, `zoneDataIncomplete: true` result instead of ever
+    // rejecting this function's own promise.
+    const [boundary, zoneResponse] = await Promise.all([
+      resolvers.findTifBoundary(point.lat, point.lon).catch(() => null),
+      resolvers.checkZones(point.lat, point.lon).catch(() => null),
+    ]);
+
     tif = assessTifExpiration(boundary, today);
 
-    const normalized = normalizeZoneCheckResponse(zoneResponse);
-    if (normalized) {
+    const evidence = normalizeZoneEvidenceV2(zoneResponse);
+    if (evidence) {
+      const { zones, zoneNames, unknownKeys } = bridgeZoneEvidenceV2ToBooleanMap(evidence);
+      zoneDataIncomplete = unknownKeys.length > 0;
       const matched = runConfidenceEngine(
         resolvers.programs,
-        normalized.zones,
-        normalized.zoneNames
+        zones,
+        zoneNames
       ).filter((r) => r.relevance !== "not_mapped_at_location");
 
       const summary = deadlinesForAddress({
@@ -195,10 +246,17 @@ export async function assessWatchedArea(
           item.kind !== "tif_expiration" &&
           item.daysFromToday <= PROGRAM_DEADLINE_WINDOW_DAYS
       );
+    } else {
+      // checkZones failed outright, or returned a response
+      // normalizeZoneEvidenceV2 couldn't parse — MORE incomplete than a
+      // partial unknown-layers case, not less: zero zone evidence at
+      // all for this point this week.
+      zoneDataIncomplete = true;
     }
   } catch (err) {
     console.error("watchlist digest: area assessment degraded", area.areaId, err);
     deadlines = [];
+    zoneDataIncomplete = true;
   }
 
   return {
@@ -208,7 +266,15 @@ export async function assessWatchedArea(
     lon: point.lon,
     tif,
     deadlines,
-    notable: Boolean(tif) || deadlines.length > 0,
+    // review7 S22: `zoneDataIncomplete` added to the "worth including"
+    // condition — an area whose zone data couldn't be verified this week
+    // is always notable, even with zero other findings, specifically so
+    // the digest email has somewhere to render the caveat. Without this,
+    // the worst case (checkZones failed entirely) produced tif=null,
+    // deadlines=[], notable=false — silently DROPPED from the email
+    // altogether, the exact false-negative this finding is about.
+    notable: Boolean(tif) || deadlines.length > 0 || zoneDataIncomplete,
+    zoneDataIncomplete,
   };
 }
 
@@ -292,11 +358,29 @@ export function buildDigestEmailHtml(
       }
 
       const mapLink = `${SITE_URL}/map?lat=${area.lat}&lon=${area.lon}&label=${encodeURIComponent(area.areaLabel)}`;
+      // review7 S22 (HIGH, BLOCKING): a visible caveat wherever this
+      // area's zone data may be incomplete — never an unqualified
+      // "complete" digest for it. Rendered whether or not `rows` also
+      // has confirmed findings (known positives above are never hidden
+      // by this — S2/S3's "both must render" discipline, applied here):
+      // an area with real deadlines AND incomplete zone data shows both;
+      // an area with NO confirmed findings but incomplete zone data
+      // still appears (via `notable` above) with ONLY this caveat,
+      // rather than being silently dropped from the email.
+      const caveat = area.zoneDataIncomplete
+        ? `<p style="font-size:12px;color:#92400E;background:#FFFBEB;border-left:3px solid #D97706;padding:8px 10px;margin:${rows.length > 0 ? "8px" : "0"} 0 0;">
+             Some incentive-geography data could not be verified for this location this week. ${rows.length > 0 ? "The items above may be incomplete" : "This area may have deadlines not shown here"} — check the map for current status.
+           </p>`
+        : "";
+      const table = rows.length > 0
+        ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E5E7EB;">${rows.join("")}</table>`
+        : "";
       return `
         <div style="margin:0 0 28px;">
           <p style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#2563EB;margin:0 0 6px;">Watched area</p>
           <p style="font-size:15px;font-weight:600;color:#0C1B33;margin:0 0 4px;">${escapeHtml(area.areaLabel)}</p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E5E7EB;">${rows.join("")}</table>
+          ${table}
+          ${caveat}
           <p style="margin:10px 0 0;"><a href="${mapLink}" style="font-size:12px;color:#2563EB;">View on map</a></p>
         </div>`;
     })

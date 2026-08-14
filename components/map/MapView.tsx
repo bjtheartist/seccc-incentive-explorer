@@ -9,10 +9,10 @@ import type { Layer, PickingInfo } from "@deck.gl/core";
 import { Layers } from "lucide-react";
 import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
-import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
-import type { Program, ProgramCheckResult, ParcelData, DistrictData, ZoningLookupResponse } from "@/lib/types";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
+import { bridgeZoneEvidenceV2ToBooleanMap, zoneCoverageCaveat } from "@/lib/zone-evidence-bridge";
+import type { ParcelData, DistrictData, SafeMapProgramMatch } from "@/lib/types";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
@@ -33,10 +33,11 @@ import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import { trackEvent } from "@/lib/analytics-events";
-import {
-  buildLocationContext,
-  summarizeLocationContextForMap,
-} from "@/lib/location-context";
+// review6 S11: buildLocationContext()/summarizeLocationContextForMap()
+// are no longer imported here — snapshotContextSummary now reuses
+// snapshotPrograms (fetched from /api/programs/match) directly instead
+// of re-running the confidence engine client-side a second time. See
+// the comment at snapshotContextSummary's useMemo below.
 import {
   POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
@@ -227,6 +228,11 @@ export default function MapView() {
   // Preset state
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [locationZones, setLocationZones] = useState<Record<string, boolean> | null>(null);
+  // review5 S2/S3: Zone Evidence v2's per-layer "unknown" state, bridged
+  // to a caveat sentence rendered ALONGSIDE known positives — never used
+  // to suppress them, and never silently dropped when a match also
+  // exists. See lib/zone-evidence-bridge.ts's doc comment.
+  const [locationZoneCoverageNote, setLocationZoneCoverageNote] = useState<string | null>(null);
 
   // Inspect zoning mode
   const [inspectMode, setInspectMode] = useState(false);
@@ -296,17 +302,26 @@ export default function MapView() {
   );
 
   // Enhanced Area Snapshot
-  const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
+  // review6 S11 (CRITICAL, S1 reopened): this used to be ProgramCheckResult[]
+  // (embeds a full internal Program per match) fed by a client-side
+  // runConfidenceEngine() call against the full catalog fetched from the
+  // now-removed /api/programs/engine-source route. Matches are now
+  // computed server-side (POST /api/programs/match) and returned already
+  // narrowed to SafeMapProgramMatch — see that route's doc comment.
+  const [snapshotPrograms, setSnapshotPrograms] = useState<SafeMapProgramMatch[]>([]);
   const [snapshotTifFinance, setSnapshotTifFinance] = useState<TifFinanceContext | null>(null);
-  const [locationZoneNames, setLocationZoneNames] = useState<Record<string, string> | null>(null);
-  const [snapshotParcelData, setSnapshotParcelData] = useState<ParcelData | null>(null);
-  const [snapshotCityZoning, setSnapshotCityZoning] = useState<ZoningLookupResponse | null>(null);
+  // review6 S11 cleanup: locationZoneNames/snapshotParcelData/snapshotCityZoning
+  // state was write-only after this route's removal — their only reader
+  // was the removed buildLocationContext()/summarizeLocationContextForMap()
+  // call above. zoneNames/parcelData/zoningLookup are still used directly
+  // as local values inside handleMapClick (zoneNames/parcelData go straight
+  // into the /api/programs/match POST body; zoningLookup drives zoningInfo
+  // below) — nothing lost by dropping the redundant state mirrors.
   const [tifFinanceLoading, setTifFinanceLoading] = useState(false);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
-  const [allPrograms, setAllPrograms] = useState<Program[]>([]);
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -720,13 +735,10 @@ export default function MapView() {
     [],
   );
 
-  // Load programs for snapshot
-  useEffect(() => {
-    cachedFetch<Program[]>("/api/programs")
-      .catch(() => cachedFetch<Program[]>("/data/programs.json"))
-      .then(setAllPrograms)
-      .catch(() => {});
-  }, []);
+  // review6 S11 (CRITICAL, S1 reopened): the client-side catalog fetch
+  // that used to live here (/api/programs/engine-source) is gone — program
+  // matching now happens server-side, per click, via POST
+  // /api/programs/match (see handleMapClick below).
 
   // Owner Files admin session probe (once, independent of map load) — gates
   // whether the ADMIN legend section renders at all.
@@ -899,15 +911,20 @@ export default function MapView() {
       zoningLookupAbortRef.current?.abort();
       const zoningController = new AbortController();
       zoningLookupAbortRef.current = zoningController;
-      setSnapshotCityZoning(null);
       setZoningInfo("Loading...");
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
       setTifFinanceLoading(true);
       try {
+        // review5 S2: /api/zones/check/v2 instead of the v1 route — v1
+        // silently defaults an omitted/unresolved layer to `false`
+        // (indistinguishable from a genuine non-match once normalized),
+        // which could make a program whose zone layer failed to resolve
+        // silently vanish from the click panel's program list with no
+        // indication anything went wrong.
         const [data, parcelData, tifFinanceData, zoningLookup] = await Promise.all([
-          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`).catch(() => null),
+          cachedFetch(`/api/zones/check/v2?lat=${lat}&lon=${lon}`).catch(() => null),
           cachedFetch<ParcelData>(
             `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
           ).catch(() => null),
@@ -917,7 +934,6 @@ export default function MapView() {
           fetchZoningLookup(lat, lon, { signal: zoningController.signal }),
         ]);
         if (!zoningController.signal.aborted) {
-          setSnapshotCityZoning(zoningLookup);
           if (zoningLookup.status === "available") {
             // Published district code alone — see inspectPublishedZoning.
             setZoningInfo(zoningLookup.zoneClass);
@@ -927,64 +943,73 @@ export default function MapView() {
             setZoningInfo("Published zoning temporarily unavailable — select the location again to retry");
           }
         }
-        const normalized = normalizeZoneCheckResponse(data);
-        if (!normalized) throw new Error("Unexpected zone check response");
+        const evidence = normalizeZoneEvidenceV2(data);
+        if (!evidence) throw new Error("Unexpected zone check response");
 
-        const { zones, zoneNames } = normalized;
+        const { zones, zoneNames, unknownKeys } = bridgeZoneEvidenceV2ToBooleanMap(evidence);
         setLocationZones(zones);
-        setLocationZoneNames(zoneNames);
-        setSnapshotParcelData(parcelData ?? null);
+        setLocationZoneCoverageNote(zoneCoverageCaveat(unknownKeys));
         setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
-        // Compute the internal ranking client-side (including parcel context).
-        if (allPrograms.length > 0) {
-          const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
-          setSnapshotPrograms(
-            results.filter((r) => r.relevance !== "not_mapped_at_location").slice(0, 3)
-          );
+        // review6 S11 (CRITICAL, S1 reopened): matching now runs
+        // server-side via POST /api/programs/match — the full catalog
+        // never reaches the browser. NOTE: `zones` bridges v2's "unknown"
+        // state to `false` (the engine has no third state) — a program
+        // mapped to an unknown layer is still filtered out of this
+        // positives-only list. locationZoneCoverageNote (rendered by
+        // MapDossierCard alongside whatever DID match) is what keeps that
+        // omission from reading as a confirmed "not here".
+        try {
+          const matchRes = await fetch("/api/programs/match", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zones, zoneNames, parcel: parcelData ?? undefined }),
+          });
+          if (matchRes.ok) {
+            const { programs: safeMatches } = (await matchRes.json()) as {
+              programs: SafeMapProgramMatch[];
+            };
+            setSnapshotPrograms(safeMatches);
+          } else {
+            setSnapshotPrograms([]);
+          }
+        } catch {
+          setSnapshotPrograms([]);
         }
       } catch {
-        setLocationZoneNames(null);
-        setSnapshotParcelData(null);
+        setLocationZoneCoverageNote(null);
         setSnapshotTifFinance(null);
       } finally {
         setTifFinanceLoading(false);
       }
     },
-    [allPrograms]
+    []
   );
 
+  // review6 S11 (CRITICAL, S1 reopened): this used to call
+  // buildLocationContext()/summarizeLocationContextForMap() client-side,
+  // which internally re-ran runConfidenceEngine() against the full
+  // catalog — a SECOND, redundant client-side engine call computing the
+  // exact same top-3-positives list `snapshotPrograms` above already has
+  // (same zones/zoneNames/parcel inputs, no project goals set for this
+  // page's minimal LocationContextState, so no reordering ever applied).
+  // `siteSignals`/`transport`/`tifFinance` were never Program-derived in
+  // the first place — buildLocationContext only ever passed them through
+  // from this same component's own state. Reusing `snapshotPrograms`
+  // directly removes both the redundant computation and the client-side
+  // catalog dependency it required.
   const snapshotContextSummary = useMemo(() => {
     if (!locationZones) return null;
-    const locationContext = buildLocationContext(
-      {
-        reportType: "site-incentives",
-        address: snapshotLabel,
-        lat: lastClickLat,
-        lon: lastClickLon,
-      },
-      allPrograms,
-      {
-        zones: locationZones,
-        zoneNames: locationZoneNames ?? undefined,
-        parcel: snapshotParcelData ?? undefined,
-        cityZoning: snapshotCityZoning ?? undefined,
-        siteSignals: areaStats.siteSignals ?? undefined,
-        transport: areaStats.transport ?? undefined,
-        tifFinance: snapshotTifFinance ?? undefined,
-      }
-    );
-    return summarizeLocationContextForMap(locationContext);
+    return {
+      programs: snapshotPrograms,
+      siteSignals: areaStats.siteSignals ?? null,
+      transport: areaStats.transport ?? null,
+      tifFinance: snapshotTifFinance ?? null,
+    };
   }, [
-    allPrograms,
     areaStats.siteSignals,
     areaStats.transport,
-    lastClickLat,
-    lastClickLon,
-    locationZoneNames,
     locationZones,
-    snapshotLabel,
-    snapshotParcelData,
-    snapshotCityZoning,
+    snapshotPrograms,
     snapshotTifFinance,
   ]);
   const lastClickRef = useRef(handleMapClick);
@@ -4169,6 +4194,7 @@ export default function MapView() {
       snapshotPrograms={snapshotPrograms}
       snapshotTifFinance={snapshotTifFinance}
       snapshotContextSummary={snapshotContextSummary}
+      snapshotZoneCoverageNote={locationZoneCoverageNote}
       tifFinanceLoading={tifFinanceLoading}
       zoningInfo={zoningInfo}
       isGeneratingSnapshot={isGeneratingSnapshot}

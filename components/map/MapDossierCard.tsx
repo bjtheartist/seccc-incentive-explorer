@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
-import type { ProgramCheckResult } from "@/lib/types";
+import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
-import type { LocationContextMapSummary } from "@/lib/location-context";
+import type { SafeLocationContextMapSummary } from "@/lib/location-context";
 import type {
   MapDossierAction,
   MapDossierSelection,
@@ -42,9 +42,15 @@ export interface MapDossierCardProps {
   snapshotLabel: string;
   snapshotLat?: number | null;
   snapshotLon?: number | null;
-  snapshotPrograms: ProgramCheckResult[];
+  snapshotPrograms: SafeMapProgramMatch[];
   snapshotTifFinance: TifFinanceContext | null;
-  snapshotContextSummary?: LocationContextMapSummary | null;
+  snapshotContextSummary?: SafeLocationContextMapSummary | null;
+  /** review5 S2/S3: non-null when one or more Zone Evidence v2 layers
+   *  could not be resolved for this location. Must render ALONGSIDE
+   *  snapshotPrograms (known positives), regardless of how many programs
+   *  matched — never suppressed by a nonzero match count, and never the
+   *  reason a zero-match state silently reads as a confirmed negative. */
+  snapshotZoneCoverageNote?: string | null;
   tifFinanceLoading: boolean;
   zoningInfo: string | null;
   isGeneratingSnapshot: boolean;
@@ -74,7 +80,7 @@ interface NextStepPresentation {
   generateReport: boolean;
 }
 
-function mappedProgramReason(result: ProgramCheckResult): string {
+function mappedProgramReason(result: SafeMapProgramMatch): string {
   return result.program.zoneKey
     ? "Mapped boundary intersects this location."
     : "Included from the program catalog for further review.";
@@ -367,7 +373,18 @@ function SelectionFacts({ selection }: { selection: MapDossierSelection }) {
         <>
           <FactRow label="Tracked type" value={VACANCY_TYPE_LABELS[selection.vacancyType]} />
           {selection.pin ? <FactRow label="PIN" value={selection.pin} /> : null}
-          {selection.incentiveGeographyCount != null ? (
+          {/* review6 S12: cited directly in the finding text ("map dossiers
+              render non-null zero as mapped") — `!= null` alone let a
+              genuine `0` render as an audited "Mapped incentive
+              geographies: 0" fact row, same false-zero shape as the
+              shortlist card's `?? 0` coercion (see
+              components/vacancy/SiteShortlistResults.tsx's
+              incentiveCountText). This value comes from a separate,
+              deeper DB pipeline this session has no live access to audit
+              (documented gap, review5 S2) — `> 0` is the conservative
+              fix available without that access: only a positive,
+              unambiguous count is shown at all. */}
+          {selection.incentiveGeographyCount != null && selection.incentiveGeographyCount > 0 ? (
             <FactRow
               label="Mapped incentive geographies"
               value={selection.incentiveGeographyCount.toLocaleString("en-US")}
@@ -403,6 +420,7 @@ export default function MapDossierCard({
   snapshotPrograms,
   snapshotTifFinance,
   snapshotContextSummary,
+  snapshotZoneCoverageNote,
   tifFinanceLoading,
   zoningInfo,
   isGeneratingSnapshot,
@@ -451,7 +469,11 @@ export default function MapDossierCard({
       areaStats.districtsLoading,
   );
   const hasProgramsAndZones = Boolean(
-    contextPrograms.length > 0 || zoningInfo || contextTifFinance || tifFinanceLoading,
+    contextPrograms.length > 0 ||
+      zoningInfo ||
+      contextTifFinance ||
+      tifFinanceLoading ||
+      snapshotZoneCoverageNote,
   );
 
   return (
@@ -545,6 +567,17 @@ export default function MapDossierCard({
           badge={contextPrograms.length > 0 ? `${contextPrograms.length} mapped` : "location context"}
         >
           {zoningInfo ? <FactRow label="Zoning" value={zoningInfo} /> : null}
+
+          {/* review5 S2/S3: rendered unconditionally alongside any known
+              positives below — this is a coverage caveat, not a
+              replacement, and must never be hidden just because programs
+              also matched or the match count is nonzero. */}
+          {snapshotZoneCoverageNote ? (
+            <div className="mb-3 flex gap-2 border-l-2 border-[#B45309] bg-[#FFFBEB] px-3 py-2 text-[10px] leading-relaxed text-[#78350F]">
+              <CircleAlert aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p>{snapshotZoneCoverageNote}</p>
+            </div>
+          ) : null}
 
           {contextPrograms.length > 0 ? (
             <div className="space-y-3">

@@ -146,13 +146,56 @@ const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
 ];
 
 /** Each active overlay's own feature name where the source published one
- *  (Finding 12) — "SSA: Greater Chatham", not just "SSA". */
-function overlaysText(overlays: CandidateOverlays): string {
+ *  (Finding 12) — "SSA: Greater Chatham", not just "SSA".
+ *
+ * review5 S2: "None mapped" is a confirmed-absence claim — it must never
+ * be the string shown when a layer simply couldn't be checked
+ * (overlays[key].unknown === true). Known positives (`present`) always
+ * render, regardless of how many other layers are unknown; an unknown
+ * layer is disclosed, never silently folded into "none". */
+export function overlaysText(overlays: CandidateOverlays): string {
   const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
     const name = overlays[overlay.key].name;
     return name ? `${overlay.label}: ${name}` : overlay.label;
   });
+  const unknown = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].unknown).map(
+    (overlay) => overlay.label,
+  );
+
+  if (active.length === 0 && unknown.length === OVERLAY_LABELS.length) {
+    return "Not checked";
+  }
+  if (unknown.length > 0) {
+    const base = active.length > 0 ? active.join(" · ") : "None confirmed";
+    return `${base} (${unknown.join(", ")} not checked)`;
+  }
   return active.length > 0 ? active.join(" · ") : "None mapped";
+}
+
+/**
+ * review6 S12 (CRITICAL): 12,216 of the committed universe's 31,296 rows
+ * carry `incentiveCount: null` — the count was never resolved for that
+ * row. `candidate.incentiveCount ?? 0` used to coerce every one of those
+ * into a trusted `0`, rendered as "0 incentive geographies mapped at this
+ * point" — a confirmed-absence claim for a fact nobody ever checked, the
+ * exact same false-zero anti-pattern S1-S3/S12's overlay fix all exist to
+ * prevent, just for a count instead of a boolean.
+ *
+ * Directive from review6 S12 verbatim: "counts stay number|null and null
+ * OR zero renders 'Not checked' ... do NOT trust legacy zeros." A literal
+ * `0` is treated the same as `null` here — not because a genuine zero is
+ * impossible, but because THIS export pipeline has never yet produced a
+ * distinguishable, audited zero (every committed row is either `null` or
+ * a positive count; see docs/eligibility-claims-acceptance.md's S12
+ * entry), so there is no way today to tell an audited zero from an
+ * unresolved one that happened to compute to the same number. Only a
+ * genuinely positive count is a fact worth stating.
+ */
+export function incentiveCountText(incentiveCount: number | null): string {
+  if (incentiveCount == null || incentiveCount <= 0) {
+    return "Incentive geography count not checked";
+  }
+  return `${incentiveCount} incentive ${incentiveCount === 1 ? "geography" : "geographies"} mapped at this point`;
 }
 
 function ShortlistCard({
@@ -310,8 +353,7 @@ function ShortlistCard({
         </span>
         {overlaysText(candidate.overlays)}
         {" · "}
-        {candidate.incentiveCount} incentive{" "}
-        {candidate.incentiveCount === 1 ? "geography" : "geographies"} mapped at this point
+        {incentiveCountText(candidate.incentiveCount)}
       </p>
 
       {flags.length > 0 && (

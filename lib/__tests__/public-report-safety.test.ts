@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { extractText } from "unpdf";
-import { generateReportBase64, generateReportPdfBase64 } from "../pdf-report";
+import { generateReportPdfBase64 } from "../pdf-report";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
@@ -16,7 +16,7 @@ import {
   runConfidenceEngine,
 } from "../confidence-engine";
 import { getProgramsSync } from "../programs-data";
-import type { LookupResult, ParcelData, Program, SurveyAnswers } from "../types";
+import type { ParcelData, Program, SurveyAnswers } from "../types";
 import {
   SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
   SUPPORT_ORGANIZATIONS_DESCRIPTION,
@@ -25,8 +25,12 @@ import {
 
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
+// review6 S11 investigation: `whoQualifies` added — it carried raw
+// internal catalog prose onto ReportItem (removed from the type; this
+// regex additionally guards against it resurfacing on an
+// already-persisted saved report's JSON blob).
 const PRIVATE_MATCH_FIELDS =
-  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFit|projectFitLabel|projectFitReason)"/i;
+  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFit|projectFitLabel|projectFitReason|whoQualifies)"/i;
 
 function savedReport(sections: GeneratedReport["sections"]): GeneratedReport {
   return {
@@ -357,7 +361,22 @@ describe("public report safety", () => {
     expect(section.items[1].detail).not.toMatch(/Status:|Active resource|Verified current web presence/i);
   });
 
-  it("preserves deadline and project-requirement facts while stripping private item payloads", () => {
+  it("preserves deadline and project-requirement facts while stripping private item payloads, including a legacy whoQualifies key on an already-saved report", () => {
+    // review6 S11 investigation: this test previously asserted that
+    // `whoQualifies` SURVIVED normalization — i.e. that raw internal
+    // catalog prose was safe to preserve and display. That was the exact
+    // defect under review: `whoQualifies` is the same internal-only field
+    // `lib/program-public.ts`'s PublicProgramView deliberately excludes,
+    // for the same reason (it can assert/imply a determination this tool
+    // has no authority to make), and it was being rendered verbatim under
+    // "Published Applicant Requirements" in both ReportDisplay forks. The
+    // field was removed from `ReportItem`'s type entirely; this fixture
+    // still supplies it (cast through `as ReportItem` below) specifically
+    // to prove an ALREADY-SAVED report from before this fix — which can
+    // still carry the key in its persisted JSON blob — gets it stripped
+    // defensively, the same way the other now-legacy fields here already
+    // are. `value`/`detail` (genuinely safe, already-public fields)
+    // still survive unchanged.
     const normalized = normalizePublicReportForDisplay(savedReport([
       {
         title: "Upcoming Deadlines Near This Address",
@@ -366,13 +385,13 @@ describe("public report safety", () => {
           value: "December 15, 2026",
           detail: "Confirm the current filing window.",
           programId: "deadline-program",
-          whoQualifies: "Eligible applicants must file before the published deadline.",
           confidenceLevel: "appears_eligible",
           confidenceLabel: "High Match",
           whyOneLine: "You qualify.",
           matchedRules: ["Reported industry: manufacturing"],
           notVerified: ["Confirm timing"],
           projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+          ...({ whoQualifies: "Eligible applicants must file before the published deadline." } as object),
         }],
       },
       {
@@ -382,8 +401,8 @@ describe("public report safety", () => {
           value: "Eligible businesses must document a qualifying rehabilitation project.",
           detail: "Factual program requirement.",
           programId: "requirement-program",
-          whoQualifies: "Eligible businesses must document a qualifying rehabilitation project.",
           projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+          ...({ whoQualifies: "Eligible businesses must document a qualifying rehabilitation project." } as object),
         }],
       },
       {
@@ -398,17 +417,17 @@ describe("public report safety", () => {
       },
     ]));
 
-    const deadline = normalized.sections[0].items[0];
-    const requirement = normalized.sections[1].items[0];
+    const deadline = normalized.sections[0].items[0] as GeneratedReport["sections"][number]["items"][number] & {
+      whoQualifies?: string;
+    };
+    const requirement = normalized.sections[1].items[0] as typeof deadline;
     expect(deadline.value).toBe("December 15, 2026");
-    expect(deadline.whoQualifies).toBe(
-      "Eligible applicants must file before the published deadline.",
-    );
+    expect(deadline.whoQualifies).toBeUndefined();
     expect(deadline.matchExplanation).toBeUndefined();
     expect(requirement.value).toBe(
       "Eligible businesses must document a qualifying rehabilitation project.",
     );
-    expect(requirement.whoQualifies).toBe(requirement.value);
+    expect(requirement.whoQualifies).toBeUndefined();
     expect(requirement.matchExplanation).toBeUndefined();
     expect(JSON.stringify(normalized)).not.toMatch(PRIVATE_MATCH_FIELDS);
   });
@@ -600,64 +619,12 @@ describe("public report safety", () => {
     expect(extracted.text).toContain("Awarded public investment: $8,500,000");
   });
 
-  it("keeps LookupResult zoning states source-honest in generated PDFs", async () => {
-    const lookupResult: LookupResult = {
-      matched: false,
-      address: "100 E Test St",
-      lat: 41.8,
-      lon: -87.6,
-      zones: {},
-      zoneNames: {},
-      incentiveCount: 0,
-    };
-    const extractLookupPdf = async (result: LookupResult) => {
-      const output = generateReportBase64(result, []);
-      return extractText(
-        new Uint8Array(Buffer.from(output.base64, "base64")),
-        { mergePages: true },
-      );
-    };
-
-    const available = await extractLookupPdf({
-      ...lookupResult,
-      cityZoningStatus: "available",
-      cityZoning: {
-        zoneClass: "B3-2",
-        zoneType: "Business",
-        recordUpdatedAt: "2026-08-01T00:00:00.000Z",
-        source: {
-          id: "chicago-arcgis-zoning",
-          label: "City of Chicago Zoning Map",
-          url: "https://gisapps.chicago.gov/zoning",
-          retrievedAt: "2026-08-08T00:00:00.000Z",
-          recordUpdatedAt: "2026-08-01T00:00:00.000Z",
-        },
-      },
-    });
-    const notFound = await extractLookupPdf({
-      ...lookupResult,
-      cityZoningStatus: "not_found",
-    });
-    const unavailable = await extractLookupPdf({
-      ...lookupResult,
-      cityZoningStatus: "unavailable",
-    });
-
-    expect(available.text).toContain("B3-2");
-    expect(available.text).toContain("Published district classification only");
-    expect(available.text).toContain("Verify whether a proposed use is permitted");
-    expect(available.text).toContain("Record updated Aug 1, 2026");
-    expect(available.text).toContain("View published City zoning source");
-    expect(available.text).not.toMatch(/Zoning determines permitted land uses/i);
-
-    expect(notFound.text).toContain("NO PUBLISHED DISTRICT RETURNED");
-    expect(notFound.text).toContain("not evidence that zoning requirements do not apply");
-    expect(notFound.text).not.toContain("PUBLISHED SOURCE TEMPORARILY UNAVAILABLE");
-
-    expect(unavailable.text).toContain("PUBLISHED SOURCE TEMPORARILY UNAVAILABLE");
-    expect(unavailable.text).toContain("No zoning or proposed-use conclusion was made");
-    expect(unavailable.text).not.toContain("NO PUBLISHED DISTRICT RETURNED");
-  });
+  // build-spec.md 2.7 (audit F15/F16): the LookupResult-shaped legacy PDF
+  // path (generateReportBase64) this test exercised is deleted along with
+  // IncentiveReport/ZoneResultCard — lib/pdf-report.ts's obsolete
+  // generateReport/generateReportBase64/_buildReport are gone; only the
+  // current GeneratedReport-shaped generateReportPdf(Base64) pipeline
+  // remains, which the rest of this file's tests already cover.
 
   it("keeps both public report renderers off legacy confidence fields", () => {
     for (const path of [

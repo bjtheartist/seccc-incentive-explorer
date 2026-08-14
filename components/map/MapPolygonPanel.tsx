@@ -7,6 +7,7 @@ import { FileText, Loader2, Mail, X } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { programCount } from "@/lib/report-email";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
@@ -1579,7 +1580,8 @@ function AreaEmailReportModal({
           filename,
           businessName: report.title,
           address: report.metadata.address,
-          incentiveCount: report.sections.length,
+          // F14 (build-spec.md 2.4): a program count, not a section count.
+          incentiveCount: programCount(report),
         }),
       });
 

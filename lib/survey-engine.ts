@@ -1,6 +1,27 @@
-import programsData from "@/public/data/programs.json";
+// review5 S1 (CRITICAL) / review6 S11 (CRITICAL, S1 reopened): this module
+// previously statically imported data/programs-internal.json, then (S1's
+// fix) fetched /api/programs/engine-source client-side at submit time —
+// but that route turned out to be an UNAUTHENTICATED endpoint returning
+// all 71 FULL internal Program records (whoQualifies, eligibilityRules,
+// verificationSteps, contacts, suspension notes...) to anyone, which
+// reopened the exact exposure S1 was supposed to close (review6 S11).
+//
+// Fixed properly this time: SCORING now runs server-side, never the raw
+// catalog. `scoreSurveyWithPrograms()` below is the pure, synchronous
+// engine (unchanged logic) — it now lives behind
+// app/api/survey/score/route.ts, which reads the full catalog on the
+// server (never serialized to the network) and returns only the already-
+// safe `SurveyResult` (via `toProgramMatch()`, whose `program` field was
+// always narrow — {name, short, level} — and whose `explanation` comes
+// from `buildPublicMatchExplanation()`, the same safe-transformation
+// boundary the report engine uses). `scoreSurvey()` is now the CLIENT-
+// facing wrapper: it POSTs `{answers}` to that route and returns the
+// parsed `SurveyResult` — components/survey/PreQualSurvey.tsx's call
+// site (`scoreSurvey(answers)`) is unchanged.
 import { buildPublicMatchExplanation } from "./match-transparency";
+import { resolveAvailability } from "./program-gating";
 import type {
+  IntakeStatus,
   Program,
   ProgramMatch,
   SurveyAnswers,
@@ -10,6 +31,14 @@ import type {
 
 // ─── Question Definitions ────────────────────────────────────────────
 
+// build-spec.md 2.6 (audit F12; consult item 10): the industry options
+// retail, professional, construction, healthcare, and other were INERT —
+// no rule in RULES.industry below ever used them to order programs, so
+// answering one of them cost the user effort for zero effect while the
+// results screen still read as if every answer mattered. Removed rather
+// than retained-with-disclosure, per the spec's primary instruction ("do
+// not invent new matching rules"): none of the five had a defensible
+// non-ranking purpose to disclose.
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
     id: "industry",
@@ -22,10 +51,6 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "semiconductor", label: "Semiconductor" },
       { id: "dataCenter", label: "Data Center / Cloud" },
       { id: "manufacturing", label: "Manufacturing" },
-      { id: "retail", label: "Retail / Restaurant / Service" },
-      { id: "professional", label: "Professional Services" },
-      { id: "construction", label: "Construction / Trades" },
-      { id: "healthcare", label: "Healthcare / Wellness" },
       { id: "tech", label: "Tech / Software" },
       { id: "nonprofit", label: "Nonprofit" },
       { id: "hairBeauty", label: "Hair Care & Beauty" },
@@ -35,7 +60,6 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "fitness", label: "Fitness & Recreation" },
       { id: "homeServices", label: "Home Services" },
       { id: "petServices", label: "Pet Services" },
-      { id: "other", label: "Other" },
     ],
   },
   {
@@ -65,7 +89,14 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       { id: "equipment", label: "Buying equipment / machinery" },
       { id: "capitalGains", label: "Investing capital gains" },
       { id: "expanding", label: "Expanding / relocating" },
-      { id: "advice", label: "Seeking advice" },
+      // "advice" ("Seeking advice") removed (review5 S7). Its only rule
+      // routed to smallBizSource, which is forced into the universal-
+      // navigation bucket regardless of any answer (see below) — so
+      // selecting it never changed `matches`, and after this fix it can
+      // no longer even change what reason text the universal bucket
+      // shows. An option with zero remaining observable effect gets
+      // removed, per the same F12 doctrine that removed the other inert
+      // options above, rather than kept with a fabricated effect.
     ],
   },
   {
@@ -74,9 +105,10 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     title: "How big is your business?",
     subtitle: "Annual revenue range",
     type: "single",
+    // under500k removed (build-spec.md 2.6 / audit F12) — no rule in
+    // RULES.size ever used it.
     options: [
       { id: "preRevenue", label: "Pre-revenue / startup" },
-      { id: "under500k", label: "Under $500K / year" },
       { id: "500kTo10m", label: "$500K – $10M / year" },
       { id: "over10m", label: "Over $10M / year" },
     ],
@@ -140,7 +172,6 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
     equipment: [{ program: "enterprise", confidence: "medium" }, { program: "catalystGrant", confidence: "medium" }],
     capitalGains: [{ program: "federalOZ", confidence: "high" }, { program: "illinoisOZ", confidence: "high" }],
     expanding: [{ program: "landBank", confidence: "medium" }, { program: "edge", confidence: "medium" }, { program: "enterprise", confidence: "medium" }],
-    advice: [{ program: "smallBizSource", confidence: "high" }],
   },
   size: {
     preRevenue: [{ program: "smallBizSource", confidence: "high" }],
@@ -151,13 +182,68 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
 
 // ─── Internal Ordering ───────────────────────────────────────────────
 
-const PROGRAM_DETAILS = new Map(
-  (programsData as unknown as Program[]).map((program) => [program.id, program]),
-);
+/** Short collapsed-row label from a program's intakeStatus (build-spec.md
+ *  2.6: status must show BEFORE the card is opened, never only inside). */
+function statusLabel(intakeStatus: IntakeStatus): string {
+  switch (intakeStatus) {
+    case "open":
+      return "Open";
+    case "rolling":
+      return "Rolling";
+    case "closed":
+      return "Closed";
+    case "lapsed":
+      return "Lapsed";
+    case "pending":
+      return "Pending";
+    case "unknown":
+    default:
+      return "Status not established";
+  }
+}
 
-export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
+function matchStatus(program: Program): ProgramMatch["status"] {
+  const intakeStatus: IntakeStatus = program.intakeStatus ?? "unknown";
+  return { intakeStatus, label: statusLabel(intakeStatus) };
+}
+
+function toProgramMatch(
+  programDetails: Map<string, Program>,
+  programId: string,
+  confidence: Confidence,
+  reasons: string[],
+): ProgramMatch | null {
+  const program = programDetails.get(programId);
+  if (!program) return null;
+  return {
+    programId,
+    program: {
+      name: program.name,
+      short: PROGRAMS[programId]?.short ?? program.name,
+      level: program.level,
+    },
+    explanation: buildPublicMatchExplanation(program, {
+      basedOnUserAnswers: reasons,
+    }),
+    status: matchStatus(program),
+  };
+}
+
+/**
+ * The pure, synchronous scoring engine — SERVER-ONLY caller
+ * (app/api/survey/score/route.ts) supplies `programDetails` from a
+ * full, server-side catalog read. Exported so the route can call it
+ * directly without an intermediate network hop.
+ */
+export function scoreSurveyWithPrograms(
+  answers: SurveyAnswers,
+  programDetails: Map<string, Program>,
+): SurveyResult {
   const matchMap: Record<string, { confidence: Confidence; reasons: string[] }> = {};
   const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
+  // Every answer key the caller actually gave, e.g. "industry", "activities:hiring".
+  const usedAnswers: string[] = [];
+  const unusedAnswers: string[] = [];
 
   const addMatch = (programId: string, confidence: Confidence, reason?: string) => {
     if (!matchMap[programId]) {
@@ -179,19 +265,38 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
       for (const optionId of answer) {
         const matches = questionRules[optionId] || [];
         const label = question.options.find((o) => o.id === optionId)?.label || optionId;
+        const key = `${question.id}:${optionId}`;
+        if (matches.length > 0) usedAnswers.push(key);
+        else unusedAnswers.push(key);
         for (const m of matches) addMatch(m.program, m.confidence, label);
       }
     } else if (typeof answer === "string") {
       const matches = questionRules[answer] || [];
       const label = question.options.find((o) => o.id === answer)?.label || answer;
+      const key = `${question.id}:${answer}`;
+      if (matches.length > 0) usedAnswers.push(key);
+      else unusedAnswers.push(key);
       for (const m of matches) addMatch(m.program, m.confidence, label);
     }
   }
 
-  // smallBizSource always matches
-  if (!matchMap.smallBizSource) {
-    addMatch("smallBizSource", "low");
-  }
+  // build-spec.md 2.6: smallBizSource is universal navigation, not an
+  // answer-derived result — separated from `matches` below regardless of
+  // whether an answer ALSO happened to name it, so it never implies a
+  // ranking decision the user's answers made.
+  //
+  // review5 S7: the confidence tier was correctly forced to "low" and the
+  // program was correctly pulled out of `matches`, but the REASON TEXT
+  // that accumulated in matchMap.smallBizSource (e.g. an answer's label,
+  // via addMatch's `reason` param) was passed straight through to
+  // toProgramMatch's `basedOnUserAnswers` — so the universal card could
+  // still display "Pre-revenue / startup" or similar as if it were an
+  // answer-derived reason, contradicting the comment right above it. The
+  // universal bucket now NEVER carries answer-derived reasons — deleted
+  // unconditionally, not merely captured-then-forwarded.
+  delete matchMap.smallBizSource;
+  const universalMatch = toProgramMatch(programDetails, "smallBizSource", "low", []);
+  const universal: ProgramMatch[] = universalMatch ? [universalMatch] : [];
 
   const confidenceOrder: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
   const rankedMatches = Object.entries(matchMap)
@@ -202,22 +307,35 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
     }))
     .sort((a, b) => confidenceOrder[a.confidence] - confidenceOrder[b.confidence]);
 
+  // build-spec.md 2.6: gate through resolveAvailability — an expired
+  // program never surfaces as a "starting point", matching every other
+  // program-facing surface in the app.
+  const today = new Date();
   const matches: ProgramMatch[] = rankedMatches.flatMap((match) => {
-    const program = PROGRAM_DETAILS.get(match.programId);
+    const program = programDetails.get(match.programId);
     if (!program) return [];
-
-    return [{
-      programId: match.programId,
-      program: {
-        name: program.name,
-        short: PROGRAMS[match.programId]?.short ?? program.name,
-        level: program.level,
-      },
-      explanation: buildPublicMatchExplanation(program, {
-        basedOnUserAnswers: match.reasons,
-      }),
-    }];
+    if (resolveAvailability(program, today).state === "expired") return [];
+    const built = toProgramMatch(programDetails, match.programId, match.confidence, match.reasons);
+    return built ? [built] : [];
   });
 
-  return { matches };
+  return { matches, universal, usedAnswers, unusedAnswers };
+}
+
+/**
+ * CLIENT-facing entry point (components/survey/PreQualSurvey.tsx). Never
+ * touches the catalog directly — POSTs the answers to the server route,
+ * which runs `scoreSurveyWithPrograms()` above and returns only the
+ * already-safe `SurveyResult`.
+ */
+export async function scoreSurvey(answers: SurveyAnswers): Promise<SurveyResult> {
+  const res = await fetch("/api/survey/score", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ answers }),
+  });
+  if (!res.ok) {
+    throw new Error(`scoreSurvey: /api/survey/score returned ${res.status}`);
+  }
+  return (await res.json()) as SurveyResult;
 }

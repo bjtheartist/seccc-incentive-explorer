@@ -24,6 +24,7 @@ import {
   CONCIERGE_DISABLED_MESSAGE,
   CONCIERGE_RESTING_MESSAGE,
   CONCIERGE_SYSTEM_PROMPT,
+  CONCIERGE_VALIDATOR_FALLBACK_MESSAGE,
 } from "@/lib/concierge/system-prompt";
 import {
   checkConciergeRateLimit,
@@ -50,6 +51,7 @@ import {
   persistConciergeTurn,
   type PersistedToolCall,
 } from "@/lib/concierge/persistence";
+import { validateConciergeOutput, recordConciergeValidatorHit } from "@/lib/concierge/output-validator";
 
 export const runtime = "nodejs";
 
@@ -338,6 +340,14 @@ export async function POST(request: NextRequest) {
   const modelMessages = await convertToModelMessages(messages);
   const modelId = getConciergeModelId();
 
+  // build-spec.md 2.5 (audit "F-rail"; consult item 7, BLOCKING): buffer
+  // the FULL model response, validate it, and ONLY THEN emit it — never
+  // stream raw model text live to the client. `streamText`'s internal
+  // generation (including the tool-call loop) still runs to completion the
+  // moment any of its result promises are awaited; nothing here is exposed
+  // to the client until validation has run over the complete text, so a
+  // prohibited phrase split across what would have been stream chunks
+  // cannot evade the check — there are no chunks yet at validation time.
   const result = streamText({
     model: gateway(modelId),
     system: CONCIERGE_SYSTEM_PROMPT,
@@ -357,50 +367,62 @@ export async function POST(request: NextRequest) {
     providerOptions: {
       gateway: { disallowPromptTraining: true },
     },
-    onFinish: async (event) => {
-      // Stage 3 persistence: signed-in + DB only, strictly best-effort.
-      if (!userId || !sql) return;
-      try {
-        const rawCalls = (event.toolCalls ?? []) as Array<{
-          toolName?: string;
-          toolCallId?: string;
-          input?: unknown;
-        }>;
-        const toolCalls: PersistedToolCall[] = rawCalls.map((c) => ({
-          toolName: String(c.toolName ?? "unknown"),
-          toolCallId: c.toolCallId,
-          input: c.input,
-          needsApproval: ACTION_TOOL_SET.has(String(c.toolName ?? "")),
-        }));
-        const citations = extractCitations(
-          (event.toolResults ?? []) as unknown[]
-        );
-        await persistConciergeTurn(
-          {
-            sql,
-            userId,
-            sessionId: sessionId!,
-            pageRoute: pageContext.route,
-            modelId,
-          },
-          {
-            userText,
-            assistantText: event.text ?? "",
-            toolCalls,
-            citations,
-          }
-        );
-      } catch {
-        /* best-effort — never surface a persistence failure */
-      }
-    },
   });
 
-  const response = result.toUIMessageStreamResponse({
-    onError: () => CONCIERGE_RESTING_MESSAGE,
-  });
+  let rawText: string;
+  let rawToolCalls: Array<{ toolName?: string; toolCallId?: string; input?: unknown }>;
+  let rawToolResults: unknown[];
+  try {
+    [rawText, rawToolCalls, rawToolResults] = await Promise.all([
+      result.text,
+      result.toolCalls,
+      result.toolResults,
+    ]);
+  } catch {
+    // Model call itself failed (timeout, provider error, abort). Fail to
+    // the same resting message the rate-limit path uses — never partial
+    // unvalidated text.
+    return deterministicStreamResponse(CONCIERGE_RESTING_MESSAGE, sessionId, isNewSession);
+  }
 
-  appendSessionCookie(response, sessionId, isNewSession);
+  const outputValidation = validateConciergeOutput(rawText);
+  const finalText = outputValidation.hit ? CONCIERGE_VALIDATOR_FALLBACK_MESSAGE : outputValidation.text;
+  if (outputValidation.hit) {
+    recordConciergeValidatorHit(outputValidation.reason ?? "unknown");
+  }
 
-  return response;
+  // Persist EXACTLY what was shown (the validated/substituted text) — never
+  // the raw model text, per the consult's explicit instruction that
+  // scrubbing the stored transcript after the fact "does nothing about
+  // exposure" and creates two different histories.
+  if (userId && sql) {
+    try {
+      const toolCalls: PersistedToolCall[] = rawToolCalls.map((c) => ({
+        toolName: String(c.toolName ?? "unknown"),
+        toolCallId: c.toolCallId,
+        input: c.input,
+        needsApproval: ACTION_TOOL_SET.has(String(c.toolName ?? "")),
+      }));
+      const citations = outputValidation.hit ? [] : extractCitations(rawToolResults);
+      await persistConciergeTurn(
+        {
+          sql,
+          userId,
+          sessionId: sessionId!,
+          pageRoute: pageContext.route,
+          modelId: outputValidation.hit ? "deterministic-validator-fallback" : modelId,
+        },
+        {
+          userText,
+          assistantText: finalText,
+          toolCalls: outputValidation.hit ? [] : toolCalls,
+          citations,
+        }
+      );
+    } catch {
+      /* best-effort — never surface a persistence failure */
+    }
+  }
+
+  return deterministicStreamResponse(finalText, sessionId, isNewSession);
 }

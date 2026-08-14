@@ -1,5 +1,6 @@
 import { searchPrograms } from "./programs-index";
-import { resolveZonesAtPoint } from "@/lib/zones-check";
+import { resolveZoneEvidenceV2 } from "@/lib/zones-check";
+import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import type { ConciergePageContext } from "./types";
 
 const ACTION_REQUEST_RE =
@@ -220,7 +221,22 @@ export async function buildDeterministicConciergeResponse({
 
   if (/\b(zone|district|opportunity zone|enterprise zone|cover(?:s|ed)?)\b/i.test(text)) {
     if (typeof pageContext.lat === "number" && typeof pageContext.lon === "number") {
-      const zones = await resolveZonesAtPoint(pageContext.lat, pageContext.lon);
+      // Zone Evidence v2 (build-spec.md 2.3; audit F2): an empty match list
+      // is only an honest "no overlay" claim when every layer actually
+      // resolved. A layer this deterministic fallback could not check must
+      // never be reported as confirmed absent.
+      const evidence = await resolveZoneEvidenceV2(
+        pageContext.lat,
+        pageContext.lon,
+        CHECKABLE_ZONE_KEYS,
+      );
+      const zones = Object.entries(evidence)
+        .filter(([, entry]) => entry.state === "matched")
+        .map(([key, entry]) => ({ key, name: entry.name }));
+      const unknownCount = Object.values(evidence).filter((entry) => entry.state === "unknown").length;
+      if (zones.length === 0 && unknownCount > 0) {
+        return `${unknownCount} mapped-zone layer(s) could not be checked right now. That is an incomplete check, not confirmation the address is outside any incentive-zone overlay. Try again shortly or verify directly with the relevant administrators.`;
+      }
       if (zones.length === 0) {
         return "The current report coordinates did not return a mapped incentive-zone overlay. That is a location result only, not an eligibility finding. Verify current boundaries with the relevant administrators.";
       }
@@ -228,7 +244,16 @@ export async function buildDeterministicConciergeResponse({
         .slice(0, 10)
         .map((zone) => `- ${zone.name || zone.key}`)
         .join("\n");
-      return `The current report coordinates intersect these mapped overlays:\n\n${names}\n\nCoverage means a program may be worth exploring; it does not confirm eligibility. Verify the current boundary and project rules with administrators.`;
+      // review5 S3: known positives AND an unavailable-layer notice must
+      // both render, regardless of match count — a nonzero `zones.length`
+      // must not silence the fact that some OTHER layer could not be
+      // checked. Before this fix, `unknownCount` was computed above but
+      // never read again once at least one zone matched.
+      const unknownNote =
+        unknownCount > 0
+          ? `\n\nNote: ${unknownCount} additional mapped-zone layer(s) could not be checked right now, so this list may be incomplete.`
+          : "";
+      return `The current report coordinates intersect these mapped overlays:\n\n${names}\n\nCoverage means a program may be worth exploring; it does not confirm eligibility. Verify the current boundary and project rules with administrators.${unknownNote}`;
     }
     return "I need a report location before I can check mapped zone coverage. [Build a report for the address](/report), then ask me again. Coverage is not an eligibility determination.";
   }

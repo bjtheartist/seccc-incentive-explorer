@@ -30,7 +30,16 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
-const PROGRAMS_PATH = resolve(ROOT, "public/data/programs.json");
+// review5 S1: public/data/programs.json no longer exists — build-spec.md 2.2
+// deleted it as part of the hard cutover to the sanitized
+// public/data/programs-public.json envelope. This checker is NOT a client
+// path (it's a Node script run in CI/cron, never bundled to a browser), and
+// it needs fields the PublicProgramView DTO deliberately excludes —
+// applicationPortals[], contacts[].url, verificationSteps[].url — to find
+// every link a user can actually click. So it reads the full internal
+// catalog directly rather than the public envelope, the same way the /api
+// server boundary does before projecting.
+const PROGRAMS_PATH = resolve(ROOT, "data/programs-internal.json");
 const HEALTH_PATH = resolve(ROOT, "public/data/link-health.json");
 
 const TIMEOUT_MS = 15000;

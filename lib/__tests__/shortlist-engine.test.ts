@@ -32,10 +32,10 @@ const BASE_LON = -87.605;
 
 function noOverlays(): ShortlistUniverseRow["overlays"] {
   return {
-    ssa: { present: false, name: null },
-    ccsa: { present: false, name: null },
-    tif: { present: false, name: null },
-    nof: { present: false, name: null },
+    ssa: { present: false, name: null, unknown: false },
+    ccsa: { present: false, name: null, unknown: false },
+    tif: { present: false, name: null, unknown: false },
+    nof: { present: false, name: null, unknown: false },
   };
 }
 

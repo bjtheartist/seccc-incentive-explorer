@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { programCount } from "@/lib/report-email";
 
 export function EmailReportModal({
   report,
@@ -56,7 +57,8 @@ export function EmailReportModal({
           filename,
           businessName: report.title,
           address: report.metadata?.address,
-          incentiveCount: report.sections?.length,
+          // F14 (build-spec.md 2.4): a program count, not a section count.
+          incentiveCount: programCount(report),
         }),
       });
 

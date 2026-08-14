@@ -21,8 +21,19 @@ vi.mock("@/lib/tif-boundary", () => ({
   findTifBoundaryAtPoint: findTifBoundaryMock,
 }));
 
-vi.mock("@/app/api/zones/check/route", () => ({
-  GET: vi.fn(async () => NextResponse.json([])),
+// review6 S16: migrated from the v1 zones/check route mock — the cron
+// route now calls v2. Empty `layers` is the v2-shaped equivalent of the
+// old v1 empty-array "no zone matches" fixture.
+vi.mock("@/app/api/zones/check/v2/route", () => ({
+  GET: vi.fn(async () =>
+    NextResponse.json({
+      schemaVersion: 2,
+      dataRevision: "test-revision",
+      checkedAt: new Date().toISOString(),
+      requestedLayers: [],
+      layers: {},
+    }),
+  ),
 }));
 
 vi.mock("@/lib/programs-data", () => ({
@@ -168,6 +179,60 @@ describe("GET /api/cron/watchlist-digest", () => {
     expect(payload.wouldSend[0].areas[0]).toMatchObject({
       areaId: "41.7355,-87.5512",
     });
+  });
+
+  it("review8 S27: a SYNCHRONOUS resolver throw (not a rejected promise) still keeps the failed area in the digest, with a caveat, alongside a successful area", async () => {
+    // Distinct from the "bad geometry" test above, which mocks an
+    // asynchronously REJECTED promise — already caught by the per-
+    // resolver `.catch(() => null)` even before S27. A resolver that
+    // throws SYNCHRONOUSLY (never returns a promise at all) used to
+    // propagate out of `assessWatchedArea` itself, rejecting its own
+    // returned promise; the route's outer `.catch()` converted that to
+    // `null` and the area vanished from the digest with no trace, even
+    // though the user's OTHER area still sent successfully.
+    sqlMock.mockResolvedValue([
+      {
+        user_id: "user-1",
+        area_type: "point",
+        area_id: "41.9000,-87.7000",
+        area_label: "Sync-throw corner",
+        email: "user1@example.com",
+        name: "User One",
+      },
+      ...watchedRows, // "Commercial Ave corridor" — the successful area
+    ]);
+    findTifBoundaryMock
+      .mockImplementationOnce(() => {
+        throw new Error("resolver threw synchronously, not a rejected promise");
+      })
+      .mockResolvedValueOnce({
+        districtId: "T-999",
+        rawDistrictId: "T-999",
+        districtName: "Test District",
+        expirationDate: isoInDays(60),
+        boundaryWards: null,
+      });
+    sendMock.mockResolvedValue({ id: "email-1" });
+
+    const res = await GET(
+      digestRequest("/api/cron/watchlist-digest", {
+        authorization: "Bearer test-secret",
+      })
+    );
+    const payload = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(payload).toMatchObject({ ok: true, emailsSent: 1, failed: 0 });
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const html = sendMock.mock.calls[0][0].html as string;
+    // The successful area's own finding still renders.
+    expect(html).toContain("Commercial Ave corridor");
+    // The FAILED area is retained too — not silently dropped — with its
+    // own visible caveat, not presented as a confirmed empty result.
+    expect(html).toContain("Sync-throw corner");
+    expect(html).toContain(
+      "Some incentive-geography data could not be verified for this location this week."
+    );
   });
 
   it("sends one email per user with notable items", async () => {

@@ -81,7 +81,7 @@ export const INVESTMENT_TOUR_STEPS: InvestmentTourStep[] = [
     selector: '[data-tour="investment-community-ranking"] button[aria-pressed]',
     title: "Pin communities to compare",
     description:
-      "This star button adds a community to a working compare set. Pin between two and four communities this way and a compare bar appears fixed to the bottom of the page, with a link to a full side-by-side view once enough are pinned. The button is easy to miss — the comparison it unlocks is not.",
+      "This star button adds a community to a working compare set. Pin between two and four communities this way and a compare bar appears fixed to the bottom of the page, with a link to a full side-by-side view once enough are pinned. The button is easy to miss — the comparison it opens up is not.",
     side: "left",
   },
   {

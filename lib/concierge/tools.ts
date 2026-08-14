@@ -1,8 +1,9 @@
 /**
  * Read-only concierge tools (Stage 1). None of these write to a database, none
  * require authentication, and every one returns SOURCED facts only:
- *   - searchPrograms / getProgram  → public/data/programs.json
- *   - listZonesAtPoint             → the same point-in-zone logic as the report
+ *   - searchPrograms / getProgram  → the public program projection (lib/program-public.ts)
+ *   - listZonesAtPoint             → Zone Evidence v2 (build-spec.md 2.3), the
+ *                                     same tri-state resolver the report uses
  *   - getPageContext               → echoes the client-provided page context
  *   - navigateTo                   → validates an allowlisted route to SUGGEST
  *
@@ -15,7 +16,8 @@ import {
   getProgram as lookupProgram,
   searchPrograms as searchProgramIndex,
 } from "./programs-index";
-import { resolveZonesAtPoint } from "@/lib/zones-check";
+import { resolveZoneEvidenceV2 } from "@/lib/zones-check";
+import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import { resolveNavTarget } from "./navigation";
 import type { ConciergePageContext } from "./types";
 import {
@@ -94,11 +96,25 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
       }),
       execute: async ({ lat, lon }) => {
         onToolCall?.("listZonesAtPoint");
-        const zones = await resolveZonesAtPoint(lat, lon);
+        // Zone Evidence v2 (build-spec.md 2.3; audit F2): a layer this tool
+        // could not resolve is reported as unknown, never silently absent —
+        // otherwise the model has no way to tell "confirmed not covered"
+        // apart from "the check failed", and could assert the former.
+        const evidence = await resolveZoneEvidenceV2(lat, lon, CHECKABLE_ZONE_KEYS);
+        const zones = Object.entries(evidence)
+          .filter(([, entry]) => entry.state === "matched")
+          .map(([key, entry]) => ({ key, name: entry.name }));
+        const unknownLayers = Object.entries(evidence)
+          .filter(([, entry]) => entry.state === "unknown")
+          .map(([key]) => key);
         return {
           count: zones.length,
           zones,
-          note: "Zone coverage indicates a program MAY apply at this location. Verify eligibility with the program administrator.",
+          unknownLayers,
+          note:
+            unknownLayers.length > 0
+              ? `${unknownLayers.length} layer(s) could not be checked and are NOT confirmed absent — do not tell the user this address is outside them. Zone coverage indicates a program MAY apply at this location; the administering agency confirms eligibility.`
+              : "Zone coverage indicates a program MAY apply at this location; the administering agency confirms eligibility.",
         };
       },
     }),

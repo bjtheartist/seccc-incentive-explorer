@@ -12,19 +12,26 @@
  * federal Opportunity Zone, an NMTC-eligible tract, a HUD Qualified Census
  * Tract, an IRA Energy Community, and an SBA HUBZone.
  *
- * Resolution path: `GET /api/zones/check?lat=&lon=` — the SAME endpoint
- * app/report/page.tsx calls, backed by lib/zones-check.ts (PostGIS when the DB
- * is reachable, malformed-geometry-safe static point-in-polygon otherwise) and
- * cached for a week at the edge. Deliberately NOT a client-side load of
- * public/data/zones/*.geojson: those total ~20 MB (tif-districts alone is
- * 3.2 MB, nmtc-eligible 7.4 MB) and would be a catastrophic payload on a map
- * page. Deliberately NOT an export-time stamp either — regenerating
- * vacancy-index.json needs Neon, which is out of reach here.
+ * Resolution path: `GET /api/zones/check/v2?lat=&lon=` — the Zone Evidence v2
+ * endpoint (build-spec.md 2.3), the same one app/report/page.tsx now calls,
+ * backed by lib/zones-check.ts (PostGIS when the DB is reachable,
+ * malformed-geometry-safe static point-in-polygon otherwise) and cached for a
+ * week at the edge (short-TTL/no-store whenever any layer is unknown).
+ * Deliberately NOT a client-side load of public/data/zones/*.geojson: those
+ * total ~20 MB (tif-districts alone is 3.2 MB, nmtc-eligible 7.4 MB) and
+ * would be a catastrophic payload on a map page. Deliberately NOT an
+ * export-time stamp either — regenerating vacancy-index.json needs Neon,
+ * which is out of reach here.
  *
  * Honesty rails:
  *   • "Not inside a mapped incentive geography" is only ever claimed from a
- *     lookup that SUCCEEDED and returned nothing (`status: "loaded"` with an
- *     empty list). A failed or unattempted lookup says so instead.
+ *     lookup that SUCCEEDED and confirmed EVERY checkable layer either
+ *     matched or not_matched (`status: "loaded"` with an empty match list
+ *     and zero unknown layers). v1's positives-only array made a failed
+ *     layer indistinguishable from a confirmed non-match (audit F2) — v2's
+ *     tri-state layers fix that at the source, so this module now surfaces
+ *     `unknownKeys` and refuses to render the negative claim when any
+ *     checkable layer could not be resolved.
  *   • Zones are reported as MAPPED GEOGRAPHIES, never as eligibility or an
  *     award. The card links out to the full address report for the program
  *     layer, exactly as the report's own zone pills do.
@@ -34,6 +41,7 @@
  */
 
 import { CHECKABLE_ZONE_KEYS, ZONE_LABELS, ZONE_META } from "./constants";
+import { normalizeZoneEvidenceV2 } from "./zone-response";
 
 /** One place-based geography containing the site, ready to render. */
 export interface SiteZoneMatch {
@@ -51,7 +59,13 @@ export type SiteZoneState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error" }
-  | { status: "loaded"; matches: SiteZoneMatch[] };
+  | {
+      status: "loaded";
+      matches: SiteZoneMatch[];
+      /** Checkable layer keys that could not be resolved (build-spec.md 2.3 / audit F2) — NOT confirmed absent. */
+      unknownKeys: string[];
+      checkedAt: string;
+    };
 
 const CHECKABLE = new Set<string>(CHECKABLE_ZONE_KEYS);
 
@@ -62,11 +76,14 @@ function sortOrder(key: string): number {
 }
 
 /**
- * Normalize whatever `/api/zones/check` returned into a deduped, ordered list.
- * The route answers with `[{key, name}]`; anything else (an error object, a
- * truncated body, a hand-edited response) yields an empty list rather than a
- * throw. Unknown / point-data keys are dropped — only the checkable polygon
- * layers describe a geography that CONTAINS the point.
+ * Normalize a v1 `/api/zones/check` array (kept for the small number of
+ * existing test fixtures / legacy callers) into a deduped, ordered list.
+ * Unknown / point-data keys are dropped — only the checkable polygon layers
+ * describe a geography that CONTAINS the point. Prefer
+ * `matchesFromEvidenceV2` for anything resolving live coverage — this
+ * function alone cannot distinguish "confirmed absent" from "layer failed
+ * server-side" (audit F2), which is exactly why fetchSiteZones below calls
+ * the v2 endpoint instead.
  */
 export function normalizeSiteZoneMatches(raw: unknown): SiteZoneMatch[] {
   if (!Array.isArray(raw)) return [];
@@ -89,13 +106,62 @@ export function normalizeSiteZoneMatches(raw: unknown): SiteZoneMatch[] {
   );
 }
 
+/** Build the matched-layer list AND the unresolved-layer list from a Zone
+ *  Evidence v2 envelope (see lib/zone-response.ts's normalizeZoneEvidenceV2). */
+export function matchesFromEvidenceV2(raw: unknown): {
+  matches: SiteZoneMatch[];
+  unknownKeys: string[];
+  checkedAt: string;
+} | null {
+  const evidence = normalizeZoneEvidenceV2(raw);
+  if (!evidence) return null;
+
+  const matches: SiteZoneMatch[] = [];
+  for (const key of evidence.matchedKeys) {
+    if (!CHECKABLE.has(key)) continue;
+    const entry = evidence.layers[key];
+    matches.push({ key, label: ZONE_LABELS[key] ?? key, name: entry?.name ?? "" });
+  }
+  matches.sort((a, b) => sortOrder(a.key) - sortOrder(b.key) || a.key.localeCompare(b.key));
+
+  return {
+    matches,
+    unknownKeys: evidence.unknownKeys.filter((key) => CHECKABLE.has(key)),
+    checkedAt: evidence.checkedAt,
+  };
+}
+
 /** "Inside 8 mapped incentive geographies." / "Inside 1 mapped incentive
- *  geography." / the honest empty statement. Never claims eligibility. */
-export function siteZonesSummary(matches: readonly SiteZoneMatch[]): string {
+ *  geography." / the honest empty statement — or, when the empty result
+ *  cannot be trusted because some layers were never actually checked, an
+ *  honest incomplete-check statement instead of a negative claim (audit F2).
+ *  Never claims eligibility.
+ *
+ * review5 S3: known positives and an unavailable-layer notice must BOTH
+ * render regardless of match count — a nonzero `matches.length` must never
+ * cause `unknownKeys` to go unmentioned. Before this fix, any unknown
+ * layer's disclosure only appeared when `matches` was empty; a site with
+ * 3 confirmed geographies AND 2 layers that failed to resolve rendered
+ * ONLY "Inside 3 mapped incentive geographies:", silently dropping the
+ * fact that 2 more layers were never actually checked. */
+export function siteZonesSummary(
+  matches: readonly SiteZoneMatch[],
+  unknownKeys: readonly string[] = [],
+  checkedAt?: string,
+): string {
+  const dateNote = checkedAt ? ` (checked ${checkedAt.slice(0, 10)})` : "";
+  const unknownNote =
+    unknownKeys.length > 0
+      ? ` ${unknownKeys.length} layer${unknownKeys.length !== 1 ? "s" : ""} could not be checked right now${dateNote}.`
+      : "";
+
+  if (matches.length === 0 && unknownKeys.length > 0) {
+    return unknownNote.trim();
+  }
   if (matches.length === 0) return "Not inside a mapped incentive geography.";
   return `Inside ${matches.length} mapped incentive ${
     matches.length === 1 ? "geography" : "geographies"
-  }:`;
+  }:${unknownNote}`;
 }
 
 /** One rendered line: "TIF District — Madison/Austin Corridor TIF (T-75)", or
@@ -163,15 +229,18 @@ export async function fetchSiteZones(
   const request = (async (): Promise<SiteZoneState> => {
     try {
       const res = await fetch(
-        `/api/zones/check?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`,
+        `/api/zones/check/v2?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`,
         { signal },
       );
       if (!res.ok) return { status: "error" };
-      const state: SiteZoneState = {
-        status: "loaded",
-        matches: normalizeSiteZoneMatches(await res.json()),
-      };
-      resolved.set(cacheKey, state);
+      const resolvedEvidence = matchesFromEvidenceV2(await res.json());
+      if (!resolvedEvidence) return { status: "error" };
+      const state: SiteZoneState = { status: "loaded", ...resolvedEvidence };
+      // build-spec.md 2.3: fully-covered responses (no unknown layers) are
+      // safe to memo for the life of the page; a response carrying any
+      // unknown layer is NOT memoized here, so a later click re-resolves it
+      // instead of permanently caching an incomplete check as if it were final.
+      if (resolvedEvidence.unknownKeys.length === 0) resolved.set(cacheKey, state);
       return state;
     } catch {
       return { status: "error" };

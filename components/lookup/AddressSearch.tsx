@@ -3,16 +3,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { IncentiveReport } from "./IncentiveReport";
-import {
-  findBusinessByAddress,
-  findBusinessByName,
-  businessToLookupResult,
-} from "@/lib/business-lookup";
-import { enrichEmployment } from "@/lib/zone-check";
-import type { Business, LookupResult, Program } from "@/lib/types";
+import { findBusinessByAddress, findBusinessByName } from "@/lib/business-lookup";
+import type { Business } from "@/lib/types";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { trackEvent } from "@/lib/analytics-events";
+
+/**
+ * build-spec.md 2.7 (audit F15; consult item 11): a matched business
+ * without stored coordinates used to fall back to the legacy IncentiveReport
+ * fork instead of routing through /report like every other match. This is
+ * a LIVE conditional branch, not dead code — /api/businesses can return a
+ * DB-only or future record with null coordinates even though the static
+ * 360-record snapshot always has them. The fix: geocode the business's own
+ * stored address and route to /report exactly like a coordinate-bearing
+ * match; if geocoding fails, degrade to an honest "couldn't confirm a
+ * location" error rather than any legacy report path.
+ */
+const NO_LOCATION_ERROR =
+  "We found this business, but couldn't confirm a mapped location for it right now. Try entering the street address directly.";
 
 const SAMPLE_PROMPTS = [
   { label: "Justice of the Pies", type: "business" },
@@ -62,9 +70,7 @@ export function AddressSearch({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<LookupResult | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [suggestions, setSuggestions] = useState<Business[]>([]);
   const [error, setError] = useState("");
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
@@ -75,8 +81,6 @@ export function AddressSearch({
       .catch(() => cachedFetch<Business[]>("/data/businesses.json"))
       .then(setBusinesses)
       .catch(() => {});
-    cachedFetch<Program[]>("/data/programs.json")
-      .then(setPrograms);
   }, []);
 
   // Cycle loading messages
@@ -126,7 +130,6 @@ export function AddressSearch({
 
       setLoading(true);
       setError("");
-      setResult(null);
       setSuggestions([]);
       trackEvent("location_snapshot_requested", {
         source,
@@ -155,46 +158,43 @@ export function AddressSearch({
         });
       };
 
+      // build-spec.md 2.7 (audit F15): a matched business with no stored
+      // coordinates geocodes its own address and routes to /report exactly
+      // like a coordinate-bearing match — never the legacy inline report.
+      // A failed geocode is an honest unavailable state, not a fallback
+      // report of any kind.
+      const routeBusinessMatch = async (business: Business) => {
+        fireSearchPerformed("business", business.lat, business.lon);
+        if (business.lat && business.lon) {
+          navigateToReport(business.lat, business.lon, business.address);
+          return;
+        }
+        try {
+          const geo = await cachedFetch<{ lat: number; lon: number; displayName?: string }>(
+            `/api/geocode?address=${encodeURIComponent(business.address)}`
+          );
+          navigateToReport(geo.lat, geo.lon, geo.displayName || business.address);
+        } catch {
+          setError(NO_LOCATION_ERROR);
+          setLoading(false);
+        }
+      };
+
       try {
         if (directBusiness) {
-          fireSearchPerformed("business", directBusiness.lat, directBusiness.lon);
-          if (directBusiness.lat && directBusiness.lon) {
-            navigateToReport(directBusiness.lat, directBusiness.lon, directBusiness.address);
-            return;
-          }
-          await new Promise((r) => setTimeout(r, 600));
-          const lookupResult = businessToLookupResult(directBusiness);
-          setResult(await enrichEmployment(lookupResult));
-          setLoading(false);
+          await routeBusinessMatch(directBusiness);
           return;
         }
 
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
-          fireSearchPerformed("business", addrMatch.lat, addrMatch.lon);
-          if (addrMatch.lat && addrMatch.lon) {
-            navigateToReport(addrMatch.lat, addrMatch.lon, addrMatch.address);
-            return;
-          }
-          await new Promise((r) => setTimeout(r, 600));
-          const lookupResult = businessToLookupResult(addrMatch);
-          setResult(await enrichEmployment(lookupResult));
-          setLoading(false);
+          await routeBusinessMatch(addrMatch);
           return;
         }
 
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
-          const match = nameMatches[0];
-          fireSearchPerformed("business", match.lat, match.lon);
-          if (match.lat && match.lon) {
-            navigateToReport(match.lat, match.lon, match.address);
-            return;
-          }
-          await new Promise((r) => setTimeout(r, 600));
-          const lookupResult = businessToLookupResult(match);
-          setResult(await enrichEmployment(lookupResult));
-          setLoading(false);
+          await routeBusinessMatch(nameMatches[0]);
           return;
         }
 
@@ -250,7 +250,7 @@ export function AddressSearch({
         </div>
 
         {/* Sample Search Prompts */}
-        {!query && !result && !loading && (
+        {!query && !loading && (
           <div className="flex flex-wrap gap-2 mt-3 justify-center">
             <span className="font-mono-bureau text-[10px] tracking-[0.1em] uppercase text-white/30 self-center mr-1">
               Try:
@@ -271,7 +271,7 @@ export function AddressSearch({
         )}
 
         {/* Autocomplete Suggestions */}
-        {suggestions.length > 0 && !result && (
+        {suggestions.length > 0 && (
           <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl border border-[#0C1B33]/10 shadow-xl overflow-hidden">
             {suggestions.map((biz) => (
               <button
@@ -329,13 +329,6 @@ export function AddressSearch({
       {error && (
         <div className="mt-6 p-4 border border-red-400/30 bg-red-500/10 text-red-300 text-sm font-mono-bureau">
           {error}
-        </div>
-      )}
-
-      {/* Results */}
-      {result && (
-        <div className="mt-10">
-          <IncentiveReport result={result} programs={programs} />
         </div>
       )}
     </div>

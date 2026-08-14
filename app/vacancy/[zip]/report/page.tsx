@@ -317,6 +317,11 @@ export default async function VacancyReportPage({
     edition.sitePoints.map((p) => [`${p.lat},${p.lon}`, p]),
   );
 
+  // F1 binding replacement copy (build-spec.md 2.4; audit's clearest
+  // prohibited determination — "already qualifies for programs" — do not
+  // weaken, do not strengthen). "sites" -> "tracked site points": the
+  // adapter tests a point, not whole-site geometry.
+  const editionRevision = exportData.generatedAt ? exportData.generatedAt.slice(0, 10) : "unknown";
   const neighborhoodBrief = `${pilotEntry.primaryNeighborhood} carries ${total.toLocaleString(
     "en-US",
   )} tracked vacant properties. ${cityOwned.toLocaleString(
@@ -324,12 +329,8 @@ export default async function VacancyReportPage({
   )} are City- or public-controlled and can move toward disposition without owner outreach; the remaining ${ownershipUnverified.toLocaleString(
     "en-US",
   )} carry unverified ownership (311-reported buildings) and start with parcel matching and ownership verification. ${
-    allInIncentive
-      ? "Every tracked site sits inside at least one incentive geography"
-      : `${inIncentive.toLocaleString("en-US")} of ${total.toLocaleString(
-          "en-US",
-        )} sit inside at least one incentive geography`
-  }, so the location already qualifies for programs before any conversation begins. Revitalization here is not a single deal — it is public-land disposition, local-owner partnerships, absentee-owner outreach, and records verification, run cluster by cluster.`;
+    allInIncentive ? total.toLocaleString("en-US") : inIncentive.toLocaleString("en-US")
+  } tracked site points intersect at least one boundary in the Explorer dataset (revision ${editionRevision}). Use those overlaps to prioritize programs for review; they do not establish eligibility, current intake, or an award. Revitalization here is not a single deal — it is public-land disposition, local-owner partnerships, absentee-owner outreach, and records verification, run cluster by cluster.`;
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -1382,7 +1383,7 @@ export default async function VacancyReportPage({
             <p className="text-[#0C1B33]/55">
               Informational screening only. Owner type is inferred from public taxpayer-of-record
               patterns and is anonymized — no owner names or mailing addresses appear here. Records
-              indicate; verify current ownership, eligibility, timing, and approval requirements with
+              indicate; confirm current ownership, program requirements, timing, and approval steps with
               the administering organization before relying.
             </p>
           </div>

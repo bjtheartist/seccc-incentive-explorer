@@ -55,13 +55,17 @@ describe("buildZoningHandoff", () => {
     expect(handoff.body).toContain(
       "Published zoning designation: Not published for this location",
     );
-    // No empty scaffolding for absent sections.
+    // No empty scaffolding for absent sections — EXCEPT official sources,
+    // which always carries the ZBA link (F10, build-spec.md 2.4): an
+    // unresolved zoning question always routes to ZBA even when the caller
+    // supplied no links of its own.
     expect(handoff.body).not.toContain("Details the user provided");
-    expect(handoff.body).not.toContain("Official sources:");
+    expect(handoff.body).toContain("Official sources:");
+    expect(handoff.body).toContain("Chicago Zoning Board of Appeals (ZBA)");
     expect(handoff.body).not.toContain("Full site report");
   });
 
-  it("drops blank answers and links instead of rendering stubs", () => {
+  it("drops blank answers and links instead of rendering stubs, but always keeps the ZBA link (F10)", () => {
     const handoff = buildZoningHandoff({
       address: "1 N Test",
       reviewAnswers: [
@@ -72,7 +76,23 @@ describe("buildZoningHandoff", () => {
     });
 
     expect(handoff.body).not.toContain("Details the user provided");
-    expect(handoff.body).not.toContain("Official sources:");
+    expect(handoff.body).toContain("Official sources:");
+    expect(handoff.body).toContain("Chicago Zoning Board of Appeals (ZBA)");
+    // The caller's blank-labeled link is still dropped.
+    expect(handoff.body).not.toContain("https://example.gov");
+  });
+
+  it("F10: the ZBA link cannot be omitted by a caller-supplied officialLinks array, and is always first", () => {
+    const handoff = buildZoningHandoff({
+      address: "1 N Test",
+      officialLinks: [
+        { label: "District use table", url: "https://example.gov/use-table" },
+      ],
+    });
+    const sourcesSection = handoff.sections.find((s) => s.heading === "Official sources:");
+    expect(sourcesSection).toBeDefined();
+    expect(sourcesSection!.lines[0]).toContain("Chicago Zoning Board of Appeals (ZBA)");
+    expect(sourcesSection!.lines.some((l) => l.includes("District use table"))).toBe(true);
   });
 
   it("keeps the subject usable when only the address is known", () => {
