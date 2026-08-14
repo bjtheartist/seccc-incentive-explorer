@@ -2245,3 +2245,90 @@ every changed file; full `npx vitest run` — **325 test files, 3997
 passed, 2 skipped** (up from S16's 324/3991); `npm run
 programs:public:check` clean (unaffected — this finding touches program
 detail-page rendering, not the catalog export).
+
+---
+
+### S18 (HIGH) — (0,0) seeds correctly into `wizardState`, but every downstream effect re-checked truthiness one level down
+
+**Finding:** S13 fixed `wizardState.lat`/`.lon`'s OWN seeding for a
+validated `(0, 0)` pair, but every effect THAT READS `wizardState.lat`/
+`.lon` afterward independently re-implemented the same truthy check —
+`if (!wizardState.lat || !wizardState.lon)` — one level downstream. For
+`(0, 0)`: the zone-data effect treated it as "no coordinates," cleared
+`zones` to `null`, and never fetched; the instant-mode auto-generation
+effect's `if (!zones) return;` then waited on a value that could never
+become non-null again. "Generating Location Snapshot" spun forever, with
+no error and no way out — the exact operational risk
+`lib/instant-report-coords.ts`'s own doc comment (S9) warned about, now
+realized for the one input class (`(0, 0)`) S13 had just finished making
+"validator says yes."
+
+**Fix:** every truthy coordinate check in `app/report/page.tsx` — 10
+sites across 6 effects (the zone effect, census/parcel/representatives,
+site signals/transport/mobility, stacking/community-assets/local-business-
+support, and BOTH the instant-mode and share-mode auto-generation gates)
+— replaced with correct `!= null` semantics. Introduced one shared,
+derived boolean, `hasWizardCoords = wizardState.lat != null &&
+wizardState.lon != null`, computed once near the top of the component
+and reused across every site that only needs a plain boolean (the
+generation gates' `parcelLookupComplete`/`=== undefined` checks) — so
+this specific bug class can't recur one effect at a time. Two effects
+(the zone-data effect and the site-signals effect) keep an INLINE
+`lat == null || lon == null` guard instead of the shared boolean,
+deliberately: both immediately do `const lat = wizardState.lat; const
+lon = wizardState.lon;` and pass `lat`/`lon` into functions requiring
+`number` (`checkZones`, `getSiteSignals`, `getTransportAccess`) —
+TypeScript's control-flow narrowing doesn't propagate through a
+separately-computed boolean variable, only through a check performed
+directly on the property access being narrowed, so those two keep the
+inline form (same `!= null` semantics, just not routed through
+`hasWizardCoords`) to stay both correct AND type-safe. Also found and
+fixed while re-sweeping the whole file for the same anti-pattern beyond
+S18's literally-cited 5 lines: the SHARE-mode auto-generation effect had
+an identical, independent copy of the same 5-truthy-check pattern (not
+explicitly named in the finding, but the same bug, same file, same
+class — a saved-report share link carrying `(0, 0)` would have hit the
+identical hang). `react-hooks/exhaustive-deps` correctly flagged
+`hasWizardCoords` as a newly-missing dependency in 4 effects after this
+change (it's derived from state already in each effect's own deps array,
+but ESLint can't infer that through a separate variable) — added to each
+affected effect's dependency array; the file's total warning count is
+unchanged from the pre-existing 5 (confirmed via a full repo-wide
+`eslint .` run, same as S11's `git stash` baseline check).
+
+**Tests added:**
+`app/report/__tests__/instant-mode-zero-zero-effect-composition.test.tsx`
+(new, 4 tests) — the coordinator's TEST requirement verbatim: "live
+page/effect composition with mocked APIs — (0,0) must call the v2 zone
+route, generate the report, and exit the spinner." Unlike S13's
+render-based test (which only needs the first synchronous render pass,
+no jsdom, no effects), this fix is entirely about effects actually
+firing and resolving, so this file uses `@vitest-environment jsdom` +
+React Testing Library (`render`/`waitFor`) — the technique already
+established elsewhere in this codebase
+(`components/vacancy/__tests__/SiteShortlistResults.test.tsx`) — with
+every network dependency mocked (a URL-routing `fetch` mock plus
+module-level mocks for `getSiteSignals`/`getTransportAccess`/
+`fetchZoningLookup`, and the same `ReportDisplay`-child-component stub
+list `report-page-live-renderer.test.tsx` already established) so the
+whole effect chain settles deterministically. Asserts, for
+`instant=true&lat=0&lon=0`: the v2 zone route is actually called with
+`lat=0&lon=0`; `/api/report/generate` is actually called (POST); the
+"Generating Location Snapshot" text is present initially and becomes
+absent once the chain resolves. A control case with a genuinely valid
+non-zero pair proves the same assertions aren't vacuous for the ordinary
+case either. Verified empirically via `git stash` (same discipline as
+S13): all 3 `(0, 0)`-specific assertions fail against the pre-fix code
+(the zone-route call never happens, the generate-route call times out
+after 10s, the spinner never disappears after 10s) while the control
+case already passes on old code — confirming the tests exercise exactly
+the fixed bug, not a vacuous assertion; all 4 pass against the restored
+fix.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors, 5
+pre-existing warnings (confirmed identical set/count to the pre-S18
+baseline, not just the same total); full `npx vitest run` — **326 test
+files, 4001 passed, 2 skipped** (up from S17's 325/3997); no regression
+in the existing `instant-refine-coordinate-live-composition.test.tsx`
+(S13) or `report-page-live-renderer.test.tsx` suites; `npm run
+programs:public:check` clean.

@@ -856,18 +856,40 @@ function ReportWizardPage() {
   // confidence-engine matching (now server-side too) no longer need the
   // client to hold the full catalog at all.
 
+  // review7 S18 (HIGH): the coordinate-dependent effects below (and the
+  // instant/share auto-generation gates further down) used to each
+  // independently write `wizardState.lat && wizardState.lon` — a truthy
+  // check that treats a validated (0, 0) pair (S13 seeds it correctly
+  // into wizardState) as "no coordinates," even though `0` is a
+  // perfectly real, in-range value `isValidInstantCoordinatePair`
+  // accepts. That silently skipped every lat/lon-dependent fetch for
+  // (0, 0) — the zone effect cleared `zones` to `null` and never
+  // re-fetched it, so the instant-mode generation gate's `if (!zones)
+  // return;` waited on a value that could never become non-null again,
+  // hanging "Generating Location Snapshot" forever. One shared,
+  // correctly-null-checked boolean, reused everywhere below, so this
+  // class of bug can't recur one effect at a time.
+  const hasWizardCoords = wizardState.lat != null && wizardState.lon != null;
+
   // Load zone data when address has lat/lon
   // Uses the API first, then falls back to client-side Turf.js if the API fails.
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) {
+    // review7 S18: kept as an inline `== null` check (not the shared
+    // `hasWizardCoords` boolean) specifically so TypeScript narrows
+    // `wizardState.lat`/`.lon` to `number` for the `const lat`/`lon`
+    // declarations right below — `checkZones(lat, lon)` further down
+    // requires `number`, and narrowing through a separately-computed
+    // boolean variable doesn't propagate that far. Same `!= null`
+    // semantics as `hasWizardCoords` everywhere else in this file.
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    if (lat == null || lon == null) {
       setZones(null);
       setZoneNames(null);
       setZoneUnknowns([]);
       setZoneCheckedAt(null);
       return;
     }
-    const lat = wizardState.lat;
-    const lon = wizardState.lon;
     let cancelled = false;
     setZones(null);
     setZoneNames(null);
@@ -918,7 +940,7 @@ function ReportWizardPage() {
 
   // Load census + parcel data when address has lat/lon.
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) return;
+    if (!hasWizardCoords) return;
     setParcelLookupComplete(false);
     setParcelData(null);
     cachedFetch(`/api/census?lat=${wizardState.lat}&lon=${wizardState.lon}`)
@@ -931,7 +953,7 @@ function ReportWizardPage() {
     cachedFetch<DistrictData>(`/api/representatives?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
-  }, [wizardState.lat, wizardState.lon]);
+  }, [wizardState.lat, wizardState.lon, hasWizardCoords]);
 
   // Zoning has a stricter contract than the general stale-while-error client
   // cache: never reuse another address or hide a current source failure.
@@ -960,15 +982,18 @@ function ReportWizardPage() {
 
   // Load address-level proximity signals used in the report Site Overview.
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) {
+    // review7 S18: same narrowing reason as the zone-data effect above —
+    // getSiteSignals/getTransportAccess require `number`, not
+    // `number | null`.
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    if (lat == null || lon == null) {
       setSiteSignals(undefined);
       setTransportAccess(undefined);
       setMobilityAccess(undefined);
       return;
     }
 
-    const lat = wizardState.lat;
-    const lon = wizardState.lon;
     setSiteSignals(undefined);
     setTransportAccess(undefined);
     setMobilityAccess(undefined);
@@ -987,7 +1012,7 @@ function ReportWizardPage() {
   // Load stacking rules + community assets when address has lat/lon
   const localSupportKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) {
+    if (!hasWizardCoords) {
       setLocalBusinessSupport(undefined);
       localSupportKeyRef.current = null;
       return;
@@ -1025,6 +1050,7 @@ function ReportWizardPage() {
     wizardState.projectType,
     wizardState.proposedUse,
     wizardState.reportType,
+    hasWizardCoords,
   ]);
 
   // Load area stats on mount (no lat/lon dependency)
@@ -1225,16 +1251,16 @@ function ReportWizardPage() {
   useEffect(() => {
     if (!isInstantMode || !instantLoading) return;
     if (!zones) return;
-    if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (hasWizardCoords && !parcelLookupComplete) return;
     if (
       wizardState.lat != null &&
       wizardState.lon != null &&
       cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
     ) return;
-    if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
-    if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
-    if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
-    if (wizardState.lat && wizardState.lon && mobilityAccess === undefined) return;
+    if (hasWizardCoords && localBusinessSupport === undefined) return;
+    if (hasWizardCoords && siteSignals === undefined) return;
+    if (hasWizardCoords && transportAccess === undefined) return;
+    if (hasWizardCoords && mobilityAccess === undefined) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
     let cancelled = false;
@@ -1291,7 +1317,7 @@ function ReportWizardPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isInstantMode, instantLoading, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
+  }, [isInstantMode, instantLoading, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr, hasWizardCoords]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
@@ -1338,17 +1364,17 @@ function ReportWizardPage() {
   useEffect(() => {
     if (!isShareMode || shareAutoGenerated) return;
     // For address-based reports, wait for zones
-    if (!zones && wizardState.lat) return;
-    if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (!zones && hasWizardCoords) return;
+    if (hasWizardCoords && !parcelLookupComplete) return;
     if (
       wizardState.lat != null &&
       wizardState.lon != null &&
       cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
     ) return;
-    if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
-    if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
-    if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
-    if (wizardState.lat && wizardState.lon && mobilityAccess === undefined) return;
+    if (hasWizardCoords && localBusinessSupport === undefined) return;
+    if (hasWizardCoords && siteSignals === undefined) return;
+    if (hasWizardCoords && transportAccess === undefined) return;
+    if (hasWizardCoords && mobilityAccess === undefined) return;
     if (wizardState.reportType === "corridor-intelligence" && corridorLoading) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
@@ -1401,7 +1427,7 @@ function ReportWizardPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isShareMode, shareAutoGenerated, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isShareMode, shareAutoGenerated, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, hasWizardCoords]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
