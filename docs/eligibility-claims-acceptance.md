@@ -549,7 +549,21 @@ this is a pointer index, oldest to newest:
   2027-02-13: one quiz question quoting a federal statute's own eligibility
   rule for which credits qualify (the build spec's own worked example), one
   internal stable section-id key, and two internal telemetry `reason` ids
-  in the concierge validator — none rendered to a user.
+  in the concierge validator.
+  **CORRECTION (review5 S8):** this bullet previously claimed all four
+  were "none rendered to a user" — that was false for the quiz exception.
+  The quiz question text IS rendered to the user; it is excepted because
+  it is a REVIEWED, verbatim, user-facing statutory quote (the build
+  spec's own worked example of what a reviewed exception should cover),
+  not because it is hidden. Only the section-id key and the two concierge
+  telemetry `reason` ids are genuinely non-rendered. Each exception is now
+  also bound to an exact `filePath` and an AST-location `context` (not
+  text-only matching) and a tamper-evident `textHash` — see that file's
+  own doc comment and `lib/__tests__/source-guard-ast.test.ts`'s
+  "path-scoped matching" tests for why: a short, generic string like
+  "unlocks" or "verify-eligibility" being excepted by text alone had
+  silently become a GLOBAL pass for that literal anywhere in the entire
+  scanned codebase, not just at the one file it was actually reviewed in.
 - **Concierge validator prohibited-phrase check runs on the RAW model text,
   before `normalizePublicDeterminationText`** — not after. Running the
   phrase check post-normalization would let normalization silently rewrite
@@ -1202,4 +1216,58 @@ where "advice" was incidental filler, not the property under test.
 **Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
 same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
 3755 passed, 2 skipped** (up from S6's 318/3751); `npm run
+programs:public:check` clean.
+
+### S8 (MEDIUM) — source-guard exceptions bound to exact path + AST context + text hash
+
+**Finding:** every entry in `lib/source-guard/exceptions.ts` matched by
+EXACT TEXT ONLY, with no file-path or location binding. For the two
+short, generic strings excepted there — `"unlocks"` and
+`"verify-eligibility"` (lib/concierge/output-validator.ts's internal
+telemetry `reason` ids) — this meant the reviewed exception had silently
+become a GLOBAL pass for that literal string ANYWHERE in the entire
+scanned codebase: a brand-new, never-reviewed component containing the
+identical bare-word literal `"unlocks"` for a completely unrelated reason
+would have been silently excepted too, with no path check to catch it.
+Separately, the acceptance doc's own AST-source-guard-scope bullet
+claimed all four reviewed exceptions were "none rendered to a user" —
+false for the quiz exception, whose text is the literal, on-screen quiz
+question.
+
+**Fix:**
+- `SourceGuardException` gained `filePath` (exact repo-relative path),
+  `context` (human-readable AST location the reviewer actually checked),
+  and `textHash` (a SHA-256 of `text`, stored as an independent literal
+  hex string — NOT computed from `text` in the same file, which would
+  give zero tamper-evidence since editing `text` and a co-located hash
+  call is the same edit).
+- New exported `isViolationExcepted(violation, exceptions, rootDir, now)`
+  — the real match predicate: exact `text` AND exact `filePath`
+  (resolved relative to `rootDir`) AND not expired. The real-codebase
+  scan and the "every exception is USED" check in
+  `lib/__tests__/source-guard-ast.test.ts` both now call this function
+  instead of the old text-only `Set` lookup.
+- `docs/eligibility-claims-acceptance.md`'s AST-source-guard-scope bullet
+  corrected: the quiz exception IS rendered to the user (documented as "a
+  REVIEWED, verbatim, user-facing statutory quote," not a hidden string);
+  only the section-id key and the two concierge telemetry ids are
+  genuinely non-rendered.
+
+**Tests added:** `lib/__tests__/source-guard-ast.test.ts` — a new
+`describe` block exercising `isViolationExcepted` directly (the coordinator's
+exact TEST requirement): the existing, reviewed telemetry occurrence at
+its real file passes; an IDENTICAL "unlocks" literal at a fabricated
+brand-new component path FAILS (the actual regression this finding
+targets); the same for "verify-eligibility"; the quiz exception passes
+only at its own reviewed file and fails elsewhere; an expired exception
+never passes even at the exact right file. Plus: every exception's
+`textHash` is asserted to equal `sha256(text)` (well-formedness test), a
+dedicated tamper-evidence test proving a mutated `text` no longer matches
+its stored hash, and the "every exception is USED" check now requires
+the violation be found AT THE EXCEPTION'S OWN reviewed `filePath`, not
+merely anywhere in the scanned source.
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors,
+same 5 pre-existing warnings; full `npx vitest run` — **318 test files,
+3761 passed, 2 skipped** (up from S7's 318/3755); `npm run
 programs:public:check` clean.
