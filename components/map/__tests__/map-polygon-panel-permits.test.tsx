@@ -127,7 +127,35 @@ const COMPLETE_VACANCY_COVERAGE: VacancyCoverageMetadata = {
   sourceMode: "database",
   sourcePath: "database:vacant_properties",
   asOf: "2026-08-04T18:00:00.000Z",
-  asOfBasis: "latest_queried_row_updated_at",
+  asOfBasis: "explorer_refresh_timestamp",
+  explorerRefreshedAt: "2026-08-04T18:00:00.000Z",
+  freshness: {
+    policyVersion: "source-record-date-v1",
+    referenceDate: "2026-08-14T00:00:00.000Z",
+    recentWithinYears: 3,
+    cutoffDate: "2023-08-14T00:00:00.000Z",
+    retainedWithinYears: 5,
+    retentionPolicyCutoffDate: "2021-08-14T00:00:00.000Z",
+    retentionCutoffBasis: "current_request_reference_policy",
+    returnedCounts: { recent: 0, stale: 0, unknownDate: 0 },
+  },
+  licenseScreening: {
+    policyVersion: "issued-exact-address-v4",
+    sourcePath: "https://data.cityofchicago.org/resource/r5kz-chrr.json",
+    status: "available",
+    checkedAt: "2026-08-14T00:00:00.000Z",
+    candidateCount: 0,
+    checkedCount: 0,
+    matchedPropertyCount: 0,
+    capped: false,
+    addressCap: 500,
+    sourceCallCount: 0,
+    successfulBatches: 0,
+    failedBatches: 0,
+    malformedRowCount: 0,
+    partialReasons: [],
+    caveats: [],
+  },
   returnedCount: 0,
   configuredLimit: 10_000,
   queryLimit: 10_001,
@@ -182,7 +210,7 @@ describe("MapPolygonPanel permit analysis", () => {
 
   it("keeps permit-only areas useful and exportable", () => {
     const html = render(PERMITS, { vacancyCoverage: COMPLETE_VACANCY_COVERAGE });
-    expect(html).toContain("No tracked vacant properties found");
+    expect(html).toContain("No tracked vacancy signals returned");
     expect(html).toContain("Save Report");
     expect(html).toContain("Email This to Me");
     expect(html).toContain("Export Area Data (CSV)");
@@ -192,7 +220,7 @@ describe("MapPolygonPanel permit analysis", () => {
     const failedHtml = render(PERMITS, { vacancyLoadFailed: true });
     expect(failedHtml).toContain("Vacancy records unavailable");
     expect(failedHtml).toContain("lookup failure, not evidence");
-    expect(failedHtml).not.toContain("No tracked vacant properties found");
+    expect(failedHtml).not.toContain("No tracked vacancy signals returned");
     expect(failedHtml).toContain("Permit filings in this area");
 
     const partialHtml = render(PERMITS, {
@@ -208,7 +236,7 @@ describe("MapPolygonPanel permit analysis", () => {
     });
     expect(partialHtml).toContain("Partial vacancy records");
     expect(partialHtml).toContain("published static fallback");
-    expect(partialHtml).not.toContain("No tracked vacant properties found");
+    expect(partialHtml).not.toContain("No tracked vacancy signals returned");
     expect(partialHtml).toContain("Permit filings in this area");
   });
 

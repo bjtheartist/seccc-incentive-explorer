@@ -48,6 +48,17 @@ import {
   vacancyCoverageDisclosure,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+import type { VacancyFreshnessFilter } from "@/lib/vacancy-evidence";
+import {
+  currentLicenseConflictSummary,
+  filterAreaVacancyFeatures,
+  licenseScreeningReportItems,
+  summarizeAreaVacancyTypes,
+  vacancyCanonicalTypeLabel,
+  vacancyFreshnessLabel,
+  vacancySourceLabel,
+  type VacancyLicenseFilter,
+} from "@/lib/area-vacancy-presentation";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -77,6 +88,8 @@ const RESOURCES = [
     url: "https://www.chicago.gov/city/en/depts/dcd/supp_info/neighborhood-opportunity-fund0.html",
   },
 ];
+
+const PROPERTY_LIST_RENDER_LIMIT = 100;
 
 /**
  * Module-scope cache for the gated Community Investment export so an admin who
@@ -113,6 +126,14 @@ interface MapPolygonPanelProps {
   vacancyCoverage?: VacancyCoverageMetadata | null;
   /** HTTP or malformed-response failure; never interpret the empty collection as zero. */
   vacancyLoadFailed?: boolean;
+  /** Draft editing is explicit; analyzed results remain tied to `polygon`. */
+  editing?: boolean;
+  editDirty?: boolean;
+  onEdit?: () => void;
+  onEditDone?: () => void;
+  onEditCancel?: () => void;
+  /** Keeps the point layer identical to the panel/report/export filter set. */
+  onDisplayedFeaturesChange?: (features: readonly GeoJSON.Feature[]) => void;
   onClose: () => void;
   onClear: () => void;
   /**
@@ -155,6 +176,12 @@ export default function MapPolygonPanel({
   loading,
   vacancyCoverage = null,
   vacancyLoadFailed = false,
+  editing = false,
+  editDirty = false,
+  onEdit,
+  onEditDone,
+  onEditCancel,
+  onDisplayedFeaturesChange,
   onClose,
   onClear,
   polygon = null,
@@ -167,7 +194,65 @@ export default function MapPolygonPanel({
   const { status } = useSession();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const features = results.features;
+  const editButtonRef = useRef<HTMLButtonElement | null>(null);
+  const editDoneButtonRef = useRef<HTMLButtonElement | null>(null);
+  const loadingStatusRef = useRef<HTMLDivElement | null>(null);
+  const wasEditingRef = useRef(editing);
+  const restoreFocusAfterLoadingRef = useRef(false);
+  const allFeatures = results.features;
+  const [freshnessFilter, setFreshnessFilter] =
+    useState<VacancyFreshnessFilter>("current_screening");
+  const [licenseFilter, setLicenseFilter] =
+    useState<VacancyLicenseFilter>("all");
+  const licenseScreening = vacancyCoverage?.licenseScreening ?? null;
+  const licenseMalformedRowCount = licenseScreening?.malformedRowCount ?? 0;
+  const licensePartialReasonSummary =
+    licenseScreening?.partialReasons?.join(", ") || "none";
+  const licenseFilterAvailable =
+    licenseScreening?.status === "available" ||
+    licenseScreening?.status === "partial";
+  const effectiveLicenseFilter = licenseFilterAvailable ? licenseFilter : "all";
+  const freshnessFilterLabel =
+    freshnessFilter === "current_screening"
+      ? "Current screen — City inventory + reports within 3 years"
+      : freshnessFilter === "recent_reports"
+        ? "Reports within 3 years only"
+        : "All retained source records — 311 window is 5 years";
+  const licenseFilterLabel =
+    effectiveLicenseFilter === "conflicts"
+      ? "Current-license conflicts only"
+      : "All signals in this screen";
+  const features = useMemo(
+    () =>
+      filterAreaVacancyFeatures(
+        allFeatures,
+        freshnessFilter,
+        effectiveLicenseFilter,
+      ),
+    [allFeatures, freshnessFilter, effectiveLicenseFilter],
+  );
+  useEffect(() => {
+    onDisplayedFeaturesChange?.(editing ? [] : features);
+  }, [editing, features, onDisplayedFeaturesChange]);
+  useEffect(() => {
+    const wasEditing = wasEditingRef.current;
+    wasEditingRef.current = editing;
+    if (editing && !wasEditing) {
+      requestAnimationFrame(() => editDoneButtonRef.current?.focus());
+    } else if (!editing && wasEditing) {
+      requestAnimationFrame(() => {
+        if (loading) {
+          restoreFocusAfterLoadingRef.current = true;
+          loadingStatusRef.current?.focus();
+        } else {
+          editButtonRef.current?.focus();
+        }
+      });
+    } else if (!editing && !loading && restoreFocusAfterLoadingRef.current) {
+      restoreFocusAfterLoadingRef.current = false;
+      requestAnimationFrame(() => editButtonRef.current?.focus());
+    }
+  }, [editing, loading]);
   const vacancyCoverageNote = vacancyLoadFailed
     ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
     : vacancyCoverageDisclosure(vacancyCoverage);
@@ -312,13 +397,17 @@ export default function MapPolygonPanel({
   const investmentExportAvailable =
     adminSessionActive && !!investmentSelection && investmentSelection.length > 0;
 
-  /* ── Summary counts ── */
-  const vacantLandCount = features.filter(
-    (f) => f.properties?.propertyType === "vacant_land"
+  /* ── Summary counts: every canonical bucket sums back to displayed total. ── */
+  const vacancyTypeCounts = useMemo(
+    () => summarizeAreaVacancyTypes(features),
+    [features],
+  );
+  const vacantLandCount = vacancyTypeCounts.land;
+  const vacantBuildingCount = vacancyTypeCounts.building;
+  const licenseConflictCount = features.filter(
+    (feature) => feature.properties?.licenseCheckState === "match",
   ).length;
-  const vacantBuildingCount = features.filter(
-    (f) => f.properties?.propertyType === "vacant_building"
-  ).length;
+  const propertyListFeatures = features.slice(0, PROPERTY_LIST_RENDER_LIMIT);
 
   /* ── Top community area ── */
   const topCommunityArea = useMemo(() => {
@@ -340,9 +429,13 @@ export default function MapPolygonPanel({
     const map = new Map<string, number>();
     for (const f of features) {
       const matches = f.properties?.zoneMatches ?? [];
+      const featureZoneKeys = new Set<string>();
       for (const z of matches) {
         const key = typeof z === "string" ? z : z.zoneKey;
-        if (key) map.set(key, (map.get(key) ?? 0) + 1);
+        if (key) featureZoneKeys.add(key);
+      }
+      for (const key of featureZoneKeys) {
+        map.set(key, (map.get(key) ?? 0) + 1);
       }
     }
     return [...map.entries()]
@@ -367,9 +460,7 @@ export default function MapPolygonPanel({
     if (features.length === 0) return "";
     const parts: string[] = [];
     parts.push(
-      vacancyCoverageIncomplete
-        ? `The vacancy lookup returned ${features.length} tracked vacant ${features.length === 1 ? "property" : "properties"}`
-        : `This area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}`
+      `The current filters show ${features.length} tracked public-record vacancy ${features.length === 1 ? "signal" : "signals"}`
     );
     if (topCommunityArea) {
       parts[0] += ` in ${topCommunityArea}`;
@@ -377,10 +468,20 @@ export default function MapPolygonPanel({
     parts[0] += ".";
 
     const typeBreak: string[] = [];
-    if (vacantLandCount > 0) typeBreak.push(`${vacantLandCount} vacant lot${vacantLandCount !== 1 ? "s" : ""}`);
-    if (vacantBuildingCount > 0) typeBreak.push(`${vacantBuildingCount} vacant building${vacantBuildingCount !== 1 ? "s" : ""}`);
-    if (typeBreak.length === 2) {
-      parts.push(`That includes ${typeBreak.join(" and ")}.`);
+    if (vacancyTypeCounts.land > 0) typeBreak.push(`${vacancyTypeCounts.land} land`);
+    if (vacancyTypeCounts.building > 0) typeBreak.push(`${vacancyTypeCounts.building} building`);
+    if (vacancyTypeCounts.storefront > 0) {
+      typeBreak.push(`${vacancyTypeCounts.storefront} storefront`);
+    }
+    if (vacancyTypeCounts.other > 0) typeBreak.push(`${vacancyTypeCounts.other} other`);
+    if (typeBreak.length > 0) {
+      parts.push(`The complete type breakdown is ${typeBreak.join(", ")}.`);
+    }
+
+    if (licenseConflictCount > 0) {
+      parts.push(
+        `${licenseConflictCount} ${licenseConflictCount === 1 ? "has" : "have"} a current-license conflict signal; confirm present use before relying on the vacancy record.`,
+      );
     }
 
     if (zoneCounts.length > 0) {
@@ -400,10 +501,9 @@ export default function MapPolygonPanel({
     return parts.join(" ");
   }, [
     features,
+    licenseConflictCount,
     topCommunityArea,
-    vacantLandCount,
-    vacantBuildingCount,
-    vacancyCoverageIncomplete,
+    vacancyTypeCounts,
     zoneCounts,
     ownerCounts,
   ]);
@@ -420,23 +520,31 @@ export default function MapPolygonPanel({
     const permitLookupUnavailable = permitLoadFailed && !permitAnalysis;
     const zoneItems = zoneCounts.map(({ key, count }) => ({
       label: ZONE_LABELS[key] || key,
-      value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of ${vacancyCoverageIncomplete ? "returned vacancy records" : "properties in the drawn area"} fall within this zone.`,
+      value: `${count} signal${count === 1 ? "" : "s"}`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the displayed vacancy signals fall within this zone.`,
     }));
 
     const ownerItems = ownerCounts.map(({ key, count }) => ({
       label: OWNER_TYPE_LABELS[key] || key,
-      value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the ${vacancyCoverageIncomplete ? "returned" : "drawn area"} vacancy set.`,
+      value: `${count} signal${count === 1 ? "" : "s"}`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the displayed vacancy signals.`,
     }));
 
     const propertyItems = features.slice(0, 20).map((feature) => {
       const p = feature.properties ?? {};
       const zones: unknown[] = p.zoneMatches ?? [];
+      const sourceDate = typeof p.sourceRecordDate === "string"
+        ? p.sourceRecordDate.slice(0, 10)
+        : "source date unavailable";
+      const conflict = currentLicenseConflictSummary(p.currentLicenseMatches);
+      const sourceStatus =
+        typeof p.status === "string" && p.status.trim()
+          ? p.status.trim()
+          : "not recorded";
       return {
         label: String(p.address || "Unknown Address"),
-        value: p.propertyType === "vacant_land" ? "Vacant land" : "Vacant building",
-        detail: `${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}`,
+        value: vacancyCanonicalTypeLabel(p.canonicalType),
+        detail: `${vacancySourceLabel(p.source)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
       };
     });
 
@@ -451,7 +559,7 @@ export default function MapPolygonPanel({
         ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
         : narrative ||
           vacancyCoverageNote ||
-          `No tracked vacant properties were returned inside ${reportAreaName}.`,
+          `No tracked vacancy signals matched the selected filters inside ${reportAreaName}.`,
     ];
     if (permitAnalysis) {
       summaryParts.push(
@@ -463,14 +571,14 @@ export default function MapPolygonPanel({
 
     return {
       title: `Area Analysis Report — ${reportAreaName}`,
-      subtitle: "Drawn-area vacancy and permit context",
+      subtitle: "Drawn-area public-record vacancy signals and permit context",
       reportType: "best-location",
       generatedAt: new Date().toISOString(),
       summary: summaryParts.join(" "),
       sections: [
         {
           title: "Area Snapshot",
-          description: "Source-backed vacancy and permit context inside the drawn area.",
+          description: "Source-backed vacancy signals and permit context inside the drawn area.",
           items: [
             ...(vacancyLoadFailed
               ? [
@@ -482,22 +590,44 @@ export default function MapPolygonPanel({
                 ]
               : [
                   {
-                    label: vacancyCoverageIncomplete
-                      ? "Vacancy Records Returned"
-                      : "Total Properties",
+                    label: "Vacancy Signals Shown",
                     value: String(features.length),
-                    detail: vacancyCoverageNote ?? undefined,
+                    detail: `${allFeatures.length} source record${allFeatures.length === 1 ? " was" : "s were"} returned before the selected filters.${vacancyCoverageNote ? ` ${vacancyCoverageNote}` : ""}`,
                   },
                   {
-                    label: vacancyCoverageIncomplete ? "Returned Vacant Land" : "Vacant Land",
+                    label: "Vacancy Evidence Filter",
+                    value: freshnessFilterLabel,
+                    detail: `${allFeatures.length} source record${allFeatures.length === 1 ? " was" : "s were"} returned before filtering; ${features.length} ${features.length === 1 ? "is" : "are"} represented in this report.`,
+                  },
+                  {
+                    label: "License Conflict Filter",
+                    value: licenseFilterLabel,
+                  },
+                  {
+                    label: "Tracked Land Signals",
                     value: String(vacantLandCount),
                   },
                   {
-                    label: vacancyCoverageIncomplete
-                      ? "Returned Vacant Buildings"
-                      : "Vacant Buildings",
+                    label: "Tracked Building Signals",
                     value: String(vacantBuildingCount),
                   },
+                  {
+                    label: "Tracked Storefront Signals",
+                    value: String(vacancyTypeCounts.storefront),
+                  },
+                  {
+                    label: "Other Tracked Signals",
+                    value: String(vacancyTypeCounts.other),
+                  },
+                  {
+                    label: "Current-License Conflicts",
+                    value: String(licenseConflictCount),
+                    detail:
+                      "Issued, unexpired BACP licenses matched to exact published addresses. This is a conflict signal, not proof of occupancy.",
+                  },
+                  ...(licenseScreening
+                    ? licenseScreeningReportItems(licenseScreening)
+                    : []),
                 ]),
             { label: "Community Area", value: topCommunityArea || "Drawn area" },
             ...(permitAnalysis
@@ -523,9 +653,7 @@ export default function MapPolygonPanel({
           ? [
               {
                 title: "Incentive Zones in Area",
-                description: vacancyCoverageIncomplete
-                  ? "Zone coverage among returned vacancy records inside the drawn area."
-                  : "Zone coverage among properties inside the drawn area.",
+                description: "Zone coverage among the vacancy signals shown by the selected filters.",
                 items: zoneItems,
               },
             ]
@@ -534,9 +662,7 @@ export default function MapPolygonPanel({
           ? [
               {
                 title: "Ownership Breakdown",
-                description: vacancyCoverageIncomplete
-                  ? "Ownership classification among returned vacancy records."
-                  : "Ownership classification among vacancy records.",
+                description: "Ownership classification among the displayed vacancy signals.",
                 items: ownerItems,
               },
             ]
@@ -547,10 +673,8 @@ export default function MapPolygonPanel({
                 title: "Priority Properties",
                 description:
                   propertyItems.length < features.length
-                    ? `Showing the first ${propertyItems.length} of ${features.length} properties. Export CSV for the full list.`
-                    : vacancyCoverageIncomplete
-                      ? "Vacancy records returned inside the drawn area."
-                      : "Properties inside the drawn area.",
+                    ? `Showing the first ${propertyItems.length} of ${features.length} signals. Export CSV for the full list.`
+                    : "Public-record vacancy signals shown by the selected filters.",
                 items: propertyItems,
               },
             ]
@@ -599,7 +723,7 @@ export default function MapPolygonPanel({
         {
           label: "Verify property status",
           description:
-            "Vacancy records can lag real conditions. Confirm status through site visits, assessor records, or local partners.",
+            "Vacancy signals can lag real conditions. Confirm status through site visits, assessor records, license records, or local partners.",
           priority: "medium",
         },
         ...(permitAnalysis && permitAnalysis.totalFilings > 0
@@ -638,6 +762,16 @@ export default function MapPolygonPanel({
           description: "Property assessment and ownership context.",
           url: "https://www.cookcountyassessor.com/",
         },
+        ...(licenseScreening
+          ? [
+              {
+                id: "chicago-business-licenses",
+                label: "City of Chicago Business Licenses",
+                description: `Exact-address current-license conflict screening was ${licenseScreening.status}. Issued, unexpired matches may indicate current use; no match never establishes that a site is unoccupied.`,
+                url: "https://data.cityofchicago.org/Community-Economic-Development/Business-Licenses/r5kz-chrr",
+              },
+            ]
+          : []),
         ...(permitAnalysis
           ? [
               {
@@ -651,7 +785,12 @@ export default function MapPolygonPanel({
       ],
     };
   }, [
+    allFeatures.length,
+    freshnessFilterLabel,
     features,
+    licenseConflictCount,
+    licenseFilterLabel,
+    licenseScreening,
     narrative,
     ownerCounts,
     permitAnalysis,
@@ -659,7 +798,8 @@ export default function MapPolygonPanel({
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
-    vacancyCoverageIncomplete,
+    vacancyTypeCounts.other,
+    vacancyTypeCounts.storefront,
     vacancyCoverageNote,
     vacancyLoadFailed,
     zoneCounts,
@@ -706,6 +846,9 @@ export default function MapPolygonPanel({
     const csv = buildDrawnAreaCsv({
       areaName,
       vacancyFeatures: features,
+      vacancyReturnedCountBeforeFilters: allFeatures.length,
+      vacancyFreshnessFilter: freshnessFilter,
+      vacancyLicenseFilter: effectiveLicenseFilter,
       vacancyCoverage,
       vacancyLoadFailed,
       permitArea: permitAnalysis,
@@ -730,7 +873,10 @@ export default function MapPolygonPanel({
     URL.revokeObjectURL(url);
   }, [
     areaName,
+    allFeatures.length,
+    effectiveLicenseFilter,
     features,
+    freshnessFilter,
     investmentSelection,
     investmentSummary,
     permitAnalysis,
@@ -774,12 +920,13 @@ export default function MapPolygonPanel({
           onClick={(e) => { e.stopPropagation(); onClose(); }}
           className="text-white/35 hover:text-white text-[22px] leading-none transition-colors p-2 -mr-2 -mt-2"
           title="Close"
+          aria-label="Close area analysis"
         >
           &times;
         </button>
       </div>
 
-      {/* Area name + Clear & Redraw */}
+      {/* Area name + explicit edit lifecycle */}
       <div className="px-5 py-3 bg-white border-b border-[#0C1B33]/8">
         <div className="flex items-center justify-between mb-1.5">
           <label
@@ -788,12 +935,48 @@ export default function MapPolygonPanel({
           >
             Area Name
           </label>
-          <button
-            onClick={onClear}
-            className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] transition-colors"
-          >
-            Clear &amp; Redraw
-          </button>
+          <div className="flex items-center gap-3">
+            {editing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onEditCancel}
+                  className="min-h-11 min-w-11 px-3 font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#0C1B33]/55 hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50"
+                >
+                  Cancel
+                </button>
+                <button
+                  ref={editDoneButtonRef}
+                  type="button"
+                  onClick={onEditDone}
+                  className="min-h-11 min-w-11 px-3 font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-white bg-[#2563EB] hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50"
+                >
+                  Done
+                </button>
+              </>
+            ) : (
+              <>
+                {onEdit && (
+                  <button
+                    ref={editButtonRef}
+                    type="button"
+                    onClick={onEdit}
+                    disabled={loading || !polygon}
+                    className="min-h-11 min-w-11 px-3 font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#2563EB] hover:text-[#1d4ed8] disabled:text-[#0C1B33]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50"
+                  >
+                    Edit area
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClear}
+                  className="min-h-11 px-3 font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#2563EB] hover:text-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50"
+                >
+                  Clear &amp; Redraw
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <input
           id="drawn-area-name"
@@ -802,16 +985,37 @@ export default function MapPolygonPanel({
           onChange={(event) => setAreaName(event.target.value)}
           placeholder={defaultDrawnAreaName()}
           maxLength={120}
-          className="w-full border border-[#0C1B33]/12 px-2.5 py-2 text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]"
+          className="w-full border border-[#0C1B33]/12 px-2.5 py-2 text-[16px] md:text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/35 focus-visible:border-[#2563EB]"
         />
         <p className="text-[8px] text-[#0C1B33]/30 mt-1 leading-snug">
           Names this area in the panel header and on every row of the CSV export.
         </p>
+        <p className="sr-only" role="status" aria-live="polite">
+          {editing
+            ? `Area editing mode. ${editDirty ? "Boundary changed. Choose Done to refresh the analysis or Cancel to restore it." : "Move the boundary, then choose Done to refresh the analysis or Cancel to restore it."}`
+            : "Area boundary locked. Dragging the map will pan without moving the analyzed area."}
+        </p>
       </div>
+
+      {editing && (
+        <div className="px-5 py-3 bg-[#EFF6FF] border-b border-[#2563EB]/15" role="status">
+          <div className="font-mono-bureau text-[9px] tracking-[0.18em] uppercase text-[#2563EB]">
+            Editing area
+          </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/60">
+            Move vertices or the boundary. Choose Done to run a new analysis, or Cancel to keep the current boundary and results.
+          </p>
+        </div>
+      )}
 
       {/* ── Loading state ── */}
       {loading && (
-        <div className="px-5 py-10 flex flex-col items-center gap-3 bg-white">
+        <div
+          ref={loadingStatusRef}
+          tabIndex={-1}
+          role="status"
+          className="px-5 py-10 flex flex-col items-center gap-3 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563EB]/40"
+        >
           <div className="flex gap-1.5">
             {[0, 1, 2].map((i) => (
               <span
@@ -828,7 +1032,7 @@ export default function MapPolygonPanel({
       )}
 
       {/* ── Results ── */}
-      {!loading && (
+      {!loading && !editing && (
         <>
           {/* ── Empty state ── */}
           {features.length === 0 && (
@@ -838,11 +1042,15 @@ export default function MapPolygonPanel({
                   ? "Vacancy records unavailable"
                   : vacancyCoverageIncomplete
                     ? "Partial vacancy records"
-                    : "No tracked vacant properties found"}
+                    : allFeatures.length > 0
+                      ? "No vacancy signals match these filters"
+                      : "No tracked vacancy signals returned"}
               </div>
               <div className="text-[11px] text-[#0C1B33]/40">
                 {vacancyCoverageNote ??
-                  "Permit or investment records may still appear below for this area."}
+                  (allFeatures.length > 0
+                    ? "Adjust the evidence filters to review older, undated, or non-conflict records."
+                    : "A successful zero means no tracked signals were returned; it does not establish that every property is occupied. Permit or investment records may still appear below.")}
               </div>
               {vacancyCoverageNote && (
                 <div className="text-[10px] text-[#0C1B33]/35 mt-2">
@@ -860,6 +1068,65 @@ export default function MapPolygonPanel({
               <p className="text-[10px] text-[#0C1B33]/55 leading-relaxed">
                 {vacancyCoverageNote}
               </p>
+            </div>
+          )}
+
+          {allFeatures.length > 0 && (
+            <div className="px-5 py-4 bg-[#F8FAFC] border-b border-[#0C1B33]/8">
+              <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/35 mb-2">
+                Vacancy evidence filters
+              </div>
+              <div className="space-y-2">
+                <label className="block">
+                  <span className="sr-only">Vacancy evidence timeframe</span>
+                  <select
+                    value={freshnessFilter}
+                    onChange={(event) =>
+                      setFreshnessFilter(event.target.value as VacancyFreshnessFilter)
+                    }
+                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                  >
+                    <option value="current_screening">
+                      Current screen — City inventory + reports within 3 years
+                    </option>
+                    <option value="recent_reports">Reports within 3 years only</option>
+                    <option value="all_records">
+                      All retained records — 311 source window is 5 years
+                    </option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="sr-only">Current-license conflict filter</span>
+                  <select
+                    value={effectiveLicenseFilter}
+                    onChange={(event) =>
+                      setLicenseFilter(event.target.value as VacancyLicenseFilter)
+                    }
+                    disabled={!licenseFilterAvailable}
+                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2 text-[16px] md:text-[11px] text-[#0C1B33] disabled:text-[#0C1B33]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                  >
+                    <option value="all">All signals in this screen</option>
+                    <option value="conflicts">Current-license conflicts only</option>
+                  </select>
+                </label>
+              </div>
+              <div className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/45">
+                Showing {features.length.toLocaleString("en-US")} of {allFeatures.length.toLocaleString("en-US")} returned signals.
+                {vacancyCoverage?.freshness
+                  ? ` Source dates: ${vacancyCoverage.freshness.returnedCounts.recent} recent, ${vacancyCoverage.freshness.returnedCounts.stale} older, ${vacancyCoverage.freshness.returnedCounts.unknownDate} unknown. Retention policy: each sync requests the latest ${vacancyCoverage.freshness.retainedWithinYears} years of 311 records; using today’s policy reference, that window would begin ${vacancyCoverage.freshness.retentionPolicyCutoffDate.slice(0, 10)}. The exact last-sync cutoff is not persisted.`
+                  : ""}
+              </div>
+              {licenseScreening && (
+                <div
+                  className={`mt-2 border-l-2 pl-2 text-[9px] leading-relaxed ${
+                    licenseScreening.status === "available"
+                      ? "border-[#059669]/30 text-[#0C1B33]/45"
+                      : "border-[#D97706]/40 text-[#0C1B33]/55"
+                  }`}
+                >
+                  License screening: {licenseScreening.status}. Checked {licenseScreening.checkedCount.toLocaleString("en-US")} of {licenseScreening.candidateCount.toLocaleString("en-US")} exact published addresses; {licenseScreening.matchedPropertyCount.toLocaleString("en-US")} returned signal{licenseScreening.matchedPropertyCount === 1 ? " has" : "s have"} an issued, unexpired license match. Address cap {licenseScreening.addressCap.toLocaleString("en-US")}; capped {licenseScreening.capped ? "yes" : "no"}; {licenseScreening.sourceCallCount} bounded source calls; root address groups {licenseScreening.successfulBatches} complete and {licenseScreening.failedBatches} incomplete. Partial reasons: {licensePartialReasonSummary}. {licenseMalformedRowCount > 0 ? `${licenseMalformedRowCount.toLocaleString("en-US")} malformed or policy-ineligible source rows were ignored. ` : ""}A match is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied.
+                </div>
+              )}
             </div>
           )}
 
@@ -881,20 +1148,23 @@ export default function MapPolygonPanel({
               <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
                 At a Glance
               </div>
-              <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+              <div className="grid grid-cols-2 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
                 {[
                   {
-                    label: vacancyCoverageIncomplete ? "Returned" : "Total",
+                    label: "Signals shown",
                     value: features.length,
                   },
                   {
-                    label: vacancyCoverageIncomplete ? "Land returned" : "Vacant Land",
+                    label: "Land",
                     value: vacantLandCount,
                   },
                   {
-                    label: vacancyCoverageIncomplete ? "Buildings returned" : "Buildings",
+                    label: "Buildings",
                     value: vacantBuildingCount,
                   },
+                  { label: "Storefronts", value: vacancyTypeCounts.storefront },
+                  { label: "Other", value: vacancyTypeCounts.other },
+                  { label: "License conflicts", value: licenseConflictCount },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3 text-center">
                     <div className="font-editorial text-[22px] leading-none text-[#0C1B33]">
@@ -1385,26 +1655,32 @@ export default function MapPolygonPanel({
               <div className="px-5 py-4 bg-white">
                 <div className="flex items-baseline justify-between mb-0.5">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50">
-                    Properties
+                    Tracked vacancy signals
                   </div>
                   <span className="font-mono-bureau text-[9px] text-[#0C1B33]/30">
-                    {features.length} total
+                    {features.length} signals total
                   </span>
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
                   Click an address to generate its location snapshot
                 </div>
                 <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-                  {features.map((f, i) => {
+                  {propertyListFeatures.map((f, i) => {
                     const p = f.properties ?? {};
-                    const isLand = p.propertyType === "vacant_land";
+                    const canonicalType =
+                      p.canonicalType === "land" ||
+                      p.canonicalType === "building" ||
+                      p.canonicalType === "storefront"
+                        ? p.canonicalType
+                        : "other";
+                    const isLand = canonicalType === "land";
                     const zones: unknown[] = p.zoneMatches ?? [];
                     const ownerColor =
                       OWNER_TYPE_COLORS[p.ownerType as OwnerType] ??
                       "#9CA3AF";
                     return (
                       <div
-                        key={p.address ?? i}
+                        key={p.id ?? `${p.address ?? "unknown"}-${i}`}
                         className="text-[10px] leading-snug border-l-2 pl-3 py-1 hover:bg-[#FAF9F6] transition-colors"
                         style={{ borderColor: isLand ? "#EF4444" : "#F97316" }}
                       >
@@ -1425,8 +1701,32 @@ export default function MapPolygonPanel({
                               color: isLand ? "#EF4444" : "#F97316",
                             }}
                           >
-                            {isLand ? "Land" : "Building"}
+                            {canonicalType === "land"
+                              ? "Land signal"
+                              : canonicalType === "building"
+                                ? "Building signal"
+                                : canonicalType === "storefront"
+                                  ? "Storefront signal"
+                                  : "Other signal"}
                           </span>
+                          <span className="text-[8px] text-[#0C1B33]/45">
+                            {vacancySourceLabel(p.source)}
+                          </span>
+                          {typeof p.status === "string" && p.status.trim() && (
+                            <span className="text-[8px] text-[#0C1B33]/40">
+                              Source status: {p.status}
+                            </span>
+                          )}
+                          <span className="text-[8px] text-[#0C1B33]/40">
+                            {typeof p.sourceRecordDate === "string"
+                              ? `Reported ${p.sourceRecordDate.slice(0, 10)}`
+                              : "Source date unknown"}
+                          </span>
+                          {p.licenseCheckState === "match" && (
+                            <span className="inline-block text-[8px] font-medium px-1.5 py-px rounded bg-[#FEF3C7] text-[#92400E]">
+                              Current-license conflict
+                            </span>
+                          )}
                           {zones.length > 0 && (
                             <span className="text-[8px] text-[#0C1B33]/40 font-mono-bureau">
                               {zones.length} zone{zones.length !== 1 ? "s" : ""}
@@ -1448,6 +1748,11 @@ export default function MapPolygonPanel({
                     );
                   })}
                 </div>
+                {features.length > propertyListFeatures.length && (
+                  <p className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/45">
+                    Showing the first {propertyListFeatures.length.toLocaleString("en-US")} of {features.length.toLocaleString("en-US")} signals in this on-screen list. Aggregates, map filters, saved analysis, and CSV use the full filtered set; the CSV contains every row.
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -1529,7 +1834,7 @@ export default function MapPolygonPanel({
           {/* ── Attribution ── */}
           <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
-              Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy records may lag current conditions; permit filings do not prove work started or finished. Always verify source records and site conditions.
+              Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
             </p>
           </div>
         </>

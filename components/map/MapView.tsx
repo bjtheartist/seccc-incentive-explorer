@@ -22,6 +22,24 @@ import MapDossierCard from "./MapDossierCard";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import {
+  DRAWN_AREA_ANALYSIS_FILL_LAYER_ID,
+  DRAWN_AREA_ANALYSIS_LINE_LAYER_ID,
+  DRAWN_AREA_ANALYSIS_SOURCE_ID,
+  analyzedPolygonCollection,
+  blocksDrawnAreaSnapshot,
+  beginDrawnAreaEdit,
+  readEditedPolygon,
+  setAnalyzedPolygon,
+  shouldCancelDrawnAreaEditOnKey,
+  shouldCancelDrawnAreaEditOnModeChange,
+} from "./drawn-area-edit";
+import {
+  buildDrawnAreaVacancyPopupHtml,
+  DRAWN_AREA_VACANCY_LAYER_ID,
+  DRAWN_AREA_VACANCY_SOURCE_ID,
+  setDrawnAreaVacancySignals,
+} from "./drawn-area-vacancy-layer";
+import {
   applyMapZoningFamilyVisibility,
   applyMapZoningLayerFilters,
   installMapZoningLayers,
@@ -609,7 +627,12 @@ export default function MapView() {
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
   const drawModeRef = useRef(false);
+  const suppressSnapshotUntilRef = useRef(0);
+  const polygonGeometryRef = useRef<GeoJSON.Polygon | null>(null);
+  const polygonEditingRef = useRef(false);
   const [drawMode, setDrawMode] = useState(false);
+  const [polygonEditing, setPolygonEditing] = useState(false);
+  const [polygonEditDirty, setPolygonEditDirty] = useState(false);
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
   const [polygonVacancyCoverage, setPolygonVacancyCoverage] =
     useState<VacancyCoverageMetadata | null>(null);
@@ -623,6 +646,40 @@ export default function MapView() {
   const polygonVacancyRequests = useMemo(
     () => createDrawnAreaVacancyRequestLifecycle(),
     [],
+  );
+  const analyzePolygon = useCallback(
+    (geom: GeoJSON.Polygon) => {
+      const vacancyRequest = polygonVacancyRequests.start();
+      setPolygonLoading(true);
+      setPolygonPanelOpen(true);
+      setSnapshotOpen(false);
+      setPolygonResults(EMPTY_FC);
+      setPolygonVacancyCoverage(null);
+      setPolygonVacancyLoadFailed(false);
+      polygonGeometryRef.current = geom;
+      setPolygonGeometry(geom);
+
+      fetchDrawnAreaVacancy(geom, { signal: vacancyRequest.signal })
+        .then((parsed) => {
+          if (!vacancyRequest.isCurrent()) return;
+          setPolygonResults(parsed);
+          setPolygonVacancyCoverage(parsed.meta);
+          setPolygonVacancyLoadFailed(false);
+          setPolygonLoading(false);
+        })
+        .catch(() => {
+          if (!vacancyRequest.isCurrent()) return;
+          // Permit and investment analysis remain independent sources. Keep the
+          // panel available and label this source failure instead of inventing
+          // a zero-vacancy result.
+          setPolygonResults(EMPTY_FC);
+          setPolygonVacancyCoverage(null);
+          setPolygonVacancyLoadFailed(true);
+          setPolygonLoading(false);
+        })
+        .finally(() => vacancyRequest.release());
+    },
+    [polygonVacancyRequests],
   );
   const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
   const [countyReliefRecipientsPanel, setCountyReliefRecipientsPanel] = useState<{
@@ -1179,7 +1236,12 @@ export default function MapView() {
       // Drawing owns map clicks until the polygon is complete. Without this
       // guard, the ordinary location dossier opens on the first vertex and
       // blocks the remaining area selection.
-      if (drawModeRef.current) return;
+      if (blocksDrawnAreaSnapshot(drawModeRef.current, polygonEditingRef.current)) return;
+      // The pointer/touch event that closes a polygon can continue through
+      // Mapbox's ordinary click/tap pipeline after draw.create fires. Keep that
+      // terminal gesture owned by Draw so it cannot also open a location
+      // dossier beneath the new area panel.
+      if (Date.now() < suppressSnapshotUntilRef.current) return;
 
       const isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
@@ -1327,13 +1389,18 @@ export default function MapView() {
           selection = {
             kind: "vacancy",
             title: textValue(properties.address) || "Address not recorded",
-            vacancyType: rawType === "vacant_land" ? "vacant_land" : "vacant_building",
+            vacancyType:
+              rawType === "vacant_building" || rawType === "vacant_storefront"
+                ? "vacant_building"
+                : "vacant_land",
             pin,
             squareFeet: numberValue(properties.squareFeet),
             space: compactParcelSpaceFacts({
               lotAreaSqft:
                 numberValue(properties.lotAreaSqft) ??
-                (rawType === "vacant_land" ? numberValue(properties.squareFeet) ?? undefined : undefined),
+                (rawType === "vacant_land" || rawType === "reported_vacant_lot"
+                  ? numberValue(properties.squareFeet) ?? undefined
+                  : undefined),
               assessorBuildingSqft: numberValue(properties.assessorBuildingSqft) ?? undefined,
               assessorBuildingYear: numberValue(properties.assessorBuildingYear) ?? undefined,
               cityGroundFootprintSqft:
@@ -1352,9 +1419,11 @@ export default function MapView() {
               {
                 label:
                   textValue(properties.source) === "cols"
-                    ? "Cook County / City land records"
-                    : "City of Chicago vacant-building records",
-                note: "Tracked vacancy records are research leads, not availability listings.",
+                    ? "City-Owned Land Inventory"
+                    : textValue(properties.source) === "311_clean_lot"
+                      ? "311 Clean Vacant Lot Request"
+                      : "311 Vacant/Abandoned Building Complaint",
+                note: `${textValue(properties.sourceRecordDate) ? `Source record date ${textValue(properties.sourceRecordDate)?.slice(0, 10)}. ` : "Source record date unavailable. "}Tracked vacancy signals are research leads, not availability listings.`,
               },
             ],
           };
@@ -1470,12 +1539,33 @@ export default function MapView() {
 
     let lastTouchTapAt = 0;
     let touchTapStart: { x: number; y: number; startedAt: number } | null = null;
+    const areaSignalFeatureAt = (point: mapboxgl.Point) =>
+      map.getLayer(DRAWN_AREA_VACANCY_LAYER_ID)
+        ? map.queryRenderedFeatures(point, {
+            layers: [DRAWN_AREA_VACANCY_LAYER_ID],
+          })[0]
+        : undefined;
+    const areaSignalAt = (point: mapboxgl.Point) =>
+      !!areaSignalFeatureAt(point);
+    const openAreaSignalPopupAt = (
+      point: mapboxgl.Point,
+      lngLat: mapboxgl.LngLat,
+    ) => {
+      const feature = areaSignalFeatureAt(point);
+      if (!feature) return false;
+      new mapboxgl.Popup({ maxWidth: "340px", className: "bureau-popup" })
+        .setLngLat(lngLat)
+        .setHTML(buildDrawnAreaVacancyPopupHtml(feature.properties ?? {}))
+        .addTo(map);
+      return true;
+    };
 
     map.on("click", (e) => {
       // The recognizer below just handled this tap; if the browser also
       // synthesized a compat click for it, drop the duplicate. Mouse clicks
       // never set lastTouchTapAt, so desktop behavior is unchanged.
       if (Date.now() - lastTouchTapAt < 700) return;
+      if (areaSignalAt(e.point)) return;
       openSnapshotAt(e.point, e.lngLat);
     });
 
@@ -1509,6 +1599,7 @@ export default function MapView() {
       const dy = e.point.y - start.y;
       if (Date.now() - start.startedAt > 900 || dx * dx + dy * dy > 144) return;
       lastTouchTapAt = Date.now();
+      if (openAreaSignalPopupAt(e.point, e.lngLat)) return;
       openSnapshotAt(e.point, e.lngLat);
     });
 
@@ -1522,6 +1613,8 @@ export default function MapView() {
     if (containerRef.current) resizeObserver.observe(containerRef.current);
     window.visualViewport?.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
+
+    let detachDrawEscapeHandler: (() => void) | null = null;
 
     map.on("load", async () => {
       /* ── Community Areas base layer (77 neighborhoods) ── */
@@ -1915,6 +2008,7 @@ export default function MapView() {
           "circle-color": [
             "match", ["get", "propertyType"],
             "vacant_land", VACANT_COLORS.vacantLand,
+            "reported_vacant_lot", VACANT_COLORS.vacantLand,
             "vacant_building", VACANT_COLORS.vacantBuildings,
             "vacant_storefront", VACANT_COLORS.vacantBuildings,
             VACANT_COLORS.vacantLand,
@@ -2649,6 +2743,70 @@ export default function MapView() {
       map.on("mouseleave", "community-investment-megaproject-points", () => { map.getCanvas().style.cursor = ""; });
 
       // ── Polygon draw control ──
+      map.addSource(DRAWN_AREA_ANALYSIS_SOURCE_ID, {
+        type: "geojson",
+        data: analyzedPolygonCollection(null),
+      });
+      map.addLayer({
+        id: DRAWN_AREA_ANALYSIS_FILL_LAYER_ID,
+        type: "fill",
+        source: DRAWN_AREA_ANALYSIS_SOURCE_ID,
+        paint: { "fill-color": "#2563EB", "fill-opacity": 0.1 },
+      });
+      map.addLayer({
+        id: DRAWN_AREA_ANALYSIS_LINE_LAYER_ID,
+        type: "line",
+        source: DRAWN_AREA_ANALYSIS_SOURCE_ID,
+        paint: {
+          "line-color": "#2563EB",
+          "line-width": 2,
+          "line-dasharray": [2, 2],
+        },
+      });
+      map.addSource(DRAWN_AREA_VACANCY_SOURCE_ID, {
+        type: "geojson",
+        data: EMPTY_FC,
+      });
+      map.addLayer({
+        id: DRAWN_AREA_VACANCY_LAYER_ID,
+        type: "circle",
+        source: DRAWN_AREA_VACANCY_SOURCE_ID,
+        paint: {
+          "circle-radius": [
+            "case",
+            ["==", ["get", "licenseCheckState"], "match"],
+            8,
+            6,
+          ],
+          "circle-color": [
+            "case",
+            ["==", ["get", "licenseCheckState"], "match"],
+            "#D97706",
+            ["==", ["get", "freshnessClass"], "stale"],
+            "#64748B",
+            ["==", ["get", "freshnessClass"], "unknown_date"],
+            "#6366F1",
+            "#2563EB",
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.92,
+        },
+      });
+      map.on("click", DRAWN_AREA_VACANCY_LAYER_ID, (event) => {
+        // A touch tap is opened by the explicit recognizer above because
+        // Mapbox Draw can suppress the browser's compatibility click. If a
+        // compatibility click still arrives, do not open a duplicate popup.
+        if (Date.now() - lastTouchTapAt < 700) return;
+        openAreaSignalPopupAt(event.point, event.lngLat);
+      });
+      map.on("mouseenter", DRAWN_AREA_VACANCY_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", DRAWN_AREA_VACANCY_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
+
       const draw = new MapboxDraw({
         displayControlsDefault: false,
         controls: {},
@@ -2663,56 +2821,49 @@ export default function MapView() {
       drawRef.current = draw;
       map.addControl(draw, "top-right");
 
+      const cancelDrawnAreaEditOnEscape = (event: KeyboardEvent) => {
+        if (!shouldCancelDrawnAreaEditOnKey(polygonEditingRef.current, event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        polygonEditingRef.current = false;
+        drawModeRef.current = false;
+        draw.deleteAll();
+        draw.changeMode("simple_select");
+        setAnalyzedPolygon(map, polygonGeometryRef.current);
+        setPolygonEditing(false);
+        setPolygonEditDirty(false);
+        setDrawMode(false);
+        suppressSnapshotUntilRef.current = Date.now() + 300;
+      };
+      window.addEventListener("keydown", cancelDrawnAreaEditOnEscape, true);
+      detachDrawEscapeHandler = () =>
+        window.removeEventListener("keydown", cancelDrawnAreaEditOnEscape, true);
+
       map.on("draw.create", (e: { features: GeoJSON.Feature[] }) => {
         const feature = e.features[0];
         if (feature?.geometry?.type === "Polygon") {
           const geom = feature.geometry;
-          const vacancyRequest = polygonVacancyRequests.start();
-          // Keep only the latest polygon
-          const allFeatures = draw.getAll();
-          if (allFeatures.features.length > 1) {
-            const toDelete = allFeatures.features
-              .filter((f) => f.id !== feature.id)
-              .map((f) => String(f.id));
-            if (toDelete.length > 0) draw.delete(toDelete);
-          }
-          // Fetch vacant properties within polygon
-          setPolygonLoading(true);
-          setPolygonPanelOpen(true);
-          setSnapshotOpen(false);
-          setPolygonResults(EMPTY_FC);
-          setPolygonVacancyCoverage(null);
-          setPolygonVacancyLoadFailed(false);
+          // Draw completes into simple_select with this polygon ACTIVE. Leaving
+          // it there lets an ordinary drag translate the shape. Publish the
+          // analyzed geometry to a non-interactive map layer and remove every
+          // Draw feature; Draw is rehydrated only behind explicit Edit area.
+          suppressSnapshotUntilRef.current = Date.now() + 900;
+          draw.deleteAll();
+          setAnalyzedPolygon(map, geom);
+          polygonEditingRef.current = false;
+          setPolygonEditing(false);
+          setPolygonEditDirty(false);
           drawModeRef.current = false;
           setDrawMode(false);
-          // Hand the shape to the panel too — the admin community-investment
-          // analysis runs point-in-polygon client-side against this geometry.
-          setPolygonGeometry(geom);
-          fetchDrawnAreaVacancy(geom, {
-            signal: vacancyRequest.signal,
-          })
-            .then((parsed) => {
-              if (!vacancyRequest.isCurrent()) return;
-              setPolygonResults(parsed);
-              setPolygonVacancyCoverage(parsed.meta);
-              setPolygonVacancyLoadFailed(false);
-              setPolygonLoading(false);
-              drawModeRef.current = false;
-              setDrawMode(false);
-            })
-            .catch(() => {
-              if (!vacancyRequest.isCurrent()) return;
-              // Permit analysis is an independent source. Keep the area panel
-              // available even when the vacancy lookup fails.
-              setPolygonResults(EMPTY_FC);
-              setPolygonVacancyCoverage(null);
-              setPolygonVacancyLoadFailed(true);
-              setPolygonLoading(false);
-              drawModeRef.current = false;
-              setDrawMode(false);
-            })
-            .finally(() => vacancyRequest.release());
+          analyzePolygon(geom);
         }
+      });
+
+      map.on("draw.update", () => {
+        // A draft is never analysis. Done reads the final Draw geometry and
+        // starts one new request generation; until then the existing results
+        // remain tied to polygonGeometryRef.current and Cancel is lossless.
+        if (polygonEditingRef.current) setPolygonEditDirty(true);
       });
 
       // Escape (or draw's own trash action) abandons an in-progress polygon by
@@ -2723,6 +2874,21 @@ export default function MapView() {
       // API calls this component makes are silent (suppressAPIEvents defaults
       // true), so this listener can never fight the Draw Area toggle.
       map.on("draw.modechange", (e: { mode: string }) => {
+        if (shouldCancelDrawnAreaEditOnModeChange(polygonEditingRef.current, e.mode)) {
+          polygonEditingRef.current = false;
+          drawModeRef.current = false;
+          draw.deleteAll();
+          setAnalyzedPolygon(map, polygonGeometryRef.current);
+          setPolygonEditing(false);
+          setPolygonEditDirty(false);
+          setDrawMode(false);
+          suppressSnapshotUntilRef.current = Date.now() + 300;
+          return;
+        }
+        if (e.mode === "direct_select") {
+          drawModeRef.current = true;
+          return;
+        }
         if (e.mode !== "draw_polygon") {
           drawModeRef.current = false;
           setDrawMode(false);
@@ -2730,7 +2896,19 @@ export default function MapView() {
       });
 
       map.on("draw.delete", () => {
+        if (polygonEditingRef.current) {
+          // Deleting the draft (including with the keyboard) cancels editing;
+          // it never deletes the already analyzed geometry or its results.
+          polygonEditingRef.current = false;
+          setPolygonEditing(false);
+          setPolygonEditDirty(false);
+          drawModeRef.current = false;
+          setAnalyzedPolygon(map, polygonGeometryRef.current);
+          return;
+        }
         polygonVacancyRequests.cancel();
+        setAnalyzedPolygon(map, null);
+        polygonGeometryRef.current = null;
         setPolygonResults(null);
         setPolygonVacancyCoverage(null);
         setPolygonVacancyLoadFailed(false);
@@ -2744,6 +2922,7 @@ export default function MapView() {
 
     return () => {
       polygonVacancyRequests.cancel();
+      detachDrawEscapeHandler?.();
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
@@ -2761,7 +2940,80 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, [openDossier, openHistoricalRecoveryRecipients, polygonVacancyRequests]);
+  }, [analyzePolygon, openDossier, openHistoricalRecoveryRecipients, polygonVacancyRequests]);
+
+  const beginPolygonEdit = useCallback(() => {
+    const draw = drawRef.current;
+    const map = mapRef.current;
+    const geometry = polygonGeometryRef.current;
+    if (!draw || !map || !geometry || polygonLoading) return;
+
+    const featureId = beginDrawnAreaEdit(draw, geometry);
+    if (featureId === null) return;
+    setAnalyzedPolygon(map, null);
+    setDrawnAreaVacancySignals(map, []);
+    polygonEditingRef.current = true;
+    drawModeRef.current = true;
+    setPolygonEditing(true);
+    setPolygonEditDirty(false);
+    setPolygonPanelOpen(true);
+  }, [polygonLoading]);
+
+  const cancelPolygonEdit = useCallback(() => {
+    const draw = drawRef.current;
+    const map = mapRef.current;
+    if (!draw || !map) return;
+    // Clear the ref first so the programmatic delete cannot be mistaken for a
+    // user deletion if Mapbox Draw event behavior changes in a future release.
+    polygonEditingRef.current = false;
+    drawModeRef.current = false;
+    draw.deleteAll();
+    draw.changeMode("simple_select");
+    setAnalyzedPolygon(map, polygonGeometryRef.current);
+    setPolygonEditing(false);
+    setPolygonEditDirty(false);
+  }, []);
+
+  const finishPolygonEdit = useCallback(() => {
+    const draw = drawRef.current;
+    const map = mapRef.current;
+    if (!draw || !map || !polygonEditingRef.current) return;
+    const geometry = readEditedPolygon(draw);
+    if (!geometry) {
+      cancelPolygonEdit();
+      return;
+    }
+
+    polygonEditingRef.current = false;
+    drawModeRef.current = false;
+    draw.deleteAll();
+    draw.changeMode("simple_select");
+    polygonGeometryRef.current = geometry;
+    setAnalyzedPolygon(map, geometry);
+    setPolygonEditing(false);
+    setPolygonEditDirty(false);
+    suppressSnapshotUntilRef.current = Date.now() + 300;
+    analyzePolygon(geometry);
+  }, [analyzePolygon, cancelPolygonEdit]);
+
+  const updateDisplayedPolygonVacancies = useCallback(
+    (features: readonly GeoJSON.Feature[]) => {
+      const map = mapRef.current;
+      if (map) {
+        setDrawnAreaVacancySignals(
+          map,
+          polygonEditingRef.current ? [] : features,
+        );
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!polygonPanelOpen && mapRef.current) {
+      setDrawnAreaVacancySignals(mapRef.current, []);
+    }
+  }, [polygonPanelOpen]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -3334,7 +3586,10 @@ export default function MapView() {
               // Filter by visible sub-types (client-side for instant toggle)
               const filtered = data.features.filter((f) => {
                 const pt = f.properties?.propertyType;
-                if (vacantVisible.vacantLand && (pt === "vacant_land")) return true;
+                if (
+                  vacantVisible.vacantLand &&
+                  (pt === "vacant_land" || pt === "reported_vacant_lot")
+                ) return true;
                 if (vacantVisible.vacantBuildings && (pt === "vacant_building" || pt === "vacant_storefront")) return true;
                 return false;
               });
@@ -4250,7 +4505,12 @@ export default function MapView() {
         if (!draw) return;
         closeDossier();
         polygonVacancyRequests.cancel();
+        polygonEditingRef.current = false;
+        polygonGeometryRef.current = null;
         draw.deleteAll();
+        if (mapRef.current) setAnalyzedPolygon(mapRef.current, null);
+        setPolygonEditing(false);
+        setPolygonEditDirty(false);
         setPolygonResults(null);
         setPolygonVacancyCoverage(null);
         setPolygonVacancyLoadFailed(false);
@@ -4478,9 +4738,15 @@ export default function MapView() {
           onGenerateSnapshot={handleGenerateSnapshot}
           onDrawArea={() => {
             const draw = drawRef.current;
-            if (!draw) return;
+            const map = mapRef.current;
+            if (!draw || !map) return;
             polygonVacancyRequests.cancel();
+            polygonEditingRef.current = false;
+            polygonGeometryRef.current = null;
             draw.deleteAll();
+            setAnalyzedPolygon(map, null);
+            setPolygonEditing(false);
+            setPolygonEditDirty(false);
             setPolygonResults(null);
             setPolygonVacancyCoverage(null);
             setPolygonVacancyLoadFailed(false);
@@ -4504,11 +4770,25 @@ export default function MapView() {
           vacancyCoverage={polygonVacancyCoverage}
           vacancyLoadFailed={polygonVacancyLoadFailed}
           polygon={polygonGeometry}
+          editing={polygonEditing}
+          editDirty={polygonEditDirty}
           adminSessionActive={adminSessionActive}
-          onClose={() => setPolygonPanelOpen(false)}
+          onEdit={beginPolygonEdit}
+          onEditDone={finishPolygonEdit}
+          onEditCancel={cancelPolygonEdit}
+          onDisplayedFeaturesChange={updateDisplayedPolygonVacancies}
+          onClose={() => {
+            if (polygonEditingRef.current) cancelPolygonEdit();
+            setPolygonPanelOpen(false);
+          }}
           onClear={() => {
             polygonVacancyRequests.cancel();
+            polygonEditingRef.current = false;
+            polygonGeometryRef.current = null;
             drawRef.current?.deleteAll();
+            if (mapRef.current) setAnalyzedPolygon(mapRef.current, null);
+            setPolygonEditing(false);
+            setPolygonEditDirty(false);
             setPolygonResults(null);
             setPolygonVacancyCoverage(null);
             setPolygonVacancyLoadFailed(false);
@@ -4523,15 +4803,24 @@ export default function MapView() {
 
       {/* Snapshot toggle (when closed) — desktop text button */}
       {!snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && loaded && (
-        <button
-          onClick={() => setSnapshotOpen(true)}
-          className="hidden md:block absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
-        >
-          Location Snapshot
-        </button>
+        polygonResults ? (
+          <button
+            onClick={() => setPolygonPanelOpen(true)}
+            className="absolute top-32 md:top-14 left-3 md:left-auto right-auto md:right-3 z-50 min-h-11 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors shadow-sm"
+          >
+            Area Analysis
+          </button>
+        ) : (
+          <button
+            onClick={() => setSnapshotOpen(true)}
+            className="hidden md:block absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+          >
+            Location Snapshot
+          </button>
+        )
       )}
 
-      {loaded && isMobile && !legendOpen && !snapshotOpen && !dossierSelection && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !dossierSelection && !polygonPanelOpen && !polygonResults && !countyReliefRecipientsPanel && !drawMode && (
         <MapMobileSheet
           activePreset={activeMobilePreset}
           snapshotLabel={snapshotLabel}
@@ -4546,7 +4835,7 @@ export default function MapView() {
       {drawMode && loaded && (
         <div className="absolute top-28 md:top-12 left-1/2 -translate-x-1/2 z-20 bg-[#2563EB] text-white px-4 py-2 rounded-b shadow-md text-center">
           <div className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase">
-            Click to place points — click the first point to finish
+            Click or tap to place points — select the first point to finish
           </div>
           <div className="text-[9px] opacity-70 mt-0.5">
             Draw a shape around the area you want to analyze
@@ -4567,7 +4856,12 @@ export default function MapView() {
               setDrawMode(false);
             } else {
               polygonVacancyRequests.cancel();
+              polygonEditingRef.current = false;
+              polygonGeometryRef.current = null;
               draw.deleteAll();
+              setAnalyzedPolygon(map, null);
+              setPolygonEditing(false);
+              setPolygonEditDirty(false);
               setPolygonResults(null);
               setPolygonVacancyCoverage(null);
               setPolygonVacancyLoadFailed(false);

@@ -21,10 +21,31 @@
  */
 
 import { neon } from "@neondatabase/serverless";
+import { randomUUID } from "node:crypto";
 import { socrataHeaders } from "../lib/socrata";
 import { classifyOwner } from "../lib/owner-classify";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
+import { fetchCompleteOffsetPages } from "../lib/complete-source-pagination";
+import {
+  chicagoCalendarDay,
+  normalizeChicagoSourceCalendarDate,
+  shiftCalendarDayYears,
+  VACANCY_RETENTION_YEARS,
+} from "../lib/vacancy-evidence";
+import { reconcileVacancyMembership } from "../lib/vacancy-reconciliation";
+import { canonicalizeVacancyZoneMatches } from "../lib/vacancy-zone-matches";
+import {
+  STATIC_FALLBACK_LIMIT,
+  STATIC_FALLBACK_TYPE_QUOTAS,
+} from "../lib/vacancy-static-fallback";
+import {
+  assertVacancySourceSnapshotSane,
+  build311VacancySourcePageUrl,
+  buildColsSourcePageUrl,
+  isPlausible311VacancySourceRow,
+  isPlausibleColsSourceRow,
+} from "../lib/vacancy-source-contract";
 import {
   NORMALIZED_ADDRESS_SQL,
   PERMIT_MATCH_METHOD_ORDER,
@@ -56,7 +77,7 @@ const STEPS = new Set<SyncStep>(
 const COLS_DATASET_ID = "aksk-kvfp";
 const COLS_BASE_URL = `https://data.cityofchicago.org/resource/${COLS_DATASET_ID}.json`;
 
-// 311 Service Requests — Vacant/Abandoned Building Complaints
+// 311 Service Requests — vacant-building and clean-lot public-record signals
 const SR311_DATASET_ID = "v6vf-nfxy";
 const SR311_BASE_URL = `https://data.cityofchicago.org/resource/${SR311_DATASET_ID}.json`;
 
@@ -166,33 +187,19 @@ async function fetchOwnershipBatch(
 }
 
 async function fetchAllPages(): Promise<ColsRecord[]> {
-  const all: ColsRecord[] = [];
   const pageSize = 1000;
-  let offset = 0;
 
   console.log("Fetching City-Owned Land Inventory...");
-
-  while (true) {
-    const url = `${COLS_BASE_URL}?$limit=${pageSize}&$offset=${offset}&$order=pin`;
-    const res = await fetch(url, {
-      headers: socrataHeaders(),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!res.ok) {
-      console.error(`Socrata returned ${res.status} at offset ${offset}`);
-      break;
-    }
-
-    const page: ColsRecord[] = await res.json();
-    if (page.length === 0) break;
-
-    all.push(...page);
-    console.log(`  Fetched ${all.length} records (offset ${offset})...`);
-    offset += pageSize;
-  }
-
-  return all;
+  return fetchCompleteOffsetPages<ColsRecord>({
+    sourceLabel: "COLS API",
+    pageSize,
+    buildUrl: (offset, limit) =>
+      buildColsSourcePageUrl(COLS_BASE_URL, offset, limit),
+    headers: socrataHeaders(),
+    timeoutMs: 30_000,
+    onProgress: (total, offset) =>
+      console.log(`  Fetched ${total} records (offset ${offset})...`),
+  });
 }
 
 function normalizeRecord(r: ColsRecord): {
@@ -242,7 +249,7 @@ function normalizeRecord(r: ColsRecord): {
   };
 }
 
-// ── 311 Vacant/Abandoned Building Complaints ──
+// ── 311 vacancy-related service requests ──
 
 interface Sr311Record {
   sr_number: string;
@@ -265,71 +272,57 @@ function communityAreaName(num: string | undefined): string | null {
   return ca?.name ?? null;
 }
 
-async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
-  const all: Sr311Record[] = [];
+async function fetch311VacancySignals(): Promise<Sr311Record[]> {
   const pageSize = 1000;
-  let offset = 0;
 
-  console.log("Fetching 311 Vacant/Abandoned Building Complaints...");
+  console.log("Fetching 311 vacancy-related service requests...");
 
-  // Only fetch recent open complaints (last 3 years) to keep the dataset relevant
-  const threeYearsAgo = new Date();
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const dateFilter = threeYearsAgo.toISOString().split("T")[0];
+  // Retain a wider audit window than the default three-year screen. The API/UI
+  // classify these rows by their original date; this ingest never rewrites a
+  // source date into a sync date.
+  const dateFilter = shiftCalendarDayYears(
+    chicagoCalendarDay(),
+    -VACANCY_RETENTION_YEARS,
+  );
 
-  while (true) {
-    const where = encodeURIComponent(
-      `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${dateFilter}T00:00:00'`
-    );
-    const url = `${SR311_BASE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=${encodeURIComponent("created_date DESC")}`;
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(120000),
-      });
-    } catch (_err) {
-      // Retry once on timeout
-      console.warn(`  Timeout at offset ${offset}, retrying...`);
-      await new Promise((r) => setTimeout(r, 3000));
-      res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(120000),
-      });
-    }
-
-    if (!res.ok) {
-      console.error(`  311 API returned ${res.status} at offset ${offset}`);
-      break;
-    }
-
-    const page: Sr311Record[] = await res.json();
-    if (page.length === 0) break;
-
-    all.push(...page);
-    console.log(`  Fetched ${all.length} records (offset ${offset})...`);
-    offset += pageSize;
-  }
-
-  return all;
+  return fetchCompleteOffsetPages<Sr311Record>({
+    sourceLabel: "311 API",
+    pageSize,
+    buildUrl: (offset, limit) =>
+      build311VacancySourcePageUrl(
+        SR311_BASE_URL,
+        dateFilter,
+        offset,
+        limit,
+      ),
+    headers: socrataHeaders(),
+    timeoutMs: 120_000,
+    retries: 1,
+    retryDelayMs: 3_000,
+    onProgress: (total, offset) =>
+      console.log(`  Fetched ${total} records (offset ${offset})...`),
+  });
 }
 
-/** Deduplicate 311 records by address (keep newest per address). */
-function dedup311ByAddress(records: Sr311Record[]): Sr311Record[] {
+/** Deduplicate each evidence source by address (keep newest per source/address). */
+function dedup311BySourceAddress(records: Sr311Record[]): Sr311Record[] {
   const seen = new Map<string, Sr311Record>();
   for (const r of records) {
     const addr = r.street_address?.trim().toUpperCase();
     if (!addr) continue;
+    const key = `${r.sr_type.trim().toUpperCase()}|${addr}`;
     // Records are ordered by created_date DESC, so first occurrence is newest
-    if (!seen.has(addr)) {
-      seen.set(addr, r);
+    if (!seen.has(key)) {
+      seen.set(key, r);
     }
   }
   return Array.from(seen.values());
 }
 
-interface NormalizedVacantBuilding {
+interface Normalized311VacancySignal {
   id: string;
+  source: "dpd_vacant" | "311_clean_lot";
+  propertyType: "vacant_building" | "reported_vacant_lot";
   address: string;
   lat: number;
   lon: number;
@@ -338,9 +331,10 @@ interface NormalizedVacantBuilding {
   zoningClass: string | null;
   squareFeet: number | null;
   status: string;
+  sourceRecordDate: string | null;
 }
 
-function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
+function normalize311Record(r: Sr311Record): Normalized311VacancySignal | null {
   const lat = r.latitude ? parseFloat(r.latitude) : NaN;
   const lon = r.longitude ? parseFloat(r.longitude) : NaN;
 
@@ -348,9 +342,13 @@ function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
   if (lat < 41.6 || lat > 42.1 || lon < -88.0 || lon > -87.4) return null;
 
   const address = r.street_address?.trim() || "Unknown";
+  const isCleanLot = r.sr_type === "Clean Vacant Lot Request";
+  const sourceRecordDate = normalizeChicagoSourceCalendarDate(r.created_date);
 
   return {
-    id: `311-${r.sr_number}`,
+    id: isCleanLot ? `311-clean-lot-${r.sr_number}` : `311-${r.sr_number}`,
+    source: isCleanLot ? "311_clean_lot" : "dpd_vacant",
+    propertyType: isCleanLot ? "reported_vacant_lot" : "vacant_building",
     address,
     lat,
     lon,
@@ -358,119 +356,357 @@ function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
     communityArea: communityAreaName(r.community_area),
     zoningClass: null, // 311 doesn't include zoning
     squareFeet: null,
-    status: r.status?.toLowerCase() === "open" ? "reported_open" : "reported",
+    // Preserve the source status exactly. "Completed" describes the request;
+    // it does not establish that the property is occupied or no longer vacant.
+    status: r.status?.trim() || "Unknown",
+    sourceRecordDate,
   };
 }
 
-async function upsert311Batch(records: NormalizedVacantBuilding[]) {
-  if (records.length === 0) return;
-
-  const batchSize = 50;
+async function stage311Snapshot(
+  runId: string,
+  records: Normalized311VacancySignal[],
+) {
+  const batchSize = 250;
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
+    const payload = batch.map((record) => ({
+      id: record.id,
+      source: record.source,
+      address: record.address,
+      lat: record.lat,
+      lon: record.lon,
+      property_type: record.propertyType,
+      ward: record.ward,
+      community_area: record.communityArea,
+      zoning_class: record.zoningClass,
+      square_feet: record.squareFeet,
+      status: record.status,
+      source_record_date: record.sourceRecordDate,
+    }));
 
-    for (const r of batch) {
-      await sql`
-        INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
-        VALUES (
-          ${r.id},
-          'dpd_vacant',
-          ${r.address},
-          ${r.lat},
-          ${r.lon},
-          'vacant_building',
-          ${r.ward},
-          ${r.communityArea},
-          ${r.zoningClass},
-          ${r.squareFeet},
-          ${r.status},
-          ${"Unknown"},
-          ${null},
-          ${"unknown"},
-          ST_MakePoint(${r.lon}, ${r.lat})::geography,
-          NOW()
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          address = EXCLUDED.address,
-          lat = EXCLUDED.lat,
-          lon = EXCLUDED.lon,
-          ward = EXCLUDED.ward,
-          community_area = EXCLUDED.community_area,
-          status = EXCLUDED.status,
-          geom = EXCLUDED.geom,
-          updated_at = NOW()
-      `;
-    }
+    await sql`
+      INSERT INTO vacant_311_sync_stage (
+        run_id, id, source, address, lat, lon, property_type, ward,
+        community_area, zoning_class, square_feet, status, source_record_date
+      )
+      SELECT
+        ${runId}, incoming.id, incoming.source, incoming.address,
+        incoming.lat, incoming.lon, incoming.property_type, incoming.ward,
+        incoming.community_area, incoming.zoning_class, incoming.square_feet,
+        incoming.status, incoming.source_record_date
+      FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS incoming(
+        id TEXT,
+        source TEXT,
+        address TEXT,
+        lat DOUBLE PRECISION,
+        lon DOUBLE PRECISION,
+        property_type TEXT,
+        ward TEXT,
+        community_area TEXT,
+        zoning_class TEXT,
+        square_feet DOUBLE PRECISION,
+        status TEXT,
+        source_record_date TIMESTAMPTZ
+      )
+      ON CONFLICT (run_id, id) DO UPDATE SET
+        source = EXCLUDED.source,
+        address = EXCLUDED.address,
+        lat = EXCLUDED.lat,
+        lon = EXCLUDED.lon,
+        property_type = EXCLUDED.property_type,
+        ward = EXCLUDED.ward,
+        community_area = EXCLUDED.community_area,
+        zoning_class = EXCLUDED.zoning_class,
+        square_feet = EXCLUDED.square_feet,
+        status = EXCLUDED.status,
+        source_record_date = EXCLUDED.source_record_date,
+        staged_at = NOW()
+    `;
 
     if ((i + batchSize) % 200 === 0 || i + batchSize >= records.length) {
-      console.log(`  Upserted ${Math.min(i + batchSize, records.length)}/${records.length}`);
+      console.log(`  Staged ${Math.min(i + batchSize, records.length)}/${records.length}`);
     }
   }
 }
 
-async function upsertBatch(
+async function replace311MembershipAtomically(
+  records: Normalized311VacancySignal[],
+  complete: boolean,
+) {
+  const runId = randomUUID();
+
+  // Orphaned staging runs never affect production membership. Retire only old
+  // staging data before beginning so a crashed verification does not grow the
+  // staging table forever.
+  await sql`
+    DELETE FROM vacant_311_sync_stage
+    WHERE staged_at < NOW() - INTERVAL '2 days'
+  `;
+
+  if (complete) await stage311Snapshot(runId, records);
+
+  const [staged] = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM vacant_311_sync_stage
+    WHERE run_id = ${runId}
+  `;
+  const stagedCount = Number(staged?.count ?? 0);
+  if (complete && stagedCount !== records.length) {
+    throw new Error(
+      `311 staging completeness check failed: expected ${records.length}, found ${stagedCount}`,
+    );
+  }
+
+  const result = await reconcileVacancyMembership(
+    records,
+    complete,
+    async () => {
+      const rows = await sql`
+        WITH incoming AS MATERIALIZED (
+          SELECT * FROM vacant_311_sync_stage WHERE run_id = ${runId}
+        ),
+        upserted AS (
+          INSERT INTO vacant_properties (
+            id, source, address, lat, lon, property_type, ward,
+            community_area, zoning_class, square_feet, status,
+            source_record_date, owner_name, owner_mailing_address,
+            owner_type, geom, updated_at
+          )
+          SELECT
+            id, source, address, lat, lon, property_type, ward,
+            community_area, zoning_class, square_feet, status,
+            source_record_date, 'Unknown', NULL, 'unknown',
+            ST_MakePoint(lon, lat)::geography, NOW()
+          FROM incoming
+          ON CONFLICT (id) DO UPDATE SET
+            source = EXCLUDED.source,
+            address = EXCLUDED.address,
+            lat = EXCLUDED.lat,
+            lon = EXCLUDED.lon,
+            ward = EXCLUDED.ward,
+            community_area = EXCLUDED.community_area,
+            zoning_class = EXCLUDED.zoning_class,
+            property_type = EXCLUDED.property_type,
+            status = EXCLUDED.status,
+            source_record_date = EXCLUDED.source_record_date,
+            geom = EXCLUDED.geom,
+            updated_at = NOW()
+          RETURNING id
+        ),
+        retired AS (
+          DELETE FROM vacant_properties vp
+          WHERE vp.source IN ('dpd_vacant', '311_clean_lot')
+            AND NOT EXISTS (
+              SELECT 1 FROM incoming current WHERE current.id = vp.id
+            )
+          RETURNING vp.id
+        ),
+        cleared AS (
+          DELETE FROM vacant_311_sync_stage WHERE run_id = ${runId}
+          RETURNING id
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM upserted) AS upserted,
+          (SELECT COUNT(*)::int FROM retired) AS retired,
+          (SELECT COUNT(*)::int FROM cleared) AS cleared
+      `;
+      return Number(rows[0]?.retired ?? 0);
+    },
+  );
+
+  if (!complete) {
+    console.log("  Partial 311 snapshot left live membership unchanged");
+    return;
+  }
+  console.log(`  Published ${records.length} complete 311 signals atomically`);
+  console.log(`  Retired ${result} 311 rows no longer in the complete ${VACANCY_RETENTION_YEARS}-year source pull`);
+}
+
+type NormalizedColsSnapshotRecord = NonNullable<ReturnType<typeof normalizeRecord>> & {
+  ownerName: string;
+  ownerMailingAddress: string | null;
+  ownerType: string;
+};
+
+function attachColsOwnership(
   records: NonNullable<ReturnType<typeof normalizeRecord>>[],
   ownershipMap: Map<string, { ownerName: string; mailingAddress: string; ownerType: string }>
-) {
-  if (records.length === 0) return;
+): NormalizedColsSnapshotRecord[] {
+  return records.map((record) => {
+    const ownership = record.pin ? ownershipMap.get(record.pin) : undefined;
+    return {
+      ...record,
+      ownerName:
+        ownership?.ownerName ||
+        (record.managingOrg && record.managingOrg !== "None"
+          ? `City of Chicago — ${record.managingOrg}`
+          : "City of Chicago"),
+      ownerMailingAddress: ownership?.mailingAddress || null,
+      ownerType: ownership?.ownerType || "city_public",
+    };
+  });
+}
 
-  // Upsert in batches of 50
-  const batchSize = 50;
+async function stageColsSnapshot(
+  runId: string,
+  records: NormalizedColsSnapshotRecord[],
+) {
+  const batchSize = 250;
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
+    const payload = batch.map((record) => ({
+      id: record.id,
+      pin: record.pinDigits,
+      address: record.address,
+      lat: record.lat,
+      lon: record.lon,
+      ward: record.ward,
+      community_area: record.communityArea,
+      zoning_class: record.zoningClass,
+      square_feet: record.squareFeet,
+      owner_name: record.ownerName,
+      owner_mailing_address: record.ownerMailingAddress,
+      owner_type: record.ownerType,
+    }));
 
-    for (const r of batch) {
-      // Ownership: use assessor data if available, else default to city_public
-      // All COLS records are city-owned land — the managing_organization is a city department
-      const ownership = r.pin ? ownershipMap.get(r.pin) : undefined;
-      const ownerName = ownership?.ownerName || (r.managingOrg && r.managingOrg !== "None" ? `City of Chicago — ${r.managingOrg}` : "City of Chicago");
-      const ownerMailingAddress = ownership?.mailingAddress || null;
-      // COLS = City-Owned Land, so always city_public unless assessor says otherwise
-      const ownerType = ownership?.ownerType || "city_public";
+    await sql`
+      INSERT INTO vacant_cols_sync_stage (
+        run_id, id, pin, address, lat, lon, ward, community_area,
+        zoning_class, square_feet, owner_name, owner_mailing_address, owner_type
+      )
+      SELECT
+        ${runId}, incoming.id, incoming.pin, incoming.address,
+        incoming.lat, incoming.lon, incoming.ward, incoming.community_area,
+        incoming.zoning_class, incoming.square_feet, incoming.owner_name,
+        incoming.owner_mailing_address, incoming.owner_type
+      FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS incoming(
+        id TEXT,
+        pin TEXT,
+        address TEXT,
+        lat DOUBLE PRECISION,
+        lon DOUBLE PRECISION,
+        ward TEXT,
+        community_area TEXT,
+        zoning_class TEXT,
+        square_feet DOUBLE PRECISION,
+        owner_name TEXT,
+        owner_mailing_address TEXT,
+        owner_type TEXT
+      )
+      ON CONFLICT (run_id, id) DO UPDATE SET
+        pin = EXCLUDED.pin,
+        address = EXCLUDED.address,
+        lat = EXCLUDED.lat,
+        lon = EXCLUDED.lon,
+        ward = EXCLUDED.ward,
+        community_area = EXCLUDED.community_area,
+        zoning_class = EXCLUDED.zoning_class,
+        square_feet = EXCLUDED.square_feet,
+        owner_name = EXCLUDED.owner_name,
+        owner_mailing_address = EXCLUDED.owner_mailing_address,
+        owner_type = EXCLUDED.owner_type,
+        staged_at = NOW()
+    `;
 
-      await sql`
-        INSERT INTO vacant_properties (id, source, pin, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
-        VALUES (
-          ${r.id},
-          'cols',
-          ${r.pinDigits},
-          ${r.address},
-          ${r.lat},
-          ${r.lon},
-          'vacant_land',
-          ${r.ward},
-          ${r.communityArea},
-          ${r.zoningClass},
-          ${r.squareFeet},
-          'city_owned',
-          ${ownerName},
-          ${ownerMailingAddress},
-          ${ownerType},
-          ST_MakePoint(${r.lon}, ${r.lat})::geography,
-          NOW()
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          pin = EXCLUDED.pin,
-          address = EXCLUDED.address,
-          lat = EXCLUDED.lat,
-          lon = EXCLUDED.lon,
-          ward = EXCLUDED.ward,
-          community_area = EXCLUDED.community_area,
-          zoning_class = EXCLUDED.zoning_class,
-          square_feet = EXCLUDED.square_feet,
-          status = EXCLUDED.status,
-          owner_name = EXCLUDED.owner_name,
-          owner_mailing_address = EXCLUDED.owner_mailing_address,
-          owner_type = EXCLUDED.owner_type,
-          geom = EXCLUDED.geom,
-          updated_at = NOW()
-      `;
-    }
-
-    if ((i + batchSize) % 200 === 0 || i + batchSize >= records.length) {
-      console.log(`  Upserted ${Math.min(i + batchSize, records.length)}/${records.length}`);
+    if (i + batchSize >= records.length) {
+      console.log(`  Staged ${records.length}/${records.length}`);
     }
   }
+}
+
+async function replaceColsMembershipAtomically(
+  records: NormalizedColsSnapshotRecord[],
+  complete: boolean,
+) {
+  const runId = randomUUID();
+  await sql`
+    DELETE FROM vacant_cols_sync_stage
+    WHERE staged_at < NOW() - INTERVAL '2 days'
+  `;
+  if (complete) await stageColsSnapshot(runId, records);
+
+  const [staged] = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM vacant_cols_sync_stage
+    WHERE run_id = ${runId}
+  `;
+  const stagedCount = Number(staged?.count ?? 0);
+  if (complete && stagedCount !== records.length) {
+    throw new Error(
+      `COLS staging completeness check failed: expected ${records.length}, found ${stagedCount}`,
+    );
+  }
+
+  const retired = await reconcileVacancyMembership(
+    records.map((record) => ({ id: record.id, source: "cols" as const })),
+    complete,
+    async () => {
+      const rows = await sql`
+        WITH incoming AS MATERIALIZED (
+          SELECT * FROM vacant_cols_sync_stage WHERE run_id = ${runId}
+        ),
+        upserted AS (
+          INSERT INTO vacant_properties (
+            id, source, pin, address, lat, lon, property_type, ward,
+            community_area, zoning_class, square_feet, status,
+            source_record_date, owner_name, owner_mailing_address,
+            owner_type, geom, updated_at
+          )
+          SELECT
+            id, 'cols', pin, address, lat, lon, 'vacant_land', ward,
+            community_area, zoning_class, square_feet, 'city_owned',
+            NULL, owner_name, owner_mailing_address, owner_type,
+            ST_MakePoint(lon, lat)::geography, NOW()
+          FROM incoming
+          ON CONFLICT (id) DO UPDATE SET
+            source = EXCLUDED.source,
+            pin = EXCLUDED.pin,
+            address = EXCLUDED.address,
+            lat = EXCLUDED.lat,
+            lon = EXCLUDED.lon,
+            property_type = EXCLUDED.property_type,
+            ward = EXCLUDED.ward,
+            community_area = EXCLUDED.community_area,
+            zoning_class = EXCLUDED.zoning_class,
+            square_feet = EXCLUDED.square_feet,
+            status = EXCLUDED.status,
+            source_record_date = EXCLUDED.source_record_date,
+            owner_name = EXCLUDED.owner_name,
+            owner_mailing_address = EXCLUDED.owner_mailing_address,
+            owner_type = EXCLUDED.owner_type,
+            geom = EXCLUDED.geom,
+            updated_at = NOW()
+          RETURNING id
+        ),
+        retired AS (
+          DELETE FROM vacant_properties vp
+          WHERE vp.source = 'cols'
+            AND NOT EXISTS (
+              SELECT 1 FROM incoming current WHERE current.id = vp.id
+            )
+          RETURNING vp.id
+        ),
+        cleared AS (
+          DELETE FROM vacant_cols_sync_stage WHERE run_id = ${runId}
+          RETURNING id
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM upserted) AS upserted,
+          (SELECT COUNT(*)::int FROM retired) AS retired,
+          (SELECT COUNT(*)::int FROM cleared) AS cleared
+      `;
+      return Number(rows[0]?.retired ?? 0);
+    },
+    ["cols"],
+  );
+
+  if (!complete) {
+    console.log("  Partial COLS snapshot left live membership unchanged");
+    return;
+  }
+  console.log(`  Published ${records.length} complete COLS records atomically`);
+  console.log(`  Retired ${retired} COLS rows no longer in the complete source pull`);
 }
 
 async function crossReferenceZones() {
@@ -488,15 +724,30 @@ async function crossReferenceZones() {
       SET
         zone_matches = COALESCE(
           (
-            SELECT jsonb_agg(jsonb_build_object('zoneKey', z.zone_key, 'zoneName', COALESCE(z.feature_name, z.zone_key)))
-            FROM zones z
-            WHERE ST_Intersects(z.geom, vp.geom)
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'zoneKey', unique_zone.zone_key,
+                'zoneName', unique_zone.zone_name
+              )
+              ORDER BY unique_zone.zone_key
+            )
+            FROM (
+              SELECT
+                z.zone_key,
+                COALESCE(
+                  MIN(NULLIF(BTRIM(z.feature_name), '')),
+                  z.zone_key
+                ) AS zone_name
+              FROM zones z
+              WHERE ST_Intersects(z.geom, vp.geom)
+              GROUP BY z.zone_key
+            ) unique_zone
           ),
           '[]'::jsonb
         ),
         incentive_count = COALESCE(
           (
-            SELECT COUNT(*)::integer
+            SELECT COUNT(DISTINCT z.zone_key)::integer
             FROM zones z
             WHERE ST_Intersects(z.geom, vp.geom)
           ),
@@ -855,39 +1106,62 @@ async function printPermitMatchReport() {
 async function generateStaticFile() {
   console.log("\nGenerating static GeoJSON fallback...");
 
-  // Include both property types: up to 1200 vacant land + up to 800 vacant buildings
-  // so the "Vacant Buildings" toggle has data in the static fallback too
+  // Preserve each published evidence class in fallback coverage, then fill any
+  // unused quota from the strongest remaining records. Stable id ordering makes
+  // tied source snapshots reproducible. The API labels this bounded export partial.
   const rows = await sql`
-    (
+    WITH ranked AS (
       SELECT id, source, address, lat, lon, property_type, ward, community_area,
              zoning_class, square_feet, status, zone_matches, incentive_count,
-             owner_name, owner_type
+             owner_name, owner_type, source_record_date::text,
+             updated_at::text AS explorer_refreshed_at,
+             ROW_NUMBER() OVER (
+               PARTITION BY property_type
+               ORDER BY incentive_count DESC, source_record_date DESC NULLS LAST, id ASC
+             ) AS type_rank
       FROM vacant_properties
-      WHERE property_type = 'vacant_land'
-      ORDER BY incentive_count DESC
-      LIMIT 1200
+    ), quota AS (
+      SELECT * FROM ranked
+      WHERE (property_type = 'vacant_land' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_land})
+         OR (property_type = 'reported_vacant_lot' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.reported_vacant_lot})
+         OR (property_type = 'vacant_building' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_building})
+         OR (property_type = 'vacant_storefront' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_storefront})
+    ), fill AS (
+      SELECT ranked.*
+      FROM ranked
+      WHERE NOT EXISTS (SELECT 1 FROM quota WHERE quota.id = ranked.id)
+      ORDER BY incentive_count DESC, source_record_date DESC NULLS LAST, id ASC
+      LIMIT GREATEST(0, ${STATIC_FALLBACK_LIMIT} - (SELECT COUNT(*) FROM quota))
     )
-    UNION ALL
-    (
-      SELECT id, source, address, lat, lon, property_type, ward, community_area,
-             zoning_class, square_feet, status, zone_matches, incentive_count,
-             owner_name, owner_type
-      FROM vacant_properties
-      WHERE property_type IN ('vacant_building', 'vacant_storefront')
-      ORDER BY incentive_count DESC
-      LIMIT 800
-    )
+    SELECT id, source, address, lat, lon, property_type, ward, community_area,
+           zoning_class, square_feet, status, zone_matches, incentive_count,
+           owner_name, owner_type, source_record_date, explorer_refreshed_at
+    FROM (
+      SELECT * FROM quota
+      UNION ALL
+      SELECT * FROM fill
+    ) selected
+    ORDER BY property_type, incentive_count DESC,
+             source_record_date DESC NULLS LAST, id ASC
   `;
 
-  const geojson: GeoJSON.FeatureCollection = {
+  const generatedAt = new Date().toISOString();
+  const geojson: GeoJSON.FeatureCollection & { generatedAt: string } = {
     type: "FeatureCollection",
+    generatedAt,
     features: rows.map((r) => ({
       type: "Feature" as const,
       geometry: {
         type: "Point" as const,
         coordinates: [r.lon, r.lat],
       },
-      properties: {
+      properties: (() => {
+        const zoneMatches = canonicalizeVacancyZoneMatches(
+          typeof r.zone_matches === "string"
+            ? JSON.parse(r.zone_matches)
+            : r.zone_matches,
+        );
+        return {
         id: r.id,
         source: r.source,
         address: r.address,
@@ -897,13 +1171,14 @@ async function generateStaticFile() {
         zoningClass: r.zoning_class,
         squareFeet: r.square_feet,
         status: r.status,
-        zoneMatches: typeof r.zone_matches === "string"
-          ? JSON.parse(r.zone_matches)
-          : r.zone_matches,
-        incentiveCount: r.incentive_count,
+        zoneMatches,
+        incentiveCount: zoneMatches.length,
         ownerName: r.owner_name,
         ownerType: r.owner_type,
-      },
+        sourceRecordDate: r.source_record_date,
+        explorerRefreshedAt: r.explorer_refreshed_at,
+        };
+      })(),
     })),
   };
 
@@ -947,21 +1222,31 @@ async function main() {
   console.log("=== Vacant Property Sync ===\n");
   console.log(`Steps: ${[...ALL_STEPS].filter((s) => STEPS.has(s)).join(", ") || "(none)"}`);
 
-  // Addresses of the COLS rows written THIS run, used to keep 311 duplicates
-  // out. When the COLS step is skipped the set is read back from the table
-  // instead, so a `SYNC_VACANT_STEPS=sr311` run still de-duplicates correctly
-  // rather than re-inserting every 311 row COLS already covers.
-  let colsAddresses = new Set<string>();
-
   // ── Source 1: City-Owned Land Inventory (vacant land) ──
   if (STEPS.has("cols")) {
     const raw = await fetchAllPages();
     console.log(`\nTotal COLS raw records: ${raw.length}`);
 
-    const normalized = raw
+    const normalizedWithDuplicates = raw
       .map(normalizeRecord)
       .filter((r): r is NonNullable<typeof r> => r !== null);
+    const normalized = Array.from(
+      new Map(normalizedWithDuplicates.map((record) => [record.id, record])).values(),
+    );
     console.log(`Valid records with coordinates: ${normalized.length}`);
+    if (normalized.length !== normalizedWithDuplicates.length) {
+      console.log(`  Deduplicated ${normalizedWithDuplicates.length - normalized.length} repeated source IDs`);
+    }
+    assertVacancySourceSnapshotSane(
+      {
+        source: "COLS",
+        rawCount: raw.length,
+        validShapeCount: raw.filter(isPlausibleColsSourceRow).length,
+        candidateCount: normalizedWithDuplicates.length,
+        normalizedCount: normalized.length,
+      },
+      process.env.ALLOW_IMPLAUSIBLE_VACANCY_SOURCE_SNAPSHOT === "1",
+    );
     console.log(`  With a 14-digit PIN: ${normalized.filter((r) => r.pinDigits).length}`);
 
     const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
@@ -969,39 +1254,41 @@ async function main() {
     const ownershipMap = await fetchOwnershipBatch(pinsWithData);
     console.log(`  Got ownership data for ${ownershipMap.size} properties`);
 
-    console.log("\nUpserting COLS (vacant land) into database...");
-    await upsertBatch(normalized, ownershipMap);
+    console.log("\nPublishing the complete COLS snapshot atomically...");
+    await replaceColsMembershipAtomically(
+      attachColsOwnership(normalized, ownershipMap),
+      true,
+    );
 
-    colsAddresses = new Set(normalized.map((r) => r.address.trim().toUpperCase()));
-  } else if (STEPS.has("sr311")) {
-    const existing = await sql`
-      SELECT address FROM vacant_properties WHERE source = 'cols' AND address IS NOT NULL
-    `;
-    colsAddresses = new Set(existing.map((r) => String(r.address).trim().toUpperCase()));
-    console.log(`\nCOLS step skipped — read ${colsAddresses.size} existing COLS addresses for dedup`);
   }
 
-  // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
+  // ── Source 2: 311 vacancy-related public-record signals ──
   if (STEPS.has("sr311")) {
-    const raw311 = await fetch311VacantBuildings();
+    // fetch311VacancySignals throws on any failed page. Reconciliation is
+    // deliberately unreachable unless pagination completed successfully.
+    const raw311 = await fetch311VacancySignals();
     console.log(`\nTotal 311 raw records: ${raw311.length}`);
 
-    const deduped311 = dedup311ByAddress(raw311);
-    console.log(`Unique addresses after dedup: ${deduped311.length}`);
+    const deduped311 = dedup311BySourceAddress(raw311);
+    console.log(`Unique source/address signals after dedup: ${deduped311.length}`);
 
     const normalized311 = deduped311
       .map(normalize311Record)
       .filter((r): r is NonNullable<typeof r> => r !== null);
     console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
-
-    // Remove 311 records that share an address with a COLS record (COLS is authoritative)
-    const filtered311 = normalized311.filter(
-      (r) => !colsAddresses.has(r.address.trim().toUpperCase())
+    assertVacancySourceSnapshotSane(
+      {
+        source: "311",
+        rawCount: raw311.length,
+        validShapeCount: raw311.filter(isPlausible311VacancySourceRow).length,
+        candidateCount: deduped311.length,
+        normalizedCount: normalized311.length,
+      },
+      process.env.ALLOW_IMPLAUSIBLE_VACANCY_SOURCE_SNAPSHOT === "1",
     );
-    console.log(`After removing COLS duplicates: ${filtered311.length}`);
 
-    console.log("\nUpserting 311 (vacant buildings) into database...");
-    await upsert311Batch(filtered311);
+    console.log("\nPublishing the complete 311 snapshot atomically...");
+    await replace311MembershipAtomically(normalized311, true);
   }
 
   // ── Cross-reference, match & export ──
