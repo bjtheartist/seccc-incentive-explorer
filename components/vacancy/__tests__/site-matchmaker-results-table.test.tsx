@@ -46,6 +46,7 @@ describe("SiteMatchmakerResultsTable", () => {
         landPoints={[landPoint]}
         zip="60617"
         neighborhood="South Chicago"
+        buildId="build-test"
       />,
     );
 
@@ -63,7 +64,9 @@ describe("SiteMatchmakerResultsTable", () => {
     expect(html).toContain("Nearest expressway");
     expect(html).toContain("Airport proximity");
     expect(html).toContain("Loading context...");
-    expect(html).toContain("Parcel record");
+    expect(html).toContain("CookViewer");
+    expect(html).toContain("Assessor");
+    expect(html).toContain("Clerk documents");
     expect(html).not.toContain("Load 100 more");
     expect(html).not.toMatch(/owner name|explorer score|rank|recommendation bucket|projected incentive|estimated dollars|\$/i);
   });
@@ -75,6 +78,7 @@ describe("SiteMatchmakerResultsTable", () => {
         landPoints={null}
         zip="60617"
         neighborhood="South Chicago"
+        buildId="build-test"
       />,
     );
 
@@ -94,6 +98,7 @@ describe("SiteMatchmakerResultsTable", () => {
         sitePoints={points}
         zip="60617"
         neighborhood="South Chicago"
+        buildId="build-test"
       />,
     );
 

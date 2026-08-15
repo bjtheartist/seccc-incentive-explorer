@@ -175,7 +175,7 @@ describe("Site Shortlist — fail-closed states", () => {
     loadShortlistUniverseMock.mockReturnValue({ ok: false, reason: "file_counts_inconsistent" });
     expect(await render(READY_SEARCH_PARAMS)).toContain("Ranked shortlist temporarily unavailable");
 
-    loadShortlistUniverseMock.mockReturnValue({ ok: false, reason: "manifest_vacancy_index_build_id_mismatch" });
+    loadShortlistUniverseMock.mockReturnValue({ ok: false, reason: "vacancy_snapshot_id_mismatch" });
     expect(await render(READY_SEARCH_PARAMS)).toContain("Ranked shortlist temporarily unavailable");
   });
 

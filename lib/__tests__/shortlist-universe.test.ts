@@ -81,7 +81,7 @@ function validManifest(overrides: Partial<ShortlistUniverseManifest> = {}): Shor
     buildId: "build-2026-08-12",
     generatedAt: "2026-08-12T00:00:00.000Z",
     zips: ["60621"],
-    vacancyIndexBuildId: "build-2026-08-12",
+    vacancyIndexBuildId: "snap-1",
     files: {
       "60621": { path: "60621.json", checksum: "xyz", rowCount: 1 },
     },
@@ -91,7 +91,7 @@ function validManifest(overrides: Partial<ShortlistUniverseManifest> = {}): Shor
 
 /** Writes a manifest + one universe file pair that pass EVERY loader check
  *  (schema, buildId binding, checksum, rowCount, envelope-count
- *  self-consistency, vacancyIndexBuildId) — mirrors what the export script
+ *  self-consistency, vacancy snapshot binding) — mirrors what the export script
  *  itself produces. Individual tests corrupt exactly one piece afterward to
  *  exercise one failure mode at a time. */
 function writeConsistentFixture(
@@ -104,7 +104,7 @@ function writeConsistentFixture(
   const checksum = shortlistUniverseChecksum(serialized);
   const manifest = validManifest({
     buildId: file.buildId,
-    vacancyIndexBuildId: file.buildId,
+    vacancyIndexBuildId: file.vacancySnapshotId,
     zips: [zip],
     files: { [zip]: { path: `${zip}.json`, checksum, rowCount: file.rows.length } },
   });
@@ -117,6 +117,29 @@ describe("ShortlistUniverseFileSchema", () => {
   it("accepts a well-formed envelope", () => {
     const result = ShortlistUniverseFileSchema.safeParse(validFile());
     expect(result.success).toBe(true);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "normalizes invalid published area %p to null at the schema boundary",
+    (invalidArea) => {
+      const file = validFile();
+      const parsed = ShortlistUniverseFileSchema.parse({
+        ...file,
+        rows: [{ ...file.rows[0], lotSqft: invalidArea, buildingSqft: invalidArea }],
+      });
+      expect(parsed.rows[0].lotSqft).toBeNull();
+      expect(parsed.rows[0].buildingSqft).toBeNull();
+    },
+  );
+
+  it("preserves fractional and whole positive published areas", () => {
+    const file = validFile();
+    const parsed = ShortlistUniverseFileSchema.parse({
+      ...file,
+      rows: [{ ...file.rows[0], lotSqft: 0.25, buildingSqft: 4000 }],
+    });
+    expect(parsed.rows[0].lotSqft).toBe(0.25);
+    expect(parsed.rows[0].buildingSqft).toBe(4000);
   });
 
   it("rejects an unsupported schemaVersion", () => {
@@ -261,7 +284,7 @@ describe("loadShortlistUniverse / loadShortlistUniverseManifest — fail-closed 
     const checksum = shortlistUniverseChecksum(serialized);
     const manifest = validManifest({
       buildId: file.buildId,
-      vacancyIndexBuildId: file.buildId,
+      vacancyIndexBuildId: file.vacancySnapshotId,
       zips: ["60619"],
       files: { "60619": { path: "60619.json", checksum, rowCount: file.rows.length } },
     });
@@ -278,7 +301,7 @@ describe("loadShortlistUniverse / loadShortlistUniverseManifest — fail-closed 
     const checksum = shortlistUniverseChecksum(serialized);
     const manifest = validManifest({
       buildId: "build-A",
-      vacancyIndexBuildId: "build-A",
+      vacancyIndexBuildId: file.vacancySnapshotId,
       files: { "60621": { path: "60621.json", checksum, rowCount: file.rows.length } },
     });
     writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest));
@@ -372,20 +395,29 @@ describe("loadShortlistUniverse / loadShortlistUniverseManifest — fail-closed 
     if (!result.ok) expect(result.reason).toBe("file_counts_inconsistent");
   });
 
-  it("fails closed when the manifest's vacancyIndexBuildId does not match its own buildId", () => {
+  it("accepts a derivation-only build whose preserved vacancy snapshot id differs from buildId", () => {
+    const { file } = writeConsistentFixture(dir, "60621", {
+      buildId: "derived-area-repair",
+      vacancySnapshotId: "source-vacancy-snapshot",
+    });
+    const result = loadShortlistUniverse("60621");
+    expect(result).toEqual({ ok: true, data: file });
+  });
+
+  it("fails closed when a file's vacancy snapshot id does not match the manifest", () => {
     const file = validFile();
     const serialized = JSON.stringify(file);
     const checksum = shortlistUniverseChecksum(serialized);
     const manifest = validManifest({
       buildId: file.buildId,
-      vacancyIndexBuildId: "some-other-run", // decoupled from buildId — a real drift
+      vacancyIndexBuildId: "some-other-source-snapshot",
       files: { "60621": { path: "60621.json", checksum, rowCount: file.rows.length } },
     });
     writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest));
     writeFileSync(join(dir, "60621.json"), serialized);
     const result = loadShortlistUniverse("60621");
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("manifest_vacancy_index_build_id_mismatch");
+    if (!result.ok) expect(result.reason).toBe("vacancy_snapshot_id_mismatch");
   });
 
   it("caches a successful load and does not re-read the file on a second call", () => {

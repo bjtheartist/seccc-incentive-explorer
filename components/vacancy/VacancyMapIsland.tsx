@@ -8,6 +8,7 @@ import type { ComponentProps } from "react";
 
 type MapProps = Omit<ComponentProps<typeof VacancyReportMap>, "focusBbox"> & {
   showSiteMatchmakerResults?: boolean;
+  siteMatchmakerBuildId?: string;
 };
 
 /**
@@ -19,6 +20,7 @@ type MapProps = Omit<ComponentProps<typeof VacancyReportMap>, "focusBbox"> & {
  */
 export default function VacancyMapIsland({
   showSiteMatchmakerResults = false,
+  siteMatchmakerBuildId = "",
   ...props
 }: MapProps) {
   const focusBbox = useFocusBbox();
@@ -33,7 +35,11 @@ export default function VacancyMapIsland({
   return (
     <>
       <div ref={wrapRef} id={showSiteMatchmakerResults ? "site-matchmaker-map" : undefined}>
-        <VacancyReportMap {...props} focusBbox={focusBbox} />
+        <VacancyReportMap
+          {...props}
+          focusBbox={focusBbox}
+          siteMatchmakerBuildId={siteMatchmakerBuildId}
+        />
       </div>
       {showSiteMatchmakerResults ? (
         <div className="mt-8">
@@ -42,6 +48,10 @@ export default function VacancyMapIsland({
             landPoints={props.landPoints}
             zip={props.zip}
             neighborhood={props.neighborhood ?? `ZIP ${props.zip}`}
+            buildId={siteMatchmakerBuildId}
+            trackedTotalCount={props.totalCount}
+            landTotalCount={props.landPointsTotal}
+            landTruncated={props.landPointsTruncated}
           />
         </div>
       ) : null}

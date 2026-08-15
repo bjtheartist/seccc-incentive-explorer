@@ -286,6 +286,7 @@ export default async function VacancyMapPage({
               initialAreaId={initialAreaId}
               siteMatchmakerPrefilter={handoff != null}
               showSiteMatchmakerResults={handoff != null}
+              siteMatchmakerBuildId={exportData?.generatedAt ?? ""}
             />
           </div>
         ) : (

@@ -248,18 +248,29 @@ export function activeLicenseFlag(name: string): string {
 export const CONDITION_VERIFICATION_NOTE =
   "Confirm condition, open violations, and permit history with the Department of Buildings before committing.";
 
-// ── Request-time finalist enrichment (county valuation + licensing) ─────────
+// ── Request-time bounded enrichment (county parcel facts + licensing) ──
 
 /** Per-card facts the request-time enrichment adds, for the CSV and the
- *  cards. Stays finalist-only DISPLAY enrichment — it can never change which
- *  candidates appear or their order (see lib/shortlist-engine.ts). */
+ *  cards. Stays DISPLAY-only enrichment — it can never change which
+ *  candidates appear or their order (see lib/shortlist-engine.ts). Ranked
+ *  results are fetched as one bounded batch; the full explorer fetches only
+ *  the one parcel a reader explicitly opens. */
 export interface ShortlistEnrichmentFacts {
   countyClass: string | null;
   classGloss: string | null;
+  countyClassStatus?: "available" | "not_published" | "unavailable" | "not_requested";
+  lotAreaSqft?: number | null;
+  lotAreaStatus?: "available" | "not_published" | "unavailable" | "not_requested";
+  assessorBuildingSqft?: number | null;
+  assessorBuildingYear?: string | null;
+  assessorBuildingAreaStatus?: "available" | "not_published" | "unavailable" | "not_requested";
   assessedValue: number | null;
   assessedYear: string | null;
+  assessedStage?: "board" | "certified" | "mailed" | null;
+  assessedValueStatus?: "available" | "not_published" | "unavailable" | "not_requested";
   impliedMarketValue: number | null;
   activeLicenses: { name: string; description: string }[];
+  activeLicenseStatus?: "available" | "not_found" | "unavailable" | "not_requested";
 }
 
 // ── Incentive-snapshot link ─────────────────────────────────────────────────

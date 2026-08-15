@@ -39,7 +39,12 @@ import {
   PERMIT_VERIFICATION_NOTE,
   permitDetailLines,
 } from "@/lib/permit-match-lines";
-import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+  formatPin14,
+} from "@/lib/cook-viewer";
 import { STARRED_RING } from "@/lib/vacancy-starred";
 import {
   siteReportHref,
@@ -68,6 +73,7 @@ import type {
   VacancyCluster,
   VacancyPropertyType,
 } from "@/lib/vacancy-index";
+import type { CandidateParcelEnrichmentState } from "@/lib/site-matchmaker-results";
 
 const CARD_INK = "#0C1B33";
 const CARD_MUTED = "#5A6478";
@@ -155,6 +161,8 @@ export interface SiteCardOptions {
    * "checked, nothing found".
    */
   permits?: PermitMatchState;
+  /** On-demand County class/assessment for the parcel the reader clicked. */
+  parcelEnrichment?: CandidateParcelEnrichmentState;
 }
 
 /** Marks the element whose innerHTML is swapped when the zone lookup lands. */
@@ -173,6 +181,82 @@ export const PERMIT_SLOT_ATTR = "data-vacancy-permit";
 export const PERMIT_BADGE_ATTR = "data-vacancy-permit-badge";
 /** Marks the scroll container that guarantees the card fits the frame. */
 export const CARD_SCROLLER_ATTR = "data-vacancy-card-scroll";
+/** Marks the parcel-assessment rows patched after the on-demand County check. */
+export const PARCEL_ENRICHMENT_SLOT_ATTR = "data-vacancy-parcel-enrichment";
+/** Marks the map-card retry action shown after a County assessment failure. */
+export const PARCEL_ENRICHMENT_RETRY_ATTR = "data-vacancy-parcel-enrichment-retry";
+
+function parcelCurrency(value: number | null): string {
+  return value === null
+    ? "Not published"
+    : value.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      });
+}
+
+/** HTML for the source-honest assessment state, independently snapshot-testable. */
+export function parcelEnrichmentHtml(state: CandidateParcelEnrichmentState): string {
+  if (state.status === "loading") {
+    return `<div style="color:${CARD_MUTED}">County parcel check: Checking…</div>`;
+  }
+  if (state.status === "unavailable") {
+    return [
+      `<div style="color:${DISTRESS_RED}">County parcel check: Temporarily unavailable</div>`,
+      `<button type="button" ${PARCEL_ENRICHMENT_RETRY_ATTR} style="margin-top:5px;min-height:36px;border:1px solid ${CARD_BLUE};background:white;color:${CARD_BLUE};padding:6px 9px;font-size:10px;font-weight:600;cursor:pointer">Retry County check</button>`,
+    ].join("");
+  }
+  if (state.status === "not_checked") {
+    return `<div style="color:${CARD_FAINT}">County parcel check: Not checked</div>`;
+  }
+  if (state.status === "not_requested") {
+    return `<div style="color:${CARD_FAINT}">County parcel check: Not requested — PIN needs verification</div>`;
+  }
+
+  const facts = state.facts;
+  const countyClass =
+    facts.countyClassStatus === "unavailable"
+      ? "Unavailable"
+      : facts.countyClassStatus === "not_requested"
+        ? "Not requested — PIN needs verification"
+        : facts.countyClass ?? "Not published";
+  const assessed =
+    facts.assessedValueStatus === "unavailable"
+      ? "Unavailable"
+      : facts.assessedValueStatus === "not_requested"
+        ? "Not requested — PIN needs verification"
+        : parcelCurrency(facts.assessedValue);
+  const areaLabel = (
+    status: typeof facts.lotAreaStatus,
+    value: number | null | undefined,
+  ) =>
+    status === "unavailable"
+      ? "Unavailable"
+      : status === "not_requested"
+        ? "Not requested — PIN needs verification"
+        : squareFeetLabel(value);
+  const lotArea = areaLabel(facts.lotAreaStatus, facts.lotAreaSqft);
+  const buildingArea = areaLabel(
+    facts.assessorBuildingAreaStatus,
+    facts.assessorBuildingSqft,
+  );
+  const buildingYear = facts.assessorBuildingYear
+    ? ` <span style="color:${CARD_FAINT}">(tax year ${escapeHtml(facts.assessorBuildingYear)})</span>`
+    : "";
+  const stage = facts.assessedStage ? ` · ${facts.assessedStage} total` : "";
+  const estimate =
+    facts.impliedMarketValue === null
+      ? "Not published"
+      : `about ${parcelCurrency(facts.impliedMarketValue)} (screening estimate, not an appraisal)`;
+  return [
+    `<div>Lot area: ${escapeHtml(lotArea)}</div>`,
+    `<div>Assessor building area: ${escapeHtml(buildingArea)}${buildingYear}</div>`,
+    `<div>County property class: ${escapeHtml(countyClass)}</div>`,
+    `<div>Assessed value: ${escapeHtml(assessed)} <span style="color:${CARD_FAINT}">(tax year ${escapeHtml(facts.assessedYear ?? "not published")}${escapeHtml(stage)})</span></div>`,
+    `<div>Assessor-implied market: ${escapeHtml(estimate)}</div>`,
+  ].join("");
+}
 
 /** A plain land-use noun for the significance sentence — from the zoning prefix
  *  when present, else the property type. Longest prefixes first. */
@@ -493,10 +577,17 @@ export function buildSiteCardHtml(
   const zones: SiteZoneState = options.zones ?? { status: "idle" };
   const activity: SiteActivityState = options.activity ?? { status: "idle" };
   const permits: PermitMatchState = options.permits ?? { status: "idle" };
+  const parcelEnrichment: CandidateParcelEnrichmentState =
+    options.parcelEnrichment ?? { status: "not_checked" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
   const space = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet);
   const matchArea = siteMatchAreaForProperty(d.propertyType, space);
+  const ownerLabel = PUBLIC_OWNER_TYPE_LABELS[d.ownerType] ?? PUBLIC_OWNER_TYPE_LABELS.unknown;
+  const ownerClassificationAtGlance =
+    ownerLabel === PUBLIC_OWNER_TYPE_LABELS.unknown
+      ? "Ownership: Not yet classified"
+      : `${ownerLabel} owner classification`;
 
   const label = (text: string) =>
     `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600;margin-bottom:5px">${escapeHtml(text)}</div>`;
@@ -522,6 +613,7 @@ export function buildSiteCardHtml(
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;color:${CARD_INK};line-height:1.3">${escapeHtml(addressText)}</div>
         <div style="font-size:11px;color:${CARD_MUTED};margin-top:3px">${escapeHtml(propertyLabel)}${escapeHtml(sizeClause)}</div>
+        <div style="font-size:10px;color:${CARD_MUTED};margin-top:2px">Lot ${escapeHtml(squareFeetLabel(space?.lotAreaSqft))} · Assessor building ${escapeHtml(squareFeetLabel(space?.assessorBuildingSqft))} · ${escapeHtml(ownerClassificationAtGlance)}</div>
       </div>
       ${starHtml}
     </div>
@@ -540,18 +632,19 @@ export function buildSiteCardHtml(
 
   // ── 4 · Next step + ONE primary action ──
   const cookViewer = cookViewerUrl(d.pin);
+  const assessor = assessorRecordUrl(d.pin);
   const clerk = clerkRecordsUrl(d.pin);
   const btnStyle = `display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:white;background:${CARD_INK};border:1px solid ${CARD_INK};padding:5px 9px;border-radius:2px;cursor:pointer;text-decoration:none`;
   const linkStyle = `font-size:10px;color:${CARD_BLUE};text-decoration:none`;
   let primaryHtml = "";
   let secondaryHtml = "";
-  if (cookViewer && clerk) {
+  if (cookViewer && assessor && clerk) {
     if (emphasizesDeed(d)) {
       primaryHtml = `<a href="${escapeHtml(clerk)}" target="_blank" rel="noopener noreferrer" style="${btnStyle}">Review deed history ↗</a>`;
-      secondaryHtml = `<a href="${escapeHtml(cookViewer)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Parcel record ↗</a>`;
+      secondaryHtml = `<a href="${escapeHtml(cookViewer)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">CookViewer ↗</a><a href="${escapeHtml(assessor)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Assessor record ↗</a>`;
     } else {
       primaryHtml = `<a href="${escapeHtml(cookViewer)}" target="_blank" rel="noopener noreferrer" style="${btnStyle}">Check parcel record ↗</a>`;
-      secondaryHtml = `<a href="${escapeHtml(clerk)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Deed history ↗</a>`;
+      secondaryHtml = `<a href="${escapeHtml(assessor)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Assessor record ↗</a><a href="${escapeHtml(clerk)}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Clerk recordings ↗</a>`;
     }
   } else if (cookViewer) {
     primaryHtml = `<a href="${escapeHtml(cookViewer)}" target="_blank" rel="noopener noreferrer" style="${btnStyle}">Check parcel record ↗</a>`;
@@ -587,7 +680,8 @@ export function buildSiteCardHtml(
       `Assessor building area: ${squareFeetLabel(space?.assessorBuildingSqft)}${space?.assessorBuildingYear ? ` <span style="color:${CARD_FAINT}">(tax year ${space.assessorBuildingYear})</span>` : ""}`,
       `Mapped building footprint on parcel: ${squareFeetLabel(space?.cityGroundFootprintSqft)} <span style="color:${CARD_FAINT}">(${escapeHtml(space?.cityGroundFootprintVintage ?? CITY_BUILDING_FOOTPRINTS_VINTAGE)})</span>`,
       `Reported available space: ${space?.availableSpaceSqft ? `${space.availableSpaceSqft.toLocaleString("en-US")} sq ft` : "Not verified"}${space?.availableSpaceSource ? ` <span style="color:${CARD_FAINT}">(${escapeHtml(space.availableSpaceSource)}; confirm current availability)</span>` : ""}`,
-      `PIN: ${d.pin ? `<span style="font-family:${MONO_STACK}">${escapeHtml(d.pin)}</span>` : "No PIN on record"}`,
+      `<div ${PARCEL_ENRICHMENT_SLOT_ATTR}>${parcelEnrichmentHtml(parcelEnrichment)}</div>`,
+      `PIN: ${formatPin14(d.pin) ? `<span style="font-family:${MONO_STACK}">${escapeHtml(formatPin14(d.pin)!)}</span>` : "PIN needs verification"}`,
       `Type: ${escapeHtml(propertyLabel)}`,
     ]
       .map((r) => `<div>${r}</div>`)
@@ -659,7 +753,6 @@ export function buildSiteCardHtml(
   );
 
   // 6f · Data and sources (ownership type lives here — off the headline)
-  const ownerLabel = PUBLIC_OWNER_TYPE_LABELS[d.ownerType] ?? PUBLIC_OWNER_TYPE_LABELS.unknown;
   const ownerColor = OWNER_TYPE_COLORS[d.ownerType] ?? OWNER_TYPE_COLORS.unknown;
   const axisLine =
     d.ownerStructure && d.ownerGeography

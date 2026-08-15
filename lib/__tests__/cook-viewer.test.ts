@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { clerkRecordsUrl, cookViewerUrl, normalizePin14 } from "../cook-viewer";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+  formatPin14,
+  normalizePin14,
+} from "../cook-viewer";
 
 describe("normalizePin14", () => {
   it("returns a digits-only 14-digit PIN unchanged", () => {
@@ -42,6 +48,18 @@ describe("normalizePin14", () => {
     expect(normalizePin14(undefined)).toBeNull();
     expect(normalizePin14({})).toBeNull();
     expect(normalizePin14(["20363230080000"])).toBeNull();
+  });
+});
+
+describe("formatPin14", () => {
+  it("formats a normalized PIN while preserving a leading zero", () => {
+    expect(formatPin14("01234567890123")).toBe("01-23-456-789-0123");
+    expect(formatPin14("01-23-456-789-0123")).toBe("01-23-456-789-0123");
+  });
+
+  it("fails closed for malformed and missing values", () => {
+    expect(formatPin14("123")).toBeNull();
+    expect(formatPin14(null)).toBeNull();
   });
 });
 
@@ -101,5 +119,22 @@ describe("clerkRecordsUrl", () => {
     expect(clerkRecordsUrl(null)).toBeNull();
     expect(clerkRecordsUrl(undefined)).toBeNull();
     expect(clerkRecordsUrl({})).toBeNull();
+  });
+});
+
+describe("assessorRecordUrl", () => {
+  it("builds the Assessor PIN record from digits-only or dashed input", () => {
+    expect(assessorRecordUrl("20363230080000")).toBe(
+      "https://www.cookcountyassessoril.gov/pin/20363230080000",
+    );
+    expect(assessorRecordUrl("20-36-323-008-0000")).toBe(
+      "https://www.cookcountyassessoril.gov/pin/20363230080000",
+    );
+  });
+
+  it("fails closed for invalid and numeric PINs", () => {
+    expect(assessorRecordUrl("2036323008000")).toBeNull();
+    expect(assessorRecordUrl(20363230080000)).toBeNull();
+    expect(assessorRecordUrl(null)).toBeNull();
   });
 });

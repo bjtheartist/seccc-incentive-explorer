@@ -20,6 +20,7 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { normalizePublishedArea } from "./published-area";
 
 /**
  * v2 (PR2 adversarial-review fix round): adds `counts.sourceRecordsByEvidenceType`
@@ -155,6 +156,16 @@ const RowOverlaysSchema = z.object({
 
 const OwnerConfidenceSchema = z.enum(["pin_matched", "inferred", "needs_verification"]);
 
+/**
+ * Published parcel measurements are strictly positive. Source sentinel zeroes,
+ * negative values, NaN, and infinities normalize to an honest unknown before
+ * validation so legacy files cannot leak false measurements downstream.
+ */
+export const PublishedAreaSchema = z.preprocess(
+  normalizePublishedArea,
+  z.number().positive().nullable(),
+);
+
 export const ShortlistUniverseRowSchema = z.object({
   canonicalKey: z.string().min(1),
   pin: z.string().nullable(),
@@ -166,9 +177,9 @@ export const ShortlistUniverseRowSchema = z.object({
   hasVacantBuildingEvidence: z.boolean(),
   conflictingPropertyTypes: z.boolean(),
   propertyType: z.enum(["vacant_land", "vacant_building"]),
-  buildingSqft: z.number().nullable(),
+  buildingSqft: PublishedAreaSchema,
   buildingSqftSource: EvidenceTypeSchema.nullable(),
-  lotSqft: z.number().nullable(),
+  lotSqft: PublishedAreaSchema,
   lotSqftSource: EvidenceTypeSchema.nullable(),
   ownerStructure: z.string().nullable(),
   ownerGeography: z.string().nullable(),
@@ -209,11 +220,11 @@ export const ShortlistUniverseManifestSchema = z.object({
   buildId: z.string().min(1),
   generatedAt: z.string(),
   zips: z.array(z.string().regex(/^\d{5}$/)),
-  /** The vacancy-index.json regenerated in the SAME refresh run (consult
-   * Q6.3) — must equal `buildId`. Kept as a separate explicit field (rather
-   * than assuming equality) so a future run that intentionally decouples
-   * the two artifacts fails a loud, specific assertion instead of a vague
-   * mismatch. */
+  /** Identity of the vacancy snapshot from which this derived universe was
+   * built. A full refresh normally stamps the same value as `buildId`; a
+   * derivation-only repair intentionally preserves the prior snapshot id
+   * while issuing a new derived-artifact `buildId`. Every per-ZIP file must
+   * carry this exact identity. */
   vacancyIndexBuildId: z.string().min(1),
   files: z.record(
     z.string(),

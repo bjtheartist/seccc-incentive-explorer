@@ -37,6 +37,13 @@ export function normalizePin14(pin: unknown): string | null {
   return /^\d{14}$/.test(digits) ? digits : null;
 }
 
+/** Human-readable Cook County PIN that preserves all leading zeroes. */
+export function formatPin14(pin: unknown): string | null {
+  const pin14 = normalizePin14(pin);
+  if (pin14 === null) return null;
+  return `${pin14.slice(0, 2)}-${pin14.slice(2, 4)}-${pin14.slice(4, 7)}-${pin14.slice(7, 10)}-${pin14.slice(10)}`;
+}
+
 /**
  * Build the CookViewer deep-link for a parcel PIN, or `null` when the PIN is
  * not a valid 14-digit string (see {@link normalizePin14}). Null-safe: pass a
@@ -47,6 +54,20 @@ export function cookViewerUrl(pin: unknown): string | null {
   const pin14 = normalizePin14(pin);
   if (pin14 === null) return null;
   return `${COOK_VIEWER_BASE}?pin14=${encodeURIComponent(pin14)}`;
+}
+
+const ASSESSOR_RECORD_BASE = "https://www.cookcountyassessoril.gov/pin";
+
+/**
+ * Build the Cook County Assessor property-record deep-link for a parcel PIN,
+ * or `null` when the PIN is not a valid 14-digit string. Keeping this beside
+ * the CookViewer and Clerk helpers gives every Matchmaker surface one shared
+ * three-link parcel-record contract.
+ */
+export function assessorRecordUrl(pin: unknown): string | null {
+  const pin14 = normalizePin14(pin);
+  if (pin14 === null) return null;
+  return `${ASSESSOR_RECORD_BASE}/${encodeURIComponent(pin14)}`;
 }
 
 const CLERK_RECORDS_BASE = "https://crs.cookcountyclerkil.gov/Search/ResultByPin";

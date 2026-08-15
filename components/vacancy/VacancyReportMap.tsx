@@ -49,6 +49,8 @@ import {
   CARD_SCROLLER_ATTR,
   PERMIT_BADGE_ATTR,
   PERMIT_SLOT_ATTR,
+  PARCEL_ENRICHMENT_SLOT_ATTR,
+  PARCEL_ENRICHMENT_RETRY_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
@@ -57,11 +59,17 @@ import {
   escapeHtml,
   permitBadgeText,
   permitMatchHtml,
+  parcelEnrichmentHtml,
   programsAndZonesRows,
   siteActivityHtml,
   zoneBadgeText,
   type CardData,
 } from "./vacancy-site-card";
+import {
+  cachedCandidateParcelEnrichment,
+  fetchCandidateParcelEnrichment,
+} from "@/lib/site-matchmaker-parcel-client";
+import type { CandidateParcelEnrichmentState } from "@/lib/site-matchmaker-results";
 import {
   fittedContentHeight,
   intersectRects,
@@ -228,6 +236,8 @@ interface VacancyReportMapProps {
    *  published-size criteria, so the showing line must describe a prefilter
    *  rather than implying it is the full edition universe. */
   siteMatchmakerPrefilter?: boolean;
+  /** Vacancy-index build id for source-safe on-demand County parcel caching. */
+  siteMatchmakerBuildId?: string;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -281,6 +291,7 @@ export default function VacancyReportMap({
   neighborhood,
   initialAreaId,
   siteMatchmakerPrefilter = false,
+  siteMatchmakerBuildId = "",
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -366,8 +377,8 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter });
-  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter };
+  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter, siteMatchmakerBuildId });
+  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter, siteMatchmakerBuildId };
 
   // Current view read through a ref so the mount-once popup handler stays fresh.
   const viewRef = useRef(view);
@@ -414,6 +425,7 @@ export default function VacancyReportMap({
       neighborhood: nbhd,
       initialAreaId: initialAreaIdVal,
       siteMatchmakerPrefilter: useSizeMatchStyling,
+      siteMatchmakerBuildId: parcelBuildId,
     } = dataRef.current;
 
     // Kept clusters keyed by id, for the site card's cluster/corridor line, the
@@ -1006,6 +1018,15 @@ export default function VacancyReportMap({
         const initialPermits: PermitMatchState =
           cachedPermits ?? (canCheckPermits ? { status: "loading" } : { status: "idle" });
 
+        const cachedParcel = useSizeMatchStyling
+          ? cachedCandidateParcelEnrichment(parcelBuildId, data.pin)
+          : null;
+        const initialParcel =
+          cachedParcel ??
+          (useSizeMatchStyling && canCheckPermits && parcelBuildId
+            ? { status: "loading" as const }
+            : { status: "not_checked" as const });
+
         // Star affordance ONLY for a confirmed admin session.
         const starKey = siteStarKey({ pin: data.pin, address: data.address });
         const showStar = adminRef.current && starKey !== "";
@@ -1016,6 +1037,7 @@ export default function VacancyReportMap({
           zones: initialZones,
           activity: initialActivity,
           permits: initialPermits,
+          parcelEnrichment: initialParcel,
           star: showStar ? { key: starKey, starred: starredRef.current.has(starKey) } : null,
         });
 
@@ -1107,6 +1129,25 @@ export default function VacancyReportMap({
             refitCard(popup);
           });
         }
+
+        const patchParcelEnrichment = (state: CandidateParcelEnrichmentState) => {
+          if (!popup.isOpen()) return;
+          const slot = el?.querySelector<HTMLElement>(`[${PARCEL_ENRICHMENT_SLOT_ATTR}]`);
+          if (!slot) return;
+          slot.innerHTML = parcelEnrichmentHtml(state);
+          const retry = slot.querySelector<HTMLButtonElement>(
+            `[${PARCEL_ENRICHMENT_RETRY_ATTR}]`,
+          );
+          retry?.addEventListener("click", () => requestParcelEnrichment());
+          refitCard(popup);
+        };
+        const requestParcelEnrichment = () => {
+          patchParcelEnrichment({ status: "loading" });
+          void fetchCandidateParcelEnrichment(parcelBuildId, data.pin).then(
+            patchParcelEnrichment,
+          );
+        };
+        if (initialParcel.status === "loading") requestParcelEnrichment();
       };
 
       for (const layerId of ["vacancy-unclustered", "vacancy-marker-disc"]) {
