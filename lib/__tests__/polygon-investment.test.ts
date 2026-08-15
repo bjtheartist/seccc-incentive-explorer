@@ -472,7 +472,16 @@ describe("buildDrawnAreaCsv", () => {
       geometry: { type: "Point", coordinates: [-87.63, 41.88] },
       properties: {
         address: "123 S State St",
+        source: "cols",
+        status: "city_owned",
+        sourceRecordDate: null,
+        freshnessClass: "unknown_date",
+        canonicalType: "land",
         propertyType: "vacant_land",
+        explorerRefreshedAt: "2026-08-14T00:00:00.000Z",
+        licenseCheckState: "no_match",
+        currentLicenseMatches: [],
+        licenseCheckedAt: "2026-08-14T00:00:00.000Z",
         ward: "3",
         communityArea: "Loop",
         zoningClass: "DX-16",
@@ -527,8 +536,9 @@ describe("buildDrawnAreaCsv", () => {
   });
 
   it("keeps the vacancy table intact under the area-name column", () => {
-    expect(csv).toContain('"Area Name","Address","Property Type"');
-    expect(csv).toContain('"63rd & Halsted","123 S State St","vacant_land"');
+    expect(csv).toContain('"Area Name","Address","Source","Source Status","Source Record Date","Freshness Class"');
+    expect(csv).toContain('"63rd & Halsted","123 S State St","City-Owned Land Inventory","city_owned"');
+    expect(csv).toContain('"Source record date unavailable","Tracked land signal","vacant_land"');
     expect(csv).toContain('"tif; opportunity_zone"');
   });
 

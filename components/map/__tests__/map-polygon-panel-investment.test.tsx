@@ -179,8 +179,17 @@ const VACANCY: GeoJSON.FeatureCollection = {
       type: "Feature",
       geometry: { type: "Point", coordinates: [-87.63, 41.88] },
       properties: {
+        id: "cols-300-s-state",
         address: "300 S State St",
+        source: "cols",
         propertyType: "vacant_land",
+        canonicalType: "land",
+        sourceRecordDate: null,
+        freshnessClass: "unknown_date",
+        explorerRefreshedAt: "2026-08-14T00:00:00.000Z",
+        licenseCheckState: "no_match",
+        currentLicenseMatches: [],
+        licenseCheckedAt: "2026-08-14T00:00:00.000Z",
         ward: "4",
         communityArea: "Loop",
         ownerType: "city_public",
@@ -361,7 +370,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
     // Save/Email build a vacancy report, so they stay hidden with no vacancies.
     expect(html).not.toContain("Save Report");
     expect(html).not.toContain("Email This to Me");
-    expect(html).toContain("No tracked vacant properties found");
+    expect(html).toContain("No tracked vacancy signals returned");
   });
 
   it("still offers nothing to a non-admin with no vacancies (unchanged behavior)", () => {

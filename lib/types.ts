@@ -661,11 +661,11 @@ export interface VacantPropertyZoneMatch {
 
 export interface VacantProperty {
   id: string;
-  source: "cols" | "dpd_vacant" | "violations";
+  source: import("@/lib/vacancy-evidence").VacancySource;
   address: string;
   lat: number;
   lon: number;
-  propertyType: "vacant_land" | "vacant_building" | "vacant_storefront";
+  propertyType: import("@/lib/vacancy-evidence").VacancyPropertyType;
   ward: string | null;
   communityArea: string | null;
   zoningClass: string | null;
@@ -675,6 +675,10 @@ export interface VacantProperty {
   incentiveCount: number;
   ownerName: string | null;
   ownerType: string | null;
+  /** Original source record date (311 created_date), never Explorer sync time. */
+  sourceRecordDate: string | null;
+  freshnessClass: import("@/lib/vacancy-evidence").VacancyFreshness;
+  explorerRefreshedAt: string | null;
 }
 
 export interface DistrictData {

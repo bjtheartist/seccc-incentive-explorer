@@ -40,7 +40,7 @@ export function getRedisClient(): Redis | null {
  */
 export async function cached<T>(
   key: string,
-  ttlSeconds: number,
+  ttlSeconds: number | ((result: T) => number),
   fn: () => Promise<T>
 ): Promise<T> {
   const redis = getRedis();
@@ -60,7 +60,11 @@ export async function cached<T>(
 
   if (redis) {
     try {
-      await redis.set(key, JSON.stringify(result), { ex: ttlSeconds });
+      const resolvedTTL =
+        typeof ttlSeconds === "function" ? ttlSeconds(result) : ttlSeconds;
+      if (Number.isFinite(resolvedTTL) && resolvedTTL > 0) {
+        await redis.set(key, JSON.stringify(result), { ex: resolvedTTL });
+      }
     } catch (err) {
       console.warn("[redis] cache write error:", err);
     }

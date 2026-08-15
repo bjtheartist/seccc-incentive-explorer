@@ -27,18 +27,26 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
   });
 
   it("binds fetch publication to the request generation", () => {
+    const analysis = sourceBetween(
+      "const analyzePolygon = useCallback",
+      "const countyReliefRecipientsAbortRef",
+    );
     const createHandler = sourceBetween(
       'map.on("draw.create"',
       'map.on("draw.modechange"',
     );
 
-    expect(createHandler).toContain("polygonVacancyRequests.start()");
-    expect(createHandler).toContain("fetchDrawnAreaVacancy(geom");
-    expect(createHandler).toContain("signal: vacancyRequest.signal");
-    expect(createHandler.match(/vacancyRequest\.isCurrent\(\)/g)).toHaveLength(2);
-    expect(createHandler).toContain("setPolygonVacancyLoadFailed(true)");
-    expect(createHandler).toContain("setPolygonLoading(false)");
-    expect(createHandler).toContain(".finally(() => vacancyRequest.release())");
+    expect(analysis).toContain("polygonVacancyRequests.start()");
+    expect(analysis).toContain("fetchDrawnAreaVacancy(geom");
+    expect(analysis).toContain("signal: vacancyRequest.signal");
+    expect(analysis.match(/vacancyRequest\.isCurrent\(\)/g)).toHaveLength(2);
+    expect(analysis).toContain("setPolygonVacancyLoadFailed(true)");
+    expect(analysis).toContain("setPolygonLoading(false)");
+    expect(analysis).toContain(".finally(() => vacancyRequest.release())");
+
+    expect(createHandler).toContain("draw.deleteAll()");
+    expect(createHandler).toContain("setAnalyzedPolygon(map, geom)");
+    expect(createHandler).toContain("analyzePolygon(geom)");
   });
 
   it("cancels and invalidates the request on draw deletion", () => {
@@ -51,6 +59,25 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
     expect(deleteHandler).toContain("setPolygonResults(null)");
     expect(deleteHandler).toContain("setPolygonLoading(false)");
     expect(deleteHandler).toContain("setPolygonPanelOpen(false)");
+  });
+
+  it("atomically cancels Escape from edit and keeps the closed analysis reopenable", () => {
+    const modeHandler = sourceBetween(
+      'map.on("draw.modechange"',
+      'map.on("draw.delete"',
+    );
+    expect(modeHandler).toContain("shouldCancelDrawnAreaEditOnModeChange");
+    expect(modeHandler).toContain("setAnalyzedPolygon(map, polygonGeometryRef.current)");
+    expect(modeHandler).toContain("setPolygonEditing(false)");
+    expect(modeHandler).toContain("setPolygonEditDirty(false)");
+    expect(source).toContain("blocksDrawnAreaSnapshot(drawModeRef.current, polygonEditingRef.current)");
+    expect(source).toContain("shouldCancelDrawnAreaEditOnKey(polygonEditingRef.current, event.key)");
+    expect(source).toContain('window.addEventListener("keydown", cancelDrawnAreaEditOnEscape, true)');
+    expect(source).toContain("detachDrawEscapeHandler?.()");
+    expect(source).toContain('onClick={() => setPolygonPanelOpen(true)}');
+    expect(source).toContain("Area Analysis");
+    expect(source).toContain("top-32 md:top-14 left-3 md:left-auto right-auto md:right-3 z-50 min-h-11");
+    expect(source).toContain("!polygonPanelOpen && !polygonResults && !countyReliefRecipientsPanel");
   });
 
   it("cancels the active request during component cleanup", () => {

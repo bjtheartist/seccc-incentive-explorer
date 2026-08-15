@@ -61,6 +61,14 @@ import {
   vacancyCoverageDisclosure,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+import {
+  currentLicenseConflictSummary,
+  vacancyCanonicalTypeLabel,
+  vacancyFreshnessLabel,
+  vacancySourceLabel,
+  type VacancyLicenseFilter,
+} from "@/lib/area-vacancy-presentation";
+import type { VacancyFreshnessFilter } from "@/lib/vacancy-evidence";
 
 // ── Point-in-polygon ─────────────────────────────────────────────────────────
 
@@ -667,7 +675,15 @@ export function drawnAreaFilenameSlug(areaName: string): string {
 // ── CSV ──────────────────────────────────────────────────────────────────────
 
 function csvCell(value: unknown): string {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const raw = String(value ?? "");
+  // Spreadsheet programs can execute formulas even in quoted CSV cells.
+  // Prefix source/user-controlled strings whose first meaningful character is
+  // a formula marker (or a control marker Excel treats specially).
+  const safe =
+    typeof value === "string" && /^(?:[\s\u0000-\u001f]*[=+\-@]|[\t\r])/.test(raw)
+      ? `'${raw}`
+      : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function csvRow(values: readonly unknown[]): string {
@@ -677,7 +693,17 @@ function csvRow(values: readonly unknown[]): string {
 /** Vacancy-table columns, after the leading "Area Name". */
 export const DRAWN_AREA_VACANCY_COLUMNS = [
   "Address",
+  "Source",
+  "Source Status",
+  "Source Record Date",
+  "Freshness Class",
+  "Freshness Meaning",
+  "Canonical Type",
   "Property Type",
+  "Explorer Refreshed At",
+  "License Check State",
+  "Current-License Conflict Matches",
+  "License Checked At",
   "Ward",
   "Community Area",
   "Zoning Class",
@@ -741,6 +767,10 @@ export interface DrawnAreaCsvInput {
   areaName: string;
   /** Vacancy features already scoped to the drawn area by /api/vacant. */
   vacancyFeatures: readonly GeoJSON.Feature[];
+  /** Returned feature count before user-selected evidence filters. */
+  vacancyReturnedCountBeforeFilters?: number;
+  vacancyFreshnessFilter?: VacancyFreshnessFilter;
+  vacancyLicenseFilter?: VacancyLicenseFilter;
   /** Source coverage returned with the scoped vacancy features. */
   vacancyCoverage?: VacancyCoverageMetadata | null;
   /** HTTP or malformed-response failure; vacancyFeature emptiness is not a zero. */
@@ -810,9 +840,43 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
     );
     if (input.vacancyCoverage) {
       lines.push(csvRow([areaName, "Source", input.vacancyCoverage.sourcePath]));
-      lines.push(csvRow([areaName, "Source as of", input.vacancyCoverage.asOf ?? "Not recorded"]));
+      lines.push(csvRow([areaName, "Explorer refreshed at", input.vacancyCoverage.explorerRefreshedAt ?? "Not recorded"]));
       lines.push(csvRow([areaName, "Records returned", input.vacancyCoverage.returnedCount]));
+      lines.push(
+        csvRow([
+          areaName,
+          "Freshness policy",
+          `${input.vacancyCoverage.freshness.policyVersion}; recent within ${input.vacancyCoverage.freshness.recentWithinYears} years; reference ${input.vacancyCoverage.freshness.referenceDate}; cutoff ${input.vacancyCoverage.freshness.cutoffDate}`,
+        ]),
+      );
+      lines.push(csvRow([areaName, "Recent source records returned", input.vacancyCoverage.freshness.returnedCounts.recent]));
+      lines.push(csvRow([areaName, "Older source records returned", input.vacancyCoverage.freshness.returnedCounts.stale]));
+      lines.push(csvRow([areaName, "Unknown-date source records returned", input.vacancyCoverage.freshness.returnedCounts.unknownDate]));
+      lines.push(csvRow([
+        areaName,
+        "311 retention policy",
+        `Each sync requests the latest ${input.vacancyCoverage.freshness.retainedWithinYears} years. Current request-date policy reference cutoff: ${input.vacancyCoverage.freshness.retentionPolicyCutoffDate}. This is not the persisted cutoff of the last source sync.`,
+      ]));
+      lines.push(csvRow([areaName, "License screening status", input.vacancyCoverage.licenseScreening.status]));
+      lines.push(csvRow([areaName, "License addresses checked", input.vacancyCoverage.licenseScreening.checkedCount]));
+      lines.push(csvRow([areaName, "License address candidates", input.vacancyCoverage.licenseScreening.candidateCount]));
+      lines.push(csvRow([areaName, "License screening capped", input.vacancyCoverage.licenseScreening.capped ? "yes" : "no"]));
+      lines.push(csvRow([areaName, "License address cap", input.vacancyCoverage.licenseScreening.addressCap]));
+      lines.push(csvRow([areaName, "License source calls", input.vacancyCoverage.licenseScreening.sourceCallCount]));
+      lines.push(csvRow([areaName, "License root groups complete", input.vacancyCoverage.licenseScreening.successfulBatches]));
+      lines.push(csvRow([areaName, "License root groups incomplete", input.vacancyCoverage.licenseScreening.failedBatches]));
+      lines.push(csvRow([areaName, "Current-license conflict signals", input.vacancyCoverage.licenseScreening.matchedPropertyCount]));
+      lines.push(csvRow([areaName, "License checked at", input.vacancyCoverage.licenseScreening.checkedAt ?? "Not checked"]));
+      lines.push(csvRow([areaName, "License malformed rows ignored", input.vacancyCoverage.licenseScreening.malformedRowCount ?? 0]));
+      lines.push(csvRow([areaName, "License partial reasons", (input.vacancyCoverage.licenseScreening.partialReasons ?? []).join("; ") || "none"]));
+      for (const caveat of input.vacancyCoverage.licenseScreening.caveats) {
+        lines.push(csvRow([areaName, "License screening caveat", caveat]));
+      }
     }
+    lines.push(csvRow([areaName, "Evidence timeframe filter", input.vacancyFreshnessFilter ?? "not recorded"]));
+    lines.push(csvRow([areaName, "License conflict filter", input.vacancyLicenseFilter ?? "all"]));
+    lines.push(csvRow([areaName, "Records before filters", input.vacancyReturnedCountBeforeFilters ?? input.vacancyFeatures.length]));
+    lines.push(csvRow([areaName, "Records exported", input.vacancyFeatures.length]));
     if (vacancyDisclosure) {
       lines.push(csvRow([areaName, "Coverage note", vacancyDisclosure]));
     }
@@ -825,25 +889,40 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
     for (const feature of input.vacancyFeatures) {
       const p = (feature?.properties ?? {}) as Record<string, unknown>;
       const zoneMatches = Array.isArray(p.zoneMatches) ? p.zoneMatches : [];
+      const uniqueZoneKeys = Array.from(
+        new Set(
+          zoneMatches.flatMap((z) => {
+            const key =
+              z && typeof z === "object"
+                ? (z as { zoneKey?: unknown }).zoneKey
+                : z;
+            return typeof key === "string" && key.trim() ? [key.trim()] : [];
+          }),
+        ),
+      );
       lines.push(
         csvRow([
           areaName,
           p.address ?? "",
+          vacancySourceLabel(p.source),
+          p.status ?? "",
+          p.sourceRecordDate ?? "",
+          p.freshnessClass ?? "",
+          vacancyFreshnessLabel(p.freshnessClass),
+          vacancyCanonicalTypeLabel(p.canonicalType),
           p.propertyType ?? "",
+          p.explorerRefreshedAt ?? "",
+          p.licenseCheckState ?? "",
+          currentLicenseConflictSummary(p.currentLicenseMatches),
+          p.licenseCheckedAt ?? "",
           p.ward ?? "",
           p.communityArea ?? "",
           p.zoningClass ?? "",
           p.squareFeet ?? "",
           p.ownerName ?? "",
           p.ownerType ?? "",
-          p.incentiveCount ?? "",
-          zoneMatches
-            .map((z) =>
-              z && typeof z === "object"
-                ? ((z as { zoneKey?: string }).zoneKey ?? "")
-                : z,
-            )
-            .join("; "),
+          uniqueZoneKeys.length,
+          uniqueZoneKeys.join("; "),
         ]),
       );
     }
