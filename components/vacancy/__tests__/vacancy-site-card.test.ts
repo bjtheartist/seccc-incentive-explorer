@@ -3,6 +3,8 @@ import {
   ACTIVITY_BADGE_ATTR,
   ACTIVITY_SLOT_ATTR,
   CARD_SCROLLER_ATTR,
+  PARCEL_ENRICHMENT_SLOT_ATTR,
+  PARCEL_ENRICHMENT_RETRY_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
@@ -10,6 +12,7 @@ import {
   buildSiteCardHtml,
   cautionLine,
   programsAndZonesRows,
+  parcelEnrichmentHtml,
   significanceSentence,
   siteActivityHtml,
   zoneBadgeText,
@@ -154,6 +157,81 @@ describe("buildSiteCardHtml", () => {
     const html = buildSiteCardHtml(card({ ownerType: "city_public", saleYear: null }), "60617", null);
     expect(html).toContain("cookcountyil.gov/cookviewer");
     expect(html).toContain("Check parcel record");
+    expect(html).toContain("www.cookcountyassessoril.gov/pin/21322110390000");
+    expect(html).toContain("crs.cookcountyclerkil.gov/Search/ResultByPin?id1=21322110390000");
+  });
+
+  it("surfaces lot/building/owner facts at a glance and a source-honest assessed value in the clicked popup", () => {
+    const html = buildSiteCardHtml(
+      card({
+        squareFeet: null,
+        space: { lotAreaSqft: 3125, assessorBuildingSqft: 1800, assessorBuildingYear: 2024 },
+        ownerType: "city_public",
+      }),
+      "60617",
+      null,
+      {
+        parcelEnrichment: {
+          status: "checked",
+          sourceUnavailable: false,
+          facts: {
+            countyClass: "517",
+            classGloss: "Commercial building",
+            countyClassStatus: "available",
+            lotAreaSqft: 3333,
+            lotAreaStatus: "available",
+            assessorBuildingSqft: 1900,
+            assessorBuildingYear: "2025",
+            assessorBuildingAreaStatus: "available",
+            assessedValue: 6900,
+            assessedYear: "2025",
+            assessedStage: "board",
+            assessedValueStatus: "available",
+            impliedMarketValue: 27600,
+            activeLicenses: [],
+            activeLicenseStatus: "not_requested",
+          },
+        },
+      },
+    );
+    expect(html).toContain("Lot 3,125 sq ft");
+    expect(html).toContain("Assessor building 1,800 sq ft");
+    expect(html).toContain("Public agency owner classification");
+    expect(html).toContain(`${PARCEL_ENRICHMENT_SLOT_ATTR}`);
+    expect(html).toContain("Lot area: 3,333 sq ft");
+    expect(html).toContain("Assessor building area: 1,900 sq ft");
+    expect(html).toContain("Assessed value: $6,900");
+    expect(html).toContain("tax year 2025 · board total");
+  });
+
+  it("keeps County failure distinct from a successful no-published-value check", () => {
+    const unavailable = parcelEnrichmentHtml({ status: "unavailable" });
+    expect(unavailable).toContain("Temporarily unavailable");
+    expect(unavailable).toContain(PARCEL_ENRICHMENT_RETRY_ATTR);
+    expect(unavailable).toContain("Retry County check");
+    expect(
+      parcelEnrichmentHtml({
+        status: "checked",
+        sourceUnavailable: false,
+        facts: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "not_published",
+          lotAreaSqft: null,
+          lotAreaStatus: "not_published",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "not_published",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+        },
+      }),
+    ).toContain("Assessed value: Not published");
   });
 
   it("never emits an owner name field (anonymized end to end)", () => {

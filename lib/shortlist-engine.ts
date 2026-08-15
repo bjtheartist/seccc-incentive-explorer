@@ -87,6 +87,7 @@
 import type { EvidenceType, ShortlistUniverseRow } from "./shortlist-universe-schema";
 import type { SiteMatchCriteria, SiteProjectUse } from "./site-matchmaker";
 import { RECORD_COMPLETENESS_WEIGHTS, shortlistCriteriaByBehavior } from "./shortlist-criteria";
+import { normalizePublishedArea } from "./published-area";
 import {
   approxDistanceMeters,
   isCtaStation,
@@ -275,7 +276,7 @@ export function zoningBadgeNote(badge: ZoningBadge, districtCode?: string | null
 /** A published, finite, strictly-positive measurement — the only kind
  *  either area field is ever screened on. */
 function positiveArea(value: number | null): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+  return normalizePublishedArea(value);
 }
 
 /**
@@ -371,7 +372,9 @@ export function recordCompletenessScore(row: ShortlistUniverseRow): number {
   // reader asked for. Routing this through the requested property type made
   // a conflicted row's "completeness" change with the brief (round-4 review,
   // finding 13): exactly the criteria-coupling this score must never contain.
-  if (row.buildingSqft != null || row.lotSqft != null) total += RECORD_COMPLETENESS_WEIGHTS.measuredArea;
+  if (positiveArea(row.buildingSqft) != null || positiveArea(row.lotSqft) != null) {
+    total += RECORD_COMPLETENESS_WEIGHTS.measuredArea;
+  }
   if (row.pin != null) total += RECORD_COMPLETENESS_WEIGHTS.resolvedPin;
   if (row.zoning.status === "resolved") total += RECORD_COMPLETENESS_WEIGHTS.resolvedZoning;
   return total;
@@ -868,8 +871,11 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       lat: row.lat,
       lon: row.lon,
       propertyType: row.propertyType,
-      buildingSqft: row.buildingSqft,
-      lotSqft: row.lotSqft,
+      // Legacy exports can carry source sentinel zeroes. A zero/negative or
+      // non-finite area is not a published measurement and must never render
+      // as square footage or improve the record-completeness order.
+      buildingSqft: positiveArea(row.buildingSqft),
+      lotSqft: positiveArea(row.lotSqft),
       zoningDistrict: row.zoning.district,
       zoningStatus: row.zoning.status,
       badge,

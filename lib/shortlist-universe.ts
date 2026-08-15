@@ -73,7 +73,7 @@ function resolvedDataDir(): string {
 export type ShortlistUniverseLoadFailureReason =
   | "manifest_missing"
   | "manifest_invalid_schema"
-  | "manifest_vacancy_index_build_id_mismatch"
+  | "vacancy_snapshot_id_mismatch"
   | "manifest_zip_missing"
   | "file_missing"
   | "file_invalid_json"
@@ -133,19 +133,6 @@ export function loadShortlistUniverse(zip: string): ShortlistUniverseLoadResult 
 function loadShortlistUniverseUncached(zip: string): ShortlistUniverseLoadResult {
   const manifest = loadShortlistUniverseManifest();
   if (!manifest) return { ok: false, reason: "manifest_missing" };
-  // Cross-artifact binding (Finding 7): the manifest's own two buildId
-  // fields must agree. This is not a self-evident tautology — a future
-  // export run that regenerates the shortlist universe WITHOUT also
-  // regenerating public/data/vacancy-index.json in the same pass (see the
-  // export script's runbook step 6) would otherwise silently decouple the
-  // two artifacts' vintages with no error anywhere.
-  if (manifest.vacancyIndexBuildId !== manifest.buildId) {
-    return {
-      ok: false,
-      reason: "manifest_vacancy_index_build_id_mismatch",
-      detail: `manifest.vacancyIndexBuildId "${manifest.vacancyIndexBuildId}" !== manifest.buildId "${manifest.buildId}"`,
-    };
-  }
   const manifestEntry = manifest.files[zip];
   if (!manifestEntry) return { ok: false, reason: "manifest_zip_missing", detail: zip };
 
@@ -193,6 +180,13 @@ function loadShortlistUniverseUncached(zip: string): ShortlistUniverseLoadResult
       ok: false,
       reason: "build_id_mismatch",
       detail: `file buildId "${data.buildId}" !== manifest buildId "${manifest.buildId}"`,
+    };
+  }
+  if (data.vacancySnapshotId !== manifest.vacancyIndexBuildId) {
+    return {
+      ok: false,
+      reason: "vacancy_snapshot_id_mismatch",
+      detail: `file vacancySnapshotId "${data.vacancySnapshotId}" !== manifest vacancyIndexBuildId "${manifest.vacancyIndexBuildId}"`,
     };
   }
   if (data.rows.length !== manifestEntry.rowCount) {

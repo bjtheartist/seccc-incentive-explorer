@@ -12,12 +12,14 @@ vi.mock("../SiteMatchmakerResultsTable", () => ({
   default: ({
     sitePoints,
     landPoints,
+    buildId,
   }: {
     sitePoints: VacancySitePoint[];
     landPoints?: VacancyLandPoint[] | null;
+    buildId: string;
   }) => (
     <div data-testid="results-table">
-      {sitePoints.length} tracked and {landPoints?.length ?? 0} land candidates
+      {sitePoints.length} tracked and {landPoints?.length ?? 0} land candidates · {buildId}
     </div>
   ),
 }));
@@ -48,12 +50,17 @@ const baseProps = {
 describe("VacancyMapIsland Site Matchmaker results", () => {
   it("renders the spreadsheet below the map from the same candidate arrays", () => {
     const html = renderToStaticMarkup(
-      <VacancyMapIsland {...baseProps} showSiteMatchmakerResults />,
+      <VacancyMapIsland
+        {...baseProps}
+        showSiteMatchmakerResults
+        siteMatchmakerBuildId="build-map"
+      />,
     );
 
     expect(html).toContain('id="site-matchmaker-map"');
     expect(html).toContain("1 map candidates");
     expect(html).toContain("1 tracked and 1 land candidates");
+    expect(html).toContain("build-map");
     expect(html.indexOf("1 map candidates")).toBeLessThan(
       html.indexOf("1 tracked and 1 land candidates"),
     );

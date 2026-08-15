@@ -17,6 +17,7 @@ import {
   type ZoningBadge,
 } from "./shortlist-engine";
 import type { ShortlistEnrichmentFacts } from "./site-shortlist";
+import { assessorRecordUrl, clerkRecordsUrl, cookViewerUrl } from "./cook-viewer";
 
 export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Rank",
@@ -25,11 +26,16 @@ export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Zoning district",
   "Zoning badge",
   "County class",
+  "County class state",
   "County class description",
   "Building sq ft",
+  "Building area publication state",
   "Lot sq ft",
+  "Lot area publication state",
   "Assessed value",
   "Assessed year",
+  "Assessed stage",
+  "Assessment check state",
   "Assessor-implied market value",
   "Owner type (unverified)",
   "Transit score basis",
@@ -43,13 +49,17 @@ export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Incentive geographies mapped at this point",
   "Tax-sale year",
   "Vacant-building violation",
-  "Active licenses",
+  "Issued unexpired BACP license signals",
+  "CookViewer parcel details",
+  "Cook County Assessor property record",
+  "Cook County Clerk recorded documents",
   "Screening score",
 ];
 
 function csvCell(value: string | number | null | undefined): string {
   if (value == null) return "";
-  const text = String(value);
+  const raw = String(value);
+  const text = /^[\u0000-\u0020]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -87,6 +97,60 @@ export function overlaysCell(overlays: CandidateOverlays): string {
 
 export const ZONING_BADGE_CSV_LABEL: Readonly<Record<ZoningBadge, string>> = ZONING_BADGE_LABELS;
 
+type CountyFieldStatus =
+  | "available"
+  | "not_published"
+  | "unavailable"
+  | "not_requested"
+  | undefined;
+
+function fieldStateLabel(
+  status: CountyFieldStatus,
+  hasFacts: boolean,
+  value: unknown,
+): string {
+  if (!hasFacts) return "Not checked";
+  if (status === "unavailable") return "Unavailable";
+  if (status === "not_requested") return "Not requested — PIN needs verification";
+  if (status === "not_published") return "Not published";
+  if (status === "available") return "Available";
+  return value == null ? "Not published" : "Available";
+}
+
+function fieldValue(
+  status: CountyFieldStatus,
+  hasFacts: boolean,
+  value: string | number | null | undefined,
+): string | number {
+  const state = fieldStateLabel(status, hasFacts, value);
+  return state === "Available" ? (value ?? "Not published") : state;
+}
+
+function areaField(
+  snapshotValue: number | null,
+  hasFacts: boolean,
+  liveValue: number | null | undefined,
+  liveStatus: CountyFieldStatus,
+): { value: number | string; state: string } {
+  if (hasFacts && liveStatus === "available" && liveValue != null) {
+    return { value: liveValue, state: "Available · current County record" };
+  }
+  if (snapshotValue != null) {
+    if (liveStatus === "unavailable") {
+      return { value: snapshotValue, state: "Published snapshot · current County check unavailable" };
+    }
+    if (liveStatus === "not_published") {
+      return {
+        value: snapshotValue,
+        state: "Published snapshot · current County record did not publish an area",
+      };
+    }
+    return { value: snapshotValue, state: "Published snapshot" };
+  }
+  const state = fieldStateLabel(liveStatus, hasFacts, liveValue);
+  return { value: state, state };
+}
+
 /** Build the downloadable CSV from exactly the DECORATED ranked candidates
  *  rendered on the page, in the SAME order. Candidates must already carry
  *  display-only facts (lib/shortlist-engine.ts's
@@ -99,6 +163,28 @@ export function shortlistCsv(
 
   candidates.forEach((candidate, index) => {
     const facts = enrichment[candidate.key];
+    const countyClassState = fieldStateLabel(
+      facts?.countyClassStatus,
+      facts !== undefined,
+      facts?.countyClass,
+    );
+    const assessmentState = fieldStateLabel(
+      facts?.assessedValueStatus,
+      facts !== undefined,
+      facts?.assessedValue,
+    );
+    const buildingArea = areaField(
+      candidate.buildingSqft,
+      facts !== undefined,
+      facts?.assessorBuildingSqft,
+      facts?.assessorBuildingAreaStatus,
+    );
+    const lotArea = areaField(
+      candidate.lotSqft,
+      facts !== undefined,
+      facts?.lotAreaSqft,
+      facts?.lotAreaStatus,
+    );
     lines.push(
       [
         index + 1,
@@ -106,13 +192,18 @@ export function shortlistCsv(
         candidate.pin ?? "",
         candidate.zoningDistrict ?? "",
         ZONING_BADGE_CSV_LABEL[candidate.badge],
-        facts?.countyClass ?? "",
-        facts?.classGloss ?? "",
-        candidate.buildingSqft ?? "",
-        candidate.lotSqft ?? "",
-        facts?.assessedValue ?? "",
-        facts?.assessedYear ?? "",
-        facts?.impliedMarketValue ?? "",
+        fieldValue(facts?.countyClassStatus, facts !== undefined, facts?.countyClass),
+        countyClassState,
+        countyClassState === "Available" ? (facts?.classGloss ?? "Not published") : countyClassState,
+        buildingArea.value,
+        buildingArea.state,
+        lotArea.value,
+        lotArea.state,
+        fieldValue(facts?.assessedValueStatus, facts !== undefined, facts?.assessedValue),
+        assessmentState === "Available" ? (facts?.assessedYear ?? "Not published") : assessmentState,
+        assessmentState === "Available" ? (facts?.assessedStage ?? "Not published") : assessmentState,
+        assessmentState,
+        assessmentState === "Available" ? (facts?.impliedMarketValue ?? "Not published") : assessmentState,
         candidate.ownerLabel,
         candidate.transitScore
           ? `${candidate.transitScore.stationName} (${candidate.transitScore.stationSystem})`
@@ -136,6 +227,9 @@ export function shortlistCsv(
         candidate.saleYear ?? "",
         candidate.violation ? "Yes" : "",
         (facts?.activeLicenses ?? []).map((license) => license.name).join("; "),
+        cookViewerUrl(candidate.pin) ?? "PIN needs verification",
+        assessorRecordUrl(candidate.pin) ?? "PIN needs verification",
+        clerkRecordsUrl(candidate.pin) ?? "PIN needs verification",
         candidate.score,
       ]
         .map(csvCell)

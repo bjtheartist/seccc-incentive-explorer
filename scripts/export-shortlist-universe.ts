@@ -74,6 +74,7 @@ import {
   type ShortlistUniverseFile,
   type ShortlistUniverseRow,
 } from "../lib/shortlist-universe-schema";
+import { normalizePublishedArea } from "../lib/published-area";
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -392,8 +393,14 @@ async function main() {
         propertyType: resolvedPropertyType,
         status: row.status,
         statusDate: null, // vacant_properties carries no per-row status date
-        lotSqft: resolvedPropertyType === "vacant_land" ? toNumOrNull(row.square_feet) : null,
-        buildingSqft: resolvedPropertyType === "vacant_building" ? toNumOrNull(row.square_feet) : null,
+        lotSqft:
+          resolvedPropertyType === "vacant_land"
+            ? normalizePublishedArea(row.square_feet)
+            : null,
+        buildingSqft:
+          resolvedPropertyType === "vacant_building"
+            ? normalizePublishedArea(row.square_feet)
+            : null,
         ownerType: row.owner_type,
         ownerStructureHint: classifyOwnerStructure(row.owner_name),
         ownerGeographyHint: ownerGeographyFromMailingAddress(row.owner_mailing_address),
@@ -414,8 +421,8 @@ async function main() {
           propertyType: "vacant_land",
           status: "vacant",
           statusDate: null,
-          lotSqft: toNumOrNull(row.land_sqft),
-          buildingSqft: toNumOrNull(row.bldg_sqft),
+          lotSqft: normalizePublishedArea(row.land_sqft),
+          buildingSqft: normalizePublishedArea(row.bldg_sqft),
           ownerType: row.owner_type,
           ownerStructureHint: classifyOwnerStructure(row.owner_name),
           ownerGeographyHint: ownerGeographyFromMailingAddress(row.owner_mailing_address),

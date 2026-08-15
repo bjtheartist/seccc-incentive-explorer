@@ -652,7 +652,7 @@ describe("candidateRowsToCsv", () => {
     const header = csv.slice(0, csv.indexOf("\r\n"));
 
     expect(header).toBe(
-      '"Source view","Address","PIN","Property type","Size field used for match","Match area (sq ft)","Lot area (sq ft)","Assessor building area (sq ft)","Assessor building tax year","Mapped building footprint on parcel (sq ft)","Mapped footprint source vintage","Reported available space (sq ft)","Available space source","Available space verified at","Available space reconfirm by","Owner classification","Owner type","Zoning","Incentive geographies","Source-backed flags","Census tract","Tract population","Population density (people/sq mi)","EPA Walkability Index (1-20)","Nearest expressway","Nearest expressway straight-line miles","Midway straight-line miles","O\'Hare straight-line miles","Parcel record","Recorded documents"',
+      '"Source view","Address","PIN","Property type","Size field used for match","Match area (sq ft)","Lot area (sq ft)","Lot area publication state","Assessor building area (sq ft)","Assessor building area publication state","Assessor building tax year","County property class","County property class state","Assessed value","Assessed value tax year","Assessed value stage","Assessment check state","Mapped building footprint on parcel (sq ft)","Mapped footprint source vintage","Reported available space (sq ft)","Available space source","Available space verified at","Available space reconfirm by","Owner classification","Owner type","Zoning","Incentive geographies","Source-backed flags","Census tract","Tract population","Population density (people/sq mi)","EPA Walkability Index (1-20)","Nearest expressway","Nearest expressway straight-line miles","Midway straight-line miles","O\'Hare straight-line miles","CookViewer parcel details","Cook County Assessor property record","Cook County Clerk recorded documents"',
     );
     expect(csv).toContain('"100 ""A"", MAIN\nST"');
     expect(csv).toContain('"Not published"');
@@ -662,5 +662,105 @@ describe("candidateRowsToCsv", () => {
     expect(csv).toContain('"4200","8500","12.5","Dan Ryan Expy (I-90/94)"');
     expect(csv).toContain('"Not mapped for this location"');
     expect(csv).not.toMatch(/owner name|explorer score|rank|recommendation bucket|projected incentive|estimated dollars|\$/i);
+  });
+
+  it("exports checked assessment stage/status and keeps untouched rows explicitly not checked", () => {
+    const rows = normalizeSiteMatchmakerCandidates(
+      [sitePoint({ address: "100 E MAIN ST" }), sitePoint({ address: "200 E MAIN ST" })],
+      null,
+    );
+    const csv = candidateRowsToCsv(rows, "available", {
+      [rows[0].id]: {
+        status: "checked",
+        sourceUnavailable: false,
+        facts: {
+          countyClass: "517",
+          classGloss: "Commercial building",
+          countyClassStatus: "available",
+          lotAreaSqft: 3125,
+          lotAreaStatus: "available",
+          assessorBuildingSqft: 1800,
+          assessorBuildingYear: "2025",
+          assessorBuildingAreaStatus: "available",
+          assessedValue: 6900,
+          assessedYear: "2025",
+          assessedStage: "board",
+          assessedValueStatus: "available",
+          impliedMarketValue: 27600,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+        },
+      },
+    });
+    expect(csv).toContain(
+      '"3125","Available · current County record","1800","Available · current County record","2025"',
+    );
+    expect(csv).toContain('"517","Available","6900","2025","board","Available"');
+    expect(csv).toContain('"Not checked","Not checked","Not checked","Not checked","Not checked","Not checked"');
+  });
+
+  it("keeps a partial County class failure distinct from a published assessment", () => {
+    const [row] = normalizeSiteMatchmakerCandidates([sitePoint()], null);
+    const csv = candidateRowsToCsv([row], "available", {
+      [row.id]: {
+        status: "checked",
+        sourceUnavailable: true,
+        facts: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "unavailable",
+          lotAreaSqft: null,
+          lotAreaStatus: "unavailable",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "unavailable",
+          assessedValue: 6900,
+          assessedYear: "2025",
+          assessedStage: "board",
+          assessedValueStatus: "available",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+        },
+      },
+    });
+    expect(csv).toContain('"Unavailable","Unavailable","6900","2025","board","Available"');
+    expect(csv).toContain('"Published snapshot · current County check unavailable"');
+  });
+
+  it("keeps a partial assessment failure distinct from an available County class", () => {
+    const [row] = normalizeSiteMatchmakerCandidates([sitePoint()], null);
+    const csv = candidateRowsToCsv([row], "available", {
+      [row.id]: {
+        status: "checked",
+        sourceUnavailable: true,
+        facts: {
+          countyClass: "517",
+          classGloss: "Commercial building",
+          countyClassStatus: "available",
+          lotAreaSqft: 3125,
+          lotAreaStatus: "available",
+          assessorBuildingSqft: 1800,
+          assessorBuildingYear: "2025",
+          assessorBuildingAreaStatus: "available",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "unavailable",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+        },
+      },
+    });
+    expect(csv).toContain('"517","Available","Unavailable","Unavailable","Unavailable","Unavailable"');
+  });
+
+  it("neutralizes formula-leading externally sourced cells", () => {
+    const [row] = normalizeSiteMatchmakerCandidates(
+      [sitePoint({ address: "=HYPERLINK(\"https://bad.example\")" })],
+      null,
+    );
+    expect(candidateRowsToCsv([row])).toContain("'=HYPERLINK");
   });
 });

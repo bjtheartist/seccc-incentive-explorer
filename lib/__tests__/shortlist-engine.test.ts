@@ -921,6 +921,37 @@ describe("runShortlistEngine", () => {
     expect(withEverythingFlipped.ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual(baselineOrder);
   });
 
+  it("does not reward, render, or screen a source sentinel zero as measured area", () => {
+    const zero = row({
+      canonicalKey: "a-zero",
+      pin: null,
+      buildingSqft: 0,
+      lotSqft: 0,
+      zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+    });
+    const measured = row({
+      canonicalKey: "z-measured",
+      pin: null,
+      buildingSqft: 0.25,
+      lotSqft: null,
+      zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+    });
+
+    const unscored = engine([zero, measured], criteria({ propertyType: "either" }));
+    expect(unscored.ranked.map((candidate) => [candidate.key, candidate.recordCompletenessScore])).toEqual([
+      ["z-measured", 2],
+      ["a-zero", 0],
+    ]);
+    expect(unscored.ranked.find((candidate) => candidate.key === "a-zero")?.buildingSqft).toBeNull();
+    expect(unscored.ranked.find((candidate) => candidate.key === "a-zero")?.lotSqft).toBeNull();
+
+    const screened = engine(
+      [zero, measured],
+      criteria({ propertyType: "existing-building", minSquareFeet: 0.1 }),
+    );
+    expect(screened.ranked.map((candidate) => candidate.key)).toEqual(["z-measured"]);
+  });
+
   it("UNSCORED order (round 4, finding 13): conflicted rows with building-only vs land-only measurements keep IDENTICAL order and completeness scores across building, land, and either briefs", () => {
     // Both rows carry BOTH evidence types (conflicted), so they survive any
     // property-type screen. One measures only its building, the other only

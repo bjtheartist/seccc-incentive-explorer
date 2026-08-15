@@ -124,6 +124,19 @@ describe("aggregateCanonicalSites — evidence preservation, not richer-row-wins
     expect(sites[0].lotSqftSource).toBe("assessor_vacant_land");
   });
 
+  it("ignores invalid higher-precedence areas and retains a valid positive measurement", () => {
+    const records = [
+      record({ recordId: "a", pin: "33333333333333", evidenceType: "city_land", lotSqft: 3125 }),
+      record({ recordId: "b", pin: "33333333333333", evidenceType: "assessor_vacant_land", lotSqft: 0 }),
+      record({ recordId: "c", pin: "33333333333333", evidenceType: "311_building", buildingSqft: -1 }),
+    ];
+    const { sites } = aggregateCanonicalSites(records);
+    expect(sites[0].lotSqft).toBe(3125);
+    expect(sites[0].lotSqftSource).toBe("city_land");
+    expect(sites[0].buildingSqft).toBeNull();
+    expect(sites[0].buildingSqftSource).toBeNull();
+  });
+
   it("collapses repeated same-source records to the most recent statusDate", () => {
     const records = [
       record({ recordId: "a", pin: "44444444444444", evidenceType: "311_building", status: "open", statusDate: "2025-01-01" }),

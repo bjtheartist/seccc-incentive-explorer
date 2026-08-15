@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,9 +8,17 @@ import {
   Download,
   ExternalLink,
   RotateCcw,
+  X,
 } from "lucide-react";
-import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
-import type { PublicAvailableSpaceMeasurement } from "@/lib/parcel-space";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+} from "@/lib/cook-viewer";
+import {
+  squareFeetLabel,
+  type PublicAvailableSpaceMeasurement,
+} from "@/lib/parcel-space";
 import {
   OWNER_SECTOR_COLORS,
   OWNER_SECTOR_LABELS,
@@ -56,6 +64,7 @@ import {
   normalizeSiteMatchmakerCandidates,
   parseAvailableSpacePayload,
   parseSiteMatchmakerContextPayload,
+  type CandidateParcelEnrichmentState,
   type CandidateDistressStatus,
   type CandidateSort,
   type EpaWalkabilityCategory,
@@ -65,6 +74,10 @@ import {
   type SiteMatchmakerCandidateRow,
   type SiteMatchmakerSource,
 } from "@/lib/site-matchmaker-results";
+import {
+  cachedCandidateParcelEnrichment,
+  fetchCandidateParcelEnrichment,
+} from "@/lib/site-matchmaker-parcel-client";
 import { ZONING_DISTRICT_FAMILIES, subtypesForFamily } from "@/lib/zoning-districts";
 // Type-only: lib/vacancy-index includes a node:fs-backed loader at runtime.
 import type {
@@ -80,6 +93,11 @@ interface SiteMatchmakerResultsTableProps {
   landPoints?: VacancyLandPoint[] | null;
   zip: string;
   neighborhood: string;
+  /** Static vacancy-index build that partitions request-time County cache entries. */
+  buildId: string;
+  trackedTotalCount?: number | null;
+  landTotalCount?: number | null;
+  landTruncated?: boolean;
 }
 
 interface FilterOption {
@@ -414,8 +432,9 @@ function AirportValue({
 
 function VerificationLinks({ row }: { row: SiteMatchmakerCandidateRow }) {
   const parcelUrl = cookViewerUrl(row.pin);
+  const assessorUrl = assessorRecordUrl(row.pin);
   const recordsUrl = clerkRecordsUrl(row.pin);
-  if (parcelUrl === null || recordsUrl === null) {
+  if (parcelUrl === null || assessorUrl === null || recordsUrl === null) {
     return <span className="text-[11px] text-[#0C1B33]/45">Needs verification</span>;
   }
   return (
@@ -424,20 +443,314 @@ function VerificationLinks({ row }: { row: SiteMatchmakerCandidateRow }) {
         href={parcelUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
+        className="inline-flex min-h-11 items-center gap-1 text-[#2563EB] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] sm:min-h-0"
       >
-        Parcel record
+        CookViewer
+        <ExternalLink aria-hidden="true" className="h-3 w-3" />
+      </a>
+      <a
+        href={assessorUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-11 items-center gap-1 text-[#2563EB] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] sm:min-h-0"
+      >
+        Assessor
         <ExternalLink aria-hidden="true" className="h-3 w-3" />
       </a>
       <a
         href={recordsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
+        className="inline-flex min-h-11 items-center gap-1 text-[#2563EB] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] sm:min-h-0"
       >
-        Recorded documents
+        Clerk documents
         <ExternalLink aria-hidden="true" className="h-3 w-3" />
       </a>
+    </div>
+  );
+}
+
+function currency(value: number | null): string {
+  return value === null
+    ? "Not published"
+    : value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+type CountyAreaField = "lotAreaSqft" | "assessorBuildingSqft";
+
+function countyAreaFactLabel(
+  row: SiteMatchmakerCandidateRow,
+  enrichment: CandidateParcelEnrichmentState,
+  field: CountyAreaField,
+): string {
+  const snapshotValue = row.space[field];
+  const snapshotLabel = squareFeetLabel(snapshotValue);
+  if (enrichment.status === "checked") {
+    const status =
+      field === "lotAreaSqft"
+        ? enrichment.facts.lotAreaStatus
+        : enrichment.facts.assessorBuildingAreaStatus;
+    const liveValue = enrichment.facts[field];
+    if (status === "available" && liveValue != null) return squareFeetLabel(liveValue);
+    if (snapshotValue != null) {
+      if (status === "unavailable") {
+        return `${snapshotLabel} · saved snapshot; current check unavailable`;
+      }
+      if (status === "not_published") {
+        return `${snapshotLabel} · saved snapshot; current record did not publish an area`;
+      }
+      return `${snapshotLabel} · saved snapshot`;
+    }
+    if (status === "unavailable") return "Unavailable";
+    if (status === "not_requested") return "Not requested — PIN needs verification";
+    return "Not published";
+  }
+  if (enrichment.status === "loading") {
+    return snapshotValue == null
+      ? "Checking County record..."
+      : `${snapshotLabel} · saved snapshot; checking current record`;
+  }
+  if (enrichment.status === "unavailable") {
+    return snapshotValue == null
+      ? "Unavailable"
+      : `${snapshotLabel} · saved snapshot; current check unavailable`;
+  }
+  if (enrichment.status === "not_requested") {
+    return snapshotValue == null
+      ? "Not requested — PIN needs verification"
+      : `${snapshotLabel} · saved snapshot`;
+  }
+  return snapshotLabel;
+}
+
+function assessorBuildingYearLabel(
+  row: SiteMatchmakerCandidateRow,
+  enrichment: CandidateParcelEnrichmentState,
+): string {
+  if (
+    enrichment.status === "checked" &&
+    enrichment.facts.assessorBuildingAreaStatus === "available" &&
+    enrichment.facts.assessorBuildingYear
+  ) {
+    return enrichment.facts.assessorBuildingYear;
+  }
+  return row.space.assessorBuildingYear?.toString() ?? "Not published";
+}
+
+export function ParcelDossierDialog({
+  row,
+  enrichment,
+  onClose,
+  onRetry,
+}: {
+  row: SiteMatchmakerCandidateRow;
+  enrichment: CandidateParcelEnrichmentState;
+  onClose: () => void;
+  onRetry: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const parcelUrl = cookViewerUrl(row.pin);
+  const assessorUrl = assessorRecordUrl(row.pin);
+  const recordsUrl = clerkRecordsUrl(row.pin);
+  const facts = enrichment.status === "checked" ? enrichment.facts : null;
+  const countyClassLabel =
+    facts?.countyClassStatus === "unavailable"
+      ? "Unavailable"
+      : facts?.countyClassStatus === "not_requested"
+        ? "Not requested — PIN needs verification"
+        : facts?.countyClass ??
+          (enrichment.status === "loading" ? "Checking County record..." : "Not published");
+  const assessedValueLabel =
+    facts?.assessedValueStatus === "unavailable"
+      ? "Unavailable"
+      : facts?.assessedValueStatus === "not_requested"
+        ? "Not requested"
+        : currency(facts?.assessedValue ?? null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (!dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-[#0C1B33]/55 p-0 sm:items-center sm:p-5"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="parcel-dossier-title"
+        className="max-h-[92dvh] w-full overflow-y-auto bg-white shadow-2xl sm:max-w-2xl"
+      >
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#0C1B33]/10 bg-white px-5 py-4">
+          <div className="min-w-0">
+            <p className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB]">
+              Parcel details
+            </p>
+            <h2 id="parcel-dossier-title" className="mt-1 break-words text-[20px] font-semibold text-[#0C1B33]">
+              {candidateAddressLabel(row)}
+            </h2>
+            <p className="mt-1 break-all font-mono-bureau text-[10px] text-[#0C1B33]/50">
+              PIN {candidatePinLabel(row)}
+            </p>
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close parcel details"
+            className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center border border-[#0C1B33]/15 text-[#0C1B33] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+          >
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-5 px-5 py-5">
+          <div>
+            <h3 className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              Parcel and ownership facts
+            </h3>
+            <dl className="mt-2 grid grid-cols-1 gap-px bg-[#0C1B33]/10 sm:grid-cols-2">
+              {[
+                ["Lot area", countyAreaFactLabel(row, enrichment, "lotAreaSqft")],
+                ["Assessor building area", countyAreaFactLabel(row, enrichment, "assessorBuildingSqft")],
+                ["Assessor building tax year", assessorBuildingYearLabel(row, enrichment)],
+                ["Owner classification", OWNER_SECTOR_LABELS[row.ownerSector]],
+                ["Owner type", OWNER_STRUCTURE_LABELS[row.ownerStructure]],
+                ["County property class", countyClassLabel],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-white px-3 py-3">
+                  <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">{label}</dt>
+                  <dd className="mt-1 text-[13px] text-[#0C1B33]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="border border-[#0C1B33]/12 bg-[#F7F8FA] p-4" aria-live="polite">
+            <h3 className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              County assessment
+            </h3>
+            {enrichment.status === "loading" ? (
+              <p className="mt-2 text-[13px] text-[#0C1B33]/65">Checking the Cook County assessment record...</p>
+            ) : enrichment.status === "unavailable" ? (
+              <p className="mt-2 text-[13px] text-[#9A3412]">
+                County assessment data is temporarily unavailable. The official record links below still work.
+              </p>
+            ) : enrichment.status === "not_checked" ? (
+              <p className="mt-2 text-[13px] text-[#0C1B33]/65">Assessment has not been checked for this parcel.</p>
+            ) : enrichment.status === "not_requested" ? (
+              <p className="mt-2 text-[13px] text-[#0C1B33]/65">A valid 14-digit PIN is required before the County assessment can be checked.</p>
+            ) : (
+              <>
+                {enrichment.sourceUnavailable ? (
+                  <p className="mt-2 text-[12px] text-[#9A3412]">Some County assessment fields could not be checked.</p>
+                ) : null}
+                <dl className="mt-3 grid grid-cols-2 gap-4">
+                  <div>
+                    <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">Assessed value</dt>
+                    <dd className="mt-1 text-[18px] font-semibold text-[#0C1B33]">{assessedValueLabel}</dd>
+                    <dd className="text-[10px] text-[#0C1B33]/48">
+                      Tax year {facts!.assessedYear ?? "not published"}
+                      {facts!.assessedStage ? ` · ${facts!.assessedStage} total` : ""}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">Assessor-implied market</dt>
+                    <dd className="mt-1 text-[18px] font-semibold text-[#0C1B33]">{currency(facts!.impliedMarketValue)}</dd>
+                    <dd className="text-[10px] text-[#0C1B33]/48">Screening ballpark, not an appraisal</dd>
+                  </div>
+                </dl>
+              </>
+            )}
+            {enrichment.status === "unavailable" ||
+            (enrichment.status === "checked" && enrichment.sourceUnavailable) ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-3 inline-flex min-h-11 items-center border border-[#2563EB] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.06em] text-[#2563EB] hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+              >
+                Retry County check
+              </button>
+            ) : null}
+          </div>
+
+          <div>
+            <h3 className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+              Official parcel records
+            </h3>
+            {parcelUrl && assessorUrl && recordsUrl ? (
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                {[
+                  ["CookViewer parcel details", parcelUrl],
+                  ["Assessor property record", assessorUrl],
+                  ["Clerk recorded documents", recordsUrl],
+                ].map(([label, href]) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center justify-between gap-2 border border-[#2563EB] px-3 py-2 text-[11px] font-medium text-[#2563EB] hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                  >
+                    {label}
+                    <ExternalLink aria-hidden="true" className="h-3.5 w-3.5 flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[12px] text-[#0C1B33]/55">A valid 14-digit PIN is required for parcel-record links.</p>
+            )}
+          </div>
+
+          <p className="border-t border-[#0C1B33]/10 pt-4 text-[11px] leading-relaxed text-[#0C1B33]/55">
+            These are public screening records, not proof of current ownership, availability, title, condition, or appraised market value. Confirm the current record with the responsible County office before acting.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
@@ -446,6 +759,7 @@ function SpaceValue({
   row,
   field,
   note,
+  enrichment = { status: "not_checked" },
 }: {
   row: SiteMatchmakerCandidateRow;
   field:
@@ -454,11 +768,16 @@ function SpaceValue({
     | "cityGroundFootprintSqft"
     | "availableSpaceSqft";
   note?: string | null;
+  enrichment?: CandidateParcelEnrichmentState;
 }) {
+  const value =
+    field === "lotAreaSqft" || field === "assessorBuildingSqft"
+      ? countyAreaFactLabel(row, enrichment, field)
+      : candidateSpaceFactLabel(row, field);
   return (
     <div>
       <p className="whitespace-nowrap font-mono-bureau text-[10px] text-[#0C1B33]/70">
-        {candidateSpaceFactLabel(row, field)}
+        {value}
       </p>
       {note ? <p className="mt-0.5 text-[9px] leading-snug text-[#0C1B33]/42">{note}</p> : null}
     </div>
@@ -470,6 +789,10 @@ export default function SiteMatchmakerResultsTable({
   landPoints = null,
   zip,
   neighborhood,
+  buildId,
+  trackedTotalCount = null,
+  landTotalCount = null,
+  landTruncated = false,
 }: SiteMatchmakerResultsTableProps) {
   const baseRows = useMemo(
     () => normalizeSiteMatchmakerCandidates(sitePoints, landPoints),
@@ -479,6 +802,11 @@ export default function SiteMatchmakerResultsTable({
   const [availableSpaceLoad, setAvailableSpaceLoad] = useState<AvailableSpaceLoadState>({
     status: "loading",
   });
+  const [parcelEnrichment, setParcelEnrichment] = useState<
+    Record<string, CandidateParcelEnrichmentState>
+  >({});
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const parcelOpenerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -551,6 +879,48 @@ export default function SiteMatchmakerResultsTable({
         : rowsWithAvailableSpace,
     [contextLoad, rowsWithAvailableSpace],
   );
+
+  const selectedParcel = useMemo(
+    () => (selectedParcelId === null ? null : rows.find((row) => row.id === selectedParcelId) ?? null),
+    [rows, selectedParcelId],
+  );
+
+  const closeParcelDossier = useCallback(() => {
+    setSelectedParcelId(null);
+    const opener = parcelOpenerRef.current;
+    requestAnimationFrame(() => opener?.focus());
+  }, []);
+
+  function requestParcelEnrichment(row: SiteMatchmakerCandidateRow) {
+    setParcelEnrichment((current) => ({
+      ...current,
+      [row.id]: { status: "loading" },
+    }));
+    void fetchCandidateParcelEnrichment(buildId, row.pin).then((state) => {
+      setParcelEnrichment((current) => ({ ...current, [row.id]: state }));
+    });
+  }
+
+  function openParcelDossier(row: SiteMatchmakerCandidateRow, opener: HTMLButtonElement) {
+    parcelOpenerRef.current = opener;
+    setSelectedParcelId(row.id);
+
+    const existing = parcelEnrichment[row.id];
+    if (existing?.status === "loading" || existing?.status === "checked") return;
+
+    if (!buildId.trim() || cookViewerUrl(row.pin) === null) {
+      setParcelEnrichment((current) => ({
+        ...current,
+        [row.id]: { status: "not_requested" },
+      }));
+      return;
+    }
+
+    // Shared client cache means a table dossier and map popup for the same PIN
+    // use one request. The server call receives a null address, so it checks
+    // only the two County parcel fields and cannot fan out to BACP licensing.
+    requestParcelEnrichment(row);
+  }
 
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SiteMatchmakerSource | "">("");
@@ -764,9 +1134,17 @@ export default function SiteMatchmakerResultsTable({
   }
 
   function downloadCsv() {
+    const exportEnrichment: Record<string, CandidateParcelEnrichmentState> = {};
+    for (const row of filteredRows) {
+      exportEnrichment[row.id] =
+        parcelEnrichment[row.id] ??
+        cachedCandidateParcelEnrichment(buildId, row.pin) ??
+        { status: row.pin === null ? "not_requested" : "not_checked" };
+    }
     const csv = candidateRowsToCsv(
       filteredRows,
       contextLoad.status === "available" ? "available" : contextLoad.status,
+      exportEnrichment,
     );
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -800,6 +1178,16 @@ export default function SiteMatchmakerResultsTable({
             <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-[#0C1B33]/60">
               Public records for comparison, not a statement that a property is available or
               suitable. Verify current status, ownership, and site conditions before acting.
+            </p>
+            <p className="mt-2 max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/55">
+              Comparing {baseRows.length.toLocaleString("en-US")} loaded source rows
+              {trackedTotalCount !== null
+                ? ` · tracked inventory ${sitePoints.length.toLocaleString("en-US")} of ${trackedTotalCount.toLocaleString("en-US")}`
+                : ""}
+              {landTotalCount !== null
+                ? ` · reconciled land ${landPoints?.length.toLocaleString("en-US") ?? "0"} of ${landTotalCount.toLocaleString("en-US")}${landTruncated ? " (capped)" : ""}`
+                : ""}. The two source views can contain the same parcel. CSV includes every current
+              filtered loaded row, not only the first 100 displayed.
             </p>
           </div>
           <button
@@ -1183,6 +1571,13 @@ export default function SiteMatchmakerResultsTable({
                     <p className="mt-0.5 font-mono-bureau text-[9px] text-[#0C1B33]/45">
                       PIN {candidatePinLabel(row)}
                     </p>
+                    <button
+                      type="button"
+                      onClick={(event) => openParcelDossier(row, event.currentTarget)}
+                      className="mt-2 inline-flex min-h-9 items-center border border-[#2563EB] px-2.5 py-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.06em] text-[#2563EB] hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                    >
+                      Parcel details
+                    </button>
                   </td>
                   <td className="px-3 py-2.5 text-[11px] text-[#0C1B33]/70">
                     {SITE_MATCHMAKER_PROPERTY_TYPE_LABELS[row.propertyType]}
@@ -1191,17 +1586,29 @@ export default function SiteMatchmakerResultsTable({
                     {candidateFootprintLabel(row)}
                   </td>
                   <td className="px-3 py-2.5">
-                    <SpaceValue row={row} field="lotAreaSqft" note="Cook County parcel record" />
+                    <SpaceValue
+                      row={row}
+                      field="lotAreaSqft"
+                      note="Cook County parcel record"
+                      enrichment={parcelEnrichment[row.id]}
+                    />
                   </td>
                   <td className="px-3 py-2.5">
                     <SpaceValue
                       row={row}
                       field="assessorBuildingSqft"
                       note={
-                        row.space.assessorBuildingYear
-                          ? `Assessor tax year ${row.space.assessorBuildingYear}`
+                        assessorBuildingYearLabel(
+                          row,
+                          parcelEnrichment[row.id] ?? { status: "not_checked" },
+                        ) !== "Not published"
+                          ? `Assessor tax year ${assessorBuildingYearLabel(
+                              row,
+                              parcelEnrichment[row.id] ?? { status: "not_checked" },
+                            )}`
                           : "Assessor record"
                       }
+                      enrichment={parcelEnrichment[row.id]}
                     />
                   </td>
                   <td className="px-3 py-2.5">
@@ -1272,6 +1679,13 @@ export default function SiteMatchmakerResultsTable({
                   <p className="mt-0.5 break-all font-mono-bureau text-[9px] text-[#0C1B33]/45">
                     PIN {candidatePinLabel(row)}
                   </p>
+                  <button
+                    type="button"
+                    onClick={(event) => openParcelDossier(row, event.currentTarget)}
+                    className="mt-2 inline-flex min-h-11 items-center border border-[#2563EB] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.06em] text-[#2563EB] hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                  >
+                    Parcel details
+                  </button>
                 </div>
                 <span className="flex-shrink-0 font-mono-bureau text-[9px] uppercase tracking-[0.05em] text-[#0C1B33]/50">
                   {SITE_MATCHMAKER_PROPERTY_TYPE_LABELS[row.propertyType]}
@@ -1292,7 +1706,11 @@ export default function SiteMatchmakerResultsTable({
                     Lot area
                   </dt>
                   <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
-                    {candidateSpaceFactLabel(row, "lotAreaSqft")}
+                    {countyAreaFactLabel(
+                      row,
+                      parcelEnrichment[row.id] ?? { status: "not_checked" },
+                      "lotAreaSqft",
+                    )}
                   </dd>
                 </div>
                 <div className="min-w-0">
@@ -1300,7 +1718,11 @@ export default function SiteMatchmakerResultsTable({
                     Assessor building
                   </dt>
                   <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
-                    {candidateSpaceFactLabel(row, "assessorBuildingSqft")}
+                    {countyAreaFactLabel(
+                      row,
+                      parcelEnrichment[row.id] ?? { status: "not_checked" },
+                      "assessorBuildingSqft",
+                    )}
                   </dd>
                 </div>
                 <div className="min-w-0">
@@ -1438,6 +1860,14 @@ export default function SiteMatchmakerResultsTable({
           </p>
         ) : null}
       </div>
+      {selectedParcel ? (
+        <ParcelDossierDialog
+          row={selectedParcel}
+          enrichment={parcelEnrichment[selectedParcel.id] ?? { status: "not_checked" }}
+          onClose={closeParcelDossier}
+          onRetry={() => requestParcelEnrichment(selectedParcel)}
+        />
+      ) : null}
     </section>
   );
 }

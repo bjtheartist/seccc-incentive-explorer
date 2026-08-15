@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Re-review Finding 4: this route previously had NO dedicated test file at
@@ -20,7 +20,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * actually called.
  */
 
-const { socrataFetchMock } = vi.hoisted(() => ({ socrataFetchMock: vi.fn() }));
+const { countyFetchMock, socrataFetchMock } = vi.hoisted(() => ({
+  countyFetchMock: vi.fn(),
+  socrataFetchMock: vi.fn(),
+}));
 
 vi.mock("@/lib/socrata", () => ({ socrataFetch: socrataFetchMock }));
 
@@ -45,16 +48,30 @@ function rawBodyRequest(body: string): Request {
   });
 }
 
-/** Routes the mocked socrataFetch by dataset id, embedded in every URL the
- *  route itself builds via `soda(domain, dataset, params)` — mirrors the
- *  route's own three upstreams without depending on its internal helpers. */
+/** Routes the current CookViewer request plus the assessment/license Socrata
+ *  requests without depending on route-internal helpers. */
 function mockSocrataResponses(responses: {
   classRows?: Record<string, unknown>[];
   valueRows?: Record<string, unknown>[];
   licenseRows?: Record<string, unknown>[];
 }) {
+  countyFetchMock.mockImplementation(async () =>
+    new Response(
+      JSON.stringify({
+        features: (responses.classRows ?? []).map((row) => ({
+          attributes: {
+            BCLASS: row.class,
+            TAXYR: row.year,
+            LANDSF: row.land_square_footage,
+            BLDGSQFT: row.building_square_footage,
+          },
+        })),
+      }),
+      { status: 200 },
+    ),
+  );
+  vi.stubGlobal("fetch", countyFetchMock);
   socrataFetchMock.mockImplementation(async (url: string) => {
-    if (url.includes("nj4t-kc8j")) return responses.classRows ?? [];
     if (url.includes("uzyt-m557")) return responses.valueRows ?? [];
     if (url.includes("r5kz-chrr")) return responses.licenseRows ?? [];
     return [];
@@ -64,7 +81,12 @@ function mockSocrataResponses(responses: {
 /** An AFFIRMATIVE result on every upstream — enough to be cache-eligible. */
 function mockAffirmativeSocrataResponses() {
   mockSocrataResponses({
-    classRows: [{ class: "203", year: "2024" }],
+    classRows: [{
+      class: "203",
+      year: "2024",
+      land_square_footage: "3125",
+      building_square_footage: "1800",
+    }],
     valueRows: [{ board_tot: 120_000, year: "2024" }],
     licenseRows: [{ doing_business_as_name: "Chatham Cafe", license_description: "Retail Food", expiration_date: "2099-01-01T00:00:00.000" }],
   });
@@ -77,8 +99,10 @@ function mockEmptySocrataResponses() {
 }
 
 beforeEach(() => {
+  countyFetchMock.mockReset();
   socrataFetchMock.mockReset();
 });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("POST /api/shortlist/enrich — buildId is required (Finding 4)", () => {
   it("rejects a request with NO buildId field at all with 400, and never calls any upstream", async () => {
@@ -234,5 +258,142 @@ describe("POST /api/shortlist/enrich — a negative (empty) result is NEVER cach
 
     await POST(postRequest({ buildId: "build-partial-affirmative", items: [{ key: "a", pin: PIN, address: ADDRESS }] }));
     expect(socrataFetchMock.mock.calls.length).toBe(callsAfterFirst);
+  });
+});
+
+describe("POST /api/shortlist/enrich — parcel dossier semantics and bounds", () => {
+  it("reports Board/certified/mailed precedence, field states, and exact tax year", async () => {
+    mockSocrataResponses({
+      classRows: [{
+        class: "517",
+        year: "2025",
+        land_square_footage: "3125",
+        building_square_footage: "1800",
+      }],
+      valueRows: [{ board_tot: "6900", certified_tot: "6500", mailed_tot: "6000", year: "2025" }],
+      licenseRows: [],
+    });
+    const res = await POST(
+      postRequest({ buildId: "build-stage", items: [{ key: "parcel", pin: PIN, address: null }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      countyClass: "517",
+      countyClassStatus: "available",
+      lotAreaSqft: 3125,
+      lotAreaStatus: "available",
+      assessorBuildingSqft: 1800,
+      assessorBuildingYear: "2025",
+      assessorBuildingAreaStatus: "available",
+      assessedValue: 6900,
+      assessedYear: "2025",
+      assessedStage: "board",
+      assessedValueStatus: "available",
+      activeLicenseStatus: "not_requested",
+      enrichmentUnavailable: false,
+    });
+    const parcelUrl = countyFetchMock.mock.calls.map(([url]) => String(url))[0];
+    const outFields = new URL(parcelUrl).searchParams.get("outFields") ?? "";
+    expect(parcelUrl).toContain("parcel_current_beta/FeatureServer/0/query");
+    expect(outFields).toContain("LANDSF");
+    expect(outFields).toContain("BLDGSQFT");
+  });
+
+  it("preserves a successful assessed value when the independent class source fails", async () => {
+    countyFetchMock.mockResolvedValue(new Response("unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", countyFetchMock);
+    socrataFetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("uzyt-m557")) return [{ certified_tot: "6500", year: "2025" }];
+      return [];
+    });
+    const res = await POST(
+      postRequest({ buildId: "build-partial-fields", items: [{ key: "parcel", pin: PIN, address: null }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      countyClass: null,
+      countyClassStatus: "unavailable",
+      lotAreaSqft: null,
+      lotAreaStatus: "unavailable",
+      assessorBuildingSqft: null,
+      assessorBuildingYear: null,
+      assessorBuildingAreaStatus: "unavailable",
+      assessedValue: 6500,
+      assessedYear: "2025",
+      assessedStage: "certified",
+      assessedValueStatus: "available",
+      enrichmentUnavailable: true,
+    });
+  });
+
+  it("treats zero and negative parcel dimensions as unpublished, never as real zero-area facts", async () => {
+    mockSocrataResponses({
+      classRows: [{
+        class: "517",
+        year: "2025",
+        land_square_footage: "0",
+        building_square_footage: "-25",
+      }],
+      valueRows: [],
+      licenseRows: [],
+    });
+    const res = await POST(
+      postRequest({ buildId: "build-nonpositive-area", items: [{ key: "parcel", pin: PIN, address: null }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      lotAreaSqft: null,
+      lotAreaStatus: "not_published",
+      assessorBuildingSqft: null,
+      assessorBuildingAreaStatus: "not_published",
+    });
+  });
+
+  it("deduplicates concurrent identical PIN/address lookups within one request", async () => {
+    mockAffirmativeSocrataResponses();
+    const res = await POST(
+      postRequest({
+        buildId: "build-dedupe",
+        items: [
+          { key: "tracked", pin: PIN, address: ADDRESS },
+          { key: "land", pin: `20-36-323-008-0000`, address: ADDRESS },
+        ],
+      }),
+    );
+    const body = (await res.json()) as { items: { key: string }[] };
+    expect(body.items.map((item) => item.key)).toEqual(["tracked", "land"]);
+    expect(countyFetchMock).toHaveBeenCalledTimes(1);
+    expect(socrataFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("discloses requested, accepted, and truncated counts at the hard cap", async () => {
+    mockEmptySocrataResponses();
+    const items = Array.from({ length: 30 }, (_, index) => ({
+      key: `item-${index}`,
+      pin: null,
+      address: null,
+    }));
+    const res = await POST(postRequest({ buildId: "build-cap", items }));
+    const body = (await res.json()) as {
+      items: unknown[];
+      request: { requested: number; accepted: number; truncated: number };
+    };
+    expect(body.items).toHaveLength(25);
+    expect(body.request).toEqual({ requested: 30, accepted: 25, truncated: 5 });
+    expect(socrataFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("queries only issued AAI licenses after the Chicago calendar day", async () => {
+    mockAffirmativeSocrataResponses();
+    await POST(
+      postRequest({ buildId: "build-license-query", items: [{ key: "a", pin: PIN, address: ADDRESS }] }),
+    );
+    const licenseUrl = socrataFetchMock.mock.calls
+      .map(([url]) => String(url))
+      .find((url) => url.includes("r5kz-chrr"));
+    expect(licenseUrl).toBeDefined();
+    const where = new URL(licenseUrl!).searchParams.get("$where") ?? "";
+    expect(where).toContain("license_status='AAI'");
+    expect(where).toContain("expiration_date>");
   });
 });

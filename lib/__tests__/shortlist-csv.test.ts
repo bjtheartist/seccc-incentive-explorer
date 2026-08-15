@@ -127,6 +127,74 @@ describe("shortlistCsv", () => {
     expect(csv).toContain("Chatham Cafe");
   });
 
+  it("preserves independent County class and assessment failure states", () => {
+    const unavailableClass = shortlistCsv([candidate()], {
+      [candidate().key]: {
+        countyClass: null,
+        classGloss: null,
+        countyClassStatus: "unavailable",
+        lotAreaSqft: null,
+        lotAreaStatus: "unavailable",
+        assessorBuildingSqft: null,
+        assessorBuildingYear: null,
+        assessorBuildingAreaStatus: "unavailable",
+        assessedValue: 6_900,
+        assessedYear: "2025",
+        assessedStage: "board",
+        assessedValueStatus: "available",
+        impliedMarketValue: null,
+        activeLicenses: [],
+      },
+    });
+    expect(unavailableClass.split("\n")[1].split(",").slice(5, 17)).toEqual([
+      "Unavailable",
+      "Unavailable",
+      "Unavailable",
+      "4000",
+      "Published snapshot · current County check unavailable",
+      "Unavailable",
+      "Unavailable",
+      "6900",
+      "2025",
+      "board",
+      "Available",
+      "Not published",
+    ]);
+
+    const unavailableAssessment = shortlistCsv([candidate()], {
+      [candidate().key]: {
+        countyClass: "517",
+        classGloss: "Commercial building",
+        countyClassStatus: "available",
+        lotAreaSqft: 3125,
+        lotAreaStatus: "available",
+        assessorBuildingSqft: 1800,
+        assessorBuildingYear: "2025",
+        assessorBuildingAreaStatus: "available",
+        assessedValue: null,
+        assessedYear: null,
+        assessedStage: null,
+        assessedValueStatus: "unavailable",
+        impliedMarketValue: null,
+        activeLicenses: [],
+      },
+    });
+    expect(unavailableAssessment.split("\n")[1].split(",").slice(5, 17)).toEqual([
+      "517",
+      "Available",
+      "Commercial building",
+      "1800",
+      "Available · current County record",
+      "3125",
+      "Available · current County record",
+      "Unavailable",
+      "Unavailable",
+      "Unavailable",
+      "Unavailable",
+      "Unavailable",
+    ]);
+  });
+
   it("quotes cells containing commas or quotes", () => {
     const csv = shortlistCsv([
       candidate({

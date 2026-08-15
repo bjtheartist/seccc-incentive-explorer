@@ -39,6 +39,7 @@
 import { createHash } from "node:crypto";
 import { haversineMeters } from "./vacancy-index";
 import { toDigitsOnlyPin } from "./ingest/pin-batch";
+import { normalizePublishedArea } from "./published-area";
 import type { OwnerGeography, OwnerStructure } from "./owner-taxonomy";
 
 /** Distance threshold (metres) within which two PIN-less records with a
@@ -320,10 +321,16 @@ function buildCanonicalSite(recordsInGroup: RawTrackedRecord[], resolvedPin: str
   }
 
   const { value: lotSqft, source: lotSqftSource } = pickByPrecedence(
-    recordsInGroup.map((r) => ({ evidenceType: r.evidenceType, value: r.lotSqft })),
+    recordsInGroup.map((r) => ({
+      evidenceType: r.evidenceType,
+      value: normalizePublishedArea(r.lotSqft),
+    })),
   );
   const { value: buildingSqft, source: buildingSqftSource } = pickByPrecedence(
-    recordsInGroup.map((r) => ({ evidenceType: r.evidenceType, value: r.buildingSqft })),
+    recordsInGroup.map((r) => ({
+      evidenceType: r.evidenceType,
+      value: normalizePublishedArea(r.buildingSqft),
+    })),
   );
   const { value: ownerType, source: ownerTypeSource } = pickByPrecedence(
     recordsInGroup.map((r) => ({ evidenceType: r.evidenceType, value: r.ownerType })),

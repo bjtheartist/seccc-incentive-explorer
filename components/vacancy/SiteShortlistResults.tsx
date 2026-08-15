@@ -25,7 +25,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics-events";
-import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+  formatPin14,
+} from "@/lib/cook-viewer";
 import {
   ZONING_BADGE_LABELS,
   type CandidateOverlays,
@@ -87,12 +92,37 @@ function titleCase(value: string): string {
     .replace(/\b(N|S|E|W|Ne|Nw|Se|Sw)\b/g, (match) => match.toUpperCase());
 }
 
-function assessorPinUrl(pin: string): string {
-  return `https://www.cookcountyassessoril.gov/pin/${encodeURIComponent(pin)}`;
+function sqft(value: number | null): string {
+  return value == null || !Number.isFinite(value) || value <= 0
+    ? "Not published"
+    : `${value.toLocaleString("en-US")} sq ft`;
 }
 
-function sqft(value: number | null): string {
-  return value == null ? "Not published" : `${value.toLocaleString("en-US")} sq ft`;
+function countyAreaText(
+  snapshotValue: number | null,
+  enrichment: EnrichItem | null,
+  enrichState: EnrichState["status"],
+  field: "lotAreaSqft" | "assessorBuildingSqft",
+): string {
+  const status =
+    field === "lotAreaSqft"
+      ? enrichment?.lotAreaStatus
+      : enrichment?.assessorBuildingAreaStatus;
+  const liveValue = enrichment?.[field] ?? null;
+  if (status === "available" && liveValue != null) return sqft(liveValue);
+  if (snapshotValue != null) {
+    if (status === "unavailable" || enrichState === "error") {
+      return `${sqft(snapshotValue)} · saved snapshot; current check unavailable`;
+    }
+    if (status === "not_published") {
+      return `${sqft(snapshotValue)} · saved snapshot; current record did not publish an area`;
+    }
+    return sqft(snapshotValue);
+  }
+  if (enrichState === "loading") return "Checking…";
+  if (status === "unavailable" || enrichState === "error") return "Unavailable";
+  if (status === "not_requested") return "Not requested — PIN needs verification";
+  return "Not published";
 }
 
 function usd(value: number | null): string {
@@ -214,6 +244,7 @@ function ShortlistCard({
   onSnapshotClick: (candidate: DecoratedShortlistCandidate) => void;
 }) {
   const viewerUrl = cookViewerUrl(candidate.pin);
+  const assessorUrl = assessorRecordUrl(candidate.pin);
   const clerkUrl = clerkRecordsUrl(candidate.pin);
   const showAccessibility = candidate.propertyType === "vacant_building";
   const accessibility = showAccessibility ? accessibilityNoteFor(enrichment?.countyClass ?? null) : null;
@@ -257,7 +288,7 @@ function ShortlistCard({
             {titleCase(candidate.address)}
           </h3>
           <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
-            {candidate.pin ? `PIN ${candidate.pin}` : "No PIN on this record"}
+            {formatPin14(candidate.pin) ? `PIN ${formatPin14(candidate.pin)}` : "No PIN on this record"}
             {" · "}
             {candidate.zoningDistrict ? `Zoned ${candidate.zoningDistrict}` : "Zoning unresolved"}
             {enrichment?.classGloss ? ` · ${enrichment.classGloss}` : ""}
@@ -269,9 +300,12 @@ function ShortlistCard({
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Fact
           label={candidate.propertyType === "vacant_building" ? "Building" : "Building (none)"}
-          value={sqft(candidate.buildingSqft)}
+          value={countyAreaText(candidate.buildingSqft, enrichment, enrichState, "assessorBuildingSqft")}
         />
-        <Fact label="Lot" value={sqft(candidate.lotSqft)} />
+        <Fact
+          label="Lot"
+          value={countyAreaText(candidate.lotSqft, enrichment, enrichState, "lotAreaSqft")}
+        />
         <Fact label="Owner type" value={candidate.ownerLabel} />
         <Fact
           label={candidate.transitScore ? "Scored transit" : "Nearest rail (display only)"}
@@ -289,8 +323,10 @@ function ShortlistCard({
             enrichState === "loading"
               ? "Checking…"
               : enrichment?.assessedValue != null
-                ? `${usd(enrichment.assessedValue)}${enrichment.assessedYear ? ` (${String(enrichment.assessedYear).slice(0, 4)})` : ""}`
-                : enrichState === "error" || enrichment?.enrichmentUnavailable
+                ? `${usd(enrichment.assessedValue)}${enrichment.assessedYear ? ` (${String(enrichment.assessedYear).slice(0, 4)}${enrichment.assessedStage ? ` · ${enrichment.assessedStage}` : ""})` : ""}`
+                : enrichState === "error" ||
+                    enrichment?.assessedValueStatus === "unavailable" ||
+                    (enrichment?.assessedValueStatus === undefined && enrichment?.enrichmentUnavailable)
                   ? "Unavailable"
                   : "Not published"
           }
@@ -382,17 +418,17 @@ function ShortlistCard({
             href={viewerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="border border-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white"
+            className="inline-flex min-h-11 items-center border border-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
           >
             CookViewer parcel
           </a>
         )}
-        {candidate.pin && (
+        {assessorUrl && (
           <a
-            href={assessorPinUrl(candidate.pin)}
+            href={assessorUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="border border-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white"
+            className="inline-flex min-h-11 items-center border border-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
           >
             Assessor record
           </a>
@@ -402,7 +438,7 @@ function ShortlistCard({
             href={clerkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="border border-[#0C1B33]/25 px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/60 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33]"
+            className="inline-flex min-h-11 items-center border border-[#0C1B33]/25 px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/60 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
           >
             Clerk recordings
           </a>

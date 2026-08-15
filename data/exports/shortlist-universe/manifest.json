@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "buildId": "shortlist-universe-2026-08-13T01:56:59.840Z",
-  "generatedAt": "2026-08-13T01:56:59.841Z",
+  "buildId": "shortlist-universe-area-normalized-v1-2026-08-15T19:06:17.970Z",
+  "generatedAt": "2026-08-15T19:06:17.970Z",
   "zips": [
     "60617",
     "60619",
@@ -17,47 +17,47 @@
   "files": {
     "60617": {
       "path": "60617.json",
-      "checksum": "41406c2a33313a41d50406d6a4a8bb673ab65a76bcf1f8fb0ab146b291b72c11",
+      "checksum": "9fbcdbb7b7e929ae3031000428012d07e33a9e6160c19ba5f279d291f562d5e3",
       "rowCount": 3726
     },
     "60619": {
       "path": "60619.json",
-      "checksum": "067e16b8fabed412a661ffd154f1bcf647d137741405b455a708c2039ddc2b47",
+      "checksum": "0884eadc72ae091907a5974b0d930fe89d48b46405e7d6091ac7369bc4c1490d",
       "rowCount": 2879
     },
     "60621": {
       "path": "60621.json",
-      "checksum": "222c8338e804a91718841ce772c2936235c8bbdd097063b94ddc40fcf6e36ee3",
+      "checksum": "5cc7e8edcc9b42d6caacb747ffb0c18579d830a7f17155aa071bf26c6dc499df",
       "rowCount": 6363
     },
     "60623": {
       "path": "60623.json",
-      "checksum": "3225ea77dcc8446594d8427b8edc6b33788f3e65a0d035c647d129611a6cf304",
+      "checksum": "2389c98cd81be9ecc4e6244ae15576f13f930b16ca6bbca2745b3b14c9598fa4",
       "rowCount": 3736
     },
     "60624": {
       "path": "60624.json",
-      "checksum": "7e38f2c9e18bdbae737662c1367713fffcc29ca3643f200079ba7c1afd16b7ef",
+      "checksum": "d9ead0169e50c41f1dd3156a3b7c19c8d44799195003eebbaab891454474737c",
       "rowCount": 4160
     },
     "60636": {
       "path": "60636.json",
-      "checksum": "f009a96eeee7bc4699757a8b45eb57e218eea66fdd251beb93805d90913248af",
+      "checksum": "0848ce4aae038d7a1412ab0e522f5cb3c774f0d10d5a2d5d92d3431763e8cd71",
       "rowCount": 5689
     },
     "60644": {
       "path": "60644.json",
-      "checksum": "af71f57dbd853859ed48bd524ab1644607e8ee96b04f229d8deec48186fefe7b",
+      "checksum": "b5fdb6118a8944c7007b9141766898362dd56e23f9d3ea7b126c73ad79752f28",
       "rowCount": 2247
     },
     "60649": {
       "path": "60649.json",
-      "checksum": "9a3ea2f9eb39dfd3712c3bbd139cde02c628e7d93fde7909a21b0feada24ddd5",
+      "checksum": "102cfc9081439f0de6200180e1b8d06ba9ff9423b0052db11afef5c5d1059b15",
       "rowCount": 1033
     },
     "60651": {
       "path": "60651.json",
-      "checksum": "ce2260ff4e9e62f4c7a436c4521dbf6ae81712fc92605df4015ede35372e5628",
+      "checksum": "10bd3a8569efed1bfc09ec0f18f95ee7e58d9d015b10e39154afa7d98cea2f8c",
       "rowCount": 1463
     }
   }

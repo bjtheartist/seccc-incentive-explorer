@@ -10,7 +10,13 @@
  * never enters the browser bundle.
  */
 
-import { clerkRecordsUrl, cookViewerUrl, normalizePin14 } from "@/lib/cook-viewer";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+  formatPin14,
+  normalizePin14,
+} from "@/lib/cook-viewer";
 import {
   familyById,
   subtypeById,
@@ -47,6 +53,11 @@ import type {
   VacancyPropertyType,
   VacancySitePoint,
 } from "@/lib/vacancy-index";
+import {
+  countyClassGloss,
+  impliedMarketValue,
+  type ShortlistEnrichmentFacts,
+} from "@/lib/site-shortlist";
 
 export type SiteMatchmakerSource = "tracked_inventory" | "reconciled_vacant_land";
 
@@ -148,6 +159,120 @@ export interface SiteMatchmakerCandidateRow {
   saleYear: number | null;
   /** Null means the source view does not map building-violation flags. */
   violation: boolean | null;
+}
+
+/**
+ * Request-time County assessment state for one bulk Matchmaker result.
+ *
+ * The large comparison view can contain thousands of parcels, so it never
+ * fans County requests out on page load. A reader explicitly opens one
+ * parcel dossier, and the resulting state remains attached to that row for
+ * the on-screen dossier and CSV export.
+ */
+export type CandidateParcelEnrichmentState =
+  | { status: "not_checked" }
+  | { status: "not_requested" }
+  | { status: "loading" }
+  | {
+      status: "checked";
+      facts: ShortlistEnrichmentFacts;
+      sourceUnavailable: boolean;
+    }
+  | { status: "unavailable" };
+
+function nullableText(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+function nullablePositiveNumber(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value) && value > 0);
+}
+
+const COUNTY_FIELD_STATUSES = new Set(["available", "not_published", "unavailable", "not_requested"]);
+const LICENSE_FIELD_STATUSES = new Set(["available", "not_found", "unavailable", "not_requested"]);
+const ASSESSMENT_STAGES = new Set<unknown>([null, "board", "certified", "mailed"]);
+
+/** Fail-closed parser for the one-row parcel-enrichment response. */
+export function parseCandidateParcelEnrichmentResponse(
+  value: unknown,
+  expectedKey: string,
+): Extract<CandidateParcelEnrichmentState, { status: "checked" }> | null {
+  if (!isRecord(value) || !Array.isArray(value.items) || value.items.length !== 1) return null;
+  const item = value.items[0];
+  if (!isRecord(item) || item.key !== expectedKey) return null;
+  if (!nullableText(item.countyClass) || !nullableText(item.classGloss)) return null;
+  if (!nullablePositiveNumber(item.lotAreaSqft)) return null;
+  if (!nullablePositiveNumber(item.assessorBuildingSqft)) return null;
+  if (!nullableText(item.assessorBuildingYear)) return null;
+  if (!nullablePositiveNumber(item.assessedValue)) return null;
+  if (!nullableText(item.assessedYear)) return null;
+  if (!ASSESSMENT_STAGES.has(item.assessedStage)) return null;
+  if (!nullablePositiveNumber(item.impliedMarketValue)) return null;
+  if (typeof item.enrichmentUnavailable !== "boolean") return null;
+  if (!COUNTY_FIELD_STATUSES.has(item.countyClassStatus as string)) return null;
+  if (!COUNTY_FIELD_STATUSES.has(item.lotAreaStatus as string)) return null;
+  if (!COUNTY_FIELD_STATUSES.has(item.assessorBuildingAreaStatus as string)) return null;
+  if (!COUNTY_FIELD_STATUSES.has(item.assessedValueStatus as string)) return null;
+  if (!LICENSE_FIELD_STATUSES.has(item.activeLicenseStatus as string)) return null;
+  if (!Array.isArray(item.activeLicenses)) return null;
+  if ((item.countyClassStatus === "available") !== (item.countyClass !== null)) return null;
+  if (item.classGloss !== countyClassGloss(item.countyClass)) return null;
+  if ((item.lotAreaStatus === "available") !== (item.lotAreaSqft !== null)) return null;
+  if (
+    (item.assessorBuildingAreaStatus === "available") !==
+    (item.assessorBuildingSqft !== null)
+  ) {
+    return null;
+  }
+  if ((item.assessedValueStatus === "available") !== (item.assessedValue !== null)) return null;
+  if ((item.assessedValueStatus === "available") !== (item.assessedStage !== null)) return null;
+  if (item.impliedMarketValue !== impliedMarketValue(item.countyClass, item.assessedValue)) {
+    return null;
+  }
+
+  const activeLicenses: ShortlistEnrichmentFacts["activeLicenses"] = [];
+  for (const license of item.activeLicenses) {
+    if (
+      !isRecord(license) ||
+      typeof license.name !== "string" ||
+      license.name.trim() === "" ||
+      typeof license.description !== "string"
+    ) {
+      return null;
+    }
+    activeLicenses.push({ name: license.name, description: license.description });
+  }
+  if ((item.activeLicenseStatus === "available") !== (activeLicenses.length > 0)) return null;
+  const sourceUnavailable =
+    item.countyClassStatus === "unavailable" ||
+    item.lotAreaStatus === "unavailable" ||
+    item.assessorBuildingAreaStatus === "unavailable" ||
+    item.assessedValueStatus === "unavailable" ||
+    item.activeLicenseStatus === "unavailable";
+  if (item.enrichmentUnavailable !== sourceUnavailable) return null;
+
+  return {
+    status: "checked",
+    facts: {
+      countyClass: item.countyClass,
+      classGloss: item.classGloss,
+      countyClassStatus: item.countyClassStatus as ShortlistEnrichmentFacts["countyClassStatus"],
+      lotAreaSqft: item.lotAreaSqft,
+      lotAreaStatus: item.lotAreaStatus as ShortlistEnrichmentFacts["lotAreaStatus"],
+      assessorBuildingSqft: item.assessorBuildingSqft,
+      assessorBuildingYear: item.assessorBuildingYear,
+      assessorBuildingAreaStatus:
+        item.assessorBuildingAreaStatus as ShortlistEnrichmentFacts["assessorBuildingAreaStatus"],
+      assessedValue: item.assessedValue,
+      assessedYear: item.assessedYear,
+      assessedStage: item.assessedStage as ShortlistEnrichmentFacts["assessedStage"],
+      assessedValueStatus: item.assessedValueStatus as ShortlistEnrichmentFacts["assessedValueStatus"],
+      impliedMarketValue: item.impliedMarketValue,
+      activeLicenses,
+      activeLicenseStatus: item.activeLicenseStatus as ShortlistEnrichmentFacts["activeLicenseStatus"],
+    },
+    sourceUnavailable: item.enrichmentUnavailable,
+  };
 }
 
 export interface SiteMatchmakerCandidateFilters {
@@ -754,8 +879,7 @@ export function candidateIncentiveGeographyLabel(row: SiteMatchmakerCandidateRow
 }
 
 export function candidatePinLabel(row: SiteMatchmakerCandidateRow): string {
-  if (row.pin === null) return "Needs verification";
-  return `${row.pin.slice(0, 2)}-${row.pin.slice(2, 4)}-${row.pin.slice(4, 7)}-${row.pin.slice(7, 10)}-${row.pin.slice(10)}`;
+  return formatPin14(row.pin) ?? "Needs verification";
 }
 
 export function candidateFlagLabels(row: SiteMatchmakerCandidateRow): string[] {
@@ -775,8 +899,16 @@ export const SITE_MATCHMAKER_CSV_HEADERS = [
   "Size field used for match",
   "Match area (sq ft)",
   "Lot area (sq ft)",
+  "Lot area publication state",
   "Assessor building area (sq ft)",
+  "Assessor building area publication state",
   "Assessor building tax year",
+  "County property class",
+  "County property class state",
+  "Assessed value",
+  "Assessed value tax year",
+  "Assessed value stage",
+  "Assessment check state",
   "Mapped building footprint on parcel (sq ft)",
   "Mapped footprint source vintage",
   "Reported available space (sq ft)",
@@ -796,12 +928,14 @@ export const SITE_MATCHMAKER_CSV_HEADERS = [
   "Nearest expressway straight-line miles",
   "Midway straight-line miles",
   "O'Hare straight-line miles",
-  "Parcel record",
-  "Recorded documents",
+  "CookViewer parcel details",
+  "Cook County Assessor property record",
+  "Cook County Clerk recorded documents",
 ] as const;
 
 function csvCell(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`;
+  const safe = /^[\u0000-\u0020]*[=+\-@]/.test(value) ? `'${value}` : value;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 /** Build a public-safe CSV for exactly the rows supplied by the current filter. */
@@ -820,13 +954,110 @@ function contextCsvValue(
   return String(value);
 }
 
+function areaCsvFact(
+  snapshotValue: number | null | undefined,
+  enrichment: CandidateParcelEnrichmentState,
+  liveValue: number | null | undefined,
+  liveStatus:
+    | "available"
+    | "not_published"
+    | "unavailable"
+    | "not_requested"
+    | undefined,
+): { value: number | string; state: string } {
+  if (enrichment.status === "checked") {
+    if (liveStatus === "available" && liveValue != null) {
+      return { value: liveValue, state: "Available · current County record" };
+    }
+    if (snapshotValue != null) {
+      if (liveStatus === "unavailable") {
+        return { value: snapshotValue, state: "Published snapshot · current County check unavailable" };
+      }
+      if (liveStatus === "not_published") {
+        return {
+          value: snapshotValue,
+          state: "Published snapshot · current County record did not publish an area",
+        };
+      }
+      return { value: snapshotValue, state: "Published snapshot" };
+    }
+    if (liveStatus === "unavailable") return { value: "Unavailable", state: "Unavailable" };
+    if (liveStatus === "not_requested") {
+      return {
+        value: "Not requested — PIN needs verification",
+        state: "Not requested — PIN needs verification",
+      };
+    }
+    return { value: "Not published", state: "Not published" };
+  }
+  if (snapshotValue != null) {
+    return {
+      value: snapshotValue,
+      state:
+        enrichment.status === "unavailable"
+          ? "Published snapshot · current County check unavailable"
+          : "Published snapshot",
+    };
+  }
+  const state =
+    enrichment.status === "unavailable"
+      ? "Unavailable"
+      : enrichment.status === "not_requested"
+        ? "Not requested — PIN needs verification"
+        : "Not published in saved snapshot · current County record not checked";
+  return { value: state, state };
+}
+
 export function candidateRowsToCsv(
   rows: readonly SiteMatchmakerCandidateRow[],
   contextStatus: CandidateContextExportStatus = "available",
+  parcelEnrichment: Readonly<Record<string, CandidateParcelEnrichmentState>> = {},
 ): string {
   const body = rows.map((row) => {
     const parcelRecord = cookViewerUrl(row.pin) ?? "Needs verification";
+    const assessorRecord = assessorRecordUrl(row.pin) ?? "Needs verification";
     const recordedDocuments = clerkRecordsUrl(row.pin) ?? "Needs verification";
+    const enrichment = parcelEnrichment[row.id] ?? { status: "not_checked" as const };
+    const facts = enrichment.status === "checked" ? enrichment.facts : null;
+    const uncheckedFieldState =
+      enrichment.status === "unavailable"
+        ? "Unavailable"
+        : enrichment.status === "not_requested"
+          ? "Not requested — PIN needs verification"
+          : "Not checked";
+    const checkedFieldState = (
+      status: "available" | "not_published" | "unavailable" | "not_requested" | undefined,
+      value: unknown,
+    ) =>
+      status === "unavailable"
+        ? "Unavailable"
+        : status === "not_requested"
+          ? "Not requested — PIN needs verification"
+          : status === "not_published"
+            ? "Not published"
+            : status === "available"
+              ? "Available"
+              : value == null
+                ? "Not published"
+                : "Available";
+    const countyClassState = facts
+      ? checkedFieldState(facts.countyClassStatus, facts.countyClass)
+      : uncheckedFieldState;
+    const assessmentCheckState = facts
+      ? checkedFieldState(facts.assessedValueStatus, facts.assessedValue)
+      : uncheckedFieldState;
+    const lotArea = areaCsvFact(
+      row.space.lotAreaSqft,
+      enrichment,
+      facts?.lotAreaSqft,
+      facts?.lotAreaStatus,
+    );
+    const assessorBuildingArea = areaCsvFact(
+      row.space.assessorBuildingSqft,
+      enrichment,
+      facts?.assessorBuildingSqft,
+      facts?.assessorBuildingAreaStatus,
+    );
     return [
       SITE_MATCHMAKER_SOURCE_LABELS[row.source],
       candidateAddressLabel(row),
@@ -834,13 +1065,27 @@ export function candidateRowsToCsv(
       SITE_MATCHMAKER_PROPERTY_TYPE_LABELS[row.propertyType],
       siteMatchAreaLabel(row.matchAreaKind),
       row.squareFeet === null ? "Not published" : String(row.squareFeet),
-      row.space.lotAreaSqft == null ? "Not published" : String(row.space.lotAreaSqft),
-      row.space.assessorBuildingSqft == null
-        ? "Not published"
-        : String(row.space.assessorBuildingSqft),
-      row.space.assessorBuildingYear == null
-        ? "Not published"
-        : String(row.space.assessorBuildingYear),
+      String(lotArea.value),
+      lotArea.state,
+      String(assessorBuildingArea.value),
+      assessorBuildingArea.state,
+      facts?.assessorBuildingAreaStatus === "available" && facts.assessorBuildingYear
+        ? facts.assessorBuildingYear
+        : row.space.assessorBuildingYear == null
+          ? assessorBuildingArea.state
+          : String(row.space.assessorBuildingYear),
+      countyClassState === "Available" ? (facts?.countyClass ?? "Not published") : countyClassState,
+      countyClassState,
+      assessmentCheckState === "Available"
+        ? (facts?.assessedValue ?? "Not published")
+        : assessmentCheckState,
+      assessmentCheckState === "Available"
+        ? (facts?.assessedYear ?? "Not published")
+        : assessmentCheckState,
+      assessmentCheckState === "Available"
+        ? (facts?.assessedStage ?? "Not published")
+        : assessmentCheckState,
+      assessmentCheckState,
       row.space.cityGroundFootprintSqft == null
         ? "Not published"
         : String(row.space.cityGroundFootprintSqft),
@@ -871,6 +1116,7 @@ export function candidateRowsToCsv(
       contextCsvValue(row, row.context?.midwayMiles, contextStatus),
       contextCsvValue(row, row.context?.ohareMiles, contextStatus),
       parcelRecord,
+      assessorRecord,
       recordedDocuments,
     ];
   });
