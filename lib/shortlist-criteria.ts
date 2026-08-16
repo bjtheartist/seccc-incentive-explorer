@@ -27,12 +27,32 @@
  *
  * v1 BEHAVIORS (binding — see the PR2 build spec's ruling, itself drawn from
  * the consult's Q4 table):
- *   SCREEN        propertyType, the measured-area band, and the selected
+ *   SCREEN        propertyType, the measured-area band, the selected
  *                 CTA/Metra network's distance cutoff (against the SELECTED
- *                 system only — never "any system").
+ *                 system only — never "any system"), and (added for the
+ *                 zoning-alignment-rank change) the opt-in
+ *                 `zoningAlignment: "aligned-only"` screen — itself a no-op
+ *                 unless a projectUse is ALSO selected (see the
+ *                 "zoning-alignment" entry below and
+ *                 `SCREEN_HANDLERS["zoning-alignment"]` in
+ *                 lib/shortlist-engine.ts).
  *   SCORE         transit proximity, and ONLY when a transit need with a
  *                 network the row can be measured against was selected.
- *                 Nothing else scores in v1.
+ *                 Nothing else scores in v1 — a NUMERIC contribution to
+ *                 `RankedShortlistCandidate.score` and the `scored` flag,
+ *                 distinct from ORDER below.
+ *   ORDER         projectUse — added for the zoning-alignment-rank change.
+ *                 Orders by district-family alignment (`zoningBadgeFor`):
+ *                 aligned, then planned-development, then not-aligned, then
+ *                 unresolved. PRIMARY key on the unscored path (ahead of
+ *                 record completeness); TIEBREAK on the scored path (after
+ *                 transit score, before canonicalKey). Deliberately NOT
+ *                 "score": it never contributes to the numeric `score` field
+ *                 or flips the `scored` flag. With no projectUse selected,
+ *                 every candidate ranks identically here (badge is never a
+ *                 real alignment read without a use to compare against), so
+ *                 the order is byte-identical to before this criterion
+ *                 existed.
  *   DISPLAY-ONLY  measured and shown on every card, but incapable of moving
  *                 a candidate's membership or rank: expressway proximity,
  *                 school/library distance, and (only when no transit
@@ -55,7 +75,7 @@
 
 import type { SiteProjectUse } from "./site-matchmaker";
 
-export type ShortlistCriterionBehavior = "screen" | "score" | "display-only" | "unsupported";
+export type ShortlistCriterionBehavior = "screen" | "score" | "order" | "display-only" | "unsupported";
 
 export interface ShortlistCriterionEntry {
   /** Stable id. Matches the wizard's own value space 1:1 (a
@@ -81,11 +101,11 @@ export const SHORTLIST_CRITERION_REGISTRY: readonly ShortlistCriterionEntry[] = 
   {
     id: "project-use",
     label: "Project use",
-    behavior: "display-only",
+    behavior: "order",
     source: "Site Matchmaker wizard, matched against the mapped zoning district family",
     vintage: null,
     explanation:
-      "Combines with the mapped zoning district family to produce the badge shown on every card. It does not filter which records appear or change their order — every candidate in this ZIP that passes the other screens is ranked the same way regardless of project use.",
+      "Combines with the mapped zoning district family to produce the badge shown on every card, and orders results by that badge — aligned first, then site-specific (PD/PMD), then not-aligned, then unresolved. This is the PRIMARY order when no transit criterion is scored, and a TIEBREAK (after transit score) when one is. It never removes a candidate on its own — pair it with the 'Aligned zoning families only' screen to do that. With no project use selected, every candidate ranks identically here, so results are ordered exactly as if this criterion did not exist.",
   },
   {
     id: "property-type",
@@ -113,6 +133,15 @@ export const SHORTLIST_CRITERION_REGISTRY: readonly ShortlistCriterionEntry[] = 
     vintage: null,
     explanation:
       "Screens against the SELECTED network(s) only (CTA rail and/or Metra) — never against every system a station file happens to carry. Selecting a distance with no rail network chosen, or choosing bus/expressway/freight/bike, applies no distance screen at all.",
+  },
+  {
+    id: "zoning-alignment",
+    label: "Aligned zoning families only",
+    behavior: "screen",
+    source: "derived from the same `zoningBadgeFor` district-family read the card badge already publishes",
+    vintage: null,
+    explanation:
+      "When a project use is ALSO selected, keeps only candidates whose zoning badge reads aligned or a site-specific Planned Development/PMD — a PD/PMD may or may not actually permit the project, so it is kept rather than dropped. Removes not-aligned and unresolved candidates. Broad district-family screen only — not a use determination. With NO project use selected, this criterion cannot screen and is treated as not selected by the engine — the page surfaces it as a selected-but-inert criterion rather than pretending it did something.",
   },
   // ── Score ────────────────────────────────────────────────────────────────
   {
@@ -287,6 +316,11 @@ export interface SelectedShortlistCriteria {
   walkability: boolean;
   pedestrianActivity: boolean;
   amenities: readonly string[];
+  /** Whether `sm_zoning=aligned` was selected — independent of whether a
+   *  project use was ALSO selected (that combination is what determines
+   *  whether the screen can actually act; see `selectedNonScoringCriteria`
+   *  below for the honest "needs a project use" surfacing when it can't). */
+  zoningAlignment: boolean;
 }
 
 export function selectedShortlistCriterionIds(selection: SelectedShortlistCriteria): string[] {
@@ -300,6 +334,7 @@ export function selectedShortlistCriterionIds(selection: SelectedShortlistCriter
   if (selection.walkability) ids.push("walkability");
   if (selection.pedestrianActivity) ids.push("pedestrian-activity");
   ids.push(...selection.amenities);
+  if (selection.zoningAlignment) ids.push("zoning-alignment");
   return ids;
 }
 
@@ -315,10 +350,53 @@ export function selectedNonScoringCriteria(
   selection: SelectedShortlistCriteria,
 ): ShortlistCriterionEntry[] {
   const ids = new Set(selectedShortlistCriterionIds(selection));
-  return SHORTLIST_CRITERION_REGISTRY.filter(
+  const entries = SHORTLIST_CRITERION_REGISTRY.filter(
     (entry) =>
       ids.has(entry.id) && (entry.behavior === "unsupported" || entry.behavior === "display-only"),
   );
+
+  // The zoning-alignment SCREEN is selected but request-conditionally inert
+  // — it can only act when a project use is ALSO selected (see
+  // SCREEN_HANDLERS["zoning-alignment"] in lib/shortlist-engine.ts). That is
+  // a per-REQUEST fact, not a fixed registry-level behavior, so it cannot be
+  // caught by the static "unsupported"/"display-only" filter above; it is
+  // surfaced here explicitly, with its own honest explanation, instead of
+  // silently doing nothing.
+  if (selection.zoningAlignment && !selection.projectUse) {
+    const zoningEntry = shortlistCriterionById("zoning-alignment");
+    if (zoningEntry) {
+      entries.push({
+        ...zoningEntry,
+        explanation:
+          "Needs a project use selected to screen — with no project use chosen, this selection has no effect on the results. Broad district-family screen only — not a use determination. Select a project use to activate it.",
+      });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * The parenthetical suffix the "Selected criteria with no ranking effect"
+ * list (app/vacancy/[zip]/shortlist/page.tsx) renders after each entry's
+ * label. Extracted here — rather than left as an inline ternary in the page
+ * — so the THREE distinct reasons an entry can land in that list are each
+ * independently testable and impossible to mismatch:
+ *   - "display-only": measured and shown on the card, never scored — a
+ *     fixed, permanent registry fact.
+ *   - "screen" (behavior "screen" reaching this list at all is ONLY
+ *     possible via `selectedNonScoringCriteria`'s zoning-alignment
+ *     request-conditional injection above): a REAL, supported screen that
+ *     is inert on THIS specific request because it needs a project use it
+ *     was not given — calling this "(not supported)" would be false, since
+ *     the criterion demonstrably IS supported once a project use is added.
+ *   - everything else ("unsupported"): no committed input backs the
+ *     concept at all, ever.
+ */
+export function nonScoringCriterionSuffix(behavior: ShortlistCriterionBehavior): string {
+  if (behavior === "display-only") return " (shown, not scored)";
+  if (behavior === "screen") return " (needs a project use)";
+  return " (not supported)";
 }
 
 /**

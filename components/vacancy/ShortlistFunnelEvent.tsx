@@ -30,6 +30,12 @@ export default function ShortlistFunnelEvent({
         withMeasuredArea: funnel.withMeasuredArea,
         insideBand: funnel.insideBand,
         survivingTransitScreen: funnel.survivingTransitScreen,
+        // zoning-alignment-rank change: the true final screening stage — an
+        // omitted field here would let this telemetry event under-report a
+        // zoning-alignment screen that emptied the results, contradicting
+        // the on-screen funnel (app/vacancy/[zip]/shortlist/page.tsx's
+        // FUNNEL_STAGES, which already renders this stage).
+        survivingZoningScreen: funnel.survivingZoningScreen,
       },
     });
     // Once per mount only.

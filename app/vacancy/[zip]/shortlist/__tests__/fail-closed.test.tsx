@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ShortlistUniverseLoadResult } from "@/lib/shortlist-universe";
 import type { ShortlistUniverseFile, ShortlistUniverseRow } from "@/lib/shortlist-universe-schema";
+import { SHORTLIST_RANKING_MODEL_VERSION } from "@/lib/site-matchmaker";
 
 /**
  * FAIL-CLOSED coverage for app/vacancy/[zip]/shortlist/page.tsx (PR2 hard
@@ -208,7 +209,7 @@ describe("Site Shortlist — fail-closed states", () => {
 
   it("accepts the CURRENT sm_rv value explicitly", async () => {
     loadShortlistUniverseMock.mockReturnValue({ ok: true, data: fixtureUniverseFile({ rows: [fixtureRow()] }) });
-    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "2" });
+    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: SHORTLIST_RANKING_MODEL_VERSION });
     expect(html).not.toContain("Ranked shortlist temporarily unavailable");
   });
 

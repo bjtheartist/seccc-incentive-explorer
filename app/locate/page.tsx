@@ -280,6 +280,40 @@ function SiteMatchmakerPage() {
               />
             </fieldset>
 
+            <div className="mt-4">
+              <label
+                className={`flex items-start gap-3 border p-4 transition-colors ${
+                  criteria.projectUse
+                    ? "cursor-pointer border-[#0C1B33]/12 bg-white hover:border-[#2563EB]/40"
+                    : "cursor-not-allowed border-[#0C1B33]/8 bg-[#FAF9F6] opacity-60"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={criteria.zoningAlignment === "aligned-only"}
+                  disabled={!criteria.projectUse}
+                  onChange={() =>
+                    setField(
+                      "zoningAlignment",
+                      criteria.zoningAlignment === "aligned-only" ? null : "aligned-only",
+                    )
+                  }
+                  className="mt-0.5 h-4 w-4 flex-none accent-[#2563EB]"
+                />
+                <span>
+                  <span className="block text-[12px] font-semibold text-[#0C1B33]">
+                    Screen to aligned zoning families only
+                  </span>
+                  <span className="mt-1 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                    Keeps only candidates whose mapped zoning district family is broadly aligned
+                    with your project use, or a site-specific Planned Development/PMD. Broad
+                    district-family screen only — not a use determination.
+                    {!criteria.projectUse && " Select a project use above to enable this filter."}
+                  </span>
+                </span>
+              </label>
+            </div>
+
             <fieldset className="mt-8">
               <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
                 What kind of property should be included? *
@@ -497,6 +531,7 @@ function SiteMatchmakerPage() {
             <SummaryRow label="Context" value={summary.context} />
             <SummaryRow label="Transportation" value={summary.transportation} />
             <SummaryRow label="Transport distance" value={summary.transportationDistance} />
+            <SummaryRow label="Zoning alignment" value={summary.zoningAlignment} />
             <SummaryRow label="Walkability" value={summary.walkability} />
             <SummaryRow label="Pedestrian activity" value={summary.pedestrianActivity} />
             <SummaryRow label="Nearby amenities" value={summary.amenities} />

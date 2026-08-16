@@ -4,6 +4,7 @@ import {
   summarizeSiteMatchCriteria,
   type SiteMatchCriteria,
   type SiteMatchSummary,
+  SITE_MATCH_CRITERIA_PARAM_KEYS,
 } from "./site-matchmaker";
 import { normalizePin14 } from "./cook-viewer";
 import {
@@ -18,18 +19,7 @@ import type {
 } from "./vacancy-index";
 
 const SITE_MATCHMAKER_SOURCE = "site-matchmaker";
-const CANONICAL_CRITERIA_PARAMS = [
-  "sm_use",
-  "sm_property",
-  "sm_min_sqft",
-  "sm_max_sqft",
-  "sm_context",
-  "sm_transport",
-  "sm_transport_distance",
-  "sm_walkability",
-  "sm_pedestrian_activity",
-  "sm_amenities",
-] as const;
+const CANONICAL_CRITERIA_PARAMS = SITE_MATCH_CRITERIA_PARAM_KEYS;
 
 export interface SiteMatchmakerVacancyHandoff {
   criteria: SiteMatchCriteria;

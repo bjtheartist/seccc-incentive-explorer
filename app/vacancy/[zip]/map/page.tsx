@@ -254,6 +254,8 @@ export default async function VacancyMapPage({
                   <dd className="text-[#0C1B33]">{handoff.summary.pedestrianActivity}</dd>
                   <dt className="text-[#0C1B33]/45">Amenities</dt>
                   <dd className="text-[#0C1B33]">{handoff.summary.amenities}</dd>
+                  <dt className="text-[#0C1B33]/45">Zoning alignment</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.zoningAlignment}</dd>
                 </dl>
                 <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
                   These review criteria have not been verified against the plotted sites. This map

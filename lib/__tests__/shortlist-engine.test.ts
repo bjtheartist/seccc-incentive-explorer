@@ -15,6 +15,7 @@ import {
   selectedTransitNetwork,
   transitScoreFor,
   transitScreenMeters,
+  zoningAlignmentRank,
   zoningBadgeFor,
   zoningBadgeNote,
   type RankedShortlistCandidate,
@@ -391,7 +392,17 @@ describe("registry-driven dispatch coverage", () => {
 
   it("the engine's screen pipeline is driven by the registry's own SCREEN ids, in registry order", () => {
     const registryScreenIds = shortlistCriteriaByBehavior("screen").map((e) => e.id);
-    expect(registryScreenIds).toEqual(["property-type", "square-footage", "transportation-distance"]);
+    expect(registryScreenIds).toEqual([
+      "property-type",
+      "square-footage",
+      "transportation-distance",
+      "zoning-alignment",
+    ]);
+  });
+
+  it("the engine's zoning-alignment ordering is driven by the registry's own ORDER id", () => {
+    const registryOrderIds = shortlistCriteriaByBehavior("order").map((e) => e.id);
+    expect(registryOrderIds).toEqual(["project-use"]);
   });
 
   it("the engine's transit scoring is driven by the registry's own SCORE ids", () => {
@@ -450,6 +461,7 @@ describe("dispatch-coverage drift degrades one request, never crashes the module
       withMeasuredArea: 0,
       insideBand: 0,
       survivingTransitScreen: 0,
+      survivingZoningScreen: 0,
     });
 
     vi.doUnmock("../shortlist-criteria");
@@ -488,6 +500,80 @@ describe("dispatch-coverage drift degrades one request, never crashes the module
     // broken dispatch table must never report scored: true — an empty,
     // clearly-flagged result, not a half-computed one.
     expect(result.scored).toBe(false);
+
+    vi.doUnmock("../shortlist-criteria");
+    vi.resetModules();
+  });
+
+  // ── zoning-alignment-rank change: the ORDER check, made bidirectional ────
+
+  it("same for a registry ORDER entry with no ordering implementation (forward direction) — import succeeds, the request degrades", async () => {
+    vi.resetModules();
+    vi.doMock("../shortlist-criteria", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("../shortlist-criteria")>();
+      return {
+        ...actual,
+        shortlistCriteriaByBehavior: (behavior: string) => {
+          const base = actual.shortlistCriteriaByBehavior(behavior as never);
+          if (behavior !== "order") return base;
+          return [
+            ...base,
+            { id: "context", label: "x", behavior: "order", source: "x", vintage: null, explanation: "x" },
+          ];
+        },
+      };
+    });
+
+    const mod = await import("../shortlist-engine");
+    expect(mod.runShortlistEngine).toBeTypeOf("function");
+    expect(() => mod.assertShortlistDispatchCoverage()).toThrow(/registry ORDER entry "context"/);
+
+    const result = mod.runShortlistEngine({
+      rows: [row()],
+      criteria: criteria(),
+      stations: [],
+      sourceRecordsByEvidenceType: ZERO_EVIDENCE_COUNTS,
+    });
+    expect(result.dispatchCoverageBroken).toBe(true);
+
+    vi.doUnmock("../shortlist-criteria");
+    vi.resetModules();
+  });
+
+  it("REVERSE direction: throws when the registry's 'project-use' entry stops declaring behavior 'order' — the engine still hard-wires ordering to it, so silent drift is caught, not just an unimplemented forward id", async () => {
+    vi.resetModules();
+    vi.doMock("../shortlist-criteria", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("../shortlist-criteria")>();
+      return {
+        ...actual,
+        // "project-use" reverts to its PRE-zoning-alignment-rank behavior —
+        // this is exactly the drift the reverse check exists to catch: the
+        // engine (zoningAlignmentRank) never stopped ordering by it.
+        shortlistCriterionById: (id: string) => {
+          const entry = actual.shortlistCriterionById(id);
+          if (id !== "project-use" || !entry) return entry;
+          return { ...entry, behavior: "display-only" as const };
+        },
+        // ORDER_CRITERION_IDS would otherwise still list "project-use" (its
+        // FORWARD check would keep passing) — only the reverse,
+        // shortlistCriterionById-based check catches this specific drift.
+      };
+    });
+
+    const mod = await import("../shortlist-engine");
+    expect(mod.runShortlistEngine).toBeTypeOf("function");
+    expect(() => mod.assertShortlistDispatchCoverage()).toThrow(
+      /registry entry "project-use" must be declared behavior "order"/,
+    );
+
+    const result = mod.runShortlistEngine({
+      rows: [row()],
+      criteria: criteria({ projectUse: "retail-service" }),
+      stations: [],
+      sourceRecordsByEvidenceType: ZERO_EVIDENCE_COUNTS,
+    });
+    expect(result.dispatchCoverageBroken).toBe(true);
+    expect(result.ranked).toEqual([]);
 
     vi.doUnmock("../shortlist-criteria");
     vi.resetModules();
@@ -745,17 +831,126 @@ describe("runShortlistEngine", () => {
     expect(nearCta.score).toBeGreaterThan(nearMetra.score);
   });
 
-  it("NEGATIVE: changing projectUse (a display-only criterion) changes badges but NEVER changes membership or order", () => {
+  // ── ZONING-ALIGNMENT-RANK: projectUse now ORDERS (was pure display-only) ──
+
+  it("ZONING-ALIGNMENT-RANK: changing projectUse changes badges AND now changes unscored order — but NEVER membership", () => {
     const rows = [
-      row({ canonicalKey: "a", zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null } }),
+      // B1-1: commercial (aligned for retail-service) but intensity 1 < 2
+      // (not-aligned for housing-mixed-use) — see zoningBadgeFor's B-prefix
+      // intensity>=2 rule.
+      row({ canonicalKey: "a", zoning: { status: "resolved", district: "B1-1", zoneType: 1, pdNum: null, pmdSubArea: null } }),
+      // RS-3: residential (aligned for housing-mixed-use via the R-prefix
+      // rule) but never aligned for retail-service (not a B/C district).
       row({ canonicalKey: "b", pin: "2", address: "2 A ST", zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null } }),
     ];
     const retail = engine(rows, criteria({ projectUse: "retail-service" }));
     const housing = engine(rows, criteria({ projectUse: "housing-mixed-use" }));
-    expect(retail.ranked.map((c) => [c.key, c.score])).toEqual(housing.ranked.map((c) => [c.key, c.score]));
-    // Badges DID change (proving the criterion has SOME effect — just not on ranking).
+    // Membership is identical either way — same two keys present, regardless
+    // of project use (this criterion alone never removes a candidate; only
+    // the opt-in zoning-alignment SCREEN does, and it is not selected here).
+    expect(new Set(retail.ranked.map((c) => c.key))).toEqual(new Set(housing.ranked.map((c) => c.key)));
+    // Badges DID change, as before...
+    expect(retail.ranked.find((c) => c.key === "a")!.badge).toBe("aligned");
     expect(retail.ranked.find((c) => c.key === "b")!.badge).toBe("not-aligned");
+    expect(housing.ranked.find((c) => c.key === "a")!.badge).toBe("not-aligned");
     expect(housing.ranked.find((c) => c.key === "b")!.badge).toBe("aligned");
+    // ...and now so does ORDER: "a" (B1-1) reads aligned for retail, so it
+    // ranks first; "b" (RS-3) reads aligned for housing instead, so IT ranks
+    // first there — the reversal this whole change exists to produce.
+    expect(retail.ranked.map((c) => c.key)).toEqual(["a", "b"]);
+    expect(housing.ranked.map((c) => c.key)).toEqual(["b", "a"]);
+    // The numeric score itself is untouched (v1 still has no baseline) —
+    // only the ORDER moved, never the score value.
+    expect(retail.ranked.every((c) => c.score === 0)).toBe(true);
+    expect(housing.ranked.every((c) => c.score === 0)).toBe(true);
+  });
+
+  it("ZONING-ALIGNMENT-RANK: with NO projectUse selected, unscored order is byte-identical to the pre-existing canonicalKey/recordCompleteness behavior (regression guard)", () => {
+    const rows = [
+      row({
+        canonicalKey: "zzz-key",
+        pin: "1",
+        address: "1000 S ASHLAND AVE",
+        buildingSqft: 4000,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "aaa-key",
+        pin: "2",
+        address: "9000 S ASHLAND AVE",
+        buildingSqft: 4000,
+        // Deliberately a DIFFERENT, non-aligned-for-nothing district — with
+        // projectUse null, zoningAlignmentRank must return the SAME constant
+        // for both rows regardless of this difference, so it never leaks
+        // into the order.
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { ranked } = engine(rows, criteria({ projectUse: null }));
+    // Identical recordCompletenessScore (both rows equally complete) -> pure
+    // canonicalKey ascending, exactly as this file's pre-existing "orders by
+    // score descending, tiebreaking on canonicalKey ascending" test expects
+    // for the unscored path.
+    expect(ranked.map((c) => c.key)).toEqual(["aaa-key", "zzz-key"]);
+  });
+
+  it("ZONING-ALIGNMENT-RANK: scored path — zoning alignment is a TIEBREAK after score, never overrides a real score difference", () => {
+    const rows = [
+      // Higher transit score, LOWER zoning rank priority (not-aligned for
+      // retail-service) — score must still win.
+      row({
+        canonicalKey: "near-not-aligned",
+        lat: CTA_NEAR.lat,
+        lon: CTA_NEAR.lon,
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+      // Lower transit score, aligned badge — must still rank second despite
+      // the "better" badge.
+      row({
+        canonicalKey: "far-aligned",
+        pin: "2",
+        address: "2 A ST",
+        lat: BASE_LAT + 0.5,
+        lon: BASE_LON,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { ranked, scored } = engine(
+      rows,
+      criteria({ projectUse: "retail-service", transportation: ["cta-rail"] }),
+      [CTA_NEAR],
+    );
+    expect(scored).toBe(true);
+    expect(ranked.map((c) => c.key)).toEqual(["near-not-aligned", "far-aligned"]);
+  });
+
+  it("ZONING-ALIGNMENT-RANK: scored path — zoning alignment DOES decide a genuine score tie", () => {
+    // Two candidates at the exact same coordinates score identically; one
+    // reads aligned, the other not-aligned, for the selected project use.
+    const rows = [
+      row({
+        canonicalKey: "tied-not-aligned",
+        lat: CTA_NEAR.lat,
+        lon: CTA_NEAR.lon,
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "tied-aligned",
+        pin: "2",
+        address: "2 A ST",
+        lat: CTA_NEAR.lat,
+        lon: CTA_NEAR.lon,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { ranked, scored } = engine(
+      rows,
+      criteria({ projectUse: "retail-service", transportation: ["cta-rail"] }),
+      [CTA_NEAR],
+    );
+    expect(scored).toBe(true);
+    expect(ranked[0].score).toBe(ranked[1].score); // genuine tie
+    expect(ranked.map((c) => c.key)).toEqual(["tied-aligned", "tied-not-aligned"]);
   });
 
   it("NEGATIVE: enrichment cannot change membership or order, because the engine's own signature never accepts it", () => {
@@ -778,8 +973,12 @@ describe("runShortlistEngine", () => {
   // the generic, registry-wide version of the criteria-relative negative —
   // one test per entry, all driven off the SAME registry the engine reads.
 
+  // "project-use" is deliberately ABSENT from this table: its registry
+  // behavior changed from "display-only" to "order" (zoning-alignment-rank
+  // change) — it is no longer non-scoring, so it is no longer part of this
+  // generic negative-coverage list. Its own, dedicated ordering tests live
+  // above (search "ZONING-ALIGNMENT-RANK").
   const NON_SCORING_MUTATORS: Record<string, (base: SiteMatchCriteria) => SiteMatchCriteria> = {
-    "project-use": (base) => ({ ...base, projectUse: "retail-service" }),
     context: (base) => ({ ...base, context: "commercial-corridor" }),
     walkability: (base) => ({ ...base, walkability: "important" }),
     "pedestrian-activity": (base) => ({ ...base, pedestrianActivity: "important" }),
@@ -825,7 +1024,7 @@ describe("runShortlistEngine", () => {
 
   // ── Finding 13 (round 3): RECORD-COMPLETENESS ordering, UNSCORED path ────
 
-  it("UNSCORED order (i), expected-order oracle: matches a HAND-COMPUTED record-completeness score for every row, exactly — full(4) > tied-at-3(alpha) > area-only(2) > bare(0)", () => {
+  it("UNSCORED order (i), expected-order oracle: matches a HAND-COMPUTED record-completeness score for every row, exactly — full(4) > tied-at-3(alpha) > area-only(2) > bare(0) [projectUse: null, so zoning-alignment-rank is neutral and record completeness alone decides — see the dedicated 'ZONING-ALIGNMENT-RANK' tests for the WITH-projectUse case]", () => {
     const rows = [
       // full: measured area (2) + resolved pin (1) + resolved zoning (1) = 4
       row({
@@ -866,7 +1065,7 @@ describe("runShortlistEngine", () => {
         zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
       }),
     ];
-    const { ranked, scored } = engine(rows, criteria());
+    const { ranked, scored } = engine(rows, criteria({ projectUse: null }));
     expect(scored).toBe(false);
     expect(ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual([
       ["full", 4],
@@ -1068,10 +1267,61 @@ describe("runShortlistEngine", () => {
     expect(funnel.insideBand).toBe(1);
   });
 
-  it("funnel's final stage always equals the ranked list length", () => {
+  it("funnel's final stage (survivingZoningScreen) always equals the ranked list length", () => {
     const rows = [row({ canonicalKey: "a" }), row({ canonicalKey: "b", pin: "9", address: "9 S X ST" })];
     const { ranked, funnel } = engine(rows, criteria());
-    expect(funnel.survivingTransitScreen).toBe(ranked.length);
+    expect(funnel.survivingZoningScreen).toBe(ranked.length);
+    // No zoning-alignment screen selected here -> the two stages agree.
+    expect(funnel.survivingTransitScreen).toBe(funnel.survivingZoningScreen);
+  });
+
+  // ── zoning-alignment-rank change: the opt-in screen's own funnel stage ────
+
+  it("funnel: survivingZoningScreen narrows past survivingTransitScreen when the opt-in zoning-alignment screen actually removes candidates", () => {
+    const rows = [
+      row({
+        canonicalKey: "aligned",
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "not-aligned",
+        pin: "2",
+        address: "2 A ST",
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "planned-development",
+        pin: "3",
+        address: "3 A ST",
+        zoning: { status: "resolved", district: "PD 123", zoneType: null, pdNum: 123, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "unresolved",
+        pin: "4",
+        address: "4 A ST",
+        zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { funnel, ranked } = engine(
+      rows,
+      criteria({ projectUse: "retail-service", zoningAlignment: "aligned-only" }),
+    );
+    expect(funnel.survivingTransitScreen).toBe(4); // nothing removed yet at that stage
+    expect(funnel.survivingZoningScreen).toBe(2); // aligned + planned-development kept
+    expect(funnel.survivingZoningScreen).toBe(ranked.length);
+    expect(ranked.map((c) => c.key).sort()).toEqual(["aligned", "planned-development"]);
+  });
+
+  it("funnel: the zoning-alignment screen is a no-op (survivingZoningScreen === survivingTransitScreen) when selected WITHOUT a projectUse", () => {
+    const rows = [
+      row({
+        canonicalKey: "a",
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { funnel } = engine(rows, criteria({ projectUse: null, zoningAlignment: "aligned-only" }));
+    expect(funnel.survivingZoningScreen).toBe(funnel.survivingTransitScreen);
+    expect(funnel.survivingZoningScreen).toBe(1);
   });
 });
 
@@ -1360,32 +1610,41 @@ describe("exhaustive oracle — brute-force winner-set parity + independent scor
     }
   });
 
-  it("order contract, SCORED path: scores are non-increasing and ties break by canonicalKey ascending", () => {
-    const { ranked, scored } = engine(
-      fixtureRows,
-      criteria({ propertyType: "either", transportation: ["cta-rail"] }),
-      STATIONS,
-    );
+  it("order contract, SCORED path: scores are non-increasing; on a score tie, zoning-alignment rank is non-decreasing; canonicalKey decides only when BOTH tie (zoning-alignment-rank change)", () => {
+    const request = criteria({ propertyType: "either", transportation: ["cta-rail"] });
+    const { ranked, scored } = engine(fixtureRows, request, STATIONS);
     expect(scored).toBe(true);
     for (let i = 1; i < ranked.length; i++) {
       const prev = ranked[i - 1];
       const curr = ranked[i];
       expect(prev.score).toBeGreaterThanOrEqual(curr.score);
       if (prev.score === curr.score) {
-        expect(prev.key < curr.key).toBe(true);
+        const prevRank = zoningAlignmentRank(request.projectUse, prev.badge);
+        const currRank = zoningAlignmentRank(request.projectUse, curr.badge);
+        expect(prevRank).toBeLessThanOrEqual(currRank);
+        if (prevRank === currRank) {
+          expect(prev.key < curr.key).toBe(true);
+        }
       }
     }
   });
 
-  // Finding 13 (round 3): the UNSCORED path no longer orders on a bare
-  // canonicalKey shuffle — it orders on recordCompletenessScore, tiebreaking
-  // on canonicalKey only when completeness itself ties.
-  it("order contract, UNSCORED path: recordCompletenessScore is non-increasing and ties break by canonicalKey ascending", () => {
-    const { ranked, scored } = engine(fixtureRows, criteria({ propertyType: "either" }), STATIONS);
+  // Finding 13 (round 3), extended by the zoning-alignment-rank change: the
+  // UNSCORED path no longer orders on recordCompletenessScore alone — the
+  // zoning-alignment rank is now the PRIMARY key (non-decreasing), with
+  // recordCompletenessScore the secondary key WITHIN a rank tie
+  // (non-increasing), and canonicalKey the final tiebreak when both tie.
+  it("order contract, UNSCORED path: zoning-alignment rank is non-decreasing (primary); within a rank tie, recordCompletenessScore is non-increasing (secondary); canonicalKey decides only when BOTH tie", () => {
+    const request = criteria({ propertyType: "either" });
+    const { ranked, scored } = engine(fixtureRows, request, STATIONS);
     expect(scored).toBe(false);
     for (let i = 1; i < ranked.length; i++) {
       const prev = ranked[i - 1];
       const curr = ranked[i];
+      const prevRank = zoningAlignmentRank(request.projectUse, prev.badge);
+      const currRank = zoningAlignmentRank(request.projectUse, curr.badge);
+      expect(prevRank).toBeLessThanOrEqual(currRank);
+      if (prevRank !== currRank) continue;
       expect(prev.recordCompletenessScore).toBeGreaterThanOrEqual(curr.recordCompletenessScore);
       if (prev.recordCompletenessScore === curr.recordCompletenessScore) {
         expect(prev.key < curr.key).toBe(true);
@@ -1528,6 +1787,9 @@ describe("false-zero guard — 60621 building search (the canonical regression c
 
     expect(ranked.length).toBe(468);
     expect(funnel.survivingTransitScreen).toBe(ranked.length);
+    // No zoning-alignment screen selected in this scenario -> the true
+    // final stage agrees with survivingTransitScreen exactly.
+    expect(funnel.survivingZoningScreen).toBe(ranked.length);
     expect(scored).toBe(true);
   });
 
@@ -1591,6 +1853,9 @@ describe("false-zero guard — 60621 building search (the canonical regression c
     // real transit network was active (scored, not merely stable order).
     expect(ranked.length).toBe(227);
     expect(funnel.survivingTransitScreen).toBe(ranked.length);
+    // No zoning-alignment screen selected in this scenario -> the true
+    // final stage agrees with survivingTransitScreen exactly.
+    expect(funnel.survivingZoningScreen).toBe(ranked.length);
     expect(scored).toBe(true);
   });
 });
@@ -1621,6 +1886,7 @@ describe("60636 fixture — building and land search sanity", () => {
         sourceRecordsByEvidenceType: universe.counts.sourceRecordsByEvidenceType as never,
       });
       expect(funnel.survivingTransitScreen).toBe(ranked.length);
+      expect(funnel.survivingZoningScreen).toBe(ranked.length);
       expect(funnel.canonicalSites).toBeGreaterThanOrEqual(funnel.insideBand);
     }
   });
