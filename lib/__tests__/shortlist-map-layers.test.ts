@@ -626,6 +626,6 @@ describe("SiteShortlistResults wiring", () => {
 
   it("passes the same filtered candidate keys to the map without narrowing the CSV", () => {
     expect(source).toContain("visibleCandidateKeys={visibleCandidateKeys}");
-    expect(source).toContain("shortlistCsv(ranked, facts)");
+    expect(source).toContain("shortlistCsv(ranked, facts, resolutionStates, zip)");
   });
 });

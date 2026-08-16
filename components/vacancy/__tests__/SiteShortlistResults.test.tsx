@@ -34,7 +34,11 @@ vi.mock("@/components/vacancy/SiteShortlistMap", () => ({
   ),
 }));
 
-import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
+import SiteShortlistResults, {
+  assessedValueCardText,
+  impliedMarketValueCardText,
+} from "@/components/vacancy/SiteShortlistResults";
+import type { ShortlistEnrichmentFacts } from "@/lib/site-shortlist";
 
 function noOverlays(): CandidateOverlays {
   return {
@@ -102,6 +106,66 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+function assessmentFacts(
+  overrides: Partial<ShortlistEnrichmentFacts> = {},
+): ShortlistEnrichmentFacts {
+  return {
+    countyClass: null,
+    classGloss: null,
+    assessedValue: null,
+    assessedYear: null,
+    impliedMarketValue: null,
+    activeLicenses: [],
+    ...overrides,
+  };
+}
+
+describe("SiteShortlistResults — assessment card source states", () => {
+  it("keeps not checked, checking, and missing-response states distinct", () => {
+    expect(assessedValueCardText(null, "idle")).toBe("Not checked");
+    expect(impliedMarketValueCardText(null, "idle")).toBe("Not checked");
+    expect(assessedValueCardText(null, "loading")).toBe("Checking…");
+    expect(impliedMarketValueCardText(null, "loading")).toBe("Checking…");
+    expect(assessedValueCardText(null, "loaded")).toBe("Unavailable");
+    expect(impliedMarketValueCardText(null, "loaded")).toBe("Unavailable");
+  });
+
+  it.each([
+    [
+      "not_requested",
+      "Not requested — PIN needs verification",
+      "Not requested — PIN needs verification",
+    ],
+    ["unavailable", "Unavailable", "Unavailable"],
+    ["not_published", "Not published", "Not published"],
+  ] as const)("renders the %s state without collapsing it", (status, assessed, implied) => {
+    const facts = assessmentFacts({ assessedValueStatus: status });
+    expect(assessedValueCardText(facts, "loaded")).toBe(assessed);
+    expect(impliedMarketValueCardText(facts, "loaded")).toBe(implied);
+  });
+
+  it("formats available values and normalizes decimal-looking County years", () => {
+    const facts = assessmentFacts({
+      countyClass: "211",
+      assessedValue: 19_600,
+      assessedYear: "2026.0",
+      assessedStage: "mailed",
+      assessedValueStatus: "available",
+      impliedMarketValue: 196_000,
+    });
+    expect(assessedValueCardText(facts, "loaded")).toBe("$19,600 (2026 · mailed)");
+    expect(impliedMarketValueCardText(facts, "loaded")).toBe("~$196,000");
+  });
+
+  it("explains why an available assessment may have no convertible implied value", () => {
+    const facts = assessmentFacts({
+      assessedValue: 19_600,
+      assessedValueStatus: "available",
+    });
+    expect(impliedMarketValueCardText(facts, "loaded")).toBe("Not available for this County class");
+  });
 });
 
 // ── Finding 2: the ACTUAL EMITTED payload, not just the helper ─────────────
@@ -531,6 +595,11 @@ describe("SiteShortlistResults — shared zoning filters", () => {
     vi.stubGlobal("URL", TestURL);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     fireEvent.click(screen.getByRole("button", { name: "Download the full shortlist (CSV)" }));
-    expect(shortlistCsvMock).toHaveBeenCalledWith(ranked, expect.any(Object));
+    expect(shortlistCsvMock).toHaveBeenCalledWith(
+      ranked,
+      expect.any(Object),
+      expect.any(Object),
+      "60619",
+    );
   });
 });

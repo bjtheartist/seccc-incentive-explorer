@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  assessedYearLabel,
   CONDITION_VERIFICATION_NOTE,
   IMPLIED_VALUE_CAPTION,
   SHORTLIST_SNAPSHOT_SOURCE,
@@ -122,6 +123,16 @@ describe("impliedMarketValue", () => {
 
   it("carries the screening-ballpark caption", () => {
     expect(IMPLIED_VALUE_CAPTION).toBe("screening ballpark, not an appraisal");
+  });
+});
+
+describe("assessedYearLabel", () => {
+  it("normalizes County whole-year decimal serialization without rewriting other source text", () => {
+    expect(assessedYearLabel("2026.0")).toBe("2026");
+    expect(assessedYearLabel("2026.000")).toBe("2026");
+    expect(assessedYearLabel("2025")).toBe("2025");
+    expect(assessedYearLabel("tax year pending")).toBe("tax year pending");
+    expect(assessedYearLabel(null)).toBeNull();
   });
 });
 

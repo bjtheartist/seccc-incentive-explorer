@@ -22,7 +22,7 @@
  * screen and stays there.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics-events";
 import {
@@ -30,6 +30,7 @@ import {
   clerkRecordsUrl,
   cookViewerUrl,
   formatPin14,
+  normalizePin14,
 } from "@/lib/cook-viewer";
 import {
   ZONING_BADGE_LABELS,
@@ -38,9 +39,21 @@ import {
   type ZoningBadge,
 } from "@/lib/shortlist-engine";
 import { shortlistCsv, shortlistCsvFilename } from "@/lib/shortlist-csv";
+import { googleMapsSearchUrl } from "@/lib/google-maps";
+import { classifyOwnerSector } from "@/lib/owner-sector";
+import { normalizeOwnerStructure } from "@/lib/owner-taxonomy";
+import {
+  fetchCandidateParcelEnrichment,
+} from "@/lib/site-matchmaker-parcel-client";
+import {
+  resolveCandidateParcelIdentity,
+} from "@/lib/site-matchmaker-parcel-resolution-client";
+import type { CandidateParcelResolution } from "@/lib/site-matchmaker-parcel-resolution";
+import type { CandidateParcelEnrichmentState } from "@/lib/site-matchmaker-results";
 import {
   IMPLIED_VALUE_CAPTION,
   VIOLATION_FLAG,
+  assessedYearLabel,
   accessibilityNoteFor,
   activeLicenseFlag,
   shortlistSnapshotHref,
@@ -58,6 +71,10 @@ import {
 import { DISTRICT_FILTER_DISCLAIMER } from "@/lib/zoning-districts";
 import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
 import SiteShortlistMap from "./SiteShortlistMap";
+import {
+  ParcelDossierDialog,
+  type ParcelDossierRecord,
+} from "./SiteMatchmakerParcelDossier";
 
 interface EnrichItem extends ShortlistEnrichmentFacts {
   key: string;
@@ -69,6 +86,34 @@ type EnrichState =
   | { status: "loading" }
   | { status: "error" }
   | { status: "loaded"; byKey: Record<string, EnrichItem> };
+
+interface DossierOverlay {
+  resolution: CandidateParcelResolution;
+  enrichment: CandidateParcelEnrichmentState;
+}
+
+function factsFromEnrichItem(item: EnrichItem): CandidateParcelEnrichmentState {
+  const { key: _key, enrichmentUnavailable, ...facts } = item;
+  return { status: "checked", facts, sourceUnavailable: enrichmentUnavailable };
+}
+
+function dossierRecord(
+  candidate: DecoratedShortlistCandidate,
+  resolution: CandidateParcelResolution,
+): ParcelDossierRecord {
+  return {
+    address: candidate.address,
+    pin: resolution.status === "resolved" ? resolution.pin : candidate.pin,
+    lat: candidate.lat,
+    lon: candidate.lon,
+    space: {
+      lotAreaSqft: candidate.lotSqft ?? undefined,
+      assessorBuildingSqft: candidate.buildingSqft ?? undefined,
+    },
+    ownerSector: candidate.ownerSector ?? classifyOwnerSector({ ownerStructure: candidate.ownerStructure }),
+    ownerStructure: normalizeOwnerStructure(candidate.ownerStructure),
+  };
+}
 
 const BADGE_FILTER_ORDER: readonly ZoningBadge[] = [
   "aligned",
@@ -100,7 +145,7 @@ function sqft(value: number | null): string {
 
 function countyAreaText(
   snapshotValue: number | null,
-  enrichment: EnrichItem | null,
+  enrichment: ShortlistEnrichmentFacts | null,
   enrichState: EnrichState["status"],
   field: "lotAreaSqft" | "assessorBuildingSqft",
 ): string {
@@ -127,6 +172,52 @@ function countyAreaText(
 
 function usd(value: number | null): string {
   return value == null ? "—" : `$${value.toLocaleString("en-US")}`;
+}
+
+export function assessedValueCardText(
+  facts: ShortlistEnrichmentFacts | null,
+  enrichState: EnrichState["status"],
+): string {
+  if (enrichState === "loading") return "Checking…";
+  if (facts?.assessedValueStatus === "not_requested") {
+    return "Not requested — PIN needs verification";
+  }
+  if (
+    facts?.assessedValueStatus === "unavailable" ||
+    enrichState === "error" ||
+    (enrichState === "loaded" && facts === null)
+  ) {
+    return "Unavailable";
+  }
+  if (facts?.assessedValue != null) {
+    const year = assessedYearLabel(facts.assessedYear);
+    return `${usd(facts.assessedValue)}${year ? ` (${year}${facts.assessedStage ? ` · ${facts.assessedStage}` : ""})` : ""}`;
+  }
+  if (enrichState === "idle") return "Not checked";
+  return "Not published";
+}
+
+export function impliedMarketValueCardText(
+  facts: ShortlistEnrichmentFacts | null,
+  enrichState: EnrichState["status"],
+): string {
+  if (enrichState === "loading") return "Checking…";
+  if (facts?.assessedValueStatus === "not_requested") {
+    return "Not requested — PIN needs verification";
+  }
+  if (
+    facts?.assessedValueStatus === "unavailable" ||
+    enrichState === "error" ||
+    (enrichState === "loaded" && facts === null)
+  ) {
+    return "Unavailable";
+  }
+  if (facts?.impliedMarketValue != null) return `~${usd(facts.impliedMarketValue)}`;
+  if (enrichState === "idle") return "Not checked";
+  if (facts?.assessedValueStatus === "available") {
+    return "Not available for this County class";
+  }
+  return "Not published";
 }
 
 function miles(value: number | null): string {
@@ -235,6 +326,8 @@ function ShortlistCard({
   enrichment,
   enrichState,
   onSnapshotClick,
+  dossierOverlay,
+  onParcelDetails,
 }: {
   candidate: DecoratedShortlistCandidate;
   number: number;
@@ -242,12 +335,34 @@ function ShortlistCard({
   enrichment: EnrichItem | null;
   enrichState: EnrichState["status"];
   onSnapshotClick: (candidate: DecoratedShortlistCandidate) => void;
+  dossierOverlay: DossierOverlay | null;
+  onParcelDetails: (
+    candidate: DecoratedShortlistCandidate,
+    opener: HTMLButtonElement,
+  ) => void;
 }) {
-  const viewerUrl = cookViewerUrl(candidate.pin);
-  const assessorUrl = assessorRecordUrl(candidate.pin);
-  const clerkUrl = clerkRecordsUrl(candidate.pin);
+  const effectivePin = dossierOverlay?.resolution.status === "resolved"
+    ? dossierOverlay.resolution.pin
+    : candidate.pin;
+  const viewerUrl = cookViewerUrl(effectivePin);
+  const assessorUrl = assessorRecordUrl(effectivePin);
+  const clerkUrl = clerkRecordsUrl(effectivePin);
+  const mapsUrl = googleMapsSearchUrl({
+    address: candidate.address,
+    lat: candidate.lat,
+    lon: candidate.lon,
+    zip,
+  });
+  const currentFacts = dossierOverlay?.enrichment.status === "checked"
+    ? dossierOverlay.enrichment.facts
+    : enrichment;
+  const currentEnrichState: EnrichState["status"] = dossierOverlay?.enrichment.status === "loading"
+    ? "loading"
+    : dossierOverlay?.enrichment.status === "unavailable"
+      ? "error"
+      : enrichState;
   const showAccessibility = candidate.propertyType === "vacant_building";
-  const accessibility = showAccessibility ? accessibilityNoteFor(enrichment?.countyClass ?? null) : null;
+  const accessibility = showAccessibility ? accessibilityNoteFor(currentFacts?.countyClass ?? null) : null;
 
   const flags: string[] = [];
   if (candidate.saleYear) flags.push(taxSaleFlag(candidate.saleYear));
@@ -288,10 +403,12 @@ function ShortlistCard({
             {titleCase(candidate.address)}
           </h3>
           <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
-            {formatPin14(candidate.pin) ? `PIN ${formatPin14(candidate.pin)}` : "No PIN on this record"}
+            {formatPin14(effectivePin)
+              ? `PIN ${formatPin14(effectivePin)}${dossierOverlay?.resolution.status === "resolved" && dossierOverlay.resolution.pinSource === "coordinate_exact" ? " · resolved from current County parcel" : ""}`
+              : "PIN not published in saved shortlist snapshot"}
             {" · "}
             {candidate.zoningDistrict ? `Zoned ${candidate.zoningDistrict}` : "Zoning unresolved"}
-            {enrichment?.classGloss ? ` · ${enrichment.classGloss}` : ""}
+            {currentFacts?.classGloss ? ` · ${currentFacts.classGloss}` : ""}
           </p>
         </div>
         <ZoneBadge badge={candidate.badge} />
@@ -300,11 +417,11 @@ function ShortlistCard({
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Fact
           label={candidate.propertyType === "vacant_building" ? "Building" : "Building (none)"}
-          value={countyAreaText(candidate.buildingSqft, enrichment, enrichState, "assessorBuildingSqft")}
+          value={countyAreaText(candidate.buildingSqft, currentFacts, currentEnrichState, "assessorBuildingSqft")}
         />
         <Fact
           label="Lot"
-          value={countyAreaText(candidate.lotSqft, enrichment, enrichState, "lotAreaSqft")}
+          value={countyAreaText(candidate.lotSqft, currentFacts, currentEnrichState, "lotAreaSqft")}
         />
         <Fact label="Owner type" value={candidate.ownerLabel} />
         <Fact
@@ -319,27 +436,11 @@ function ShortlistCard({
         />
         <Fact
           label="Assessed value"
-          value={
-            enrichState === "loading"
-              ? "Checking…"
-              : enrichment?.assessedValue != null
-                ? `${usd(enrichment.assessedValue)}${enrichment.assessedYear ? ` (${String(enrichment.assessedYear).slice(0, 4)}${enrichment.assessedStage ? ` · ${enrichment.assessedStage}` : ""})` : ""}`
-                : enrichState === "error" ||
-                    enrichment?.assessedValueStatus === "unavailable" ||
-                    (enrichment?.assessedValueStatus === undefined && enrichment?.enrichmentUnavailable)
-                  ? "Unavailable"
-                  : "Not published"
-          }
+          value={assessedValueCardText(currentFacts, currentEnrichState)}
         />
         <Fact
           label="Assessor-implied market"
-          value={
-            enrichState === "loading"
-              ? "Checking…"
-              : enrichment?.impliedMarketValue != null
-                ? `~${usd(enrichment.impliedMarketValue)}`
-                : "—"
-          }
+          value={impliedMarketValueCardText(currentFacts, currentEnrichState)}
         />
       </div>
 
@@ -413,6 +514,25 @@ function ShortlistCard({
         >
           Incentive snapshot
         </Link>
+        <button
+          type="button"
+          data-parcel-details
+          onClick={(event) => onParcelDetails(candidate, event.currentTarget)}
+          className="inline-flex min-h-11 items-center border border-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+        >
+          Parcel details
+        </button>
+        {mapsUrl ? (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${titleCase(candidate.address)} in Google Maps (opens in a new tab)`}
+            className="inline-flex min-h-11 items-center border border-[#0C1B33]/25 px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/70 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+          >
+            Google Maps
+          </a>
+        ) : null}
         {viewerUrl && (
           <a
             href={viewerUrl}
@@ -497,6 +617,11 @@ export default function SiteShortlistResults({
   const [familyFilter, setFamilyFilter] = useState("");
   const [districtTypeFilter, setDistrictTypeFilter] = useState("");
   const [exactZoningFilter, setExactZoningFilter] = useState("");
+  const [dossierByKey, setDossierByKey] = useState<Record<string, DossierOverlay>>({});
+  const [selectedDossierKey, setSelectedDossierKey] = useState<string | null>(null);
+  const dossierOpenerRef = useRef<HTMLButtonElement | null>(null);
+  const requestSequenceRef = useRef(0);
+  const latestRequestByKeyRef = useRef(new Map<string, number>());
 
   const familyOptions = useMemo(() => shortlistFamilyFilterOptions(ranked), [ranked]);
   const districtTypeOptions = useMemo(
@@ -635,12 +760,144 @@ export default function SiteShortlistResults({
     return () => controller.abort();
   }, [ranked, buildId]);
 
-  const byKey = enrich.status === "loaded" ? enrich.byKey : {};
+  const byKey = useMemo(
+    () => enrich.status === "loaded" ? enrich.byKey : {},
+    [enrich],
+  );
   const allUnavailable =
     enrich.status === "error" ||
     (enrich.status === "loaded" &&
       ranked.length > 0 &&
       ranked.every((candidate) => byKey[candidate.key]?.enrichmentUnavailable !== false));
+
+  const runParcelDossier = useCallback(
+    async (
+      candidate: DecoratedShortlistCandidate,
+      options: { retryResolution?: boolean; retryEnrichment?: boolean } = {},
+    ) => {
+      const requestId = ++requestSequenceRef.current;
+      latestRequestByKeyRef.current.set(candidate.key, requestId);
+      const isCurrent = () => latestRequestByKeyRef.current.get(candidate.key) === requestId;
+      const existing = dossierByKey[candidate.key];
+      const savedPin = normalizePin14(candidate.pin);
+      if (
+        !options.retryResolution &&
+        !options.retryEnrichment &&
+        existing?.resolution.status === "resolved" &&
+        existing.enrichment.status === "checked" &&
+        !existing.enrichment.sourceUnavailable
+      ) {
+        return;
+      }
+
+      const startingResolution = options.retryResolution
+        ? { status: "resolving" } as const
+        : existing?.resolution.status === "resolved"
+          ? existing.resolution
+          : savedPin
+            ? ({
+                status: "resolved",
+                pin: savedPin,
+                pinSource: "saved_snapshot",
+                source: "saved_shortlist_snapshot",
+                matchMethod: "published_pin",
+                checkedAt: null,
+              } as const)
+            : ({ status: "resolving" } as const);
+
+      setDossierByKey((current) => ({
+        ...current,
+        [candidate.key]: {
+          resolution: startingResolution,
+          enrichment:
+            startingResolution.status === "resolved"
+              ? { status: "loading" }
+              : { status: "not_requested" },
+        },
+      }));
+
+      const resolution =
+        startingResolution.status === "resolved"
+          ? startingResolution
+          : await resolveCandidateParcelIdentity(buildId, {
+              key: candidate.key,
+              pin: candidate.pin,
+              address: candidate.address,
+              lat: candidate.lat,
+              lon: candidate.lon,
+            });
+      if (!isCurrent()) return;
+      if (resolution.status !== "resolved") {
+        setDossierByKey((current) => ({
+          ...current,
+          [candidate.key]: { resolution, enrichment: { status: "not_requested" } },
+        }));
+        return;
+      }
+
+      const batchItem = byKey[candidate.key];
+      if (
+        !options.retryEnrichment &&
+        resolution.pinSource === "saved_snapshot" &&
+        batchItem &&
+        batchItem.countyClassStatus !== "not_requested"
+      ) {
+        setDossierByKey((current) => ({
+          ...current,
+          [candidate.key]: { resolution, enrichment: factsFromEnrichItem(batchItem) },
+        }));
+        return;
+      }
+
+      setDossierByKey((current) => ({
+        ...current,
+        [candidate.key]: { resolution, enrichment: { status: "loading" } },
+      }));
+      const enrichmentResult = await fetchCandidateParcelEnrichment(buildId, resolution.pin);
+      if (!isCurrent()) return;
+      setDossierByKey((current) => ({
+        ...current,
+        [candidate.key]: { resolution, enrichment: enrichmentResult },
+      }));
+    },
+    [buildId, byKey, dossierByKey],
+  );
+
+  const openParcelDossier = useCallback(
+    (candidate: DecoratedShortlistCandidate, opener: HTMLButtonElement) => {
+      dossierOpenerRef.current = opener;
+      setSelectedDossierKey(candidate.key);
+      void runParcelDossier(candidate);
+    },
+    [runParcelDossier],
+  );
+
+  const closeParcelDossier = useCallback(() => {
+    const key = selectedDossierKey;
+    setSelectedDossierKey(null);
+    requestAnimationFrame(() => {
+      const opener = dossierOpenerRef.current;
+      if (opener?.isConnected) {
+        opener.focus();
+        return;
+      }
+      if (!key) return;
+      document
+        .getElementById(shortlistCardDomId(key))
+        ?.querySelector<HTMLButtonElement>("[data-parcel-details]")
+        ?.focus();
+    });
+  }, [selectedDossierKey]);
+
+  const selectedDossierCandidate = selectedDossierKey
+    ? ranked.find((candidate) => candidate.key === selectedDossierKey) ?? null
+    : null;
+  const selectedDossierOverlay = selectedDossierCandidate
+    ? dossierByKey[selectedDossierCandidate.key] ?? {
+        resolution: { status: "not_checked" as const },
+        enrichment: { status: "not_checked" as const },
+      }
+    : null;
 
   function downloadCsv() {
     const facts: Record<string, ShortlistEnrichmentFacts> = {};
@@ -648,7 +905,13 @@ export default function SiteShortlistResults({
       const { key: _key, enrichmentUnavailable: _flag, ...rest } = item;
       facts[key] = rest;
     }
-    const blob = new Blob([shortlistCsv(ranked, facts)], {
+    for (const [key, overlay] of Object.entries(dossierByKey)) {
+      if (overlay.enrichment.status === "checked") facts[key] = overlay.enrichment.facts;
+    }
+    const resolutionStates = Object.fromEntries(
+      ranked.map((candidate) => [candidate.key, dossierByKey[candidate.key]?.resolution ?? { status: "not_checked" }]),
+    );
+    const blob = new Blob([shortlistCsv(ranked, facts, resolutionStates, zip)], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);
@@ -816,6 +1079,10 @@ export default function SiteShortlistResults({
         visibleCandidateKeys={visibleCandidateKeys}
         boundary={boundary}
         centroid={centroid}
+        onParcelDetails={(candidateKey, opener) => {
+          const candidate = ranked.find((row) => row.key === candidateKey);
+          if (candidate) openParcelDossier(candidate, opener);
+        }}
       />
 
       <section className="mt-10">
@@ -892,6 +1159,8 @@ export default function SiteShortlistResults({
                 enrichment={byKey[candidate.key] ?? null}
                 enrichState={enrich.status}
                 onSnapshotClick={handleSnapshotClick}
+                dossierOverlay={dossierByKey[candidate.key] ?? null}
+                onParcelDetails={openParcelDossier}
               />
             ))}
           </ul>
@@ -906,6 +1175,21 @@ export default function SiteShortlistResults({
         Long-vacant and distressed buildings frequently trade well below these figures, and exempt
         parcels carry no convertible assessment at all.
       </p>
+      {selectedDossierCandidate && selectedDossierOverlay ? (
+        <ParcelDossierDialog
+          row={dossierRecord(selectedDossierCandidate, selectedDossierOverlay.resolution)}
+          zip={zip}
+          resolution={selectedDossierOverlay.resolution}
+          enrichment={selectedDossierOverlay.enrichment}
+          onClose={closeParcelDossier}
+          onRetry={() => {
+            void runParcelDossier(selectedDossierCandidate, { retryEnrichment: true });
+          }}
+          onRetryResolution={() => {
+            void runParcelDossier(selectedDossierCandidate, { retryResolution: true });
+          }}
+        />
+      ) : null}
     </div>
   );
 }

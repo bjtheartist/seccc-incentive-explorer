@@ -183,6 +183,16 @@ export function impliedMarketValue(
 
 export const IMPLIED_VALUE_CAPTION = "screening ballpark, not an appraisal";
 
+/** Cook County occasionally serializes a tax year as a decimal-looking string
+ * (for example `2026.0`). Preserve unusual source text, but present that known
+ * whole-year encoding as the calendar year users expect. */
+export function assessedYearLabel(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+  const wholeYear = /^(\d{4})\.0+$/.exec(trimmed);
+  return wholeYear?.[1] ?? trimmed;
+}
+
 // ── Owner axes ───────────────────────────────────────────────────────────────
 
 const OWNER_STRUCTURE_LABELS: Record<string, string> = {

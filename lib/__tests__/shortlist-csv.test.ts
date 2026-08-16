@@ -146,7 +146,7 @@ describe("shortlistCsv", () => {
         activeLicenses: [],
       },
     });
-    expect(unavailableClass.split("\n")[1].split(",").slice(5, 17)).toEqual([
+    expect(unavailableClass.split("\n")[1].split(",").slice(7, 19)).toEqual([
       "Unavailable",
       "Unavailable",
       "Unavailable",
@@ -179,7 +179,7 @@ describe("shortlistCsv", () => {
         activeLicenses: [],
       },
     });
-    expect(unavailableAssessment.split("\n")[1].split(",").slice(5, 17)).toEqual([
+    expect(unavailableAssessment.split("\n")[1].split(",").slice(7, 19)).toEqual([
       "517",
       "Available",
       "Commercial building",
@@ -224,6 +224,87 @@ describe("shortlistCsv", () => {
 
   it("returns just the header for an empty candidate list", () => {
     expect(shortlistCsv([]).split("\n")).toHaveLength(1);
+  });
+
+  it("keeps saved and exact-current PIN provenance separate while exporting County and Google Maps links", () => {
+    const row = candidate({ key: "coordinate-row", pin: null, address: "3040 S HOMAN AVE" });
+    const csv = shortlistCsv(
+      [row],
+      {},
+      {
+        [row.key]: {
+          status: "resolved",
+          pin: "16264270400000",
+          pinSource: "coordinate_exact",
+          source: "cook_county_current_parcels",
+          matchMethod: "exact_intersection",
+          checkedAt: "2026-08-15T20:00:00.000Z",
+        },
+      },
+      "60623",
+    );
+    const line = csv.split("\n")[1];
+    expect(line).toContain(",,16-26-427-040-0000,Current County parcel resolved by exact map-point intersection,");
+    expect(line).toContain("https://maps.cookcountyil.gov/cookviewer/?pin14=16264270400000");
+    expect(line).toContain("https://www.cookcountyassessoril.gov/pin/16264270400000");
+    expect(line).toContain("https://crs.cookcountyclerkil.gov/Search/ResultByPin?id1=16264270400000");
+    expect(line).toContain("query=3040+S+HOMAN+AVE%2C+Chicago%2C+IL+60623");
+  });
+
+  it("exports Google Maps without a PIN and does not imply a County lookup occurred", () => {
+    const row = candidate({ key: "unchecked-row", pin: null, address: "3040 S HOMAN AVE" });
+    const csv = shortlistCsv([row], {}, {}, "60623");
+    expect(csv).toContain("Not checked");
+    expect(csv).toContain("query=3040+S+HOMAN+AVE%2C+Chicago%2C+IL+60623");
+    expect(csv).not.toContain("Current County parcel resolved by exact map-point intersection");
+  });
+
+  it("exports leading-zero PINs as dashed text-safe identities for saved and exact-current records", () => {
+    const saved = candidate({ key: "saved-leading-zero", pin: "01-23-456-789-0000" });
+    const current = candidate({ key: "current-leading-zero", pin: null, address: "3040 S HOMAN AVE" });
+    const csv = shortlistCsv(
+      [saved, current],
+      {},
+      {
+        [current.key]: {
+          status: "resolved",
+          pin: "01234567890000",
+          pinSource: "coordinate_exact",
+          source: "cook_county_current_parcels",
+          matchMethod: "exact_intersection",
+          checkedAt: "2026-08-15T20:00:00.000Z",
+        },
+      },
+      "60623",
+    );
+    const [, savedLine, currentLine] = csv.split("\n");
+    expect(savedLine).toContain(",01-23-456-789-0000,01-23-456-789-0000,Published in saved shortlist snapshot,");
+    expect(currentLine).toContain(",,01-23-456-789-0000,Current County parcel resolved by exact map-point intersection,");
+    expect(csv).not.toMatch(/,01234567890000,/);
+    expect(csv).toContain("pin14=01234567890000");
+  });
+
+  it("does not let a truthy malformed saved PIN bypass the unresolved export state", () => {
+    const row = candidate({ key: "bad-pin", pin: "not-a-pin", address: "3040 S HOMAN AVE" });
+    const csv = shortlistCsv([row], {}, {}, "60623");
+    const line = csv.split("\n")[1];
+    expect(line).toContain("3040 S HOMAN AVE,,,Not checked,");
+    expect(line).not.toContain("Published in saved shortlist snapshot");
+    expect(line).not.toContain("not-a-pin");
+    expect(line).toContain("query=3040+S+HOMAN+AVE%2C+Chicago%2C+IL+60623");
+  });
+
+  it("preserves exactly 20 ranked rows and neutralizes formula-leading source text", () => {
+    const rows = Array.from({ length: 20 }, (_, index) =>
+      candidate({
+        key: `row-${index + 1}`,
+        address: index === 0 ? '=HYPERLINK("https://attacker.invalid")' : `${index + 1} TEST ST`,
+      }),
+    );
+    const csv = shortlistCsv(rows, {}, {}, "60623");
+    expect(csv.split("\n")).toHaveLength(21);
+    expect(csv.split("\n")[1]).toContain("'=");
+    expect(csv.split("\n")[20].startsWith("20,")).toBe(true);
   });
 
   // ── DEMOTED (round 3): this test proves shortlistCsv's OWN serialization
