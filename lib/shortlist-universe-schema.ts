@@ -20,6 +20,7 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { normalizePin14 } from "./cook-viewer";
 import { normalizePublishedArea } from "./published-area";
 
 /**
@@ -168,7 +169,9 @@ export const PublishedAreaSchema = z.preprocess(
 
 export const ShortlistUniverseRowSchema = z.object({
   canonicalKey: z.string().min(1),
-  pin: z.string().nullable(),
+  pin: z.string().refine((pin) => normalizePin14(pin) !== null, {
+    message: "PIN must be a 14-digit Cook County parcel identifier",
+  }).nullable(),
   address: z.string().nullable(),
   lat: z.number().nullable(),
   lon: z.number().nullable(),

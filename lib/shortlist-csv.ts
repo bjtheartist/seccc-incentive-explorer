@@ -16,13 +16,23 @@ import {
   type DecoratedShortlistCandidate,
   type ZoningBadge,
 } from "./shortlist-engine";
-import type { ShortlistEnrichmentFacts } from "./site-shortlist";
-import { assessorRecordUrl, clerkRecordsUrl, cookViewerUrl } from "./cook-viewer";
+import { assessedYearLabel, type ShortlistEnrichmentFacts } from "./site-shortlist";
+import {
+  assessorRecordUrl,
+  clerkRecordsUrl,
+  cookViewerUrl,
+  formatPin14,
+  normalizePin14,
+} from "./cook-viewer";
+import { googleMapsSearchUrl } from "./google-maps";
+import type { CandidateParcelResolution } from "./site-matchmaker-parcel-resolution";
 
 export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Rank",
   "Address",
-  "PIN",
+  "Saved shortlist PIN",
+  "Current resolved PIN",
+  "Current parcel resolution state",
   "Zoning district",
   "Zoning badge",
   "County class",
@@ -53,6 +63,7 @@ export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "CookViewer parcel details",
   "Cook County Assessor property record",
   "Cook County Clerk recorded documents",
+  "Google Maps",
   "Screening score",
 ];
 
@@ -158,11 +169,34 @@ function areaField(
 export function shortlistCsv(
   candidates: readonly DecoratedShortlistCandidate[],
   enrichment: Readonly<Record<string, ShortlistEnrichmentFacts>> = {},
+  resolutions: Readonly<Record<string, CandidateParcelResolution>> = {},
+  zip?: string,
 ): string {
   const lines = [SHORTLIST_CSV_HEADERS.map(csvCell).join(",")];
 
   candidates.forEach((candidate, index) => {
     const facts = enrichment[candidate.key];
+    const resolution = resolutions[candidate.key] ?? { status: "not_checked" };
+    const savedPin = normalizePin14(candidate.pin);
+    const effectivePin = resolution.status === "resolved" ? resolution.pin : savedPin;
+    const resolutionState = savedPin
+      ? "Published in saved shortlist snapshot"
+      : resolution.status === "resolved"
+        ? "Current County parcel resolved by exact map-point intersection"
+        : resolution.status === "no_match"
+          ? resolution.reason === "invalid_location"
+            ? "No usable Chicago map point"
+            : "No exact address-matched County parcel found"
+          : resolution.status === "ambiguous"
+            ? `Ambiguous — ${resolution.candidateCount} intersecting parcel records`
+            : resolution.status === "unavailable"
+              ? "County parcel lookup unavailable"
+              : resolution.status === "malformed"
+                ? "County parcel lookup malformed"
+                : resolution.status === "resolving"
+                  ? "Resolving current County parcel"
+                  : "Not checked";
+    const unresolvedLinkState = resolutionState;
     const countyClassState = fieldStateLabel(
       facts?.countyClassStatus,
       facts !== undefined,
@@ -189,7 +223,9 @@ export function shortlistCsv(
       [
         index + 1,
         candidate.address,
-        candidate.pin ?? "",
+        formatPin14(savedPin) ?? "",
+        formatPin14(effectivePin) ?? "",
+        resolutionState,
         candidate.zoningDistrict ?? "",
         ZONING_BADGE_CSV_LABEL[candidate.badge],
         fieldValue(facts?.countyClassStatus, facts !== undefined, facts?.countyClass),
@@ -200,7 +236,7 @@ export function shortlistCsv(
         lotArea.value,
         lotArea.state,
         fieldValue(facts?.assessedValueStatus, facts !== undefined, facts?.assessedValue),
-        assessmentState === "Available" ? (facts?.assessedYear ?? "Not published") : assessmentState,
+        assessmentState === "Available" ? (assessedYearLabel(facts?.assessedYear) ?? "Not published") : assessmentState,
         assessmentState === "Available" ? (facts?.assessedStage ?? "Not published") : assessmentState,
         assessmentState,
         assessmentState === "Available" ? (facts?.impliedMarketValue ?? "Not published") : assessmentState,
@@ -227,9 +263,15 @@ export function shortlistCsv(
         candidate.saleYear ?? "",
         candidate.violation ? "Yes" : "",
         (facts?.activeLicenses ?? []).map((license) => license.name).join("; "),
-        cookViewerUrl(candidate.pin) ?? "PIN needs verification",
-        assessorRecordUrl(candidate.pin) ?? "PIN needs verification",
-        clerkRecordsUrl(candidate.pin) ?? "PIN needs verification",
+        cookViewerUrl(effectivePin) ?? unresolvedLinkState,
+        assessorRecordUrl(effectivePin) ?? unresolvedLinkState,
+        clerkRecordsUrl(effectivePin) ?? unresolvedLinkState,
+        googleMapsSearchUrl({
+          address: candidate.address,
+          lat: candidate.lat,
+          lon: candidate.lon,
+          zip,
+        }) ?? "Location unavailable",
         candidate.score,
       ]
         .map(csvCell)

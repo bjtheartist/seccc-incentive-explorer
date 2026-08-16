@@ -33,6 +33,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import mapboxgl from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics-events";
+import { googleMapsSearchUrl } from "@/lib/google-maps";
 import {
   BADGE_PIN_COLORS,
   INFRASTRUCTURE_LAYERS,
@@ -67,6 +68,7 @@ const PIN_DISC_LAYER = "shortlist-pin-disc";
 const PIN_NUMBER_LAYER = "shortlist-pin-number";
 
 const JUMP_ATTR = "data-shortlist-jump";
+const DETAILS_ATTR = "data-shortlist-parcel-details";
 
 const NARROW_QUERY = "(max-width: 640px)";
 
@@ -98,6 +100,7 @@ export interface SiteShortlistMapProps {
   /** Simplified ZIP ring + bbox from the vacancy edition; null renders no outline. */
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
+  onParcelDetails?: (candidateKey: string, opener: HTMLButtonElement) => void;
 }
 
 function isZoningBadge(value: unknown): value is ZoningBadge {
@@ -105,7 +108,7 @@ function isZoningBadge(value: unknown): value is ZoningBadge {
 }
 
 /** The pin popup: address, badge, and the jump. */
-function pinPopupHtml(props: Record<string, unknown>): string {
+export function siteShortlistPinPopupHtml(props: Record<string, unknown>): string {
   const number = Number(props.markerNumber);
   const badge: ZoningBadge = isZoningBadge(props.badge) ? props.badge : "unresolved";
   const address = typeof props.address === "string" ? props.address : "This record";
@@ -115,6 +118,8 @@ function pinPopupHtml(props: Record<string, unknown>): string {
       : null;
   const zoningBadge = typeof props.zoningBadge === "string" ? props.zoningBadge : ZONING_BADGE_LABELS.unresolved;
   const domId = typeof props.domId === "string" ? props.domId : "";
+  const candidateKey = typeof props.key === "string" ? props.key : "";
+  const googleMapsUrl = typeof props.googleMapsUrl === "string" ? props.googleMapsUrl : null;
   const color = BADGE_PIN_COLORS[badge].color;
 
   return `<div style="font-family:Inter,sans-serif;min-width:210px;max-width:280px">
@@ -126,10 +131,39 @@ function pinPopupHtml(props: Record<string, unknown>): string {
     <div style="margin-top:8px">
       <span style="display:inline-block;border:1px solid ${color};color:${color};padding:2px 6px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(zoningBadge)}</span>
     </div>
-    <button type="button" ${JUMP_ATTR}="${escapeHtml(domId)}" style="margin-top:10px;background:none;border:none;padding:0;color:#2563EB;font-size:11px;font-family:inherit;text-decoration:underline;cursor:pointer">
-      Jump to details ↓
-    </button>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+      <button type="button" ${DETAILS_ATTR}="${escapeHtml(candidateKey)}" style="min-height:44px;border:1px solid #2563EB;background:white;padding:8px 10px;color:#2563EB;font-size:10px;font-family:inherit;text-transform:uppercase;letter-spacing:.06em;cursor:pointer">Parcel details</button>
+      <button type="button" ${JUMP_ATTR}="${escapeHtml(domId)}" style="min-height:44px;background:none;border:none;padding:8px;color:#2563EB;font-size:11px;font-family:inherit;text-decoration:underline;cursor:pointer">Jump to card ↓</button>
+    </div>
+    ${googleMapsUrl ? `<a href="${escapeHtml(googleMapsUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open this location in Google Maps (opens in a new tab)" style="display:inline-flex;min-height:44px;align-items:center;margin-top:4px;color:#2563EB;font-size:11px">Google Maps ↗</a>` : ""}
   </div>`;
+}
+
+/** Build the popup destination from the candidate feature itself. Mapbox's
+ * click point can differ from the symbol's actual coordinate, especially on
+ * touch, so it must never become the Google Maps fallback for this record. */
+export function siteShortlistFeatureGoogleMapsUrl(
+  feature: {
+    properties?: Record<string, unknown> | null;
+    geometry?: { type?: unknown; coordinates?: unknown } | null;
+  },
+  zip?: string | null,
+): string | null {
+  const coordinates = feature.geometry?.type === "Point"
+    ? feature.geometry.coordinates
+    : null;
+  const lon = Array.isArray(coordinates) && typeof coordinates[0] === "number"
+    ? coordinates[0]
+    : null;
+  const lat = Array.isArray(coordinates) && typeof coordinates[1] === "number"
+    ? coordinates[1]
+    : null;
+  return googleMapsSearchUrl({
+    address: typeof feature.properties?.address === "string" ? feature.properties.address : null,
+    lat,
+    lon,
+    zip,
+  });
 }
 
 /** Name-on-hover for every overlay. One popup instance, moved and refilled. */
@@ -146,11 +180,16 @@ export default function SiteShortlistMap({
   visibleCandidateKeys,
   boundary,
   centroid,
+  onParcelDetails = () => {},
 }: SiteShortlistMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const pinPopupRef = useRef<mapboxgl.Popup | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const onParcelDetailsRef = useRef(onParcelDetails);
+  useEffect(() => {
+    onParcelDetailsRef.current = onParcelDetails;
+  }, [onParcelDetails]);
 
   // Collapsed on narrow viewports, expanded on desktop — but only until the
   // reader says otherwise. Once they toggle it, their choice wins and the
@@ -281,7 +320,10 @@ export default function SiteShortlistMap({
         pinPopupRef.current?.remove();
         const popup = new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
           .setLngLat(event.lngLat)
-          .setHTML(pinPopupHtml(feature.properties ?? {}))
+          .setHTML(siteShortlistPinPopupHtml({
+            ...(feature.properties ?? {}),
+            googleMapsUrl: siteShortlistFeatureGoogleMapsUrl(feature, zip),
+          }))
           .addTo(map);
         pinPopupRef.current = popup;
         popup.on("close", () => {
@@ -299,6 +341,11 @@ export default function SiteShortlistMap({
           // the scroll, rather than somewhere in a wall of near-identical ones.
           target.setAttribute("data-shortlist-focused", "true");
           window.setTimeout(() => target.removeAttribute("data-shortlist-focused"), 2200);
+        });
+        const parcelDetails = popup.getElement()?.querySelector<HTMLButtonElement>(`[${DETAILS_ATTR}]`);
+        parcelDetails?.addEventListener("click", () => {
+          const candidateKey = parcelDetails.getAttribute(DETAILS_ATTR) ?? "";
+          if (candidateKey) onParcelDetailsRef.current(candidateKey, parcelDetails);
         });
       });
       map.on("mouseenter", PIN_DISC_LAYER, () => {
@@ -321,7 +368,7 @@ export default function SiteShortlistMap({
     // Filtering updates the existing GeoJSON source below. Reinitialization is
     // limited to an explicit close/reopen so a mobile-first collapsed panel
     // gets a real map when the reader opens it.
-  }, [token, open]);
+  }, [token, open, zip]);
 
   // ── Keep the pin source in step if the rendered set ever changes ──────────
   useEffect(() => {

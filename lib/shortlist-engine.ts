@@ -88,6 +88,8 @@ import type { EvidenceType, ShortlistUniverseRow } from "./shortlist-universe-sc
 import type { SiteMatchCriteria, SiteProjectUse } from "./site-matchmaker";
 import { RECORD_COMPLETENESS_WEIGHTS, shortlistCriteriaByBehavior } from "./shortlist-criteria";
 import { normalizePublishedArea } from "./published-area";
+import { classifyOwnerSector, type OwnerSector } from "./owner-sector";
+import { normalizeOwnerStructure, type OwnerStructure } from "./owner-taxonomy";
 import {
   approxDistanceMeters,
   isCtaStation,
@@ -648,6 +650,9 @@ export interface RankedShortlistCandidate {
   badge: ZoningBadge;
   badgeNote: string;
   ownerLabel: string;
+  /** Public-safe ownership axes retained separately for the shared parcel dossier. */
+  ownerSector?: OwnerSector;
+  ownerStructure?: OwnerStructure;
   /** review6 S12 (CRITICAL): stays `number | null`, never coerced. `null`
    *  means the universe row itself never resolved a count (12,216 of
    *  31,296 committed rows) — collapsing that into `0` at this boundary is
@@ -881,6 +886,8 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       badge,
       badgeNote: zoningBadgeNote(badge, row.zoning.district),
       ownerLabel: ownerAxesLabel(row.ownerStructure ?? "unresolved", row.ownerGeography ?? "unknown"),
+      ownerSector: classifyOwnerSector({ ownerStructure: row.ownerStructure }),
+      ownerStructure: normalizeOwnerStructure(row.ownerStructure),
       // review6 S12: no `?? 0` — a null count must stay null all the way to
       // the renderer, not be silently promoted to a trusted zero.
       incentiveCount: row.incentiveCount,

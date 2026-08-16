@@ -161,6 +161,12 @@ describe("ShortlistUniverseFileSchema", () => {
     expect(ShortlistUniverseFileSchema.safeParse(bad).success).toBe(false);
   });
 
+  it("rejects a truthy string that is not a valid 14-digit Cook County PIN", () => {
+    const file = validFile();
+    const bad = { ...file, rows: [{ ...file.rows[0], pin: "not-a-pin" }] };
+    expect(ShortlistUniverseFileSchema.safeParse(bad).success).toBe(false);
+  });
+
   it("rejects an overlay membership that is a bare boolean (pre-v2 shape) — Finding 12", () => {
     const file = validFile();
     const bad = {
