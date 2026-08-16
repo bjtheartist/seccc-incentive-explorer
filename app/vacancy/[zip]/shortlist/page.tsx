@@ -53,33 +53,24 @@ import {
   buildShortlistHref,
   buildSiteMatchmakerHref,
   decodeSiteMatchCriteria,
+  SITE_MATCH_CRITERIA_PARAM_KEYS,
+  SITE_MATCH_VERSION_PARAM_KEYS,
   isSiteMatchCriteriaReady,
   shortlistRankingModelVersionSupported,
   siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
   type SiteMatchCriteria,
 } from "@/lib/site-matchmaker";
-import { selectedNonScoringCriteria } from "@/lib/shortlist-criteria";
+import { nonScoringCriterionSuffix, selectedNonScoringCriteria } from "@/lib/shortlist-criteria";
 import ShortlistFunnelEvent from "@/components/vacancy/ShortlistFunnelEvent";
 import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
 
 export const dynamic = "force-dynamic";
 
 /** The canonical `sm_*` criteria parameters, plus the ZIP from the route. */
-const CRITERIA_PARAMS = [
-  "sm_v",
-  "sm_rv",
-  "sm_use",
-  "sm_property",
-  "sm_min_sqft",
-  "sm_max_sqft",
-  "sm_context",
-  "sm_transport",
-  "sm_transport_distance",
-  "sm_walkability",
-  "sm_pedestrian_activity",
-  "sm_amenities",
-] as const;
+// Derived from lib/site-matchmaker.ts so a new `sm_*` criterion can never be
+// silently dropped here before decoding (sm_zoning was, once).
+const CRITERIA_PARAMS = [...SITE_MATCH_VERSION_PARAM_KEYS, ...SITE_MATCH_CRITERIA_PARAM_KEYS] as const;
 
 type ShortlistSearchParams = Record<string, string | string[] | undefined>;
 
@@ -236,6 +227,10 @@ const FUNNEL_STAGES: { key: keyof ShortlistFunnelStats; label: string; note?: st
   },
   { key: "insideBand", label: "Inside your size band (or no band set)" },
   { key: "survivingTransitScreen", label: "Surviving the transit screen (or none configured)" },
+  {
+    key: "survivingZoningScreen",
+    label: "Surviving the zoning-alignment screen (or none configured)",
+  },
 ];
 
 /** The zero-result funnel (PR2 spec, consult Q6.5). Renders the REAL
@@ -443,7 +438,27 @@ export default async function SiteShortlistPage({
     summary.footprint,
     summary.transportation,
     summary.transportationDistance,
+    summary.zoningAlignment,
   ].filter((chip) => chip && !/not selected$|^Flexible /.test(chip));
+
+  // The ordering keys changed on BOTH paths (zoning-alignment-rank): zoning
+  // alignment is the PRIMARY key on the unscored path (ahead of record
+  // completeness) and a TIEBREAK on the scored path (after transit score) —
+  // but ONLY once a project use is selected (isSiteMatchCriteriaReady
+  // already requires one to reach this page, so this is always true here;
+  // the conditional stays explicit rather than assumed, matching how the
+  // engine itself guards `zoningAlignmentRank`). "Then ranked." alone would
+  // now be an incomplete claim whenever a score tie exists — the tiebreak
+  // is a real, sometimes decisive step, not a footnote.
+  const scoredOrderClause = criteria.projectUse
+    ? "then ranked (aligned zoning breaking ties)."
+    : "then ranked.";
+  const scoredHighestFirstClause = criteria.projectUse
+    ? "highest-ranked first, aligned zoning breaking ties."
+    : "highest-ranked first.";
+  const unscoredOrderLabel = criteria.projectUse
+    ? "ordered by zoning alignment, then record completeness"
+    : "ordered by record completeness";
 
   // REGISTRY-UI BINDING: every selected criterion the engine cannot screen
   // or score on gets its own honest label here, in the registry's own words
@@ -461,6 +476,7 @@ export default async function SiteShortlistPage({
     walkability: criteria.walkability != null,
     pedestrianActivity: criteria.pedestrianActivity != null,
     amenities: criteria.amenities,
+    zoningAlignment: criteria.zoningAlignment === "aligned-only",
   });
 
   return (
@@ -476,17 +492,16 @@ export default async function SiteShortlistPage({
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
           Screened from this area&rsquo;s complete tracked vacant-property universe against your
-          brief{scored ? ", then ranked." : ", then ordered by record completeness."} These are
+          brief, {scored ? scoredOrderClause : `then ${unscoredOrderLabel}.`} These are
           early possibilities from public records, not availability listings — no record here is
           offered for sale or lease.
           {allRanked.length > ranked.length && (
             <>
               {" "}
               {allRanked.length.toLocaleString("en-US")} records cleared the screens; {ranked.length}{" "}
-              are shown
-              {scored
-                ? ", highest-ranked first."
-                : ", ordered by record completeness — add a transit criterion to rank by fit."}
+              are shown, {scored
+                ? scoredHighestFirstClause
+                : `${unscoredOrderLabel} — add a transit criterion to rank by fit.`}
             </>
           )}
         </p>
@@ -522,7 +537,7 @@ export default async function SiteShortlistPage({
                 <li key={entry.id} className="text-[12px] leading-relaxed text-[#0C1B33]/55">
                   <span className="font-semibold text-[#0C1B33]/70">
                     {entry.label}
-                    {entry.behavior === "display-only" ? " (shown, not scored)" : " (not supported)"}:
+                    {nonScoringCriterionSuffix(entry.behavior)}:
                   </span>{" "}
                   {entry.explanation}
                 </li>

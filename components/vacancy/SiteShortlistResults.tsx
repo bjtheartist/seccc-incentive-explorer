@@ -730,6 +730,7 @@ export default function SiteShortlistResults({
       walkability: criteria.walkability != null,
       pedestrianActivity: criteria.pedestrianActivity != null,
       amenities: criteria.amenities,
+      zoningAlignment: criteria.zoningAlignment === "aligned-only",
     });
     trackEvent("site_shortlist_generated", {
       source: source ?? "site-shortlist",

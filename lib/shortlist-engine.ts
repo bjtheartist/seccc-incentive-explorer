@@ -79,14 +79,41 @@
  * committed per-ZIP context snapshot) is plain data the server page reads
  * and hands in.
  *
- * DETERMINISM: on the scored path, score descending then canonicalKey
- * ascending; on the unscored path, recordCompletenessScore descending then
- * canonicalKey ascending — never address, which is not unique.
+ * ZONING-ALIGNMENT-RANK (this round): `zoningBadgeFor` used to be purely
+ * DISPLAY-ONLY — it never screened or ordered. Two changes:
+ *   - ORDER (always on, no opt-in required): zoning-family alignment
+ *     (aligned=0, planned-development=1, not-aligned=2, unresolved=3) is now
+ *     the PRIMARY ordering key on the unscored path (ahead of
+ *     recordCompletenessScore, which remains the secondary key), and a
+ *     TIEBREAK on the scored path (after `score`, before the canonicalKey
+ *     tiebreak). See `zoningAlignmentRank`. Guarded so that with NO
+ *     projectUse selected, every candidate ranks identically here — the
+ *     order is byte-identical to before this change (`zoningBadgeFor`
+ *     cannot make a real alignment read without a use to compare against).
+ *   - SCREEN (opt-in, `criteria.zoningAlignment === "aligned-only"`, AND
+ *     only when a projectUse is also selected): drops `not-aligned` and
+ *     `unresolved` candidates, keeps `aligned` and `planned-development` (a
+ *     PD/PMD may or may not permit the project — this screen cannot tell,
+ *     so it is kept rather than dropped). See
+ *     `SCREEN_HANDLERS["zoning-alignment"]`. With no projectUse selected the
+ *     screen is a no-op PASS, exactly like every other registry SCREEN
+ *     handler when its criterion is not actually configured.
+ * Neither change adds a field to `RankedShortlistCandidate` — both read the
+ * `badge` field the engine already computes for display.
+ *
+ * DETERMINISM: on the scored path, score descending, then zoning-alignment
+ * rank ascending, then canonicalKey ascending; on the unscored path,
+ * zoning-alignment rank ascending, then recordCompletenessScore descending,
+ * then canonicalKey ascending — never address, which is not unique.
  */
 
 import type { EvidenceType, ShortlistUniverseRow } from "./shortlist-universe-schema";
 import type { SiteMatchCriteria, SiteProjectUse } from "./site-matchmaker";
-import { RECORD_COMPLETENESS_WEIGHTS, shortlistCriteriaByBehavior } from "./shortlist-criteria";
+import {
+  RECORD_COMPLETENESS_WEIGHTS,
+  shortlistCriteriaByBehavior,
+  shortlistCriterionById,
+} from "./shortlist-criteria";
 import { normalizePublishedArea } from "./published-area";
 import { classifyOwnerSector, type OwnerSector } from "./owner-sector";
 import { normalizeOwnerStructure, type OwnerStructure } from "./owner-taxonomy";
@@ -272,6 +299,35 @@ export function zoningBadgeNote(badge: ZoningBadge, districtCode?: string | null
     case "unresolved":
       return "District unresolved; no zoning screen was performed.";
   }
+}
+
+/** Zoning-alignment ORDER key (zoning-alignment-rank change): aligned sorts
+ *  first, then the neutral site-specific PD/PMD badge, then not-aligned,
+ *  then unresolved — ascending, so it composes with `Array.prototype.sort`
+ *  the same way every other numeric key in this file does (smaller sorts
+ *  first). */
+export const ZONING_ALIGNMENT_ORDER: Readonly<Record<ZoningBadge, number>> = {
+  aligned: 0,
+  "planned-development": 1,
+  "not-aligned": 2,
+  unresolved: 3,
+};
+
+/**
+ * The zoning-alignment ORDER key for one candidate's already-computed
+ * badge. Returns a CONSTANT (0) for every candidate when no projectUse was
+ * selected — `zoningBadgeFor` cannot make a real alignment read without a
+ * use to compare against (it returns `"not-aligned"`/`"unresolved"`
+ * defensively, never `"aligned"`, per its own doc comment), so letting the
+ * raw badge drive ordering in that case would make an UNRELATED criterion
+ * (badge is otherwise display-only without a use) start moving candidates —
+ * exactly the criteria-independence violation this file's "NEGATIVE" test
+ * suite exists to catch. With projectUse present, this is simply
+ * `ZONING_ALIGNMENT_ORDER[badge]`.
+ */
+export function zoningAlignmentRank(projectUse: SiteProjectUse | null, badge: ZoningBadge): number {
+  if (!projectUse) return 0;
+  return ZONING_ALIGNMENT_ORDER[badge];
 }
 
 // ── Property type / footprint (screens) ─────────────────────────────────────
@@ -474,6 +530,19 @@ const SCREEN_HANDLERS: Readonly<Record<string, ScreenHandler>> = {
     const nearest = nearestStation(row.lat, row.lon, ctx.network.stations);
     return nearest != null && nearest.meters <= ctx.screenMeters;
   },
+  /** The opt-in `sm_zoning=aligned` screen (zoning-alignment-rank change) —
+   *  a no-op PASS unless BOTH `criteria.zoningAlignment === "aligned-only"`
+   *  AND a projectUse are selected (with no projectUse there is no real
+   *  badge to screen on; see `selectedNonScoringCriteria` in
+   *  lib/shortlist-criteria.ts for how the UI surfaces that inert case
+   *  honestly instead of silently doing nothing). Keeps `aligned` and
+   *  `planned-development` (a PD/PMD may or may not permit the project —
+   *  this broad screen cannot tell), drops `not-aligned` and `unresolved`. */
+  "zoning-alignment": (row, ctx) => {
+    if (ctx.criteria.zoningAlignment !== "aligned-only" || !ctx.criteria.projectUse) return true;
+    const badge = zoningBadgeFor(ctx.criteria.projectUse, row.zoning);
+    return badge === "aligned" || badge === "planned-development";
+  },
 };
 
 /** Registry-driven screen order — the registry's own SCREEN entries, in
@@ -485,6 +554,13 @@ const SCREEN_ORDER: readonly string[] = shortlistCriteriaByBehavior("screen").ma
  *  "metra"]` literal, so a registry change that adds/removes a SCORE
  *  criterion is enforced here, not just documented there. */
 const SCORE_CRITERION_IDS: readonly string[] = shortlistCriteriaByBehavior("score").map((entry) => entry.id);
+
+/** Registry-driven set of criteria that may drive the ORDER (not the numeric
+ *  score) in v1 — see the "ZONING-ALIGNMENT-RANK" note in this file's
+ *  header. Mirrors `SCORE_CRITERION_IDS`'s registry-driven-coverage pattern
+ *  exactly, for the same reason: a registry change that adds/removes an
+ *  ORDER criterion is enforced here, not just documented there. */
+const ORDER_CRITERION_IDS: readonly string[] = shortlistCriteriaByBehavior("order").map((entry) => entry.id);
 
 /**
  * Fails loud (throws) if the registry's declared SCREEN/SCORE criteria and
@@ -522,6 +598,35 @@ export function assertShortlistDispatchCoverage(): void {
         `shortlist-engine: registry SCORE entry "${id}" has no scoring implementation (only cta-rail/metra transit proximity exists in v1).`,
       );
     }
+  }
+  // v1 has exactly one ordering implementation — zoning-alignment-rank via
+  // `zoningAlignmentRank`/`ZONING_ALIGNMENT_ORDER` — which only understands
+  // the "project-use" id. A registry ORDER entry with any other id would
+  // silently order nothing; fail loud instead (mirrors the SCORE check
+  // immediately above).
+  for (const id of ORDER_CRITERION_IDS) {
+    if (id !== "project-use") {
+      throw new Error(
+        `shortlist-engine: registry ORDER entry "${id}" has no ordering implementation (only project-use zoning-alignment ordering exists in v1).`,
+      );
+    }
+  }
+  // Reverse direction (mirrors the SCREEN check's two-way coverage above):
+  // the engine's one ORDER implementation is hard-wired to "project-use"
+  // specifically (`zoningAlignmentRank` reads `criteria.projectUse` and
+  // every ranked candidate's `badge`) — if the registry's own "project-use"
+  // entry ever stopped declaring behavior "order" (reverted to
+  // "display-only", for instance), the engine would keep silently ordering
+  // by it while the registry/UI narrative claimed it had no ranking effect.
+  // `SCORE_CRITERION_IDS`/cta-rail+metra has no equivalent reverse check
+  // because that implementation is not keyed to one hard-coded id the way
+  // this one is — ORDER's single-id case makes the reverse check meaningful
+  // here in a way it would not be there.
+  const projectUseEntry = shortlistCriterionById("project-use");
+  if (!projectUseEntry || projectUseEntry.behavior !== "order") {
+    throw new Error(
+      `shortlist-engine: registry entry "project-use" must be declared behavior "order" — the engine orders every unscored-path/tiebreak comparison by its zoning-alignment rank (zoningAlignmentRank), but the registry declares ${projectUseEntry ? `behavior "${projectUseEntry.behavior}"` : "no such entry"}.`,
+    );
   }
 }
 
@@ -749,8 +854,19 @@ export interface ShortlistFunnelStats {
    *  absent a band) — can therefore exceed `withMeasuredArea`, which is the
    *  honest result of it being diagnostic-only. */
   insideBand: number;
-  /** REAL SCREEN — the final stage. Equals the ranked-list length. */
+  /** REAL SCREEN. Captured right after the transportation-distance screen
+   *  runs (Finding 6's original "final stage" point) — no longer literally
+   *  the funnel's last stage now that the opt-in zoning-alignment screen
+   *  (zoning-alignment-rank change) can narrow further after it; see
+   *  `survivingZoningScreen` below for the true final stage. Equals
+   *  `survivingZoningScreen` whenever the zoning-alignment screen did not
+   *  run (not selected, or selected without a projectUse). */
   survivingTransitScreen: number;
+  /** REAL SCREEN — the true final stage (zoning-alignment-rank change).
+   *  Equals the ranked-list length. Equals `survivingTransitScreen` when the
+   *  opt-in `sm_zoning=aligned` screen did not actually narrow anything
+   *  (not selected, or selected without a projectUse to screen against). */
+  survivingZoningScreen: number;
 }
 
 // ── Engine ───────────────────────────────────────────────────────────────────
@@ -793,6 +909,7 @@ const EMPTY_FUNNEL: ShortlistFunnelStats = {
   withMeasuredArea: 0,
   insideBand: 0,
   survivingTransitScreen: 0,
+  survivingZoningScreen: 0,
 };
 
 function trackedEvidenceCount(
@@ -868,15 +985,19 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
   // authoritative screening pipeline — not a subset hand-picked elsewhere.
   // "property-type" is already applied above (evidenceMatch is also the
   // funnel's own canonicalSites stage), so it is skipped here; the funnel's
-  // "insideBand" stage is captured right after "square-footage" runs,
-  // before "transportation-distance" narrows further.
+  // "insideBand" stage is captured right after "square-footage" runs, and
+  // "survivingTransitScreen" right after "transportation-distance" runs —
+  // both BEFORE the opt-in "zoning-alignment" screen (zoning-alignment-rank
+  // change) narrows further, since it is the LAST registry SCREEN entry.
   let candidates = evidenceMatch;
   let insideBandCount = evidenceMatch.length;
+  let survivingTransitScreenCount = evidenceMatch.length;
   for (const id of SCREEN_ORDER) {
     if (id === "property-type") continue;
     const handler = SCREEN_HANDLERS[id];
     candidates = candidates.filter((row) => handler(row, screenContext));
     if (id === "square-footage") insideBandCount = candidates.length;
+    if (id === "transportation-distance") survivingTransitScreenCount = candidates.length;
   }
 
   const survivingRows = candidates;
@@ -918,22 +1039,34 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
     };
   });
 
-  // Finding 13 (round 3): the SCORED path (a real transit network active)
-  // orders on `score` alone, exactly as before — recordCompletenessScore is
-  // computed on every candidate above but never consulted here. The
-  // UNSCORED path orders on recordCompletenessScore instead of a bare
-  // canonicalKey shuffle, so a reader gets a documented reason for the
-  // order rather than an arbitrary one — never a fit/quality claim (see
-  // recordCompletenessScore's own doc comment for what it deliberately
-  // excludes). Both paths tiebreak on canonicalKey ascending for final
+  // Finding 13 (round 3), extended by the zoning-alignment-rank change: the
+  // SCORED path (a real transit network active) orders on `score` first,
+  // recordCompletenessScore is computed on every candidate above but never
+  // consulted on this path. The UNSCORED path orders on the zoning-alignment
+  // rank FIRST (see `zoningAlignmentRank`), then recordCompletenessScore,
+  // instead of a bare canonicalKey shuffle, so a reader gets a documented
+  // reason for the order rather than an arbitrary one — never a fit/quality
+  // claim (see recordCompletenessScore's own doc comment for what it
+  // deliberately excludes). The zoning-alignment rank ALSO runs as a
+  // TIEBREAK on the scored path, after `score`, before the final
+  // canonicalKey tiebreak. With no projectUse selected, `zoningAlignmentRank`
+  // returns the same constant for every candidate, so it drops out of both
+  // comparisons and the order is byte-identical to before this criterion
+  // existed. Both paths tiebreak on canonicalKey ascending for final
   // stability.
   const canonicalKeyTiebreak = (a: RankedShortlistCandidate, b: RankedShortlistCandidate) =>
     a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  const zoningRank = (candidate: RankedShortlistCandidate) =>
+    zoningAlignmentRank(criteria.projectUse, candidate.badge);
   ranked.sort((a, b) =>
     network !== null
-      ? b.score - a.score || canonicalKeyTiebreak(a, b)
-      : b.recordCompletenessScore - a.recordCompletenessScore || canonicalKeyTiebreak(a, b),
+      ? b.score - a.score || zoningRank(a) - zoningRank(b) || canonicalKeyTiebreak(a, b)
+      : zoningRank(a) - zoningRank(b) ||
+        b.recordCompletenessScore - a.recordCompletenessScore ||
+        canonicalKeyTiebreak(a, b),
   );
+
+  const survivingZoningScreenCount = survivingRows.length;
 
   return {
     ranked,
@@ -943,7 +1076,8 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       withResolvedPin,
       withMeasuredArea,
       insideBand: insideBandCount,
-      survivingTransitScreen: survivingRows.length,
+      survivingTransitScreen: survivingTransitScreenCount,
+      survivingZoningScreen: survivingZoningScreenCount,
     },
     railDataUnavailable,
     scored: network !== null,

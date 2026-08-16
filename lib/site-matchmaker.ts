@@ -35,6 +35,19 @@ export type SiteTransportationDistance =
 
 export type SiteLocationPriority = "flexible" | "preferred" | "important";
 
+/**
+ * The opt-in zoning-alignment SCREEN (distinct from the always-on zoning
+ * ORDER key `zoningBadgeFor` already drives — see lib/shortlist-engine.ts's
+ * header). `"aligned-only"` is the only non-null value; anything else on the
+ * wire decodes to `null`. Screens out `not-aligned`/`unresolved` candidates
+ * ONLY when a project use is ALSO selected — with no project use there is no
+ * badge to screen on, so this criterion cannot act and must be treated as
+ * not-selected by the engine (see `SCREEN_HANDLERS["zoning-alignment"]`),
+ * while still being surfaced honestly to the reader as a selected-but-inert
+ * criterion (`selectedNonScoringCriteria` in lib/shortlist-criteria.ts).
+ */
+export type SiteZoningAlignment = "aligned-only";
+
 export type SiteAmenityNeed =
   | "restaurants-retail"
   | "grocery"
@@ -233,6 +246,7 @@ export interface SiteMatchCriteria {
   walkability: SiteLocationPriority | null;
   pedestrianActivity: SiteLocationPriority | null;
   amenities: readonly SiteAmenityNeed[];
+  zoningAlignment: SiteZoningAlignment | null;
 }
 
 export interface SiteMatchSummary {
@@ -246,6 +260,7 @@ export interface SiteMatchSummary {
   walkability: string;
   pedestrianActivity: string;
   amenities: string;
+  zoningAlignment: string;
 }
 
 const MIN_SQUARE_FEET = 100;
@@ -272,7 +287,35 @@ const PARAMS = {
   walkability: "sm_walkability",
   pedestrianActivity: "sm_pedestrian_activity",
   amenities: "sm_amenities",
+  /** The opt-in zoning-alignment screen. Only the literal value `"aligned"`
+   *  is recognized; absent or anything else decodes to `null` — never a
+   *  silent alias table, since this is a single boolean-shaped toggle. */
+  zoningAlignment: "sm_zoning",
 } as const;
+
+/**
+ * Every canonical `sm_*` CRITERIA key (not the version stamps, not `zip`).
+ * The shortlist page and the vacancy-map handoff copy ONLY these keys out of
+ * an incoming URL before decoding, so a criterion that is added to `PARAMS`
+ * but not to this list would silently decode as "not selected". Derived from
+ * `PARAMS` so it cannot drift; lib/__tests__/site-matchmaker.test.ts pins it.
+ */
+export const SITE_MATCH_CRITERIA_PARAM_KEYS = [
+  PARAMS.projectUse,
+  PARAMS.propertyType,
+  PARAMS.minSquareFeet,
+  PARAMS.maxSquareFeet,
+  PARAMS.context,
+  PARAMS.transportation,
+  PARAMS.transportationDistance,
+  PARAMS.walkability,
+  PARAMS.pedestrianActivity,
+  PARAMS.amenities,
+  PARAMS.zoningAlignment,
+] as const;
+
+/** The version stamps a shortlist handoff URL carries alongside the criteria. */
+export const SITE_MATCH_VERSION_PARAM_KEYS = [PARAMS.version, PARAMS.rankingModelVersion] as const;
 
 const PROJECT_USE_ALIASES = [PARAMS.projectUse, "project", "use"] as const;
 const PROPERTY_TYPE_ALIASES = [PARAMS.propertyType, "property", "propertyType"] as const;
@@ -304,6 +347,7 @@ export function createEmptySiteMatchCriteria(): SiteMatchCriteria {
     walkability: null,
     pedestrianActivity: null,
     amenities: [],
+    zoningAlignment: null,
   };
 }
 
@@ -380,6 +424,7 @@ export function normalizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
       SITE_LOCATION_PRIORITY_OPTIONS,
     ),
     amenities: normalizedList(criteria.amenities, SITE_AMENITY_OPTIONS),
+    zoningAlignment: criteria.zoningAlignment === "aligned-only" ? "aligned-only" : null,
   };
 }
 
@@ -421,8 +466,26 @@ export function siteMatchCriteriaVersionSupported(params: URLSearchParams): bool
  * imported from there — lib/site-matchmaker.ts is a foundational module
  * lib/shortlist-engine.ts itself depends on for criteria types, and a
  * reverse value import would form a real circular dependency.
+ *
+ * Bumped to "3" (zoning-alignment ordering: `zoningBadgeFor` becomes a
+ * primary/tiebreak ORDER key, plus the opt-in `sm_zoning=aligned` SCREEN)
+ * WITHOUT bumping `RANKING_MODEL_VERSION`/`RANKING_INPUTS_VERSION` — this is
+ * the one legitimate way the two constants may diverge, per the "convention,
+ * not an import" note above: this change reads only the `zoning` field the
+ * committed universe rows already publish (the same field `zoningBadgeFor`
+ * has always read for the badge), so no committed
+ * data/exports/shortlist-universe/*.json file's shape or ranking-INPUTS
+ * contract changed — only the ranking ALGORITHM applied to those same
+ * inputs. `RANKING_MODEL_VERSION` is a zod `z.literal` cross-check against
+ * every committed universe file's own `rankingInputsVersion`; bumping it
+ * would fail-closed every already-published ZIP until every file is
+ * regenerated, which this change does not warrant. `sm_rv` alone carries the
+ * "an old shared link's order may have changed" signal here — see the
+ * lockstep test in lib/__tests__/site-matchmaker.test.ts, updated to assert
+ * `sm_rv` never falls BEHIND the data version rather than requiring exact
+ * equality.
  */
-export const SHORTLIST_RANKING_MODEL_VERSION = "2";
+export const SHORTLIST_RANKING_MODEL_VERSION = "3";
 
 /**
  * Whether the `sm_rv` carried on a shortlist URL (if any) is one this build
@@ -469,6 +532,7 @@ export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCrite
       SITE_LOCATION_PRIORITY_OPTIONS,
     ),
     amenities: selectedValues(params, AMENITY_ALIASES, SITE_AMENITY_OPTIONS),
+    zoningAlignment: params.get(PARAMS.zoningAlignment) === "aligned" ? "aligned-only" : null,
   });
 }
 
@@ -497,6 +561,9 @@ export function encodeSiteMatchCriteria(criteria: SiteMatchCriteria): URLSearchP
   }
   if (normalized.amenities.length > 0) {
     values.set(PARAMS.amenities, normalized.amenities.join(","));
+  }
+  if (normalized.zoningAlignment === "aligned-only") {
+    values.set(PARAMS.zoningAlignment, "aligned");
   }
 
   if (values.size === 0) return values;
@@ -622,5 +689,9 @@ export function summarizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
       SITE_AMENITY_OPTIONS,
       "No nearby amenity preference selected",
     ),
+    zoningAlignment:
+      normalized.zoningAlignment === "aligned-only"
+        ? "Aligned zoning families only"
+        : "Zoning-alignment filter not selected",
   };
 }

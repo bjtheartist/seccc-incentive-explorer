@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   SHORTLIST_RANKING_MODEL_VERSION,
   SITE_MATCH_CRITERIA_VERSION,
+  SITE_MATCH_CRITERIA_PARAM_KEYS,
+  SITE_MATCH_VERSION_PARAM_KEYS,
   buildShortlistHref,
   buildSiteMatchmakerHref,
   buildVacancyHandoffHref,
@@ -42,6 +44,7 @@ function completeCriteria(overrides: Partial<SiteMatchCriteria> = {}): SiteMatch
     walkability: "important",
     pedestrianActivity: "preferred",
     amenities: ["grocery", "restaurants-retail"],
+    zoningAlignment: null,
     ...overrides,
   };
 }
@@ -94,6 +97,7 @@ describe("site matchmaker criteria URL state", () => {
       walkability: null,
       pedestrianActivity: null,
       amenities: [],
+      zoningAlignment: null,
     });
     expect(normalizeSiteMatchCriteria(completeCriteria({ minSquareFeet: 9_000, maxSquareFeet: 2_000 })))
       .toMatchObject({ minSquareFeet: 2_000, maxSquareFeet: 9_000 });
@@ -106,6 +110,29 @@ describe("site matchmaker criteria URL state", () => {
     expect(buildVacancyHandoffHref(empty)).toBeNull();
     expect(buildShortlistHref(empty)).toBeNull();
     expect(isSiteMatchCriteriaReady(empty)).toBe(false);
+  });
+
+  // ── zoning-alignment-rank change: sm_zoning round-trip ────────────────────
+
+  it("round-trips sm_zoning=aligned to zoningAlignment: 'aligned-only' and back", () => {
+    const withZoning = completeCriteria({ zoningAlignment: "aligned-only" });
+    const encoded = encodeSiteMatchCriteria(withZoning);
+    expect(encoded.get("sm_zoning")).toBe("aligned");
+    expect(decodeSiteMatchCriteria(encoded).zoningAlignment).toBe("aligned-only");
+  });
+
+  it("decodes an absent or unrecognized sm_zoning to null — never a silent alias", () => {
+    expect(decodeSiteMatchCriteria(new URLSearchParams("zip=60617")).zoningAlignment).toBeNull();
+    expect(
+      decodeSiteMatchCriteria(new URLSearchParams("zip=60617&sm_zoning=yes")).zoningAlignment,
+    ).toBeNull();
+    expect(
+      decodeSiteMatchCriteria(new URLSearchParams("zip=60617&sm_zoning=true")).zoningAlignment,
+    ).toBeNull();
+  });
+
+  it("omits sm_zoning from the encoded URL when not selected", () => {
+    expect(encodeSiteMatchCriteria(completeCriteria()).toString()).not.toContain("sm_zoning");
   });
 });
 
@@ -153,10 +180,16 @@ describe("site matchmaker handoff", () => {
       walkability: "Important",
       pedestrianActivity: "Preferred",
       amenities: "Restaurants and retail, Grocery",
+      zoningAlignment: "Zoning-alignment filter not selected",
     });
     expect(JSON.stringify(summary).toLowerCase()).not.toMatch(
       /score|eligible|ideal|best|available|foot traffic/,
     );
+  });
+
+  it("gives the aligned-only zoning chip its own honest label", () => {
+    const summary = summarizeSiteMatchCriteria(completeCriteria({ zoningAlignment: "aligned-only" }));
+    expect(summary.zoningAlignment).toBe("Aligned zoning families only");
   });
 });
 
@@ -219,7 +252,7 @@ describe("shortlistRankingModelVersionSupported", () => {
     expect(params.get("sm_rv")).toBe(SHORTLIST_RANKING_MODEL_VERSION);
   });
 
-  // ── Finding 5 (re-review): the two version constants cannot silently drift ──
+  // ── Finding 5 (re-review): sm_rv must never fall BEHIND the data version ──
   //
   // The pre-fix state had each side's OWN tests passing independently —
   // shortlistRankingModelVersionSupported tested against
@@ -232,8 +265,50 @@ describe("shortlistRankingModelVersionSupported", () => {
   // — the exact silent-drift failure mode Finding 5 named — and every test
   // suite in the repo would still pass. This test imports both constants
   // directly and compares them, so that specific drift fails CI.
-  it("SHORTLIST_RANKING_MODEL_VERSION (request-level sm_rv) and RANKING_MODEL_VERSION (lib/shortlist-engine.ts's data-compatibility check) encode the SAME version number — drift between them must fail CI, not ship silently", () => {
-    expect(SHORTLIST_RANKING_MODEL_VERSION).toBe(String(RANKING_MODEL_VERSION));
-    expect(Number(SHORTLIST_RANKING_MODEL_VERSION)).toBe(RANKING_MODEL_VERSION);
+  //
+  // RELAXED (zoning-alignment-rank change) from strict equality to
+  // "sm_rv >= data version": that PR bumped SHORTLIST_RANKING_MODEL_VERSION
+  // alone, "2" -> "3", because the ranking ALGORITHM changed (zoning
+  // alignment now orders results) without touching any committed universe
+  // FILE's shape or `rankingInputsVersion` — bumping RANKING_MODEL_VERSION
+  // to match would have failed EVERY already-published ZIP closed until
+  // every committed data/exports/shortlist-universe/*.json file was
+  // regenerated, which that change did not warrant (see the doc comment on
+  // `SHORTLIST_RANKING_MODEL_VERSION` for the full reasoning). The
+  // protection Finding 5 actually needs still holds under the relaxed
+  // invariant: sm_rv can never be STALE relative to the data version (that
+  // would silently mis-decode an old link against newer data), but it MAY
+  // legitimately run ahead when only ranking semantics — not the universe
+  // row shape — changed.
+  it("SHORTLIST_RANKING_MODEL_VERSION (request-level sm_rv) never falls BEHIND RANKING_MODEL_VERSION (lib/shortlist-engine.ts's data-compatibility check) — it MAY run ahead for an algorithm-only ranking change that touches no universe-row field", () => {
+    expect(Number(SHORTLIST_RANKING_MODEL_VERSION)).toBeGreaterThanOrEqual(RANKING_MODEL_VERSION);
+  });
+});
+
+describe("SITE_MATCH_CRITERIA_PARAM_KEYS — the allowlist the shortlist page and map handoff copy before decoding", () => {
+  it("covers every sm_* key a fully-populated encoded brief emits, so no criterion is silently dropped", () => {
+    const encoded = encodeSiteMatchCriteria(
+      normalizeSiteMatchCriteria({
+        zip: "60619",
+        projectUse: "food-hospitality",
+        propertyType: "existing-building",
+        minSquareFeet: 1000,
+        maxSquareFeet: 5000,
+        context: "neighborhood-scale",
+        transportation: ["cta-rail"],
+        transportationDistance: "half-mile",
+        walkability: "important",
+        pedestrianActivity: "important",
+        amenities: ["grocery"],
+        zoningAlignment: "aligned-only",
+      }),
+    );
+    // Every criterion must actually be present in the encoded brief, so a
+    // silently-discarded value cannot hide an allowlist gap.
+    for (const key of SITE_MATCH_CRITERIA_PARAM_KEYS) expect(encoded.has(key), `${key} must be emitted`).toBe(true);
+    const emitted = [...new Set([...encoded.keys()])].filter((key) => key.startsWith("sm_"));
+    const allowlisted = new Set<string>([...SITE_MATCH_CRITERIA_PARAM_KEYS, ...SITE_MATCH_VERSION_PARAM_KEYS]);
+    for (const key of emitted) expect(allowlisted.has(key), `${key} must be allowlisted`).toBe(true);
+    expect(SITE_MATCH_CRITERIA_PARAM_KEYS).toContain("sm_zoning");
   });
 });

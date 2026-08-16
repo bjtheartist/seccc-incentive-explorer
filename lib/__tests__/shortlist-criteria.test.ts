@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   SHORTLIST_CRITERION_REGISTRY,
+  nonScoringCriterionSuffix,
   selectedNonScoringCriteria,
   selectedShortlistCriterionIds,
   shortlistCriteriaAnalyticsMetadata,
@@ -24,7 +25,7 @@ describe("SHORTLIST_CRITERION_REGISTRY", () => {
     for (const entry of SHORTLIST_CRITERION_REGISTRY) {
       expect(entry.label.trim().length).toBeGreaterThan(0);
       expect(entry.explanation.trim().length).toBeGreaterThan(20);
-      expect(["screen", "score", "display-only", "unsupported"]).toContain(entry.behavior);
+      expect(["screen", "score", "order", "display-only", "unsupported"]).toContain(entry.behavior);
     }
   });
 
@@ -45,7 +46,7 @@ describe("SHORTLIST_CRITERION_REGISTRY", () => {
   });
 
   it("covers the four standalone wizard fields", () => {
-    for (const id of ["project-use", "property-type", "square-footage", "transportation-distance", "context", "walkability", "pedestrian-activity"]) {
+    for (const id of ["project-use", "property-type", "square-footage", "transportation-distance", "zoning-alignment", "context", "walkability", "pedestrian-activity"]) {
       expect(shortlistCriterionById(id), `missing registry entry for "${id}"`).not.toBeNull();
     }
   });
@@ -55,9 +56,14 @@ describe("SHORTLIST_CRITERION_REGISTRY", () => {
     expect(scored).toEqual(["cta-rail", "metra"]);
   });
 
-  it("declares exactly the three SCREEN criteria the engine actually screens on", () => {
+  it("declares exactly the four SCREEN criteria the engine actually screens on", () => {
     const screens = shortlistCriteriaByBehavior("screen").map((entry) => entry.id).sort();
-    expect(screens).toEqual(["property-type", "square-footage", "transportation-distance"]);
+    expect(screens).toEqual(["property-type", "square-footage", "transportation-distance", "zoning-alignment"]);
+  });
+
+  it("declares exactly one ORDER behavior in v1: project-use zoning-alignment ordering", () => {
+    const ordered = shortlistCriteriaByBehavior("order").map((entry) => entry.id);
+    expect(ordered).toEqual(["project-use"]);
   });
 
   it("marks schools/libraries display-only but every other amenity unsupported", () => {
@@ -95,10 +101,27 @@ describe("selectedShortlistCriterionIds", () => {
       walkability: false,
       pedestrianActivity: false,
       amenities: ["schools"],
+      zoningAlignment: false,
     });
     expect(ids.sort()).toEqual(
       ["cta-rail", "expressway", "project-use", "property-type", "schools", "transportation-distance"].sort(),
     );
+  });
+
+  it("includes 'zoning-alignment' when selected", () => {
+    const ids = selectedShortlistCriterionIds({
+      projectUse: "retail-service",
+      propertyType: false,
+      squareFootage: false,
+      transportation: [],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+      zoningAlignment: true,
+    });
+    expect(ids.sort()).toEqual(["project-use", "zoning-alignment"]);
   });
 
   it("returns an empty list when nothing was selected", () => {
@@ -113,15 +136,16 @@ describe("selectedShortlistCriterionIds", () => {
         walkability: false,
         pedestrianActivity: false,
         amenities: [],
+        zoningAlignment: false,
       }),
     ).toEqual([]);
   });
 });
 
 describe("selectedNonScoringCriteria", () => {
-  it("returns ONLY the selected unsupported/display-only entries — never screen/score ones", () => {
+  it("returns ONLY the selected unsupported/display-only entries — never screen/score/order ones", () => {
     const entries = selectedNonScoringCriteria({
-      projectUse: "retail-service", // display-only, selected
+      projectUse: "retail-service", // order, selected — must NOT appear
       propertyType: true, // screen, selected — must NOT appear
       squareFootage: false,
       transportation: ["cta-rail", "cta-bus"], // score (selected) + unsupported (selected)
@@ -130,13 +154,15 @@ describe("selectedNonScoringCriteria", () => {
       walkability: false,
       pedestrianActivity: false,
       amenities: ["grocery", "schools"], // unsupported + display-only, both selected
+      zoningAlignment: false,
     });
     const ids = entries.map((entry) => entry.id).sort();
-    expect(ids).toEqual(["context", "cta-bus", "grocery", "project-use", "schools"]);
-    // Never includes a screen or score criterion, even when selected.
+    expect(ids).toEqual(["context", "cta-bus", "grocery", "schools"]);
+    // Never includes a screen, score, or order criterion, even when selected.
     expect(ids).not.toContain("property-type");
     expect(ids).not.toContain("transportation-distance");
     expect(ids).not.toContain("cta-rail");
+    expect(ids).not.toContain("project-use");
   });
 
   it("omits an unsupported/display-only criterion that was never selected", () => {
@@ -150,8 +176,78 @@ describe("selectedNonScoringCriteria", () => {
       walkability: false,
       pedestrianActivity: false,
       amenities: [],
+      zoningAlignment: false,
     });
     expect(entries).toEqual([]);
+  });
+
+  // ── zoning-alignment-rank change: the opt-in screen is request-conditionally
+  //    inert without a project use — surfaced honestly rather than silently.
+
+  it("surfaces 'zoning-alignment' with an honest 'needs a project use' explanation when selected WITHOUT a project use", () => {
+    const entries = selectedNonScoringCriteria({
+      projectUse: null,
+      propertyType: false,
+      squareFootage: false,
+      transportation: [],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+      zoningAlignment: true,
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe("zoning-alignment");
+    expect(entries[0].explanation).toMatch(/needs a project use/i);
+  });
+
+  it("does NOT surface 'zoning-alignment' when selected WITH a project use — it can actually screen", () => {
+    const entries = selectedNonScoringCriteria({
+      projectUse: "retail-service",
+      propertyType: false,
+      squareFootage: false,
+      transportation: [],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+      zoningAlignment: true,
+    });
+    expect(entries).toEqual([]);
+  });
+});
+
+describe("nonScoringCriterionSuffix", () => {
+  it("labels 'display-only' as shown-but-unscored", () => {
+    expect(nonScoringCriterionSuffix("display-only")).toBe(" (shown, not scored)");
+  });
+
+  it("labels 'screen' as needing a project use — never 'not supported', which would be false (the zoning-alignment screen genuinely works once a project use is added)", () => {
+    expect(nonScoringCriterionSuffix("screen")).toBe(" (needs a project use)");
+  });
+
+  it("labels every other behavior ('unsupported', 'score', 'order') as not supported", () => {
+    expect(nonScoringCriterionSuffix("unsupported")).toBe(" (not supported)");
+    expect(nonScoringCriterionSuffix("score")).toBe(" (not supported)");
+    expect(nonScoringCriterionSuffix("order")).toBe(" (not supported)");
+  });
+
+  it("matches the ACTUAL behavior selectedNonScoringCriteria returns for the zoning-alignment-needs-a-project-use case — an end-to-end proof the two functions agree", () => {
+    const [entry] = selectedNonScoringCriteria({
+      projectUse: null,
+      propertyType: false,
+      squareFootage: false,
+      transportation: [],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+      zoningAlignment: true,
+    });
+    expect(nonScoringCriterionSuffix(entry.behavior)).toBe(" (needs a project use)");
   });
 });
 
@@ -179,6 +275,7 @@ describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not h
       walkability: false,
       pedestrianActivity: false,
       amenities: ["schools", "grocery"],
+      zoningAlignment: false,
     };
     const metadata = shortlistCriteriaAnalyticsMetadata(selection);
     expect(metadata.criteriaIds).toEqual(selectedShortlistCriterionIds(selection));
@@ -195,6 +292,7 @@ describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not h
       walkability: true,
       pedestrianActivity: true,
       amenities: ["schools", "grocery", "medical-health"],
+      zoningAlignment: false,
     };
     const metadata = shortlistCriteriaAnalyticsMetadata(selection);
     expect(metadata.criteriaIds.length).toBeGreaterThan(0);
@@ -207,11 +305,12 @@ describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not h
       const independentLookup = shortlistCriterionById(metadata.criteriaIds[i]);
       expect(metadata.criteriaBehaviors[i]).toBe(independentLookup?.behavior);
     }
-    // Sanity: this selection genuinely spans screen, score, display-only,
-    // AND unsupported — so this test would actually catch a function that
-    // silently collapsed every behavior to one hardcoded string.
+    // Sanity: this selection genuinely spans screen, score, order,
+    // display-only, AND unsupported — so this test would actually catch a
+    // function that silently collapsed every behavior to one hardcoded
+    // string.
     expect(new Set(metadata.criteriaBehaviors)).toEqual(
-      new Set(["screen", "score", "display-only", "unsupported"]),
+      new Set(["screen", "score", "order", "display-only", "unsupported"]),
     );
   });
 
@@ -226,6 +325,7 @@ describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not h
       walkability: false,
       pedestrianActivity: false,
       amenities: [],
+      zoningAlignment: false,
     };
     const before = shortlistCriteriaAnalyticsMetadata(selection);
     expect(before.criteriaBehaviors).toEqual(["score"]);
@@ -246,6 +346,7 @@ describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not h
       walkability: false,
       pedestrianActivity: false,
       amenities: [],
+      zoningAlignment: false,
     });
     expect(metadata.criteriaIds).toEqual([]);
     expect(metadata.criteriaBehaviors).toEqual([]);

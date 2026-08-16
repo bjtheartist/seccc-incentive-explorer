@@ -27,6 +27,7 @@ function criteria(overrides: Partial<SiteMatchCriteria> = {}): SiteMatchCriteria
     walkability: "important",
     pedestrianActivity: "preferred",
     amenities: ["grocery"],
+    zoningAlignment: null,
     ...overrides,
   };
 }
