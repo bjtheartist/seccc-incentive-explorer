@@ -48,6 +48,30 @@ describe("GET /api/shortlist/resolve-parcel", () => {
     expect(await response.json()).toMatchObject({ status: "no_match", reason: "address_mismatch" });
   });
 
+  it("resolves when the candidate record omits the street suffix the County publishes", async () => {
+    vi.mocked(fetch).mockResolvedValue(countyResponse([
+      { attributes: { PIN14: "25034310240000", street_address: "9410 S CHAMPLAIN AVE", city_state_zip: "CHICAGO, IL 60619" } },
+    ]));
+    const response = await GET(new NextRequest(
+      "http://localhost/api/shortlist/resolve-parcel?lat=41.723586&lon=-87.608399&address=9410+S+CHAMPLAIN",
+    ));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ status: "resolved", pin: "25034310240000" });
+  });
+
+  it("resolves a County-published unit tag on the same lot but rejects a different named street", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(countyResponse([feature("16264270400000", "4320 W CERMAK RD 2")]))
+      .mockResolvedValueOnce(countyResponse([feature("16264270400000", "4320 W CERMAK RD EAST 2")]));
+    const url = "http://localhost/api/shortlist/resolve-parcel?lat=41.837760&lon=-87.709980&address=4320+W+CERMAK+RD";
+    const ok = await GET(new NextRequest(url));
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ status: "resolved", pin: "16264270400000" });
+    const rejected = await GET(new NextRequest(url));
+    expect(rejected.status).toBe(404);
+    expect(await rejected.json()).toMatchObject({ status: "no_match", reason: "address_mismatch" });
+  });
+
   it("keeps zero and multiple intersections distinct", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(countyResponse([]))
