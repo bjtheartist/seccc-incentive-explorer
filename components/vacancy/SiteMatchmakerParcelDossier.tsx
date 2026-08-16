@@ -9,7 +9,12 @@ import { OWNER_STRUCTURE_LABELS, type OwnerStructure } from "@/lib/owner-taxonom
 import { squareFeetLabel, type ParcelSpaceFacts } from "@/lib/parcel-space";
 import type { CandidateParcelEnrichmentState } from "@/lib/site-matchmaker-results";
 import type { CandidateParcelResolution } from "@/lib/site-matchmaker-parcel-resolution";
-import { assessedYearLabel } from "@/lib/site-shortlist";
+import {
+  assessedYearLabel,
+  countyRecordQualifier,
+  countyRecordSubjectLabel,
+  parcelCheckedDateLabel,
+} from "@/lib/site-shortlist";
 
 export interface ParcelDossierRecord {
   address: string | null;
@@ -39,10 +44,14 @@ function countyAreaFactLabel(
       ? enrichment.facts.lotAreaStatus
       : enrichment.facts.assessorBuildingAreaStatus;
     const liveValue = enrichment.facts[field];
-    if (status === "available" && liveValue != null) return `${squareFeetLabel(liveValue)} · current County record`;
+    if (status === "available" && liveValue != null) {
+      return `${squareFeetLabel(liveValue)} · ${countyRecordQualifier(enrichment.facts)}`;
+    }
     if (snapshotValue != null) {
       if (status === "unavailable") return `${snapshotLabel} · saved snapshot; current check unavailable`;
-      if (status === "not_published") return `${snapshotLabel} · saved snapshot; current record did not publish an area`;
+      if (status === "not_published") {
+        return `${snapshotLabel} · saved snapshot; ${countyRecordSubjectLabel(enrichment.facts, "current record")} did not publish an area`;
+      }
       return `${snapshotLabel} · saved snapshot`;
     }
     if (status === "unavailable") return "Unavailable";
@@ -74,7 +83,7 @@ function assessorBuildingYearLabel(
     enrichment.facts.assessorBuildingAreaStatus === "available" &&
     enrichment.facts.assessorBuildingYear
   ) {
-    return `${assessedYearLabel(enrichment.facts.assessorBuildingYear) ?? enrichment.facts.assessorBuildingYear} · current County record`;
+    return `${assessedYearLabel(enrichment.facts.assessorBuildingYear) ?? enrichment.facts.assessorBuildingYear} · ${countyRecordQualifier(enrichment.facts)}`;
   }
   if (record.space.assessorBuildingYear != null) {
     const suffix = enrichment.status === "loading"
@@ -83,7 +92,7 @@ function assessorBuildingYearLabel(
           (enrichment.status === "checked" && enrichment.facts.assessorBuildingAreaStatus === "unavailable")
         ? "; current check unavailable"
         : enrichment.status === "checked" && enrichment.facts.assessorBuildingAreaStatus === "not_published"
-          ? "; current record did not publish a building year"
+          ? `; ${countyRecordSubjectLabel(enrichment.facts, "current record")} did not publish a building year`
           : enrichment.status === "not_requested"
             ? "; current check not requested — confirmed PIN required"
             : enrichment.status === "not_checked"
@@ -116,9 +125,16 @@ function countyClassFactLabel(enrichment: CandidateParcelEnrichmentState): strin
 
 function resolutionText(resolution: CandidateParcelResolution, effectivePin: string | null): string {
   if (resolution.status === "resolved") {
-    return resolution.pinSource === "coordinate_exact"
-      ? `PIN ${formatPin14(resolution.pin)} · current County parcel resolved by exact map-point intersection`
-      : `PIN ${formatPin14(resolution.pin)} · published in the saved shortlist snapshot`;
+    if (resolution.pinSource !== "coordinate_exact") {
+      return `PIN ${formatPin14(resolution.pin)} · published in the saved shortlist snapshot`;
+    }
+    // An exact match carries WHEN it was checked whenever the source
+    // published one — a precomputed match may have been run days before this
+    // page load, and a reader deciding on a parcel deserves that date.
+    const checked = parcelCheckedDateLabel(resolution.checkedAt);
+    return `PIN ${formatPin14(resolution.pin)} · current County parcel resolved by exact map-point intersection${
+      checked ? ` · checked ${checked}` : ""
+    }`;
   }
   if (resolution.status === "resolving") return "PIN not published in the saved shortlist snapshot · resolving the exact County parcel at this map point";
   if (resolution.status === "no_match") {

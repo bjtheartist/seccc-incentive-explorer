@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assessedYearLabel,
+  countyRecordQualifier,
+  parcelCheckedDateLabel,
   CONDITION_VERIFICATION_NOTE,
   IMPLIED_VALUE_CAPTION,
   SHORTLIST_SNAPSHOT_SOURCE,
@@ -273,5 +275,49 @@ describe("shortlistSnapshotHref", () => {
       source.indexOf("function cleanReportSource"),
     );
     expect(allowlist).toContain(`"${SHORTLIST_SNAPSHOT_SOURCE}"`);
+  });
+});
+
+describe("parcelCheckedDateLabel", () => {
+  it("renders a County check instant as a CHICAGO date, not a UTC one", () => {
+    // 04:02 UTC is 23:02 the PREVIOUS evening in Chicago. A Chicago reader
+    // looking at a Chicago parcel must not be told the check happened
+    // "tomorrow".
+    expect(parcelCheckedDateLabel("2026-08-16T04:02:47.077Z")).toBe("Aug 15, 2026");
+    expect(parcelCheckedDateLabel("2026-08-16T03:58:31.254Z")).toBe("Aug 15, 2026");
+    // Mid-afternoon UTC is the same calendar day in Chicago.
+    expect(parcelCheckedDateLabel("2026-08-16T18:00:00.000Z")).toBe("Aug 16, 2026");
+    // Winter, when Chicago is UTC-6 rather than UTC-5.
+    expect(parcelCheckedDateLabel("2026-01-16T05:30:00.000Z")).toBe("Jan 15, 2026");
+  });
+
+  it("returns null for a missing or unparseable value rather than printing 'Invalid Date'", () => {
+    expect(parcelCheckedDateLabel(null)).toBeNull();
+    expect(parcelCheckedDateLabel(undefined)).toBeNull();
+    expect(parcelCheckedDateLabel("")).toBeNull();
+    expect(parcelCheckedDateLabel("not a date")).toBeNull();
+  });
+});
+
+describe("countyRecordQualifier", () => {
+  it("dates a precomputed-snapshot fact and calls only a live read 'current'", () => {
+    expect(
+      countyRecordQualifier({
+        countyFactsSource: "precomputed_snapshot",
+        countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+      }),
+    ).toBe("County record · checked Aug 15, 2026");
+    expect(
+      countyRecordQualifier({ countyFactsSource: "live_county", countyFactsCheckedAt: "2026-08-16T04:02:47.077Z" }),
+    ).toBe("current County record");
+  });
+
+  it("falls back to today's wording when provenance is absent or undated", () => {
+    expect(countyRecordQualifier(undefined)).toBe("current County record");
+    expect(countyRecordQualifier(null)).toBe("current County record");
+    expect(countyRecordQualifier({})).toBe("current County record");
+    expect(
+      countyRecordQualifier({ countyFactsSource: "precomputed_snapshot", countyFactsCheckedAt: null }),
+    ).toBe("County record");
   });
 });

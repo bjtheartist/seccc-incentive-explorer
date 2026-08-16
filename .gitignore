@@ -13,6 +13,7 @@
 # testing
 /coverage
 /test-results/
+.playwright-cli/
 
 # next.js
 /.next/
@@ -80,6 +81,21 @@ yarn-error.log*
 !/data/exports/shortlist-universe/60644.json
 !/data/exports/shortlist-universe/60649.json
 !/data/exports/shortlist-universe/60651.json
+# Precomputed exact County parcel identity per universe row
+# (scripts/resolve-shortlist-universe-parcels.ts, lib/shortlist-parcel-identity.ts)
+# — bound to the universe buildId; the loader fails closed on any mismatch.
+!/data/exports/shortlist-universe/parcel-identity/
+/data/exports/shortlist-universe/parcel-identity/*
+!/data/exports/shortlist-universe/parcel-identity/manifest.json
+!/data/exports/shortlist-universe/parcel-identity/60617.json
+!/data/exports/shortlist-universe/parcel-identity/60619.json
+!/data/exports/shortlist-universe/parcel-identity/60621.json
+!/data/exports/shortlist-universe/parcel-identity/60623.json
+!/data/exports/shortlist-universe/parcel-identity/60624.json
+!/data/exports/shortlist-universe/parcel-identity/60636.json
+!/data/exports/shortlist-universe/parcel-identity/60644.json
+!/data/exports/shortlist-universe/parcel-identity/60649.json
+!/data/exports/shortlist-universe/parcel-identity/60651.json
 
 # Zoning boundary snapshot (scripts/fetch-zoning-snapshot.ts) — the raw
 # clipped polygon pull is disposable/regenerable and can run large; only its

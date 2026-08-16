@@ -603,3 +603,136 @@ describe("SiteShortlistResults — shared zoning filters", () => {
     );
   });
 });
+
+// ── Precomputed exact-match PINs (lib/shortlist-parcel-identity.ts) ─────────
+
+describe("SiteShortlistResults — a precomputed exact-match PIN behaves like a known PIN, honestly labeled", () => {
+  const CHECKED_AT = "2026-08-16T03:58:31.254Z";
+
+  function precomputed(overrides: Partial<DecoratedShortlistCandidate> = {}) {
+    return candidate({
+      key: "site:precomputed",
+      pin: "16264270400000",
+      address: "3040 S HOMAN AVE",
+      pinProvenance: {
+        source: "coordinate_exact_precomputed",
+        checkedAt: CHECKED_AT,
+        countyAddress: "3040 S HOMAN AVE, CHICAGO, IL 60623",
+      },
+      ...overrides,
+    });
+  }
+
+  function batchEnrichmentMock() {
+    return vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            key: "site:precomputed",
+            countyClass: "517",
+            classGloss: "One-story commercial building",
+            countyClassStatus: "available",
+            lotAreaSqft: 3125,
+            lotAreaStatus: "available",
+            assessorBuildingSqft: 1800,
+            assessorBuildingYear: "2025",
+            assessorBuildingAreaStatus: "available",
+            assessedValue: 6900,
+            assessedYear: "2025",
+            assessedStage: "board",
+            assessedValueStatus: "available",
+            impliedMarketValue: 27600,
+            activeLicenses: [],
+            activeLicenseStatus: "not_requested",
+            enrichmentUnavailable: false,
+          },
+        ],
+      }),
+    }));
+  }
+
+  function renderPrecomputed(fetchMock: ReturnType<typeof batchEnrichmentMock>) {
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <SiteShortlistResults
+        zip="60623"
+        criteria={baseCriteria()}
+        scored={true}
+        source={null}
+        buildId="build-1"
+        ranked={[precomputed()]}
+        boundary={null}
+        centroid={{ lat: 41.84, lon: -87.71 }}
+      />,
+    );
+  }
+
+  it("joins the load-time enrichment batch and shows County facts on the CARD FACE with no resolve-parcel call", async () => {
+    const fetchMock = batchEnrichmentMock();
+    renderPrecomputed(fetchMock);
+
+    // The batch keys off candidate.pin, so the precomputed PIN is in it.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("/api/shortlist/enrich");
+    expect(String(init?.body)).toContain("16264270400000");
+
+    await waitFor(() => expect(screen.getByText(/\$6,900/)).toBeTruthy());
+    expect(screen.getByText(/~\$27,600/)).toBeTruthy();
+    expect(
+      fetchMock.mock.calls.filter(([called]) => String(called).includes("/api/shortlist/resolve-parcel")),
+    ).toHaveLength(0);
+  });
+
+  it("labels the card PIN as an exact current-County match with its check date — never as a snapshot publication", async () => {
+    renderPrecomputed(batchEnrichmentMock());
+    await waitFor(() => expect(screen.getByText(/\$6,900/)).toBeTruthy());
+    const label = screen.getByText(/PIN 16-26-427-040-0000/);
+    expect(label.textContent).toContain("resolved from current County parcel");
+    expect(label.textContent).toContain("checked Aug 15, 2026");
+    expect(label.textContent).not.toContain("saved shortlist snapshot");
+  });
+
+  it("opens Parcel details straight from the batch facts — zero extra fetches, no resolution round trip", async () => {
+    const fetchMock = batchEnrichmentMock();
+    renderPrecomputed(fetchMock);
+    await waitFor(() => expect(screen.getByText(/\$6,900/)).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Parcel details" }));
+    const dialog = await screen.findByRole("dialog", { name: "3040 S HOMAN AVE" });
+    await waitFor(() => expect(dialog.textContent).toContain("$6,900"));
+    expect(dialog.textContent).toContain("3,125 sq ft");
+    expect(dialog.textContent).toContain("current County parcel resolved by exact map-point intersection");
+    expect(dialog.textContent).toContain("checked Aug 15, 2026");
+    expect(dialog.textContent).not.toContain("published in the saved shortlist snapshot");
+    // The whole point of the precompute: opening a card costs nothing extra.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still calls a genuinely published PIN a saved-snapshot PIN", async () => {
+    const fetchMock = batchEnrichmentMock();
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <SiteShortlistResults
+        zip="60623"
+        criteria={baseCriteria()}
+        scored={true}
+        source={null}
+        buildId="build-1"
+        ranked={[precomputed({ pinProvenance: { source: "saved_snapshot" } })]}
+        boundary={null}
+        centroid={{ lat: 41.84, lon: -87.71 }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(/\$6,900/)).toBeTruthy());
+    const label = screen.getByText(/PIN 16-26-427-040-0000/);
+    expect(label.textContent).not.toContain("resolved from current County parcel");
+
+    fireEvent.click(screen.getByRole("button", { name: "Parcel details" }));
+    const dialog = await screen.findByRole("dialog", { name: "3040 S HOMAN AVE" });
+    expect(dialog.textContent).toContain("published in the saved shortlist snapshot");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

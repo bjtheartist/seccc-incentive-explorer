@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
   // lib/__tests__/programs-internal-bundling.test.ts.
   outputFileTracingIncludes: {
     "/vacancy/[zip]/shortlist": ["./data/exports/shortlist-universe/**"],
+    // The enrichment route reads the parcel-identity sidecars (precomputed
+    // County parcel facts) from data/exports/ via process.cwd() — the SAME
+    // outside-public/, not-statically-analyzable pattern the shortlist page
+    // needs tracing for. Without its own entry the deployed function has no
+    // manifest, every PIN misses, and the route silently falls back to a
+    // per-PIN County ArcGIS call: a pure performance regression with no
+    // error to notice. See lib/__tests__/shortlist-universe-bundling.test.ts.
+    "/api/shortlist/enrich": ["./data/exports/shortlist-universe/parcel-identity/**"],
     "/**": ["./data/programs-internal.json"],
   },
   async redirects() {

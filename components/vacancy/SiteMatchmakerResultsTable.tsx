@@ -77,6 +77,7 @@ import {
   cachedCandidateParcelEnrichment,
   fetchCandidateParcelEnrichment,
 } from "@/lib/site-matchmaker-parcel-client";
+import { countyRecordSubjectLabel } from "@/lib/site-shortlist";
 import { ZONING_DISTRICT_FAMILIES, subtypesForFamily } from "@/lib/zoning-districts";
 // Type-only: lib/vacancy-index includes a node:fs-backed loader at runtime.
 import type {
@@ -493,7 +494,7 @@ function countyAreaFactLabel(
         return `${snapshotLabel} · saved snapshot; current check unavailable`;
       }
       if (status === "not_published") {
-        return `${snapshotLabel} · saved snapshot; current record did not publish an area`;
+        return `${snapshotLabel} · saved snapshot; ${countyRecordSubjectLabel(enrichment.facts, "current record")} did not publish an area`;
       }
       return `${snapshotLabel} · saved snapshot`;
     }

@@ -1,4 +1,12 @@
+import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  __resetShortlistParcelIdentityCacheForTests,
+  __setShortlistParcelIdentityDataDirForTests,
+} from "@/lib/shortlist-parcel-identity";
 
 /**
  * Re-review Finding 4: this route previously had NO dedicated test file at
@@ -395,5 +403,183 @@ describe("POST /api/shortlist/enrich — parcel dossier semantics and bounds", (
     const where = new URL(licenseUrl!).searchParams.get("$where") ?? "";
     expect(where).toContain("license_status='AAI'");
     expect(where).toContain("expiration_date>");
+  });
+});
+
+// ── Precomputed County parcel facts (lib/shortlist-parcel-identity.ts) ──────
+
+describe("POST /api/shortlist/enrich — precomputed County parcel facts replace the ArcGIS call", () => {
+  const SNAPSHOT_CHECKED_AT = "2026-08-16T04:02:47.077Z";
+  const UNKNOWN_PIN = "16264270400000";
+  let dir: string;
+
+  function sha256(value: string): string {
+    return createHash("sha256").update(value).digest("hex");
+  }
+
+  /** Write a one-ZIP sidecar bound to `buildId`. Every test uses its OWN
+   *  buildId — the route's enrichment cache is a module-level singleton
+   *  shared by this whole file (see the note above), so a reused buildId
+   *  would serve a previous test's item instead of exercising the snapshot. */
+  function writeSnapshot(buildId: string, pinFacts: Record<string, unknown>): void {
+    const file = {
+      schemaVersion: 1,
+      zip: "60617",
+      universeBuildId: buildId,
+      generatedAt: SNAPSHOT_CHECKED_AT,
+      source: "cook_county_current_parcels",
+      matchMethod: "exact_intersection",
+      entries: {
+        "site:aaa": {
+          status: "resolved",
+          pin: PIN,
+          countyAddress: ADDRESS,
+          checkedAt: SNAPSHOT_CHECKED_AT,
+        },
+      },
+      factsByPin: { [PIN]: pinFacts },
+    };
+    const serialized = JSON.stringify(file, null, 1) + "\n";
+    writeFileSync(join(dir, "60617.json"), serialized);
+    writeFileSync(
+      join(dir, "manifest.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        universeBuildId: buildId,
+        generatedAt: SNAPSHOT_CHECKED_AT,
+        files: { "60617": { path: "60617.json", checksum: sha256(serialized), entryCount: 1 } },
+      }),
+    );
+    __resetShortlistParcelIdentityCacheForTests();
+  }
+
+  function publishedFacts(): Record<string, unknown> {
+    return {
+      countyClass: "517",
+      lotAreaSqft: 3125,
+      assessorBuildingSqft: 1800,
+      assessorBuildingYear: "2025",
+      checkedAt: SNAPSHOT_CHECKED_AT,
+    };
+  }
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "enrich-parcel-identity-"));
+    __setShortlistParcelIdentityDataDirForTests(dir);
+    __resetShortlistParcelIdentityCacheForTests();
+  });
+
+  afterEach(() => {
+    __setShortlistParcelIdentityDataDirForTests(null);
+    __resetShortlistParcelIdentityCacheForTests();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("serves a snapshot PIN's parcel facts with ZERO ArcGIS calls, dated and sourced honestly", async () => {
+    writeSnapshot("build-snapshot-hit", publishedFacts());
+    mockSocrataResponses({ valueRows: [{ board_tot: "6900", year: "2025" }], licenseRows: [] });
+    const res = await POST(
+      postRequest({ buildId: "build-snapshot-hit", items: [{ key: "a", pin: PIN, address: null }] }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      countyClass: "517",
+      countyClassStatus: "available",
+      lotAreaSqft: 3125,
+      lotAreaStatus: "available",
+      assessorBuildingSqft: 1800,
+      assessorBuildingYear: "2025",
+      assessorBuildingAreaStatus: "available",
+      // A snapshot read is a SUCCESSFUL read — never the "unavailable" the
+      // route reports when the County lookup itself failed.
+      countyFactsSource: "precomputed_snapshot",
+      countyFactsCheckedAt: SNAPSHOT_CHECKED_AT,
+      enrichmentUnavailable: false,
+    });
+    // THE point of the whole precompute: the County ArcGIS server is not contacted.
+    expect(countyFetchMock).not.toHaveBeenCalled();
+    // The assessment still comes from Socrata — only the parcel read moved.
+    expect(body.items[0].assessedValue).toBe(6900);
+    expect(socrataFetchMock).toHaveBeenCalled();
+  });
+
+  it("carries a snapshot NULL through as not_published, not as a failed lookup", async () => {
+    writeSnapshot("build-snapshot-nulls", {
+      countyClass: null,
+      lotAreaSqft: null,
+      assessorBuildingSqft: null,
+      assessorBuildingYear: null,
+      checkedAt: SNAPSHOT_CHECKED_AT,
+    });
+    mockSocrataResponses({ valueRows: [], licenseRows: [] });
+    const res = await POST(
+      postRequest({ buildId: "build-snapshot-nulls", items: [{ key: "a", pin: PIN, address: null }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      countyClassStatus: "not_published",
+      lotAreaStatus: "not_published",
+      assessorBuildingAreaStatus: "not_published",
+      countyFactsSource: "precomputed_snapshot",
+      enrichmentUnavailable: false,
+    });
+    expect(countyFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("falls through to the live ArcGIS lookup for a PIN the snapshot does not carry", async () => {
+    writeSnapshot("build-snapshot-miss", publishedFacts());
+    mockAffirmativeSocrataResponses();
+    const res = await POST(
+      postRequest({
+        buildId: "build-snapshot-miss",
+        items: [{ key: "unknown", pin: UNKNOWN_PIN, address: null }],
+      }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(countyFetchMock).toHaveBeenCalledTimes(1);
+    expect(body.items[0].countyFactsSource).toBe("live_county");
+    expect(typeof body.items[0].countyFactsCheckedAt).toBe("string");
+  });
+
+  it("falls through to the live lookup when the request's buildId is not the snapshot's", async () => {
+    writeSnapshot("build-snapshot-other", publishedFacts());
+    mockAffirmativeSocrataResponses();
+    const res = await POST(
+      postRequest({ buildId: "build-not-the-snapshots", items: [{ key: "a", pin: PIN, address: null }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    // An unrecognized buildId cannot select snapshot facts — it can only miss.
+    expect(countyFetchMock).toHaveBeenCalledTimes(1);
+    expect(body.items[0].countyFactsSource).toBe("live_county");
+  });
+
+  it("claims no check instant for an item with no PIN at all", async () => {
+    writeSnapshot("build-snapshot-no-pin", publishedFacts());
+    mockSocrataResponses({ valueRows: [], licenseRows: [] });
+    const res = await POST(
+      postRequest({ buildId: "build-snapshot-no-pin", items: [{ key: "a", pin: null, address: ADDRESS }] }),
+    );
+    const body = (await res.json()) as { items: Record<string, unknown>[] };
+    expect(body.items[0]).toMatchObject({
+      countyClassStatus: "not_requested",
+      countyFactsSource: "live_county",
+      countyFactsCheckedAt: null,
+    });
+    expect(countyFetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/shortlist/enrich — the Socrata lookups use the cross-instance Data Cache", () => {
+  it("asks for a 6-hour revalidate on BOTH the assessment and licence queries", async () => {
+    mockAffirmativeSocrataResponses();
+    await POST(
+      postRequest({ buildId: "build-revalidate", items: [{ key: "a", pin: PIN, address: ADDRESS }] }),
+    );
+    const calls = socrataFetchMock.mock.calls as unknown as [string, unknown, { revalidateSeconds?: number }][];
+    const assessment = calls.find(([url]) => String(url).includes("uzyt-m557"));
+    const licences = calls.find(([url]) => String(url).includes("r5kz-chrr"));
+    expect(assessment?.[2]).toEqual({ revalidateSeconds: 6 * 60 * 60 });
+    expect(licences?.[2]).toEqual({ revalidateSeconds: 6 * 60 * 60 });
   });
 });

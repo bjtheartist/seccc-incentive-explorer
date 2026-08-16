@@ -16,7 +16,13 @@ import {
   type DecoratedShortlistCandidate,
   type ZoningBadge,
 } from "./shortlist-engine";
-import { assessedYearLabel, type ShortlistEnrichmentFacts } from "./site-shortlist";
+import {
+  assessedYearLabel,
+  countyRecordQualifier,
+  countyRecordSubjectLabel,
+  parcelCheckedDateLabel,
+  type ShortlistEnrichmentFacts,
+} from "./site-shortlist";
 import {
   assessorRecordUrl,
   clerkRecordsUrl,
@@ -142,9 +148,13 @@ function areaField(
   hasFacts: boolean,
   liveValue: number | null | undefined,
   liveStatus: CountyFieldStatus,
+  facts: ShortlistEnrichmentFacts | undefined,
 ): { value: number | string; state: string } {
   if (hasFacts && liveStatus === "available" && liveValue != null) {
-    return { value: liveValue, state: "Available · current County record" };
+    // The SAME wording the parcel dossier uses, from the same function: a
+    // fact read from the precomputed snapshot is dated here too, never
+    // called "current" in one surface and dated in the other.
+    return { value: liveValue, state: `Available · ${countyRecordQualifier(facts)}` };
   }
   if (snapshotValue != null) {
     if (liveStatus === "unavailable") {
@@ -153,7 +163,9 @@ function areaField(
     if (liveStatus === "not_published") {
       return {
         value: snapshotValue,
-        state: "Published snapshot · current County record did not publish an area",
+        // A snapshot read that found no area is still a snapshot read — it
+        // must not be described as the CURRENT record having no area.
+        state: `Published snapshot · ${countyRecordSubjectLabel(facts)} did not publish an area`,
       };
     }
     return { value: snapshotValue, state: "Published snapshot" };
@@ -177,25 +189,36 @@ export function shortlistCsv(
   candidates.forEach((candidate, index) => {
     const facts = enrichment[candidate.key];
     const resolution = resolutions[candidate.key] ?? { status: "not_checked" };
-    const savedPin = normalizePin14(candidate.pin);
-    const effectivePin = resolution.status === "resolved" ? resolution.pin : savedPin;
-    const resolutionState = savedPin
-      ? "Published in saved shortlist snapshot"
-      : resolution.status === "resolved"
-        ? "Current County parcel resolved by exact map-point intersection"
-        : resolution.status === "no_match"
-          ? resolution.reason === "invalid_location"
-            ? "No usable Chicago map point"
-            : "No exact address-matched County parcel found"
-          : resolution.status === "ambiguous"
-            ? `Ambiguous — ${resolution.candidateCount} intersecting parcel records`
-            : resolution.status === "unavailable"
-              ? "County parcel lookup unavailable"
-              : resolution.status === "malformed"
-                ? "County parcel lookup malformed"
-                : resolution.status === "resolving"
-                  ? "Resolving current County parcel"
-                  : "Not checked";
+    const candidatePin = normalizePin14(candidate.pin);
+    // A precomputed exact-intersection PIN is NOT a saved-snapshot
+    // publication: it belongs in the "current resolved PIN" column with the
+    // exact-match state and its own check date, and the "saved shortlist PIN"
+    // column stays empty, exactly as it does for a live coordinate match.
+    const precomputed =
+      candidatePin != null && candidate.pinProvenance?.source === "coordinate_exact_precomputed"
+        ? candidate.pinProvenance
+        : null;
+    const savedPin = precomputed ? null : candidatePin;
+    const effectivePin = resolution.status === "resolved" ? resolution.pin : candidatePin;
+    const resolutionState = precomputed
+      ? `Current County parcel resolved by exact map-point intersection · checked ${parcelCheckedDateLabel(precomputed.checkedAt) ?? precomputed.checkedAt.slice(0, 10)}`
+      : savedPin
+        ? "Published in saved shortlist snapshot"
+        : resolution.status === "resolved"
+          ? "Current County parcel resolved by exact map-point intersection"
+          : resolution.status === "no_match"
+            ? resolution.reason === "invalid_location"
+              ? "No usable Chicago map point"
+              : "No exact address-matched County parcel found"
+            : resolution.status === "ambiguous"
+              ? `Ambiguous — ${resolution.candidateCount} intersecting parcel records`
+              : resolution.status === "unavailable"
+                ? "County parcel lookup unavailable"
+                : resolution.status === "malformed"
+                  ? "County parcel lookup malformed"
+                  : resolution.status === "resolving"
+                    ? "Resolving current County parcel"
+                    : "Not checked";
     const unresolvedLinkState = resolutionState;
     const countyClassState = fieldStateLabel(
       facts?.countyClassStatus,
@@ -212,12 +235,14 @@ export function shortlistCsv(
       facts !== undefined,
       facts?.assessorBuildingSqft,
       facts?.assessorBuildingAreaStatus,
+      facts,
     );
     const lotArea = areaField(
       candidate.lotSqft,
       facts !== undefined,
       facts?.lotAreaSqft,
       facts?.lotAreaStatus,
+      facts,
     );
     lines.push(
       [

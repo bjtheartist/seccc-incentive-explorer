@@ -37,6 +37,10 @@ import { railStations } from "@/lib/rail-stations";
 import { loadShortlistUniverse } from "@/lib/shortlist-universe";
 import { loadShortlistAmenityPoints, loadShortlistExpresswayContext } from "@/lib/shortlist-display-context";
 import {
+  applyPrecomputedParcelIdentity,
+  loadShortlistParcelIdentity,
+} from "@/lib/shortlist-parcel-identity";
+import {
   RANKING_MODEL_VERSION,
   SHORTLIST_TOP_N,
   ZONING_SCREENING_NOTE,
@@ -414,13 +418,23 @@ export default async function SiteShortlistPage({
   //    (Finding 11) — nearest school/library/expressway/rail-when-unscored
   //    are computed for these ≤20 candidates only, never the full screened
   //    universe (up to 6,000+ rows for the largest committed ZIP). ──────────
-  const ranked = decorateShortlistDisplayFacts(allRanked.slice(0, SHORTLIST_TOP_N), {
-    stations,
-    network: selectedTransitNetwork(criteria, stations),
-    expresswayContextByKey: loadShortlistExpresswayContext(zip),
-    schoolPoints: loadShortlistAmenityPoints("school-points.json"),
-    libraryPoints: loadShortlistAmenityPoints("library-points.json"),
-  });
+  // ── Then stamp PIN provenance on that same slice, filling in the PIN for
+  //    rows the committed parcel-identity sidecar already resolved offline by
+  //    exact map-point intersection (lib/shortlist-parcel-identity.ts). This
+  //    reads a committed file — it adds NO request-time County call — and it
+  //    can never reorder, drop, or re-key the ranked slice. Fail-closed: an
+  //    absent/stale/mismatched sidecar yields an empty map and every card
+  //    behaves exactly as it did before, resolving on demand when opened.
+  const ranked = applyPrecomputedParcelIdentity(
+    decorateShortlistDisplayFacts(allRanked.slice(0, SHORTLIST_TOP_N), {
+      stations,
+      network: selectedTransitNetwork(criteria, stations),
+      expresswayContextByKey: loadShortlistExpresswayContext(zip),
+      schoolPoints: loadShortlistAmenityPoints("school-points.json"),
+      libraryPoints: loadShortlistAmenityPoints("library-points.json"),
+    }),
+    loadShortlistParcelIdentity(zip, universe.data.buildId),
+  );
 
   const generatedAt = universe.data.generatedAt ?? loadVacancyIndex()?.generatedAt ?? null;
   const chips = [

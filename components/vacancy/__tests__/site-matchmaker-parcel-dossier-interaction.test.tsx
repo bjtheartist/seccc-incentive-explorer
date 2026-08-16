@@ -208,6 +208,288 @@ describe("Site Matchmaker parcel dossier", () => {
     expect(screen.getByRole("button", { name: "Retry parcel lookup" })).toBeTruthy();
   });
 
+  it("dates an exact map-point match in the header, and never dates a saved-snapshot PIN", () => {
+    // A precomputed exact match may have been checked days before this page
+    // load, so the header says WHEN. A snapshot PIN has no check date to
+    // report and must not borrow one.
+    const row = {
+      address: "3040 S HOMAN AVE",
+      pin: "16264270400000",
+      lat: 41.83776,
+      lon: -87.70998,
+      space: {},
+      ownerSector: "unclassified" as const,
+      ownerStructure: "unresolved" as const,
+    };
+    const { unmount } = render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60623"
+        resolution={{
+          status: "resolved",
+          pin: "16264270400000",
+          pinSource: "coordinate_exact",
+          source: "cook_county_current_parcels",
+          matchMethod: "exact_intersection",
+          checkedAt: "2026-08-16T03:58:31.254Z",
+        }}
+        enrichment={{ status: "not_requested" }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const exactText = screen.getByRole("dialog").textContent ?? "";
+    expect(exactText).toContain("current County parcel resolved by exact map-point intersection");
+    expect(exactText).toContain("checked Aug 15, 2026");
+    expect(exactText).not.toContain("published in the saved shortlist snapshot");
+    unmount();
+
+    render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60623"
+        resolution={{
+          status: "resolved",
+          pin: "16264270400000",
+          pinSource: "saved_snapshot",
+          source: "saved_shortlist_snapshot",
+          matchMethod: "published_pin",
+          checkedAt: null,
+        }}
+        enrichment={{ status: "not_requested" }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const savedText = screen.getByRole("dialog").textContent ?? "";
+    expect(savedText).toContain("published in the saved shortlist snapshot");
+    expect(savedText).not.toContain("checked ");
+  });
+
+  it("dates a County fact served from the precomputed snapshot instead of calling it 'current'", () => {
+    // "Current County record" is a claim about freshness. A fact read from
+    // the committed snapshot may be hours or days old, so it names the day
+    // it was actually read; a live lookup keeps today's wording.
+    const row = {
+      address: "8130 S CORNELL AVE",
+      pin: "20363230080000",
+      lat: 41.73,
+      lon: -87.55,
+      space: { lotAreaSqft: 3125, assessorBuildingSqft: 1800, assessorBuildingYear: 2024 },
+      ownerSector: "public" as const,
+      ownerStructure: "government" as const,
+    };
+    const facts = {
+      countyClass: "517",
+      classGloss: "One-story commercial building",
+      countyClassStatus: "available" as const,
+      lotAreaSqft: 3333,
+      lotAreaStatus: "available" as const,
+      assessorBuildingSqft: 1900,
+      assessorBuildingYear: "2025",
+      assessorBuildingAreaStatus: "available" as const,
+      assessedValue: 6900,
+      assessedYear: "2025",
+      assessedStage: "board" as const,
+      assessedValueStatus: "available" as const,
+      impliedMarketValue: 27_600,
+      activeLicenses: [],
+      activeLicenseStatus: "not_requested" as const,
+    };
+
+    const { unmount } = render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60617"
+        enrichment={{
+          status: "checked",
+          facts: {
+            ...facts,
+            countyFactsSource: "precomputed_snapshot",
+            countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+          },
+          sourceUnavailable: false,
+        }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const snapshotText = screen.getByRole("dialog").textContent ?? "";
+    expect(snapshotText).toContain("3,333 sq ft · County record · checked Aug 15, 2026");
+    expect(snapshotText).toContain("1,900 sq ft · County record · checked Aug 15, 2026");
+    expect(snapshotText).toContain("2025 · County record · checked Aug 15, 2026");
+    expect(snapshotText).not.toContain("current County record");
+    unmount();
+
+    render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60617"
+        enrichment={{
+          status: "checked",
+          facts: { ...facts, countyFactsSource: "live_county", countyFactsCheckedAt: "2026-08-16T04:02:47.077Z" },
+          sourceUnavailable: false,
+        }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const liveText = screen.getByRole("dialog").textContent ?? "";
+    expect(liveText).toContain("3,333 sq ft · current County record");
+    expect(liveText).not.toContain("checked Aug 15, 2026");
+  });
+
+  it("dates a precomputed fact in the RESULTS TABLE cell too, once enrichment lands", async () => {
+    // The map page sends its own buildId today, so the enrich route always
+    // answers this table live. That is a caller-side accident, not a
+    // guarantee — if a caller ever sends the universe buildId the route
+    // answers from the snapshot, and this surface must already say so.
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("site-matchmaker-context")) {
+        return new Response(
+          JSON.stringify({ version: 1, zip: "60617", generatedAt: "2026-08-15", rows: {}, sources: [] }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/api/parcel-space")) {
+        return new Response(JSON.stringify({ status: "available", measurements: [] }), { status: 200 });
+      }
+      if (url.includes("/api/shortlist/enrich")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                key: "20363230080000",
+                countyClass: null,
+                classGloss: null,
+                countyClassStatus: "not_published",
+                lotAreaSqft: null,
+                lotAreaStatus: "not_published",
+                assessorBuildingSqft: null,
+                assessorBuildingYear: null,
+                assessorBuildingAreaStatus: "not_published",
+                assessedValue: null,
+                assessedYear: null,
+                assessedStage: null,
+                assessedValueStatus: "not_published",
+                impliedMarketValue: null,
+                activeLicenses: [],
+                activeLicenseStatus: "not_requested",
+                countyFactsSource: "precomputed_snapshot",
+                countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+                enrichmentUnavailable: false,
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <SiteMatchmakerResultsTable
+        sitePoints={[point]}
+        zip="60617"
+        neighborhood="South Chicago"
+        buildId="build-precomputed-table"
+      />,
+    );
+
+    // Enrichment reaches the table's own cells only after a row is opened.
+    const opener = screen.getAllByRole("button", { name: "Parcel details" })[0];
+    fireEvent.click(opener);
+    await waitFor(() =>
+      expect(screen.getByRole("dialog").textContent).toContain("County record (checked Aug 15, 2026)"),
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    // With the dialog gone, this text can only be the table cell itself.
+    expect(document.body.textContent).toContain(
+      "saved snapshot; County record (checked Aug 15, 2026) did not publish an area",
+    );
+    expect(document.body.textContent).not.toContain("current record did not publish an area");
+  });
+
+  it("names the dated snapshot — not 'the current record' — as what did not publish an area", () => {
+    // `not_published` is the one NEGATIVE state a snapshot read can produce
+    // (a snapshot read is never "unavailable"), so it is the other place
+    // "current" would assert a freshness nobody checked today.
+    const facts = {
+      countyClass: null,
+      classGloss: null,
+      countyClassStatus: "not_published" as const,
+      lotAreaSqft: null,
+      lotAreaStatus: "not_published" as const,
+      assessorBuildingSqft: null,
+      assessorBuildingYear: null,
+      assessorBuildingAreaStatus: "not_published" as const,
+      assessedValue: null,
+      assessedYear: null,
+      assessedStage: null,
+      assessedValueStatus: "not_published" as const,
+      impliedMarketValue: null,
+      activeLicenses: [],
+      activeLicenseStatus: "not_requested" as const,
+    };
+    const row = {
+      address: "8130 S CORNELL AVE",
+      pin: "20363230080000",
+      lat: 41.73,
+      lon: -87.55,
+      space: { lotAreaSqft: 3125, assessorBuildingSqft: 1800, assessorBuildingYear: 2024 },
+      ownerSector: "public" as const,
+      ownerStructure: "government" as const,
+    };
+
+    const { unmount } = render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60617"
+        enrichment={{
+          status: "checked",
+          facts: {
+            ...facts,
+            countyFactsSource: "precomputed_snapshot",
+            countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+          },
+          sourceUnavailable: false,
+        }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const snapshotText = screen.getByRole("dialog").textContent ?? "";
+    expect(snapshotText).toContain(
+      "3,125 sq ft · saved snapshot; County record (checked Aug 15, 2026) did not publish an area",
+    );
+    expect(snapshotText).toContain(
+      "2024 · saved snapshot; County record (checked Aug 15, 2026) did not publish a building year",
+    );
+    expect(snapshotText).not.toContain("current record did not publish");
+    unmount();
+
+    render(
+      <ParcelDossierDialog
+        row={row}
+        zip="60617"
+        enrichment={{
+          status: "checked",
+          facts: { ...facts, countyFactsSource: "live_county", countyFactsCheckedAt: null },
+          sourceUnavailable: false,
+        }}
+        onClose={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const liveText = screen.getByRole("dialog").textContent ?? "";
+    // Live copy is unchanged, to the byte.
+    expect(liveText).toContain("3,125 sq ft · saved snapshot; current record did not publish an area");
+    expect(liveText).toContain("2024 · saved snapshot; current record did not publish a building year");
+  });
+
   it("does not offer a retry loop when the record has no usable Chicago map point", () => {
     render(
       <ParcelDossierDialog

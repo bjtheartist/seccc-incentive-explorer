@@ -699,6 +699,110 @@ describe("candidateRowsToCsv", () => {
     expect(csv).toContain('"Not checked","Not checked","Not checked","Not checked","Not checked","Not checked"');
   });
 
+  it("dates a County area fact this table received from the precomputed snapshot, and never calls it 'current'", () => {
+    // This table's buildId is not the universe buildId TODAY, so the enrich
+    // route always answers it live. That is a caller-side accident, not a
+    // guarantee — if a caller ever sends the universe buildId the route will
+    // answer from the snapshot, and this surface must already be honest
+    // about it rather than inheriting a stale "current" claim.
+    const rows = normalizeSiteMatchmakerCandidates([sitePoint({ address: "100 E MAIN ST" })], null);
+    const csv = candidateRowsToCsv(rows, "available", {
+      [rows[0].id]: {
+        status: "checked",
+        sourceUnavailable: false,
+        facts: {
+          countyClass: "517",
+          classGloss: "Commercial building",
+          countyClassStatus: "available",
+          lotAreaSqft: 3125,
+          lotAreaStatus: "available",
+          assessorBuildingSqft: 1800,
+          assessorBuildingYear: "2025",
+          assessorBuildingAreaStatus: "available",
+          assessedValue: 6900,
+          assessedYear: "2025",
+          assessedStage: "board",
+          assessedValueStatus: "available",
+          impliedMarketValue: 27600,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+          countyFactsSource: "precomputed_snapshot",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+    });
+    expect(csv).toContain('"Available · County record · checked Aug 15, 2026"');
+    expect(csv).not.toContain("Available · current County record");
+  });
+
+  it("says which record failed to publish an area — the snapshot's, dated, not 'the current record'", () => {
+    const rows = normalizeSiteMatchmakerCandidates(
+      [sitePoint({ address: "100 E MAIN ST", squareFeet: 4200 })],
+      null,
+    );
+    const csv = candidateRowsToCsv(rows, "available", {
+      [rows[0].id]: {
+        status: "checked",
+        sourceUnavailable: false,
+        facts: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "not_published",
+          lotAreaSqft: null,
+          lotAreaStatus: "not_published",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "not_published",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+          countyFactsSource: "precomputed_snapshot",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+    });
+    expect(csv).toContain("Published snapshot · County record (checked Aug 15, 2026) did not publish an area");
+    expect(csv).not.toContain("current County record did not publish an area");
+  });
+
+  it("keeps the live wording byte-identical when the facts came from a live County read", () => {
+    const rows = normalizeSiteMatchmakerCandidates(
+      [sitePoint({ address: "100 E MAIN ST", squareFeet: 4200 })],
+      null,
+    );
+    const csv = candidateRowsToCsv(rows, "available", {
+      [rows[0].id]: {
+        status: "checked",
+        sourceUnavailable: false,
+        facts: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "not_published",
+          lotAreaSqft: null,
+          lotAreaStatus: "not_published",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "not_published",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          activeLicenseStatus: "not_requested",
+          countyFactsSource: "live_county",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+    });
+    expect(csv).toContain("Published snapshot · current County record did not publish an area");
+    expect(csv).not.toContain("checked Aug");
+  });
+
   it("keeps a partial County class failure distinct from a published assessment", () => {
     const [row] = normalizeSiteMatchmakerCandidates([sitePoint()], null);
     const csv = candidateRowsToCsv([row], "available", {
