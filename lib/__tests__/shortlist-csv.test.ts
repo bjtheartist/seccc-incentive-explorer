@@ -195,6 +195,139 @@ describe("shortlistCsv", () => {
     ]);
   });
 
+  it("dates a County area fact served from the precomputed snapshot, exactly as the dossier does", () => {
+    const row = candidate({ key: "precomputed-facts" });
+    const csv = shortlistCsv(
+      [row],
+      {
+        [row.key]: {
+          countyClass: "517",
+          classGloss: "Commercial building",
+          countyClassStatus: "available",
+          lotAreaSqft: 3125,
+          lotAreaStatus: "available",
+          assessorBuildingSqft: 1800,
+          assessorBuildingYear: "2025",
+          assessorBuildingAreaStatus: "available",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          countyFactsSource: "precomputed_snapshot",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+      {},
+      "60623",
+    );
+    const line = csv.split("\n")[1];
+    // The CSV must not call a snapshot fact "current" while the dossier
+    // dates it — one qualifier, both surfaces.
+    expect(line).toContain("Available · County record · checked Aug 15, 2026");
+    expect(line).not.toContain("Available · current County record");
+  });
+
+  it("keeps 'current County record' for a live County read", () => {
+    const row = candidate({ key: "live-facts" });
+    const csv = shortlistCsv(
+      [row],
+      {
+        [row.key]: {
+          countyClass: "517",
+          classGloss: "Commercial building",
+          countyClassStatus: "available",
+          lotAreaSqft: 3125,
+          lotAreaStatus: "available",
+          assessorBuildingSqft: 1800,
+          assessorBuildingYear: "2025",
+          assessorBuildingAreaStatus: "available",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          countyFactsSource: "live_county",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+      {},
+      "60623",
+    );
+    const line = csv.split("\n")[1];
+    expect(line).toContain("Available · current County record");
+    expect(line).not.toContain("checked Aug");
+  });
+
+  it("names the snapshot — dated — as the record that did not publish an area", () => {
+    // not_published is the one NEGATIVE state a snapshot read can produce
+    // (a snapshot read is never "unavailable"), so it is the other place
+    // "current" would be a freshness claim nobody made today.
+    const row = candidate({ key: "precomputed-not-published", buildingSqft: 4000, lotSqft: 2500 });
+    const csv = shortlistCsv(
+      [row],
+      {
+        [row.key]: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "not_published",
+          lotAreaSqft: null,
+          lotAreaStatus: "not_published",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "not_published",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          countyFactsSource: "precomputed_snapshot",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+      {},
+      "60623",
+    );
+    const line = csv.split("\n")[1];
+    expect(line).toContain("Published snapshot · County record (checked Aug 15, 2026) did not publish an area");
+    expect(line).not.toContain("current County record did not publish an area");
+  });
+
+  it("keeps the live not_published wording byte-identical", () => {
+    const row = candidate({ key: "live-not-published", buildingSqft: 4000, lotSqft: 2500 });
+    const csv = shortlistCsv(
+      [row],
+      {
+        [row.key]: {
+          countyClass: null,
+          classGloss: null,
+          countyClassStatus: "not_published",
+          lotAreaSqft: null,
+          lotAreaStatus: "not_published",
+          assessorBuildingSqft: null,
+          assessorBuildingYear: null,
+          assessorBuildingAreaStatus: "not_published",
+          assessedValue: null,
+          assessedYear: null,
+          assessedStage: null,
+          assessedValueStatus: "not_published",
+          impliedMarketValue: null,
+          activeLicenses: [],
+          countyFactsSource: "live_county",
+          countyFactsCheckedAt: "2026-08-16T04:02:47.077Z",
+        },
+      },
+      {},
+      "60623",
+    );
+    const line = csv.split("\n")[1];
+    expect(line).toContain("Published snapshot · current County record did not publish an area");
+    expect(line).not.toContain("checked Aug");
+  });
+
   it("quotes cells containing commas or quotes", () => {
     const csv = shortlistCsv([
       candidate({
@@ -257,6 +390,52 @@ describe("shortlistCsv", () => {
     expect(csv).toContain("Not checked");
     expect(csv).toContain("query=3040+S+HOMAN+AVE%2C+Chicago%2C+IL+60623");
     expect(csv).not.toContain("Current County parcel resolved by exact map-point intersection");
+  });
+
+  it("exports a PRECOMPUTED PIN as an exact map-point match with its check date, never as a snapshot publication", () => {
+    const row = candidate({
+      key: "precomputed-row",
+      pin: "16264270400000",
+      address: "3040 S HOMAN AVE",
+      pinProvenance: {
+        source: "coordinate_exact_precomputed",
+        checkedAt: "2026-08-16T03:58:31.254Z",
+        countyAddress: "3040 S HOMAN AVE, CHICAGO, IL 60623",
+      },
+    });
+    const line = shortlistCsv([row], {}, {}, "60623").split("\n")[1];
+    // Saved-PIN column empty, current-PIN column dashed, state names the
+    // method AND the date it was actually checked.
+    expect(line).toContain(
+      ',,16-26-427-040-0000,"Current County parcel resolved by exact map-point intersection · checked Aug 15, 2026",',
+    );
+    expect(line).not.toContain("Published in saved shortlist snapshot");
+    // County record links still resolve from the precomputed PIN.
+    expect(line).toContain("https://maps.cookcountyil.gov/cookviewer/?pin14=16264270400000");
+    expect(line).toContain("https://www.cookcountyassessoril.gov/pin/16264270400000");
+  });
+
+  it("keeps a precomputed leading-zero PIN dashed and text-safe", () => {
+    const row = candidate({
+      key: "precomputed-leading-zero",
+      pin: "01234567890000",
+      pinProvenance: {
+        source: "coordinate_exact_precomputed",
+        checkedAt: "2026-08-16T03:58:31.254Z",
+        countyAddress: null,
+      },
+    });
+    const csv = shortlistCsv([row], {}, {}, "60623");
+    expect(csv).toContain(",,01-23-456-789-0000,");
+    expect(csv).not.toMatch(/,01234567890000,/);
+    expect(csv).toContain("pin14=01234567890000");
+  });
+
+  it("still calls an explicitly saved-snapshot PIN a snapshot publication", () => {
+    const row = candidate({ key: "saved-row", pinProvenance: { source: "saved_snapshot" } });
+    const line = shortlistCsv([row], {}, {}, "60623").split("\n")[1];
+    expect(line).toContain("Published in saved shortlist snapshot");
+    expect(line).not.toContain("precomputed");
   });
 
   it("exports leading-zero PINs as dashed text-safe identities for saved and exact-current records", () => {

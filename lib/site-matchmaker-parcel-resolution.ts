@@ -1,5 +1,6 @@
 import { normalizePin14 } from "./cook-viewer";
 import { normalizeSiteMatchmakerAddress } from "./site-matchmaker-context";
+import type { ShortlistPinProvenance } from "./site-shortlist";
 
 export const PARCEL_RESOLUTION_SOURCE = "cook_county_current_parcels" as const;
 export const PARCEL_RESOLUTION_METHOD = "exact_intersection" as const;
@@ -44,6 +45,55 @@ export interface ParcelResolutionCandidate {
   address: string | null;
   lat: number | null;
   lon: number | null;
+  /** WHERE `pin` came from. Absent means the saved shortlist snapshot
+   *  published it — see `resolvedParcelIdentityFromCandidate`. */
+  pinProvenance?: ShortlistPinProvenance;
+}
+
+export type ResolvedCandidateParcelResolution = Extract<
+  CandidateParcelResolution,
+  { status: "resolved" }
+>;
+
+/**
+ * The ONE place a known PIN is turned into a resolved resolution, so every
+ * surface (the resolution client's cache/short-circuit, the dossier's
+ * starting state, the card label) tells the same story about where it came
+ * from.
+ *
+ * A PIN the universe row published is `saved_snapshot` / `published_pin`
+ * with no `checkedAt`. A PIN the committed sidecar resolved offline by exact
+ * map-point intersection is reported exactly like a LIVE coordinate match —
+ * `coordinate_exact` / `cook_county_current_parcels` / `exact_intersection`,
+ * carrying the offline `checkedAt` — because that is literally what it is.
+ * Calling it "published in the saved snapshot" would be a false provenance
+ * claim; calling it a saved snapshot's PIN would also hide the check date.
+ *
+ * Returns null when there is no usable 14-digit PIN at all.
+ */
+export function resolvedParcelIdentityFromCandidate(
+  candidate: ParcelResolutionCandidate,
+): ResolvedCandidateParcelResolution | null {
+  const pin = normalizePin14(candidate.pin);
+  if (!pin) return null;
+  if (candidate.pinProvenance?.source === "coordinate_exact_precomputed") {
+    return {
+      status: "resolved",
+      pin,
+      pinSource: "coordinate_exact",
+      source: PARCEL_RESOLUTION_SOURCE,
+      matchMethod: PARCEL_RESOLUTION_METHOD,
+      checkedAt: candidate.pinProvenance.checkedAt,
+    };
+  }
+  return {
+    status: "resolved",
+    pin,
+    pinSource: "saved_snapshot",
+    source: "saved_shortlist_snapshot",
+    matchMethod: "published_pin",
+    checkedAt: null,
+  };
 }
 
 export function isChicagoParcelCoordinate(
@@ -241,7 +291,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function validCheckedAt(value: unknown): value is string {
+/**
+ * A full millisecond-precision ISO instant that ROUND-TRIPS. The shape regex
+ * alone accepts impossible dates ("2026-13-45T99:99:99.999Z"); re-serializing
+ * the parsed Date and requiring an identical string is what actually rejects
+ * them. Exported so the committed parcel-identity sidecars are validated by
+ * exactly the same rule as a live resolver response.
+ */
+export function validCheckedAt(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
     return false;
   }

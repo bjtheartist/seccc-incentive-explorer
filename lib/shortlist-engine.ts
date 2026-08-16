@@ -97,6 +97,7 @@ import {
   nearestStation,
   ownerAxesLabel,
   type NearestStation,
+  type ShortlistPinProvenance,
   type ShortlistStation,
 } from "./site-shortlist";
 
@@ -705,7 +706,22 @@ export interface ShortlistDisplayFacts {
   nearestLibrary: NearestAmenityFact | null;
 }
 
-export type DecoratedShortlistCandidate = RankedShortlistCandidate & ShortlistDisplayFacts;
+/**
+ * WHERE the candidate's `pin` came from, attached by the PAGE after
+ * decoration (lib/shortlist-parcel-identity.ts's
+ * `applyPrecomputedParcelIdentity`) — never by the engine, which does no
+ * parcel resolution of any kind. `undefined` reads as "saved snapshot", so
+ * a candidate that never went through the merge can never be mislabeled as
+ * an exact County match. See `ShortlistPinProvenance` for why the two
+ * sources must never share a label.
+ */
+export interface ShortlistPinProvenanceFact {
+  pinProvenance?: ShortlistPinProvenance;
+}
+
+export type DecoratedShortlistCandidate = RankedShortlistCandidate &
+  ShortlistDisplayFacts &
+  ShortlistPinProvenanceFact;
 
 // ── Funnel ───────────────────────────────────────────────────────────────────
 

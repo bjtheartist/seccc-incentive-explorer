@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "universeBuildId": "shortlist-universe-area-normalized-v1-2026-08-15T19:06:17.970Z",
+  "generatedAt": "2026-08-16T05:07:43.502Z",
+  "files": {
+    "60617": {
+      "path": "60617.json",
+      "checksum": "8c2e8d198085005f59335fd08219daa3121d83c08b50d022f1fd4b4587473f89",
+      "entryCount": 1260
+    },
+    "60619": {
+      "path": "60619.json",
+      "checksum": "491f692af1de711cd4ef5de1452d8ed45f9f72bcc39ac23ae7647bc14de7e2b7",
+      "entryCount": 1368
+    },
+    "60621": {
+      "path": "60621.json",
+      "checksum": "b95e999a5a7cd26636d7b1b143951a11d31dc056109bbaf9c322ab753895933c",
+      "entryCount": 1499
+    },
+    "60623": {
+      "path": "60623.json",
+      "checksum": "a8dc36a382254f311c5464826da6f30c555ba35d7699603732c6a9696b486f17",
+      "entryCount": 1284
+    },
+    "60624": {
+      "path": "60624.json",
+      "checksum": "8ec3f3cd16223f46b72915d9a8489d40205d5046c192b9e78ee124dc935cc18d",
+      "entryCount": 1422
+    },
+    "60636": {
+      "path": "60636.json",
+      "checksum": "f7476a336c13f179b358024bd1fdd0636ffa011c403dc5b20dadb37977de8e0a",
+      "entryCount": 1614
+    },
+    "60644": {
+      "path": "60644.json",
+      "checksum": "e9b984cb6ef7dac5927824b5d8fa96f23ee6f9b78a4a0d58ad6a4610816f02bd",
+      "entryCount": 903
+    },
+    "60649": {
+      "path": "60649.json",
+      "checksum": "bcf3b5a26468fecdc58c66d06733174947a7ae4a9db0352d5a6b1c83ae0d05e2",
+      "entryCount": 560
+    },
+    "60651": {
+      "path": "60651.json",
+      "checksum": "c5dbd9413ebea6859b8a8c4b0b1239e7921db2b83c4a1184c831d6e02b386674",
+      "entryCount": 712
+    }
+  }
+}

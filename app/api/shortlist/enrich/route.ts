@@ -33,7 +33,12 @@ import {
   COOK_COUNTY_CURRENT_PARCELS_QUERY_URL,
   normalizePin14,
 } from "@/lib/cook-viewer";
-import { normalizePublishedArea } from "@/lib/published-area";
+import {
+  normalizeCountyArea,
+  normalizeCountyClass,
+  normalizeCountyTaxYear,
+} from "@/lib/county-parcel-facts";
+import { loadPrecomputedCountyParcelFacts } from "@/lib/shortlist-parcel-identity";
 import { chicagoCalendarDay } from "@/lib/vacancy-evidence";
 import {
   countyClassGloss,
@@ -47,6 +52,16 @@ export const dynamic = "force-dynamic";
  * send exactly one parcel per explicit reader action. */
 const MAX_ITEMS = 25;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/**
+ * Next Data Cache window for the two SOCRATA lookups (assessment, licences).
+ * The in-memory `cache` below is per serverless instance and dies with it;
+ * this one is shared across instances, so a cold start no longer re-pays a
+ * Socrata round trip for a value that changes at most a few times a year.
+ * Deliberately NOT applied to the County ArcGIS fallback — that path is now
+ * the rare exception (an unknown PIN), and its own freshness story is the
+ * precompute, not a cache.
+ */
+const SOCRATA_REVALIDATE_SECONDS = 6 * 60 * 60;
 
 const COUNTY_DOMAIN = "datacatalog.cookcountyil.gov";
 const CITY_DOMAIN = "data.cityofchicago.org";
@@ -115,12 +130,6 @@ function record(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function yearText(value: unknown): string | null {
-  const valueText = text(value);
-  if (valueText) return valueText;
-  return typeof value === "number" && Number.isInteger(value) ? String(value) : null;
-}
-
 /** Latest published CookViewer parcel facts for a PIN. `undefined` = lookup failed. */
 async function fetchCountyParcelFacts(pin: string): Promise<CountyParcelFacts | undefined> {
   const url = new URL(COOK_COUNTY_CURRENT_PARCELS_QUERY_URL);
@@ -148,11 +157,13 @@ async function fetchCountyParcelFacts(pin: string): Promise<CountyParcelFacts | 
           assessorBuildingYear: null,
         };
       }
+      // The SAME normalizers the offline precompute uses, so a snapshot fact
+      // and a live fact for one parcel can never differ in shape.
       return {
-        countyClass: text(attributes.BCLASS),
-        lotAreaSqft: normalizePublishedArea(attributes.LANDSF),
-        assessorBuildingSqft: normalizePublishedArea(attributes.BLDGSQFT),
-        assessorBuildingYear: yearText(attributes.TAXYR),
+        countyClass: normalizeCountyClass(attributes.BCLASS),
+        lotAreaSqft: normalizeCountyArea(attributes.LANDSF),
+        assessorBuildingSqft: normalizeCountyArea(attributes.BLDGSQFT),
+        assessorBuildingYear: normalizeCountyTaxYear(attributes.TAXYR),
       };
     } catch {
       if (attempt === 1) return undefined;
@@ -177,6 +188,8 @@ async function fetchAssessedValue(
       $order: "year DESC",
       $limit: "1",
     }),
+    undefined,
+    { revalidateSeconds: SOCRATA_REVALIDATE_SECONDS },
   );
   if (rows === null) return undefined;
   const row = rows[0];
@@ -208,6 +221,8 @@ async function fetchActiveLicenses(
       $order: "expiration_date DESC",
       $limit: "5",
     }),
+    undefined,
+    { revalidateSeconds: SOCRATA_REVALIDATE_SECONDS },
   );
   if (rows === null) return undefined;
 
@@ -248,8 +263,26 @@ async function enrichOne(
 
   const request = (async (): Promise<ShortlistEnrichItem> => {
 
+  // ── The County parcel read, precomputed where possible ──────────────────
+  // The offline run (scripts/resolve-shortlist-universe-parcels.ts) already
+  // read class, lot area, assessor building area, and tax year for ~every
+  // PIN this shortlist can surface, bound to THIS universe buildId. When the
+  // snapshot has the PIN, the ArcGIS server is not contacted at all, and the
+  // result is a genuine successful read — its statuses are the same
+  // available/not_published a live lookup would produce, never "unavailable".
+  // An unknown PIN (or a buildId the snapshot does not recognize) falls
+  // through to the live lookup, unchanged.
+  const precomputedFacts = pin ? loadPrecomputedCountyParcelFacts(buildId).get(pin) : undefined;
+
   const [parcelResult, valueResult, licenseResult] = await Promise.all([
-    pin
+    precomputedFacts
+      ? Promise.resolve<CountyParcelFacts>({
+          countyClass: precomputedFacts.countyClass,
+          lotAreaSqft: precomputedFacts.lotAreaSqft,
+          assessorBuildingSqft: precomputedFacts.assessorBuildingSqft,
+          assessorBuildingYear: precomputedFacts.assessorBuildingYear,
+        })
+      : pin
       ? fetchCountyParcelFacts(pin)
       : Promise.resolve<CountyParcelFacts>({
           countyClass: null,
@@ -277,6 +310,12 @@ async function enrichOne(
     parcelResult === undefined ? null : parcelResult.assessorBuildingSqft;
   const assessorBuildingYear =
     parcelResult === undefined ? null : parcelResult.assessorBuildingYear;
+  const countyFactsSource = precomputedFacts ? "precomputed_snapshot" : "live_county";
+  // Only claim a check instant when a County parcel read actually happened:
+  // the snapshot's own instant, or now for a successful live lookup.
+  const countyFactsCheckedAt =
+    precomputedFacts?.checkedAt ??
+    (pin !== null && parcelResult !== undefined ? new Date().toISOString() : null);
   const assessedValue = valueResult === undefined ? null : valueResult.value;
   const assessedYear = valueResult === undefined ? null : valueResult.year;
   const assessedStage = valueResult === undefined ? null : valueResult.stage;
@@ -304,6 +343,8 @@ async function enrichOne(
     activeLicenses,
     activeLicenseStatus:
       address === "" ? "not_requested" : licenseResult === undefined ? "unavailable" : activeLicenses.length === 0 ? "not_found" : "available",
+    countyFactsSource,
+    countyFactsCheckedAt,
     enrichmentUnavailable:
       parcelResult === undefined || valueResult === undefined || licenseResult === undefined,
   };
@@ -415,6 +456,8 @@ export async function POST(request: Request) {
         impliedMarketValue: null,
         activeLicenses: [],
         activeLicenseStatus: item.address ? "unavailable" : "not_requested",
+        countyFactsSource: "live_county",
+        countyFactsCheckedAt: null,
         enrichmentUnavailable: true,
       })),
       request: {

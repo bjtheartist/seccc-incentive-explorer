@@ -30,7 +30,6 @@ import {
   clerkRecordsUrl,
   cookViewerUrl,
   formatPin14,
-  normalizePin14,
 } from "@/lib/cook-viewer";
 import {
   ZONING_BADGE_LABELS,
@@ -48,7 +47,11 @@ import {
 import {
   resolveCandidateParcelIdentity,
 } from "@/lib/site-matchmaker-parcel-resolution-client";
-import type { CandidateParcelResolution } from "@/lib/site-matchmaker-parcel-resolution";
+import {
+  resolvedParcelIdentityFromCandidate,
+  type CandidateParcelResolution,
+  type ParcelResolutionCandidate,
+} from "@/lib/site-matchmaker-parcel-resolution";
 import type { CandidateParcelEnrichmentState } from "@/lib/site-matchmaker-results";
 import {
   IMPLIED_VALUE_CAPTION,
@@ -56,6 +59,7 @@ import {
   assessedYearLabel,
   accessibilityNoteFor,
   activeLicenseFlag,
+  parcelCheckedDateLabel,
   shortlistSnapshotHref,
   taxSaleFlag,
   type ShortlistEnrichmentFacts,
@@ -95,6 +99,22 @@ interface DossierOverlay {
 function factsFromEnrichItem(item: EnrichItem): CandidateParcelEnrichmentState {
   const { key: _key, enrichmentUnavailable, ...facts } = item;
   return { status: "checked", facts, sourceUnavailable: enrichmentUnavailable };
+}
+
+/** The card's candidate as the shared parcel-resolution vocabulary sees it —
+ *  including WHERE its PIN came from, so a precomputed exact match is never
+ *  reported as something the saved snapshot published. */
+function parcelResolutionCandidate(
+  candidate: DecoratedShortlistCandidate,
+): ParcelResolutionCandidate {
+  return {
+    key: candidate.key,
+    pin: candidate.pin,
+    address: candidate.address,
+    lat: candidate.lat,
+    lon: candidate.lon,
+    pinProvenance: candidate.pinProvenance,
+  };
 }
 
 function dossierRecord(
@@ -341,9 +361,23 @@ function ShortlistCard({
     opener: HTMLButtonElement,
   ) => void;
 }) {
-  const effectivePin = dossierOverlay?.resolution.status === "resolved"
-    ? dossierOverlay.resolution.pin
-    : candidate.pin;
+  // The card's PIN identity: whatever the opened dossier resolved, else
+  // whatever was already known at LOAD — which now includes precomputed
+  // exact-intersection PINs, so those cards carry County links and the
+  // exact-match label without the reader having to open anything.
+  const pinResolution =
+    dossierOverlay?.resolution.status === "resolved"
+      ? dossierOverlay.resolution
+      : resolvedParcelIdentityFromCandidate(parcelResolutionCandidate(candidate));
+  const effectivePin = pinResolution?.pin ?? candidate.pin;
+  const checkedLabel =
+    pinResolution?.pinSource === "coordinate_exact"
+      ? parcelCheckedDateLabel(pinResolution.checkedAt)
+      : null;
+  const exactMatchLabel =
+    pinResolution?.pinSource === "coordinate_exact"
+      ? ` · resolved from current County parcel${checkedLabel ? ` · checked ${checkedLabel}` : ""}`
+      : "";
   const viewerUrl = cookViewerUrl(effectivePin);
   const assessorUrl = assessorRecordUrl(effectivePin);
   const clerkUrl = clerkRecordsUrl(effectivePin);
@@ -404,7 +438,7 @@ function ShortlistCard({
           </h3>
           <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
             {formatPin14(effectivePin)
-              ? `PIN ${formatPin14(effectivePin)}${dossierOverlay?.resolution.status === "resolved" && dossierOverlay.resolution.pinSource === "coordinate_exact" ? " · resolved from current County parcel" : ""}`
+              ? `PIN ${formatPin14(effectivePin)}${exactMatchLabel}`
               : "PIN not published in saved shortlist snapshot"}
             {" · "}
             {candidate.zoningDistrict ? `Zoned ${candidate.zoningDistrict}` : "Zoning unresolved"}
@@ -779,7 +813,13 @@ export default function SiteShortlistResults({
       latestRequestByKeyRef.current.set(candidate.key, requestId);
       const isCurrent = () => latestRequestByKeyRef.current.get(candidate.key) === requestId;
       const existing = dossierByKey[candidate.key];
-      const savedPin = normalizePin14(candidate.pin);
+      // Any PIN known at LOAD — published by the snapshot OR precomputed by
+      // exact map-point intersection — resolves without a network call, and
+      // carries its own provenance (never "saved_snapshot" for a precomputed
+      // match).
+      const knownResolution = resolvedParcelIdentityFromCandidate(
+        parcelResolutionCandidate(candidate),
+      );
       if (
         !options.retryResolution &&
         !options.retryEnrichment &&
@@ -790,20 +830,11 @@ export default function SiteShortlistResults({
         return;
       }
 
-      const startingResolution = options.retryResolution
-        ? { status: "resolving" } as const
+      const startingResolution: CandidateParcelResolution = options.retryResolution
+        ? { status: "resolving" }
         : existing?.resolution.status === "resolved"
           ? existing.resolution
-          : savedPin
-            ? ({
-                status: "resolved",
-                pin: savedPin,
-                pinSource: "saved_snapshot",
-                source: "saved_shortlist_snapshot",
-                matchMethod: "published_pin",
-                checkedAt: null,
-              } as const)
-            : ({ status: "resolving" } as const);
+          : (knownResolution ?? { status: "resolving" });
 
       setDossierByKey((current) => ({
         ...current,
@@ -819,13 +850,7 @@ export default function SiteShortlistResults({
       const resolution =
         startingResolution.status === "resolved"
           ? startingResolution
-          : await resolveCandidateParcelIdentity(buildId, {
-              key: candidate.key,
-              pin: candidate.pin,
-              address: candidate.address,
-              lat: candidate.lat,
-              lon: candidate.lon,
-            });
+          : await resolveCandidateParcelIdentity(buildId, parcelResolutionCandidate(candidate));
       if (!isCurrent()) return;
       if (resolution.status !== "resolved") {
         setDossierByKey((current) => ({
@@ -836,9 +861,15 @@ export default function SiteShortlistResults({
       }
 
       const batchItem = byKey[candidate.key];
+      // Reuse the load-time batch for ANY pin that was already known when the
+      // batch was sent — the batch keys off `candidate.pin`, which now
+      // includes precomputed PINs, so those facts are already on the card
+      // face and re-fetching them on open would be a wasted County round trip
+      // for an identical answer. A PIN discovered LATER (on-demand
+      // resolution) was not in the batch and still needs its own fetch.
       if (
         !options.retryEnrichment &&
-        resolution.pinSource === "saved_snapshot" &&
+        knownResolution?.pin === resolution.pin &&
         batchItem &&
         batchItem.countyClassStatus !== "not_requested"
       ) {

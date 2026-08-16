@@ -1,10 +1,10 @@
 "use client";
 
-import { normalizePin14 } from "./cook-viewer";
 import {
   isChicagoParcelCoordinate,
   normalizedParcelStreetAddress,
   parseCandidateParcelResolution,
+  resolvedParcelIdentityFromCandidate,
   type CandidateParcelResolution,
   type ParcelResolutionCandidate,
 } from "./site-matchmaker-parcel-resolution";
@@ -42,17 +42,11 @@ export function cachedCandidateParcelResolution(
   buildId: string,
   candidate: ParcelResolutionCandidate,
 ): ResolvedResolution | null {
-  const pin = normalizePin14(candidate.pin);
-  if (pin) {
-    return {
-      status: "resolved",
-      pin,
-      pinSource: "saved_snapshot",
-      source: "saved_shortlist_snapshot",
-      matchMethod: "published_pin",
-      checkedAt: null,
-    };
-  }
+  // A PIN already known at load short-circuits the network entirely — but it
+  // is reported with ITS OWN provenance: a precomputed exact-intersection
+  // match is never labeled as a saved-snapshot publication.
+  const known = resolvedParcelIdentityFromCandidate(candidate);
+  if (known) return known;
   const key = requestKey(buildId, candidate);
   const cached = resolved.get(key);
   if (!cached) return null;
@@ -68,17 +62,8 @@ export function resolveCandidateParcelIdentity(
   buildId: string,
   candidate: ParcelResolutionCandidate,
 ): Promise<CandidateParcelResolution> {
-  const pin = normalizePin14(candidate.pin);
-  if (pin) {
-    return Promise.resolve({
-      status: "resolved",
-      pin,
-      pinSource: "saved_snapshot",
-      source: "saved_shortlist_snapshot",
-      matchMethod: "published_pin",
-      checkedAt: null,
-    });
-  }
+  const known = resolvedParcelIdentityFromCandidate(candidate);
+  if (known) return Promise.resolve(known);
   if (
     !buildId.trim() ||
     !candidate.key ||

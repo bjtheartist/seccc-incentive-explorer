@@ -23,18 +23,33 @@ export function socrataHeaders(): Record<string, string> {
   return headers;
 }
 
+export interface SocrataFetchOptions {
+  /**
+   * Opt this request into Next's Data Cache for N seconds
+   * (`next: { revalidate: N }`). Unlike the per-instance in-memory caches
+   * this repo uses elsewhere, the Data Cache is SHARED across serverless
+   * instances, so a cold start does not re-pay a slow Socrata round trip.
+   * Omit to keep the default (uncached) behavior every existing caller has.
+   */
+  revalidateSeconds?: number;
+}
+
 /**
  * Fetch from a Socrata endpoint with app token and timeout.
  * Returns parsed JSON or null on failure.
  */
 export async function socrataFetch<T>(
   url: string,
-  timeoutMs = 10000
+  timeoutMs = 10000,
+  options: SocrataFetchOptions = {},
 ): Promise<T | null> {
   try {
     const res = await fetch(url, {
       headers: socrataHeaders(),
       signal: AbortSignal.timeout(timeoutMs),
+      ...(options.revalidateSeconds != null
+        ? { next: { revalidate: options.revalidateSeconds } }
+        : {}),
     });
     if (!res.ok) return null;
     return (await res.json()) as T;

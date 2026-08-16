@@ -55,6 +55,8 @@ import type {
 } from "@/lib/vacancy-index";
 import {
   countyClassGloss,
+  countyRecordQualifier,
+  countyRecordSubjectLabel,
   impliedMarketValue,
   type ShortlistEnrichmentFacts,
 } from "@/lib/site-shortlist";
@@ -270,6 +272,21 @@ export function parseCandidateParcelEnrichmentResponse(
       impliedMarketValue: item.impliedMarketValue,
       activeLicenses,
       activeLicenseStatus: item.activeLicenseStatus as ShortlistEnrichmentFacts["activeLicenseStatus"],
+      // County-fact provenance is ALLOWLISTED like every other field here:
+      // only the two known source values survive, and only a full ISO
+      // instant counts as a check time. Anything else becomes undefined /
+      // null, which every reader treats as the live path — an unparseable
+      // value can never upgrade a fact into a dated snapshot claim, and a
+      // missing one (an older route build) is simply today's wording.
+      countyFactsSource:
+        item.countyFactsSource === "precomputed_snapshot" || item.countyFactsSource === "live_county"
+          ? item.countyFactsSource
+          : undefined,
+      countyFactsCheckedAt:
+        typeof item.countyFactsCheckedAt === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(item.countyFactsCheckedAt)
+          ? item.countyFactsCheckedAt
+          : null,
     },
     sourceUnavailable: item.enrichmentUnavailable,
   };
@@ -967,7 +984,9 @@ function areaCsvFact(
 ): { value: number | string; state: string } {
   if (enrichment.status === "checked") {
     if (liveStatus === "available" && liveValue != null) {
-      return { value: liveValue, state: "Available · current County record" };
+      // Honest even if a caller ever sends the universe buildId and the
+      // enrich route answers this table from the precomputed snapshot.
+      return { value: liveValue, state: `Available · ${countyRecordQualifier(enrichment.facts)}` };
     }
     if (snapshotValue != null) {
       if (liveStatus === "unavailable") {
@@ -976,7 +995,7 @@ function areaCsvFact(
       if (liveStatus === "not_published") {
         return {
           value: snapshotValue,
-          state: "Published snapshot · current County record did not publish an area",
+          state: `Published snapshot · ${countyRecordSubjectLabel(enrichment.facts)} did not publish an area`,
         };
       }
       return { value: snapshotValue, state: "Published snapshot" };

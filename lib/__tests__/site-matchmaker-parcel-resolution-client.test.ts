@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  cachedCandidateParcelResolution,
   clearCandidateParcelResolutionCacheForTests,
   resolveCandidateParcelIdentity,
 } from "../site-matchmaker-parcel-resolution-client";
@@ -27,6 +28,67 @@ describe("resolveCandidateParcelIdentity", () => {
       status: "resolved", pin: "16264270400000", pinSource: "saved_snapshot",
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a PRECOMPUTED PIN as an exact County match, never as a saved-snapshot publication", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const precomputed = {
+      ...candidate,
+      pin: "16-26-427-040-0000",
+      pinProvenance: {
+        source: "coordinate_exact_precomputed",
+        checkedAt: "2026-08-16T03:58:31.254Z",
+        countyAddress: "3040 S HOMAN AVE, CHICAGO, IL 60623",
+      },
+    } as const;
+    const expected = {
+      status: "resolved",
+      pin: "16264270400000",
+      pinSource: "coordinate_exact",
+      source: "cook_county_current_parcels",
+      matchMethod: "exact_intersection",
+      checkedAt: "2026-08-16T03:58:31.254Z",
+    };
+    await expect(resolveCandidateParcelIdentity("build-a", precomputed)).resolves.toEqual(expected);
+    expect(cachedCandidateParcelResolution("build-a", precomputed)).toEqual(expected);
+    // The whole point: the identity was already known offline.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps today's saved-snapshot shape for a published PIN with no provenance", () => {
+    expect(cachedCandidateParcelResolution("build-a", { ...candidate, pin: "16-26-427-040-0000" })).toEqual({
+      status: "resolved",
+      pin: "16264270400000",
+      pinSource: "saved_snapshot",
+      source: "saved_shortlist_snapshot",
+      matchMethod: "published_pin",
+      checkedAt: null,
+    });
+    expect(
+      cachedCandidateParcelResolution("build-a", {
+        ...candidate,
+        pin: "16-26-427-040-0000",
+        pinProvenance: { source: "saved_snapshot" },
+      }),
+    ).toMatchObject({ pinSource: "saved_snapshot", matchMethod: "published_pin", checkedAt: null });
+  });
+
+  it("does not let provenance alone conjure a PIN when the row has none", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ status: "unavailable" }, 503));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      resolveCandidateParcelIdentity("build-a", {
+        ...candidate,
+        pin: null,
+        pinProvenance: {
+          source: "coordinate_exact_precomputed",
+          checkedAt: "2026-08-16T03:58:31.254Z",
+          countyAddress: "3040 S HOMAN AVE",
+        },
+      }),
+    ).resolves.toEqual({ status: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("issues no request for invalid or out-of-Chicago coordinates", async () => {

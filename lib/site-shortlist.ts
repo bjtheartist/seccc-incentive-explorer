@@ -281,6 +281,119 @@ export interface ShortlistEnrichmentFacts {
   impliedMarketValue: number | null;
   activeLicenses: { name: string; description: string }[];
   activeLicenseStatus?: "available" | "not_found" | "unavailable" | "not_requested";
+  /**
+   * WHERE the four County parcel facts above (class, lot area, assessor
+   * building area, building tax year) came from — the committed
+   * parcel-identity snapshot the offline run captured, or a live County
+   * ArcGIS lookup made for this request. Additive and optional: a payload
+   * without it is read as the live path, so an older item can never be
+   * mistaken for a snapshot read. Assessed value and licences are ALWAYS
+   * live (Socrata) and are not covered by this field.
+   */
+  countyFactsSource?: "precomputed_snapshot" | "live_county";
+  /** When those four County facts were actually read. `null` when no County
+   *  parcel read happened at all (no PIN, or the lookup failed). */
+  countyFactsCheckedAt?: string | null;
+}
+
+// ── PIN provenance ───────────────────────────────────────────────────────────
+
+/**
+ * WHERE a candidate's PIN came from. A shortlist card carries a PIN for
+ * exactly two reasons, and they are NOT interchangeable:
+ *
+ *   • `saved_snapshot` — the universe row itself published the PIN. The
+ *     honest label is "published in the saved shortlist snapshot".
+ *   • `coordinate_exact_precomputed` — the row published NO PIN, and the
+ *     committed parcel-identity sidecar (scripts/resolve-shortlist-universe-
+ *     parcels.ts, loaded by lib/shortlist-parcel-identity.ts) resolved the
+ *     current County parcel by exact map-point intersection offline. This is
+ *     the SAME method /api/shortlist/resolve-parcel runs on demand, just
+ *     precomputed — so every surface must label it exactly like a live
+ *     coordinate match ("resolved from the current County parcel"), NEVER as
+ *     something the saved snapshot published.
+ *
+ * `undefined` is read as `saved_snapshot` everywhere, so a candidate built by
+ * a path that predates this field can never be UPGRADED into a precomputed
+ * claim by accident.
+ */
+export type ShortlistPinProvenance =
+  | { source: "saved_snapshot" }
+  | {
+      source: "coordinate_exact_precomputed";
+      /** ISO instant the offline exact-intersection check ran. */
+      checkedAt: string;
+      /** The County-published address the match was confirmed against. */
+      countyAddress: string | null;
+    };
+
+/**
+ * "2026-08-16T03:58:31.254Z" -> "Aug 15, 2026".
+ *
+ * Rendered in AMERICA/CHICAGO, never UTC and never the viewer's own locale:
+ * every date this product shows is a Chicago date (the same reason
+ * `chicagoCalendarDay` exists in lib/vacancy-evidence.ts), and an overnight
+ * County read would otherwise be reported to a Chicago reader as the
+ * following day for a Chicago parcel. Returns null for anything unparseable
+ * rather than printing "Invalid Date".
+ */
+export function parcelCheckedDateLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Chicago",
+  });
+}
+
+/**
+ * How to describe a County parcel fact that WAS successfully read — the ONE
+ * definition, shared by the parcel dossier and the CSV so the two can never
+ * describe the same fact differently.
+ *
+ * A live lookup made for this request is "current". A fact served from the
+ * committed precomputed snapshot says so and names the day it was read,
+ * because it may be hours or days old and a reader deciding on a parcel
+ * should be told that rather than left to infer "current" from a word chosen
+ * for a different path. Facts with no provenance (an older payload, or any
+ * live response) keep the original wording.
+ */
+export type CountyFactsProvenance =
+  | Pick<ShortlistEnrichmentFacts, "countyFactsSource" | "countyFactsCheckedAt">
+  | null
+  | undefined;
+
+export function countyRecordQualifier(facts: CountyFactsProvenance): string {
+  if (facts?.countyFactsSource !== "precomputed_snapshot") return "current County record";
+  const checked = parcelCheckedDateLabel(facts.countyFactsCheckedAt);
+  return checked ? `County record · checked ${checked}` : "County record";
+}
+
+/**
+ * The same provenance rendered as the SUBJECT of a sentence — "<subject> did
+ * not publish an area".
+ *
+ * `not_published` is the one NEGATIVE state that can co-occur with a snapshot
+ * read (a snapshot read is never "unavailable"), so it is the only place
+ * besides the available branch where calling the record "current" would make
+ * a freshness claim nobody checked today.
+ *
+ * Each surface passes its OWN live-path wording as `liveLabel`, because the
+ * existing copy legitimately differs between them ("current County record" in
+ * the CSVs, "current record" in the denser table and dossier cells). Only the
+ * PRECOMPUTED branch is being corrected here — every live string stays
+ * byte-identical to what it was.
+ */
+export function countyRecordSubjectLabel(
+  facts: CountyFactsProvenance,
+  liveLabel = "current County record",
+): string {
+  if (facts?.countyFactsSource !== "precomputed_snapshot") return liveLabel;
+  const checked = parcelCheckedDateLabel(facts.countyFactsCheckedAt);
+  return checked ? `County record (checked ${checked})` : "County record";
 }
 
 // ── Incentive-snapshot link ─────────────────────────────────────────────────
