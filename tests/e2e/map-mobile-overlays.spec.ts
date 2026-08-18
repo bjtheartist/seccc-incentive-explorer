@@ -32,8 +32,10 @@ async function openMapOnPhone(page: Page) {
     },
     [RESOLVED_SITEWIDE, RESOLVED_MAP],
   );
-  await page.goto(`${baseURL}/map`);
-  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
+  await page.goto(`${baseURL}/map`, { waitUntil: "domcontentloaded" });
+  // Against production over the network with SwiftShader WebGL the search
+  // control can take ~35s to mount; local builds take a few seconds.
+  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 90000 });
   // Let the map settle before tapping (tiles + interaction handlers).
   await page.waitForTimeout(2500);
 }
@@ -41,6 +43,7 @@ async function openMapOnPhone(page: Page) {
 test("tapping the map on a phone opens the location dossier fully below the search bar", async ({
   page,
 }) => {
+  test.setTimeout(180000);
   await openMapOnPhone(page);
 
   const canvas = page.locator('[data-tour="map-canvas"]');
@@ -50,7 +53,7 @@ test("tapping the map on a phone opens the location dossier fully below the sear
   await page.touchscreen.tap(box!.x + box!.width * 0.5, box!.y + box!.height * 0.62);
 
   const dossier = page.getByRole("complementary", { name: "Selected map location details" });
-  await expect(dossier).toBeVisible({ timeout: 20000 });
+  await expect(dossier).toBeVisible({ timeout: 60000 });
 
   const search = await page.getByTestId("map-search").boundingBox();
   const card = await dossier.boundingBox();
