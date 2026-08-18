@@ -19,6 +19,7 @@ import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
 import MapDossierCard from "./MapDossierCard";
+import { DESKTOP_DOSSIER_WRAPPER_CLASS, MOBILE_DOSSIER_WRAPPER_CLASS } from "./map-overlay-layout";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import {
@@ -4710,11 +4711,8 @@ export default function MapView() {
 
       {dossierCard ? (
         <div
-          className={
-            isMobile
-              ? "absolute inset-x-3 top-16 z-30"
-              : "absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2"
-          }
+          data-testid="map-dossier-wrapper"
+          className={isMobile ? MOBILE_DOSSIER_WRAPPER_CLASS : DESKTOP_DOSSIER_WRAPPER_CLASS}
         >
           {dossierCard}
         </div>
