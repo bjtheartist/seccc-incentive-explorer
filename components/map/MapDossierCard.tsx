@@ -750,9 +750,23 @@ export default function MapDossierCard({
 
       {hasPropertyRecords ? (
         <DossierSection title="Property and public records">
+          {areaStats.parcelAddressMatch === "mismatch" && areaStats.parcelAddress ? (
+            <div className="border border-[#B45309]/40 bg-[#FEF3C7]/60 p-2.5 text-[11px] leading-relaxed text-[#78350F]">
+              <span className="font-semibold">Different parcel address.</span>{" "}
+              These County records are for{" "}
+              <span className="font-semibold">{areaStats.parcelAddress.split(",")[0]}</span>
+              {areaStats.parcelRequestedAddress
+                ? ` — the parcel at this location — not for ${areaStats.parcelRequestedAddress}.`
+                : " — the parcel at this location, not the searched address."}{" "}
+              No County parcel record was found under the searched address itself.
+            </div>
+          ) : null}
           {dossierPin ? (
             <>
               <FactRow label="PIN" value={dossierPin} />
+              {areaStats.parcelAddress ? (
+                <FactRow label="Parcel address" value={areaStats.parcelAddress.split(",")[0]} />
+              ) : null}
               {areaStats.parcelClass ? <FactRow label="Property class" value={areaStats.parcelClass} /> : null}
               {areaStats.parcelClassDescription ? <p>{areaStats.parcelClassDescription}</p> : null}
               {areaStats.parcelValue ? <FactRow label="Recorded parcel value" value={areaStats.parcelValue} /> : null}

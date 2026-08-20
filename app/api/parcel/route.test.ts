@@ -139,4 +139,174 @@ describe("GET /api/parcel", () => {
     expect(countyUrl).toContain("LANDSF%2CBLDGSQFT%2CBLDGAGE");
     expect(countyUrl).not.toContain("MapServer%2F44");
   });
+
+  /* ── Address guard ──
+     A parcel resolved from a point can belong to a different address than the
+     one the user searched (geocoded points land in the street right-of-way;
+     city vacancy-record coordinates can sit inside a neighboring parcel).
+     Every resolution is stamped with how it relates to the request. */
+
+  const cottageGroveAttributes = {
+    PIN14: "25023150220000",
+    street_address: "9300 S COTTAGE GROVE AVE",
+    city_state_zip: "CHICAGO, IL 60619",
+    township_name: "HYDE PARK",
+    BCLASS: "593",
+    TAXDIST: "70014",
+    LANDSF: 168_839,
+    BLDGSQFT: null,
+    BLDGAGE: 119,
+    CURRENTVALUE_TOTAL: 753_750,
+    CURRENTVALUE_LAND: 168_839,
+    CURRENTVALUE_BLDG: 584_911,
+    TAXYR: 2024,
+  };
+  const drexelAttributes = {
+    PIN14: "25023090250000",
+    street_address: "9336 S DREXEL AVE",
+    city_state_zip: "CHICAGO, IL 60619",
+    township_name: "HYDE PARK",
+    BCLASS: "203",
+    TAXDIST: "70014",
+    LANDSF: 4_000,
+    BLDGSQFT: 1_200,
+    BLDGAGE: 100,
+    CURRENTVALUE_TOTAL: 90_000,
+    CURRENTVALUE_LAND: 20_000,
+    CURRENTVALUE_BLDG: 70_000,
+    TAXYR: 2024,
+  } as const;
+
+  function stubCookViewer(options: {
+    containment: Array<Record<string, unknown>>;
+    buffered?: Array<{ attributes: Record<string, unknown>; geometry?: unknown }>;
+  }) {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("parcel_current_beta/FeatureServer/0/query")) {
+        const isBuffered = url.includes("distance=");
+        const features = isBuffered
+          ? options.buffered ?? []
+          : options.containment.map((attributes) => ({ attributes }));
+        return { ok: true, status: 200, json: async () => ({ features }) } as Response;
+      }
+      return { ok: false, status: 503, json: async () => ({}) } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("marks a point resolution 'verified' when the parcel's published address matches the requested one", async () => {
+    sqlMock.mockResolvedValue([]);
+    stubCookViewer({ containment: [cottageGroveAttributes] });
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/parcel?lat=41.725449&lon=-87.601905&address=9300%20S%20Cottage%20Grove%20Ave",
+      ),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.pin).toBe("25023150220000");
+    expect(body.addressMatch).toBe("verified");
+  });
+
+  it("flags a mismatch instead of presenting a neighboring parcel as the searched address", async () => {
+    sqlMock.mockResolvedValue([]);
+    stubCookViewer({
+      containment: [cottageGroveAttributes],
+      buffered: [
+        { attributes: cottageGroveAttributes, geometry: { rings: [[[-87.6019, 41.7254]]] } },
+        { attributes: drexelAttributes, geometry: { rings: [[[-87.6006, 41.7258]]] } },
+      ],
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/parcel?lat=41.725449&lon=-87.601905&address=9300%20S%20Drexel%20Ave",
+      ),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    // The containing parcel is still returned — it IS the parcel at this
+    // location — but stamped as not matching the searched address.
+    expect(body.pin).toBe("25023150220000");
+    expect(body.addressMatch).toBe("mismatch");
+    expect(body.requestedAddress).toBe("9300 S Drexel Ave");
+  });
+
+  it("rescues a street-right-of-way point via the address-verified buffer search", async () => {
+    sqlMock.mockResolvedValue([]);
+    stubCookViewer({
+      containment: [],
+      buffered: [
+        { attributes: cottageGroveAttributes, geometry: { rings: [[[-87.6019, 41.7254]]] } },
+        { attributes: drexelAttributes, geometry: { rings: [[[-87.6006, 41.7258]]] } },
+      ],
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/parcel?lat=41.72585&lon=-87.60055&address=9336%20S%20Drexel%20Ave",
+      ),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.pin).toBe("25023090250000");
+    expect(body.addressMatch).toBe("verified");
+  });
+
+  it("reduces a geocoder display name to its street line before matching", async () => {
+    sqlMock.mockResolvedValue([]);
+    stubCookViewer({
+      containment: [],
+      buffered: [{ attributes: drexelAttributes, geometry: { rings: [[[-87.6006, 41.7258]]] } }],
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/parcel?lat=41.72585&lon=-87.60055&address=" +
+          encodeURIComponent(
+            "9336, South Drexel Avenue, Burnside, Chicago, Hyde Park Township, Cook County, Illinois, 60619, United States",
+          ),
+      ),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.pin).toBe("25023090250000");
+    expect(body.addressMatch).toBe("verified");
+  });
+
+  it("never returns an unverified buffer neighbor and never queries the retired Socrata Parcel Universe", async () => {
+    sqlMock.mockResolvedValue([]);
+    const fetchMock = stubCookViewer({
+      containment: [],
+      buffered: [{ attributes: drexelAttributes, geometry: { rings: [[[-87.6006, 41.7258]]] } }],
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/parcel?lat=41.72585&lon=-87.60055&address=9300%20S%20Drexel%20Ave",
+      ),
+    );
+    // Buffer candidates exist but none match — with no containing parcel
+    // either, an honest empty beats a wrong neighbor.
+    expect(response.status).toBe(204);
+    const socrataCall = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((url) => url.includes("nj4t-kc8j"));
+    expect(socrataCall).toBeUndefined();
+  });
+
+  it("stamps pure map-point lookups as 'point' resolutions", async () => {
+    sqlMock.mockResolvedValue([]);
+    stubCookViewer({ containment: [cottageGroveAttributes] });
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/parcel?lat=41.725449&lon=-87.601905"),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.addressMatch).toBe("point");
+  });
 });

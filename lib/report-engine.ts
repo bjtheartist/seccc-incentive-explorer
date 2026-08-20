@@ -3356,11 +3356,26 @@ function generateBestLocation(
 
   // §01 Site Description & Property Profile
   if (parcel && parcel.pin) {
-    const propertyItems: ReportItem[] = [
+    const parcelStreetLine = parcel.address ? parcel.address.split(",")[0].trim() : "";
+    const propertyItems: ReportItem[] = [];
+    // Address guard: a parcel resolved from a geocoded point can belong to a
+    // different address than the one searched (street-right-of-way points,
+    // large multi-address parcels). Never present a mismatched parcel's
+    // records as the searched address's records without saying so.
+    if (parcel.addressMatch === "mismatch" && parcelStreetLine) {
+      propertyItems.push({
+        label: "Parcel address check",
+        value: `Records are for ${parcelStreetLine}`,
+        detail: `No Cook County parcel record was found published under ${
+          parcel.requestedAddress || "the searched address"
+        }. The PIN and assessor records below describe the parcel at this location — ${parcelStreetLine} — which may be a larger or differently addressed parcel. Verify the legal address and PIN with the Cook County Assessor before relying on them.`,
+      });
+    }
+    propertyItems.push(
       {
         label: "Property PIN",
         value: parcel.pin,
-        detail: `Cook County Assessor record — cookcountyassessoril.gov/pin/${parcel.pin}`,
+        detail: `Cook County Assessor record${parcelStreetLine ? ` for ${parcelStreetLine}` : ""} — cookcountyassessoril.gov/pin/${parcel.pin}`,
         url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
       },
       {
@@ -3374,7 +3389,7 @@ function generateBestLocation(
               ? "Industrial property — review industrial-development program requirements"
               : "Residential property classification",
       },
-    ];
+    );
     if (parcel.totalValue) {
       propertyItems.push({
         label: "Assessed Value",

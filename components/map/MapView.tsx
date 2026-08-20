@@ -904,10 +904,16 @@ export default function MapView() {
     lon: number,
     label?: string,
     pin?: string | null,
+    /** Street address this lookup is meant to resolve (searched address or a
+     *  vacancy record's address) — lets /api/parcel verify the resolved
+     *  parcel's published address instead of trusting the point blindly. */
+    requestedAddress?: string | null,
   ) => {
     if (label) setSnapshotLabel(label);
     setAreaStats({ ...DEFAULT_STATS, districtsLoading: true });
     try {
+      const addressParam =
+        !pin && requestedAddress ? `&address=${encodeURIComponent(requestedAddress)}` : "";
       const [data, parcelData] = await Promise.all([
         cachedFetch<{
           medianHomeValue?: number;
@@ -916,7 +922,7 @@ export default function MapView() {
           tractId?: string;
         }>(`/api/census?lat=${lat}&lon=${lon}`).catch(() => null),
         cachedFetch<ParcelData>(
-          `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
+          `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}${addressParam}`,
         ).catch(() => null),
       ]);
       if (data) {
@@ -929,6 +935,9 @@ export default function MapView() {
             : DEFAULT_STATS.medianIncome,
           walkScore: data.walkScore ?? DEFAULT_STATS.walkScore,
           parcelPin: parcelData?.pin || undefined,
+          parcelAddress: parcelData?.address || undefined,
+          parcelAddressMatch: parcelData?.addressMatch,
+          parcelRequestedAddress: parcelData?.requestedAddress ?? requestedAddress ?? null,
           parcelClass: parcelData?.classCode || undefined,
           parcelClassDescription: parcelData?.classDescription || undefined,
           parcelValue: parcelData?.totalValue || undefined,
@@ -1530,8 +1539,21 @@ export default function MapView() {
           activeSelection.kind === "permit"
             ? activeSelection.pin ?? null
             : null;
+        // A vacancy record's identity is its published address — city record
+        // coordinates can sit inside a NEIGHBORING parcel, so the parcel
+        // lookup must verify against the record's address, not the point.
+        const selectionAddress =
+          activeSelection.kind === "vacancy" && !selectedPin
+            ? activeSelection.title
+            : null;
         openDossier(activeSelection);
-        loadCensusRef.current(lngLat.lat, lngLat.lng, activeSelection.title, selectedPin);
+        loadCensusRef.current(
+          lngLat.lat,
+          lngLat.lng,
+          activeSelection.title,
+          selectedPin,
+          selectionAddress,
+        );
         lastClickRef.current(lngLat.lat, lngLat.lng, selectedPin);
         snapshotOpenedAtRef.current = Date.now();
         if (!isMobileView) setSnapshotOpen(true);
@@ -3245,6 +3267,15 @@ export default function MapView() {
 
       // Update Area Snapshot for the search location
       const title = result.label.split(" — ")[0];
+      // Only address-shaped labels (house number + street) become the
+      // requested address for the parcel lookup's address guard — business
+      // names and deep-link coordinate labels must not be compared against
+      // County parcel addresses.
+      const searchedParts = result.label.split(" — ");
+      const addressText = searchedParts[searchedParts.length - 1];
+      const searchedAddress = /^\d+[a-z]?[\s,]+.*[a-z]/i.test(addressText.trim())
+        ? addressText.trim()
+        : null;
       openDossier({
         kind: "address",
         title,
@@ -3255,7 +3286,7 @@ export default function MapView() {
       setZoningInfo(null);
       if (!window.matchMedia("(max-width: 768px)").matches) setSnapshotOpen(true);
       lastClickRef.current(result.lat, result.lon);
-      loadCensusRef.current(result.lat, result.lon, title);
+      loadCensusRef.current(result.lat, result.lon, title, null, searchedAddress);
     },
     [openDossier]
   );

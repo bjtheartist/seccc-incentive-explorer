@@ -620,9 +620,25 @@ export interface CensusData {
   walkScore: number | null;
 }
 
+/**
+ * How a resolved parcel relates to what the caller asked for.
+ * - "verified": the parcel's County-published street address matches the
+ *   address the caller was resolving.
+ * - "mismatch": the caller named an address, but the resolved parcel's
+ *   published address disagrees — the records describe the parcel at/nearest
+ *   the point, NOT the requested address. Surfaces must caveat this.
+ * - "point": resolved purely from a map point; no address was requested.
+ * - "pin": resolved from an explicit 14-digit PIN.
+ */
+export type ParcelAddressMatch = "verified" | "mismatch" | "point" | "pin";
+
 export interface ParcelData {
   pin: string;              // 14-digit Cook County PIN
   address: string;          // Street address from parcel record
+  /** Address-guard verdict for this resolution (see ParcelAddressMatch). */
+  addressMatch?: ParcelAddressMatch;
+  /** The street line the caller asked to resolve, when one was provided. */
+  requestedAddress?: string | null;
   zip?: string | null;      // ZIP code from parcel source when available
   classCode: string;        // e.g. "5-17", "2-11"
   classDescription: string; // "One-story commercial building"
