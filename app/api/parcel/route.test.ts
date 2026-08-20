@@ -237,7 +237,7 @@ describe("GET /api/parcel", () => {
 
   it("rescues a street-right-of-way point via the address-verified buffer search", async () => {
     sqlMock.mockResolvedValue([]);
-    stubCookViewer({
+    const fetchMock = stubCookViewer({
       containment: [],
       buffered: [
         { attributes: cottageGroveAttributes, geometry: { rings: [[[-87.6019, 41.7254]]] } },
@@ -254,6 +254,13 @@ describe("GET /api/parcel", () => {
     expect(response.status).toBe(200);
     expect(body.pin).toBe("25023090250000");
     expect(body.addressMatch).toBe("verified");
+    // The CookViewer service ignores the geometry's embedded spatialReference
+    // on distance-buffered queries and silently returns zero features without
+    // an explicit inSR (verified live 2026-08-20).
+    const bufferedUrl = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((url) => url.includes("distance="));
+    expect(bufferedUrl).toContain("inSR=4326");
   });
 
   it("reduces a geocoder display name to its street line before matching", async () => {

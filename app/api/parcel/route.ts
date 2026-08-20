@@ -371,6 +371,11 @@ async function resolveByPoint(
       spatialRel: "esriSpatialRelIntersects",
       distance: "30",
       units: "esriSRUnit_Meter",
+      // Distance-buffered queries IGNORE the geometry's embedded
+      // spatialReference on this service and silently return zero features
+      // without an explicit inSR (verified live 2026-08-20). Plain
+      // point-intersect honors the embedded wkid; buffered does not.
+      inSR: "4326",
       returnGeometry: "true",
       outSR: "4326",
     });
