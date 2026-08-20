@@ -393,7 +393,12 @@ export async function GET(request: NextRequest) {
     ),
     probeUrl(
       "Cook County ArcGIS Parcels",
-      `${COOK_COUNTY_CURRENT_PARCELS_QUERY_URL}?where=1%3D1&outFields=PIN14&returnGeometry=false&resultRecordCount=1&f=json`,
+      // Mirrors /api/parcel's real point-in-polygon query shape so the probe
+      // fails when parcel resolution would fail, not only when the service is
+      // unreachable (a bare where=1=1 stays green through query-level breaks).
+      `${COOK_COUNTY_CURRENT_PARCELS_QUERY_URL}?geometry=${encodeURIComponent(
+        JSON.stringify({ x: -87.62422, y: 41.88132, spatialReference: { wkid: 4326 } })
+      )}&geometryType=esriGeometryPoint&spatialRel=esriSpatialRelIntersects&outFields=PIN14,street_address&returnGeometry=false&f=json`,
       8000
     ),
     probeChicagoZoning(),
@@ -405,13 +410,17 @@ export async function GET(request: NextRequest) {
     ),
     probeUrl(
       "Socrata Cook County",
-      "https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$limit=1",
+      // $select the columns the ingest layer actually reads so a dataset
+      // restructure (like the 2026 Parcel Universe migration that removed
+      // prop_address / loc_property_location) turns this probe red instead of
+      // a column-free $limit=1 staying green through the outage.
+      "https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$select=pin,zip_code,class,year&$limit=1",
       8000,
       socrataHeaders()
     ),
     probeUrl(
       "Cook County Assessor",
-      "https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?$limit=1",
+      "https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?$select=pin,certified_tot_land,certified_tot_bldg,tax_bill_name&$limit=1",
       8000,
       socrataHeaders()
     ),

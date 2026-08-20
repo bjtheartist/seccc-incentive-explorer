@@ -7,35 +7,77 @@ import {
   isIndustrialClass,
   isVacantClass,
 } from "@/lib/parcel-classes";
-import { socrataHeaders } from "@/lib/socrata";
 import { classifyOwner } from "@/lib/owner-classify";
 import {
   COOK_COUNTY_CURRENT_PARCELS_QUERY_URL,
   normalizePin14,
 } from "@/lib/cook-viewer";
+import { parcelAddressesMatch } from "@/lib/site-matchmaker-parcel-resolution";
 import {
   CITY_BUILDING_FOOTPRINTS_VINTAGE,
   availableSpaceSourceLabel,
   compactParcelSpaceFacts,
   type ParcelSpaceFacts,
 } from "@/lib/parcel-space";
-import type { ParcelData } from "@/lib/types";
+import { socrataHeaders } from "@/lib/socrata";
+import type { ParcelData, ParcelAddressMatch } from "@/lib/types";
 
 /**
- * Queries Cook County parcel data at a given lat/lon.
+ * Queries Cook County parcel data for a PIN or a lat/lon point.
  *
  * Strategy:
  * 1. Check Redis cache (if configured)
- * 2. parcels table — nearest stored row within ~50m (if DB configured)
- * 3. Cook County current CookViewer parcel service — with retry
- * 4. Socrata Parcel Universe (fallback)
+ * 2. parcels table — exact PIN, or nearest stored row within ~50m (if DB configured)
+ * 3. Cook County current CookViewer parcel service — exact PIN, or point-in-polygon
+ * 4. When the caller supplies the address it is trying to resolve
+ *    (`address=`), a small-radius CookViewer buffer search runs so the
+ *    County-published street address can be compared against the request.
+ *
+ * The former Socrata Parcel Universe fallback (nj4t-kc8j) was removed: the
+ * dataset was restructured into a geography crosswalk and no longer carries
+ * `loc_property_location`, `prop_address`, square footage, or certified
+ * values — coordinate queries 400 and PIN queries return rows without any of
+ * the fields this endpoint needs.
+ *
+ * Address guard: every response carries `addressMatch` + `requestedAddress`.
+ * A parcel resolved from a point can be the WRONG parcel for the address the
+ * user typed (geocoded points land in the street right-of-way; city vacancy
+ * records carry coordinates inside neighboring parcels), so consumers must
+ * not present `mismatch`/`point` results as records for the searched address.
  *
  * GET /api/parcel?lat=41.75&lon=-87.58
+ * GET /api/parcel?lat=41.75&lon=-87.58&address=9300%20S%20Drexel%20Ave
  * GET /api/parcel?pin=20123456789012
  */
 
 const fmtMoney = (v: number | null) =>
   v != null ? `$${Number(v).toLocaleString()}` : null;
+
+/** Log a swallowed source failure once per source per process, not per request. */
+const loggedSourceFailures = new Set<string>();
+function logSourceFailure(source: string, err: unknown) {
+  if (loggedSourceFailures.has(source)) return;
+  loggedSourceFailures.add(source);
+  console.warn(`[parcel] ${source} lookup failing (logged once):`, err);
+}
+
+/**
+ * Reduce a raw requested address (user input or a geocoder display name like
+ * "9300, South Drexel Avenue, Burnside, Chicago, …") to the street line that
+ * parcelAddressesMatch() expects.
+ */
+function requestedStreetLine(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const segments = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  if (segments.length === 0) return null;
+  // Nominatim display names split the house number into its own segment.
+  if (segments.length > 1 && /^\d+[a-z]?$/i.test(segments[0])) {
+    return `${segments[0]} ${segments[1]}`;
+  }
+  return segments[0];
+}
 
 /** Prefer an exact PIN; coordinates are only the fallback for address/map-point lookups. */
 async function dbParcel(
@@ -97,7 +139,10 @@ async function dbParcel(
       ownerMailingAddress: r.owner_mailing_address ?? null,
       ownerType: r.owner_type ?? null,
     } satisfies ParcelData;
-  } catch {
+  } catch (err) {
+    // Schema drift here (e.g. a prod table missing a column) previously made
+    // the DB source vanish with no trace — keep the null fallthrough but say so.
+    logSourceFailure("parcels-db", err);
     return null;
   }
 }
@@ -179,11 +224,198 @@ async function fetchWithRetry(
   throw lastError || new Error("fetchWithRetry exhausted");
 }
 
+const COOK_VIEWER_OUT_FIELDS =
+  "PIN14,street_address,city_state_zip,township_name,BCLASS,TAXDIST,LANDSF,BLDGSQFT,BLDGAGE,CURRENTVALUE_TOTAL,CURRENTVALUE_LAND,CURRENTVALUE_BLDG,TAXYR";
+
+interface CookViewerFeature {
+  attributes: Record<string, unknown>;
+  geometry?: { rings?: number[][][] };
+}
+
+/** Run one CookViewer parcel query; throws on transport or ArcGIS-level error. */
+async function cookViewerQuery(
+  params: Record<string, string>,
+): Promise<CookViewerFeature[]> {
+  const url = new URL(COOK_COUNTY_CURRENT_PARCELS_QUERY_URL);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  url.searchParams.set("outFields", COOK_VIEWER_OUT_FIELDS);
+  url.searchParams.set("f", "json");
+  const res = await fetchWithRetry(url.toString(), {});
+  if (!res.ok) throw new Error(`CookViewer HTTP ${res.status}`);
+  const data = await res.json();
+  // ArcGIS reports query errors inside a 200 body.
+  if (data?.error) throw new Error(`CookViewer error ${JSON.stringify(data.error)}`);
+  return Array.isArray(data?.features) ? data.features : [];
+}
+
+function pointGeometryParam(lat: number, lon: number): string {
+  return JSON.stringify({ x: lon, y: lat, spatialReference: { wkid: 4326 } });
+}
+
+function parcelFromCookViewer(a: Record<string, unknown>): ParcelData {
+  const classCode = typeof a.BCLASS === "string" ? a.BCLASS : "";
+  const landSqft = a.LANDSF != null ? Number(a.LANDSF) : null;
+  const bldgSqft = a.BLDGSQFT != null ? Number(a.BLDGSQFT) : null;
+  return {
+    pin: typeof a.PIN14 === "string" ? a.PIN14 : "",
+    address: [a.street_address, a.city_state_zip]
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .join(", "),
+    classCode,
+    classDescription: describeClassCode(classCode),
+    taxCode: typeof a.TAXDIST === "string" ? a.TAXDIST : "",
+    township: typeof a.township_name === "string" ? a.township_name : "",
+    landSqft,
+    bldgSqft,
+    bldgAge: a.BLDGAGE != null ? Number(a.BLDGAGE) : null,
+    space: compactParcelSpaceFacts({
+      lotAreaSqft: landSqft ?? undefined,
+      assessorBuildingSqft: bldgSqft ?? undefined,
+      assessorBuildingYear: a.TAXYR != null ? Number(a.TAXYR) : undefined,
+    }),
+    landValue: a.CURRENTVALUE_LAND != null ? `$${Number(a.CURRENTVALUE_LAND).toLocaleString()}` : null,
+    bldgValue: a.CURRENTVALUE_BLDG != null ? `$${Number(a.CURRENTVALUE_BLDG).toLocaleString()}` : null,
+    totalValue: a.CURRENTVALUE_TOTAL != null ? `$${Number(a.CURRENTVALUE_TOTAL).toLocaleString()}` : null,
+    parcelType: null,
+    isCommercial: isCommercialClass(classCode),
+    isIndustrial: isIndustrialClass(classCode),
+    isVacant: isVacantClass(classCode),
+  } satisfies ParcelData;
+}
+
+/** The parcel's published street address (without the city/state tail). */
+function parcelStreetAddress(parcel: ParcelData): string {
+  return parcel.address.split(",")[0]?.trim() ?? "";
+}
+
+/** Squared planar distance from a point to a feature's nearest ring vertex. */
+function featureDistanceSq(
+  feature: CookViewerFeature,
+  lat: number,
+  lon: number,
+): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const ring of feature.geometry?.rings ?? []) {
+    for (const vertex of ring) {
+      const dx = vertex[0] - lon;
+      const dy = vertex[1] - lat;
+      const d = dx * dx + dy * dy;
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
+interface ResolvedParcel {
+  parcel: ParcelData;
+  addressMatch: ParcelAddressMatch;
+}
+
+/**
+ * Resolve a parcel for a coordinate lookup.
+ *
+ * `requested` is the street line the caller is trying to resolve (already
+ * reduced from user input / geocoder display name), or null for pure map
+ * points. The rules:
+ * - A candidate whose County-published street address matches `requested`
+ *   is returned as "verified".
+ * - Otherwise the parcel CONTAINING the point (or the stored nearest-50m DB
+ *   row) is returned, flagged "mismatch" when a requested address exists and
+ *   disagrees, or "point" when the caller never named an address.
+ * - Buffer-search candidates (within ~30m, for geocoded points that fall in
+ *   the street right-of-way) are only ever returned when address-verified —
+ *   a nearest unverified neighbor is exactly the wrong-parcel bug this
+ *   endpoint exists to prevent.
+ */
+async function resolveByPoint(
+  lat: number,
+  lon: number,
+  requested: string | null,
+): Promise<ResolvedParcel | null> {
+  const stored = await dbParcel(lat, lon, null);
+
+  let containing: ParcelData | null = null;
+  try {
+    const features = await cookViewerQuery({
+      geometry: pointGeometryParam(lat, lon),
+      geometryType: "esriGeometryPoint",
+      spatialRel: "esriSpatialRelIntersects",
+      returnGeometry: "false",
+    });
+    if (features.length > 0) containing = parcelFromCookViewer(features[0].attributes);
+  } catch (err) {
+    logSourceFailure("cookviewer-point", err);
+  }
+
+  const primary = stored ?? containing;
+
+  if (!requested) {
+    return primary ? { parcel: primary, addressMatch: "point" } : null;
+  }
+
+  for (const candidate of [stored, containing]) {
+    if (candidate && parcelAddressesMatch(requested, parcelStreetAddress(candidate))) {
+      return { parcel: candidate, addressMatch: "verified" };
+    }
+  }
+
+  // Geocoded street points often sit in the right-of-way and intersect no
+  // parcel. Search a small buffer for a parcel whose published address matches
+  // the requested one; take the closest match when several (condo splits).
+  try {
+    const features = await cookViewerQuery({
+      geometry: pointGeometryParam(lat, lon),
+      geometryType: "esriGeometryPoint",
+      spatialRel: "esriSpatialRelIntersects",
+      distance: "30",
+      units: "esriSRUnit_Meter",
+      returnGeometry: "true",
+      outSR: "4326",
+    });
+    const matches = features
+      .map((feature) => ({
+        feature,
+        parcel: parcelFromCookViewer(feature.attributes),
+      }))
+      .filter(({ parcel }) => parcelAddressesMatch(requested, parcelStreetAddress(parcel)))
+      .sort(
+        (a, b) => featureDistanceSq(a.feature, lat, lon) - featureDistanceSq(b.feature, lat, lon),
+      );
+    if (matches.length > 0) {
+      return { parcel: matches[0].parcel, addressMatch: "verified" };
+    }
+  } catch (err) {
+    logSourceFailure("cookviewer-buffer", err);
+  }
+
+  return primary ? { parcel: primary, addressMatch: "mismatch" } : null;
+}
+
+async function resolveByPin(pin: string): Promise<ResolvedParcel | null> {
+  const stored = await dbParcel(null, null, pin);
+  if (stored) return { parcel: stored, addressMatch: "pin" };
+  try {
+    const features = await cookViewerQuery({
+      where: `PIN14='${pin}'`,
+      returnGeometry: "false",
+    });
+    if (features.length > 0) {
+      return { parcel: parcelFromCookViewer(features[0].attributes), addressMatch: "pin" };
+    }
+  } catch (err) {
+    logSourceFailure("cookviewer-pin", err);
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const rawPin = request.nextUrl.searchParams.get("pin");
   const pin = rawPin === null ? null : normalizePin14(rawPin);
   const latRaw = request.nextUrl.searchParams.get("lat");
   const lonRaw = request.nextUrl.searchParams.get("lon");
+  const requested = requestedStreetLine(request.nextUrl.searchParams.get("address"));
   const lat = latRaw === null ? null : Number(latRaw);
   const lon = lonRaw === null ? null : Number(lonRaw);
   const hasCoordinates =
@@ -203,127 +435,29 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // v4: v3 entries predate the address guard and can carry wrong-parcel
+  // resolutions for geocoded points — never serve them again.
+  const requestedKeyPart = requested
+    ? `:a:${requested.toUpperCase().replace(/\s+/g, " ")}`
+    : "";
   const cacheKey = pin
-    ? `parcel:v3:pin:${pin}`
-    : `parcel:v3:${roundCoord(lat!)}:${roundCoord(lon!)}`;
+    ? `parcel:v4:pin:${pin}`
+    : `parcel:v4:${roundCoord(lat!)}:${roundCoord(lon!)}${requestedKeyPart}`;
 
-  const result = await cached<ParcelData | null>(cacheKey, 2592000, async () => {
-    // Source 1: persistent parcels store (DB-first)
-    const stored = await dbParcel(lat, lon, pin);
-    if (stored) return stored;
-
-    // Source 2: Cook County current CookViewer parcel service
-    try {
-      const arcgisUrl = new URL(COOK_COUNTY_CURRENT_PARCELS_QUERY_URL);
-      if (pin) {
-        arcgisUrl.searchParams.set("where", `PIN14='${pin}'`);
-      } else {
-        arcgisUrl.searchParams.set(
-          "geometry",
-          JSON.stringify({ x: lon, y: lat, spatialReference: { wkid: 4326 } })
-        );
-        arcgisUrl.searchParams.set("geometryType", "esriGeometryPoint");
-        arcgisUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
-      }
-      arcgisUrl.searchParams.set(
-        "outFields",
-        "PIN14,street_address,city_state_zip,township_name,BCLASS,TAXDIST,LANDSF,BLDGSQFT,BLDGAGE,CURRENTVALUE_TOTAL,CURRENTVALUE_LAND,CURRENTVALUE_BLDG,TAXYR"
-      );
-      arcgisUrl.searchParams.set("returnGeometry", "false");
-      arcgisUrl.searchParams.set("f", "json");
-
-      const res = await fetchWithRetry(arcgisUrl.toString(), {});
-      if (res.ok) {
-        const data = await res.json();
-        if (data.features && data.features.length > 0) {
-          const a = data.features[0].attributes;
-          const classCode = a.BCLASS || "";
-          const landSqft = a.LANDSF != null ? Number(a.LANDSF) : null;
-          const bldgSqft = a.BLDGSQFT != null ? Number(a.BLDGSQFT) : null;
-          return {
-            pin: a.PIN14 || "",
-            address: [a.street_address, a.city_state_zip].filter(Boolean).join(", "),
-            classCode,
-            classDescription: describeClassCode(classCode),
-            taxCode: a.TAXDIST || "",
-            township: a.township_name || "",
-            landSqft,
-            bldgSqft,
-            bldgAge: a.BLDGAGE != null ? Number(a.BLDGAGE) : null,
-            space: compactParcelSpaceFacts({
-              lotAreaSqft: landSqft ?? undefined,
-              assessorBuildingSqft: bldgSqft ?? undefined,
-              assessorBuildingYear: a.TAXYR != null ? Number(a.TAXYR) : undefined,
-            }),
-            landValue: a.CURRENTVALUE_LAND != null ? `$${Number(a.CURRENTVALUE_LAND).toLocaleString()}` : null,
-            bldgValue: a.CURRENTVALUE_BLDG != null ? `$${Number(a.CURRENTVALUE_BLDG).toLocaleString()}` : null,
-            totalValue: a.CURRENTVALUE_TOTAL != null ? `$${Number(a.CURRENTVALUE_TOTAL).toLocaleString()}` : null,
-            parcelType: null,
-            isCommercial: isCommercialClass(classCode),
-            isIndustrial: isIndustrialClass(classCode),
-            isVacant: isVacantClass(classCode),
-          } satisfies ParcelData;
-        }
-      }
-    } catch {
-      // Fall through to Socrata
-    }
-
-    // Source 3: Socrata Parcel Universe (fallback)
-    try {
-      const where = pin
-        ? `pin='${pin}'`
-        : `within_circle(loc_property_location,${lat},${lon},50)`;
-      const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=${encodeURIComponent(where)}&$limit=1`;
-      const res = await fetchWithRetry(sodaUrl, {
-        headers: socrataHeaders(),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          const r = data[0];
-          const classCode = r.class || "";
-          const landSqft = r.land_square_footage != null ? Number(r.land_square_footage) : null;
-          const bldgSqft =
-            r.building_square_footage != null ? Number(r.building_square_footage) : null;
-          return {
-            pin: r.pin || "",
-            address: r.prop_address || "",
-            classCode,
-            classDescription: describeClassCode(classCode),
-            taxCode: r.tax_code || "",
-            township: r.township_name || "",
-            landSqft,
-            bldgSqft,
-            bldgAge: r.age != null ? Number(r.age) : null,
-            space: compactParcelSpaceFacts({
-              lotAreaSqft: landSqft ?? undefined,
-              assessorBuildingSqft: bldgSqft ?? undefined,
-            }),
-            landValue: r.certified_land != null ? `$${Number(r.certified_land).toLocaleString()}` : null,
-            bldgValue: r.certified_building != null ? `$${Number(r.certified_building).toLocaleString()}` : null,
-            totalValue: r.certified_total != null ? `$${Number(r.certified_total).toLocaleString()}` : null,
-            parcelType: r.property_type != null ? Number(r.property_type) : null,
-            isCommercial: isCommercialClass(classCode),
-            isIndustrial: isIndustrialClass(classCode),
-            isVacant: isVacantClass(classCode),
-          } satisfies ParcelData;
-        }
-      }
-    } catch {
-      // All sources failed
-    }
-
-    return null;
-  });
+  const result = await cached<ResolvedParcel | null>(cacheKey, 2592000, async () =>
+    pin ? resolveByPin(pin) : resolveByPoint(lat!, lon!, requested),
+  );
 
   if (!result) {
     return new NextResponse(null, { status: 204 });
   }
 
   // Mutable copy for enrichment
-  const enriched: ParcelData = { ...result };
+  const enriched: ParcelData = {
+    ...result.parcel,
+    addressMatch: result.addressMatch,
+    requestedAddress: requested,
+  };
 
   // Non-blocking Cook County Assessor enrichment (assessment + ownership)
   if (enriched.pin) {

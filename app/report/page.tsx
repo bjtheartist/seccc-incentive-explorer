@@ -946,14 +946,23 @@ function ReportWizardPage() {
     cachedFetch(`/api/census?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setCensusData(data as ReportCensusData); })
       .catch(() => {});
-    cachedFetch<ParcelData>(`/api/parcel?lat=${wizardState.lat}&lon=${wizardState.lon}`)
+    // Pass the searched address so /api/parcel can verify the resolved
+    // parcel's County-published address instead of trusting the geocoded
+    // point (which can sit in the street right-of-way or a larger,
+    // differently addressed parcel).
+    const parcelAddressParam = wizardState.address
+      ? `&address=${encodeURIComponent(wizardState.address)}`
+      : "";
+    cachedFetch<ParcelData>(
+      `/api/parcel?lat=${wizardState.lat}&lon=${wizardState.lon}${parcelAddressParam}`,
+    )
       .then((data) => { if (data) setParcelData(data); })
       .catch(() => {})
       .finally(() => setParcelLookupComplete(true));
     cachedFetch<DistrictData>(`/api/representatives?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
-  }, [wizardState.lat, wizardState.lon, hasWizardCoords]);
+  }, [wizardState.lat, wizardState.lon, wizardState.address, hasWizardCoords]);
 
   // Zoning has a stricter contract than the general stale-while-error client
   // cache: never reuse another address or hide a current source failure.
@@ -1177,7 +1186,10 @@ function ReportWizardPage() {
       setCompareZoning(result);
       setCompareZoningKey(requestKey);
     });
-    cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
+    const compareAddressParam = compareGeoResult.display_name
+      ? `&address=${encodeURIComponent(compareGeoResult.display_name)}`
+      : "";
+    cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}${compareAddressParam}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
     return () => zoningController.abort();
   }, [compareGeoResult]);
 

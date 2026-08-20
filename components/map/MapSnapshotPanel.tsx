@@ -318,6 +318,16 @@ export default function MapSnapshotPanel({
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1">
               Parcel
             </div>
+            {areaStats.parcelAddressMatch === "mismatch" && areaStats.parcelAddress && (
+              <div className="mb-2 border border-[#B45309]/40 bg-[#FEF3C7]/60 p-2 text-[10px] leading-relaxed text-[#78350F]">
+                <span className="font-semibold">Different parcel address.</span>{" "}
+                This record is for{" "}
+                <span className="font-semibold">{areaStats.parcelAddress.split(",")[0]}</span>
+                {areaStats.parcelRequestedAddress
+                  ? ` — the parcel at this location — not for ${areaStats.parcelRequestedAddress}.`
+                  : " — the parcel at this location, not the searched address."}
+              </div>
+            )}
             <div className="text-[12px] text-[#0C1B33]/80">
               <a
                 href={`https://www.cookcountyassessoril.gov/pin/${areaStats.parcelPin}`}
@@ -327,6 +337,9 @@ export default function MapSnapshotPanel({
               >
                 {areaStats.parcelPin}
               </a>
+              {areaStats.parcelAddress && (
+                <span className="text-[#0C1B33]/50"> · {areaStats.parcelAddress.split(",")[0]}</span>
+              )}
               {areaStats.parcelClass && <span className="text-[#0C1B33]/50"> · Class {areaStats.parcelClass}</span>}
               {areaStats.parcelValue && <span className="text-[#0C1B33]/50"> · {areaStats.parcelValue}</span>}
             </div>

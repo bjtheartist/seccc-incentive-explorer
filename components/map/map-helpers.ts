@@ -18,7 +18,7 @@ import {
   GOVERNMENT_FUNDING_PURPOSE_LABELS,
   type GovernmentFundingPurpose,
 } from "@/lib/government-funding-purpose";
-import type { DistrictData } from "@/lib/types";
+import type { DistrictData, ParcelAddressMatch } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
 import type { ParcelSpaceFacts } from "@/lib/parcel-space";
@@ -539,6 +539,13 @@ export interface AreaStats {
   medianIncome: string;
   walkScore: number;
   parcelPin?: string;
+  /** County-published address of the resolved parcel (the parcel's own record). */
+  parcelAddress?: string;
+  /** Address-guard verdict from /api/parcel — "mismatch" means the parcel
+   *  record does NOT belong to the searched address and must be caveated. */
+  parcelAddressMatch?: ParcelAddressMatch;
+  /** The address the lookup was asked to resolve, when one was named. */
+  parcelRequestedAddress?: string | null;
   parcelClass?: string;
   parcelClassDescription?: string;
   parcelValue?: string;
