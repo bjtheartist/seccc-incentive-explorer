@@ -23,9 +23,10 @@ export const COOK_COUNTY_CURRENT_PARCELS_QUERY_URL =
  * Normalize a parcel PIN to Cook County's 14-digit `pin14` form.
  *
  * The PIN is ALWAYS treated as a STRING and is NEVER converted to a number —
- * leading zeros are significant and a 14-digit PIN exceeds the range that
- * survives numeric round-tripping. Only a `string` can normalize; every other
- * input type (a `number` included, on purpose) returns `null`.
+ * leading zeros are significant (a number literal drops them) and a PIN is an
+ * identifier, not a quantity, so it should never be subject to numeric
+ * coercion or arithmetic. Only a `string` can normalize; every other input
+ * type (a `number` included, on purpose) returns `null`.
  *
  * Accepts a dashed PIN ("21-32-211-039-0000") or a digits-only PIN; strips
  * dashes and surrounding/interior whitespace, then returns the 14-digit string

@@ -214,7 +214,7 @@ function StaleRankingVersionState({
 
 const FUNNEL_STAGES: { key: keyof ShortlistFunnelStats; label: string; note?: string }[] = [
   { key: "trackedEvidence", label: "Tracked evidence in this ZIP matching your property type" },
-  { key: "canonicalSites", label: "Canonical sites (deduped)" },
+  { key: "canonicalSites", label: "Source-aggregated records (before County parcel resolution)" },
   {
     key: "withResolvedPin",
     label: "With a resolved PIN",
@@ -567,7 +567,7 @@ export default async function SiteShortlistPage({
 
       <footer className="mt-12 border-t border-[#0C1B33]/10 pt-6">
         <p className="max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/45">
-          Screened from the complete canonical vacant-property universe published for this area
+          Screened from the source-aggregated vacant-property snapshot published for this area
           {generatedAt ? ` (snapshot ${String(generatedAt).slice(0, 10)})` : ""}. Sources: City of
           Chicago vacant-building and City-owned land records, Cook County Assessor parcel,
           valuation, and tax-sale data, the City of Chicago zoning boundary layer resolved locally
@@ -577,7 +577,9 @@ export default async function SiteShortlistPage({
           taxpayer-record classification and is unverified — owner TYPE only, never owner names.
           The zoning badge on every card is a broad district-family screen only. Records indicate;
           verify current ownership, zoning, condition, and status with the county and the
-          responsible City department before relying on any of it.
+          responsible City department before relying on any of it. Display-only expressway context
+          is available only where the separate context snapshot has a matching key; a missing match
+          does not remove or re-rank a candidate.
         </p>
       </footer>
     </Shell>

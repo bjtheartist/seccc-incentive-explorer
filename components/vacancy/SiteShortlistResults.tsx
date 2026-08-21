@@ -479,11 +479,13 @@ function ShortlistCard({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] leading-relaxed text-[#0C1B33]/55">
-        {candidate.expresswayDisplay?.miles != null && (
+        {candidate.expresswayDisplay?.miles != null ? (
           <span>
             Expressway proximity (display only): {candidate.expresswayDisplay.name ?? "Nearest expressway"} ·{" "}
             {miles(candidate.expresswayDisplay.miles)}
           </span>
+        ) : (
+          <span>Expressway proximity (display only): Not available in this context snapshot.</span>
         )}
         {candidate.nearestSchool && (
           <span>

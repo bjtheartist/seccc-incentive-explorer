@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { shortlistCriterionById } from "@/lib/shortlist-criteria";
 import { createEmptySiteMatchCriteria, type SiteMatchCriteria } from "@/lib/site-matchmaker";
 import type { CandidateOverlays, DecoratedShortlistCandidate } from "@/lib/shortlist-engine";
+import { shortlistCardDomId } from "@/lib/shortlist-map-layers";
 
 /**
  * Round-3 re-review, Findings 2, 3, and 10(b): component-level coverage for
@@ -402,6 +403,57 @@ describe("SiteShortlistResults — adversarial enrichment changes card FACTS but
     // valuable record on the page by every enrichment fact, and it is
     // still rendered LAST.
     expect(cardOrder()).toEqual(["1 First St", "2 Second St", "3 Third St"]);
+  });
+});
+
+// ── build-spec.md PR-A item 4/6 (F8): a missing expressway-context match ──
+//    is disclosed honestly, and never changes rank.
+
+describe("SiteShortlistResults — expressway context-missing disclosure never affects rank (F8)", () => {
+  it("renders the exact 'Not available in this context snapshot.' line for a candidate whose key has no context match, while a decorated candidate with EQUAL score inputs keeps its normal display and BOTH keep the ranked prop's order", () => {
+    vi.stubGlobal("fetch", neverResolvingFetchMock());
+    const decorated = candidate({
+      key: "a",
+      pin: "1",
+      address: "1 First St",
+      score: 10,
+      expresswayDisplay: { name: "Dan Ryan Expy (I-90/94)", miles: 0.4 },
+    });
+    const contextMissing = candidate({
+      key: "b",
+      pin: "2",
+      address: "2 Second St",
+      score: 10, // EQUAL score inputs — a missing context match must never be
+      // used as a ranking signal, so this candidate's position is decided
+      // solely by the `ranked` prop order, exactly like `decorated`'s.
+      expresswayDisplay: null,
+    });
+
+    render(
+      <SiteShortlistResults
+        zip="60619"
+        criteria={baseCriteria()}
+        scored={true}
+        source={null}
+        buildId="build-1"
+        ranked={[decorated, contextMissing]}
+        boundary={null}
+        centroid={{ lat: 41.75, lon: -87.605 }}
+      />,
+    );
+
+    // Rank: the DOM keeps the exact `ranked` prop order for both equal-score
+    // candidates — the missing context match on "b" moved it nowhere.
+    const cardOrder = screen.getAllByRole("heading", { level: 3 }).map((el) => el.textContent);
+    expect(cardOrder).toEqual(["1 First St", "2 Second St"]);
+
+    const decoratedCard = document.getElementById(shortlistCardDomId("a"));
+    const missingCard = document.getElementById(shortlistCardDomId("b"));
+    expect(decoratedCard?.textContent).toContain("Dan Ryan Expy (I-90/94)");
+    expect(decoratedCard?.textContent).not.toContain("Not available in this context snapshot.");
+    expect(missingCard?.textContent).toContain(
+      "Expressway proximity (display only): Not available in this context snapshot.",
+    );
   });
 });
 

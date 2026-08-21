@@ -36,7 +36,6 @@ import {
 import type {
   VacancyPropertyType,
   VacancySiteIndexRow,
-  VacancySitePoint,
 } from "@/lib/vacancy-index";
 import VacancyMapIsland from "@/components/vacancy/VacancyMapIsland";
 import VacancyClustersIsland from "@/components/vacancy/VacancyClustersIsland";
@@ -310,12 +309,6 @@ export default async function VacancyReportPage({
   // Public Opportunity Areas count (derived at render from the committed
   // clusters) — drives the Overview → Opportunity Areas cross-link count.
   const opportunityAreaCount = deriveOpportunityAreas(edition).totalQualifying;
-
-  // Site-index rows carry no PIN of their own — recover it by coordinate from
-  // the sitePoints that DO carry one (the same join the PDF adapter uses).
-  const sitePointByCoord = new Map<string, VacancySitePoint>(
-    edition.sitePoints.map((p) => [`${p.lat},${p.lon}`, p]),
-  );
 
   // F1 binding replacement copy (build-spec.md 2.4; audit's clearest
   // prohibited determination — "already qualifies for programs" — do not
@@ -1045,8 +1038,7 @@ export default async function VacancyReportPage({
                   const ownerType = normalizeOwnerType(row.ownerType);
                   // v2 structure abbrev, rendered only when the export carries it.
                   const structure = row.ownerStructure ? normalizeOwnerStructure(row.ownerStructure) : null;
-                  const sitePoint = sitePointByCoord.get(`${row.lat},${row.lon}`);
-                  const cookViewer = cookViewerUrl(sitePoint?.pin);
+                  const cookViewer = cookViewerUrl(row.pin);
                   return (
                     <tr key={`${row.lat},${row.lon},${i}`} className="border-b border-[#0C1B33]/5 align-top">
                       <td className="px-3 py-2.5 font-mono-bureau text-[11px] text-[#0C1B33]/50">
@@ -1097,7 +1089,7 @@ export default async function VacancyReportPage({
                             </a>
                             <span className="text-[#0C1B33]/30"> · </span>
                             <a
-                              href={clerkRecordsUrl(sitePoint?.pin)!}
+                              href={clerkRecordsUrl(row.pin)!}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
