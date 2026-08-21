@@ -24,7 +24,7 @@ export interface SiteMatchmakerContextFile {
 }
 
 export interface SiteMatchmakerContextKeyInput {
-  pin?: string | number | null;
+  pin?: string | null;
   address?: string | null;
   lat?: number | string | null;
   lon?: number | string | null;
@@ -104,7 +104,7 @@ const MIDWAY: [number, number] = [-87.7522, 41.7868];
 const OHARE: [number, number] = [-87.9048, 41.9786];
 const DEFAULT_EXPRESSWAY_CELL_SIZE_DEGREES = 0.02;
 
-export function normalizeSiteMatchmakerPin(pin: string | number | null | undefined): string | null {
+export function normalizeSiteMatchmakerPin(pin: string | null | undefined): string | null {
   if (pin == null) return null;
   const digits = String(pin).replace(/\D/g, "");
   return digits.length === 14 ? digits : null;

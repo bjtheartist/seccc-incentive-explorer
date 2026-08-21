@@ -17,11 +17,39 @@ import {
   buildTractIndex,
   findContainingTract,
   nearestExpressway,
+  normalizeSiteMatchmakerPin,
   populationDensityPerSqMi,
   siteMatchmakerContextKey,
   type GeoJsonFeatureCollection,
   type SiteMatchmakerContextMetric,
 } from "@/lib/site-matchmaker-context";
+
+// build-spec.md PR-A item 5/6 (F12) — normalizeSiteMatchmakerPin's accepted
+// type dropped `number` (a PIN is an identifier, never a numeric quantity —
+// see lib/cook-viewer.ts's normalizePin14, which this function agrees with
+// but does not (yet) delegate to; unifying the two algorithms is PR-C's F9).
+// Runtime string behavior is unchanged by the type-only fix.
+describe("normalizeSiteMatchmakerPin — string-only input (F12)", () => {
+  it("rejects a number PIN at COMPILE TIME — not just at runtime", () => {
+    // @ts-expect-error — a number is no longer an accepted input type; only
+    // `string | null | undefined` normalizes.
+    normalizeSiteMatchmakerPin(20261090420000);
+  });
+
+  it("still normalizes a valid 14-digit string, preserving leading zeros", () => {
+    expect(normalizeSiteMatchmakerPin("01234567890123")).toBe("01234567890123");
+  });
+
+  it("still strips non-digit characters from a dashed/spaced string PIN", () => {
+    expect(normalizeSiteMatchmakerPin("20-26-109-042-0000")).toBe("20261090420000");
+  });
+
+  it("still returns null for null, undefined, and a malformed string", () => {
+    expect(normalizeSiteMatchmakerPin(null)).toBeNull();
+    expect(normalizeSiteMatchmakerPin(undefined)).toBeNull();
+    expect(normalizeSiteMatchmakerPin("bad-pin")).toBeNull();
+  });
+});
 
 describe("siteMatchmakerContextKey", () => {
   it("prefers a normalized 14-digit PIN over address and coordinate fallback", () => {

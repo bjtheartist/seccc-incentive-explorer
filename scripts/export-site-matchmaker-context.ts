@@ -33,7 +33,7 @@ interface VacancyPoint {
   lat?: number | string | null;
   lon?: number | string | null;
   address?: string | null;
-  pin?: string | number | null;
+  pin?: string | null;
 }
 
 interface VacancyEdition {
