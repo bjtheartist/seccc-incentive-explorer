@@ -18,7 +18,7 @@ import type { GeneratedReport } from "../report-engine";
 
 function baseReport(): GeneratedReport {
   return {
-    title: "Corridor Intelligence Demo — ZIP 60617",
+    title: "Corridor Intelligence Pilot — ZIP 60617",
     subtitle: "",
     reportType: "corridor-intelligence",
     generatedAt: new Date().toISOString(),

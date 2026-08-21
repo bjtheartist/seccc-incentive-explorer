@@ -4359,7 +4359,7 @@ function generateCorridorIntelligence(
   const confidenceItems: ReportItem[] = [
     {
       label: "Geography",
-      value: metric?.corridorType === "zip" ? "ZIP-based demo" : "Selected corridor",
+      value: metric?.corridorType === "zip" ? "ZIP-based pilot" : "Selected corridor",
       detail: "ZIP metrics are useful for a funding demonstration. Neighborhood, SSA, ward, and custom corridor boundaries will be more precise for corridor management.",
     },
     {
@@ -4411,7 +4411,7 @@ function generateCorridorIntelligence(
   });
 
   return {
-    title: `Corridor Intelligence Demo — ${label}`,
+    title: `Corridor Intelligence Pilot — ${label}`,
     subtitle: "Market and resilience signals for corridor partners",
     reportType: "corridor-intelligence",
     generatedAt: new Date().toISOString(),
