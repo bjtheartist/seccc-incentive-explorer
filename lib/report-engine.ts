@@ -532,6 +532,7 @@ export const SECTION_IDS = {
   applicationRoadmap: "application-roadmap",
   noProgramsMatchCurrentFilters: "no-programs-match-current-filters",
   marketSignalSummary: "market-signal-summary",
+  pilotBaseline: "pilot-baseline",
   whatTheSignalsSay: "what-the-signals-say",
   ownerOperatorMap: "owner-operator-map",
   howToReadThis: "how-to-read-this",
@@ -2478,6 +2479,27 @@ export function loadSbifRollout(): SbifWindow[] | null {
  * does not produce a module-not-found error when the file has not been
  * generated yet. The try/catch ensures a graceful null return.
  */
+/**
+ * Load every corridor entry from the committed corridor-metrics.json export.
+ * Used for the pilot baseline table, where each corridor's numbers are read
+ * against the other pilot corridors from the SAME snapshot and window — the
+ * only baseline this dataset honestly supports.
+ */
+function loadAllStaticCorridorMetrics(): CorridorMetric[] {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/corridor-metrics.json") as
+      | CorridorMetric
+      | Record<string, CorridorMetric>;
+    if ((raw as CorridorMetric)?.corridorId) return [raw as CorridorMetric];
+    return Object.values(raw as Record<string, CorridorMetric>)
+      .filter((m) => m?.corridorId)
+      .sort((a, b) => a.corridorId.localeCompare(b.corridorId));
+  } catch {
+    return [];
+  }
+}
+
 function loadStaticCorridorMetrics(zip: string | null): CorridorMetric | null {
   if (!zip) return null;
   try {
@@ -4201,7 +4223,15 @@ function generateCorridorIntelligence(
   const hasMetric = Boolean(metric);
   const placeBasedPrograms = programs.filter((program) => program.zoneKey).length;
   const activityWindowMonths = details.windowMonths ?? turnover.windowMonths ?? permits.windowMonths ?? 24;
-  const activityWindowLabel = `Trailing ${activityWindowMonths} months`;
+  // Anchor every trailing-window phrase to the snapshot date. "Trailing 24
+  // months" with no endpoint reads as "the 24 months before today", which is
+  // wrong the day after the snapshot is computed.
+  const asOfLabel = metric?.asOf
+    ? new Date(metric.asOf).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+    : null;
+  const activityWindowLabel = asOfLabel
+    ? `Trailing ${activityWindowMonths} months ending ${asOfLabel}`
+    : `Trailing ${activityWindowMonths} months`;
   const netLicenseCount =
     turnover.openings != null && turnover.closures != null
       ? Number(turnover.openings) - Number(turnover.closures)
@@ -4358,6 +4388,12 @@ function generateCorridorIntelligence(
 
   const confidenceItems: ReportItem[] = [
     {
+      label: "Data vintage",
+      value: asOfLabel ? `Snapshot dated ${asOfLabel}` : "Snapshot date unavailable",
+      detail:
+        "Every corridor metric in this report comes from this snapshot; the report's generation date is not the data date. Trailing-window metrics count backward from the snapshot date, not from today.",
+    },
+    {
       label: "Geography",
       value: metric?.corridorType === "zip" ? "ZIP-based pilot" : "Selected corridor",
       detail: "ZIP metrics are useful for a funding demonstration. Neighborhood, SSA, ward, and custom corridor boundaries will be more precise for corridor management.",
@@ -4410,13 +4446,70 @@ function generateCorridorIntelligence(
     ];
   });
 
+  // ── Pilot baseline: this corridor against the other pilot corridors from
+  //    the SAME snapshot and trailing window. Not a citywide benchmark — the
+  //    dataset does not support one, and the description says so.
+  const baselineMetrics = (() => {
+    const all = loadAllStaticCorridorMetrics();
+    if (!metric?.corridorId) return all;
+    const others = all.filter((m) => m.corridorId !== metric.corridorId);
+    return [metric, ...others].sort((a, b) => a.corridorId.localeCompare(b.corridorId));
+  })();
+  const baselineColumns = [
+    "Signal",
+    ...baselineMetrics.map((m) =>
+      m.corridorId === metric?.corridorId ? `ZIP ${m.corridorId} (this report)` : `ZIP ${m.corridorId}`
+    ),
+  ];
+  const baselineRows =
+    baselineMetrics.length >= 2
+      ? [
+          [
+            "Vacancy signals",
+            ...baselineMetrics.map((m) => {
+              const v = m.details?.vacancy ?? {};
+              return v.vacantCount != null && v.totalParcels != null
+                ? `${formatNumber(v.vacantCount)} / ${formatNumber(v.totalParcels)} parcels (${formatRate(m.vacancyRate)})`
+                : formatRate(m.vacancyRate);
+            }),
+          ],
+          [
+            "License change",
+            ...baselineMetrics.map((m) => {
+              const t = m.details?.turnover ?? {};
+              return t.openings != null && t.closures != null
+                ? `${Number(t.openings) - Number(t.closures) >= 0 ? "+" : ""}${formatNumber(Number(t.openings) - Number(t.closures))} net (${formatNumber(t.openings)} openings / ${formatNumber(t.closures)} closures)`
+                : formatRate(m.turnoverRate);
+            }),
+          ],
+          [
+            "Local ownership share",
+            ...baselineMetrics.map((m) => {
+              const o = m.details?.ownershipOrigin ?? {};
+              return o.localCount != null && o.outsideCount != null
+                ? `${formatRate(m.localOwnershipShare)} (${formatNumber(o.localCount)} local / ${formatNumber(o.outsideCount)} outside)`
+                : formatRate(m.localOwnershipShare);
+            }),
+          ],
+          [
+            "Permits",
+            ...baselineMetrics.map((m) => {
+              const pm = m.details?.permits ?? {};
+              return m.permitCount != null
+                ? `${formatNumber(m.permitCount)}${pm.totalReportedCost != null ? ` (${formatMoneyShort(pm.totalReportedCost)} reported)` : ""}`
+                : "Not available";
+            }),
+          ],
+        ]
+      : [];
+
   return {
     title: `Corridor Intelligence Pilot — ${label}`,
     subtitle: "Market and resilience signals for corridor partners",
     reportType: "corridor-intelligence",
     generatedAt: new Date().toISOString(),
     summary: hasMetric
-      ? `${label} shows ${netLicenseCount != null && netLicenseCount > 0 ? "strong business momentum" : "measurable business activity"} and active reinvestment, with vacancy concentrated in a reviewable set of ${formatNumber(vacancy.vacantCount)} flagged parcels and a highly fragmented ownership base. Activity metrics use a ${activityWindowLabel.toLowerCase()} unless noted.`
+      ? `${label} shows ${netLicenseCount != null && netLicenseCount > 0 ? "strong business momentum" : "measurable business activity"} and active reinvestment, with vacancy concentrated in a reviewable set of ${formatNumber(vacancy.vacantCount)} flagged parcels and a highly fragmented ownership base. ${asOfLabel ? `Data as of ${asOfLabel}. ` : ""}Activity metrics use a ${activityWindowLabel.toLowerCase()} unless noted.`
       : `${label} does not have a computed corridor metric snapshot yet. This report still shows the intended data structure, but the metrics should be backfilled before using it for decisions.`,
     sections: [
       {
@@ -4429,6 +4522,20 @@ function generateCorridorIntelligence(
         },
         items: [],
       },
+      ...(baselineRows.length > 0
+        ? [
+            {
+              id: SECTION_IDS.pilotBaseline,
+              title: "Pilot Baseline: The Three Corridors Side By Side",
+              description: `Each number above needs a comparison to mean anything. The only baseline this dataset honestly supports is the other pilot corridors, computed from the same${asOfLabel ? ` ${asOfLabel}` : ""} snapshot with the same ${activityWindowMonths}-month trailing window and the same methods. This is not a citywide benchmark: three Southeast Side ZIP areas cannot stand in for Chicago, and differences between them are directional, not rankings.`,
+              table: {
+                columns: baselineColumns,
+                rows: baselineRows,
+              },
+              items: [],
+            },
+          ]
+        : []),
       {
         id: SECTION_IDS.whatTheSignalsSay,
         title: "What The Signals Say",
@@ -4477,10 +4584,10 @@ function generateCorridorIntelligence(
       {
         id: SECTION_IDS.whatAFundedVersionUnlocks,
         title: "What A Funded Version Adds",
-        description: "This hidden demo shows what is possible with one geography. A funded version would make it reliable across more places and partner workflows.",
+        description: "This public pilot shows what is possible with three ZIP-based geographies. A funded version would make it reliable across more places and partner workflows.",
         items: [
           {
-            label: "What this demo proves",
+            label: "What this pilot proves",
             value: "Public data can become corridor intelligence",
             detail: "Parcel, ownership, business-license, vacancy, permit, and condition signals can be stitched into a coherent market read for a specific geography.",
           },

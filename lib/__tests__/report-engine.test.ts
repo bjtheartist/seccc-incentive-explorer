@@ -1612,6 +1612,68 @@ describe("generateReportData", () => {
     );
   });
 
+  it("anchors corridor numbers to the snapshot date and a pilot baseline", () => {
+    const report = generateReportData(
+      makeState({
+        reportType: "corridor-intelligence",
+        neighborhood: "60617",
+        address: "",
+        lat: null,
+        lon: null,
+      }),
+      [makeProgram()],
+      {
+        corridorMetrics: {
+          corridorType: "zip",
+          corridorId: "60617",
+          asOf: "2026-07-03T05:00:00.000Z",
+          vacancyRate: 0.12,
+          turnoverRate: 0.08,
+          ownershipHHI: 0.23,
+          localOwnershipShare: 0.41,
+          permitCount: 19,
+          incentiveCoverage: null,
+          details: {
+            windowMonths: 24,
+            vacancy: { vacantCount: 120, totalParcels: 1000 },
+            turnover: { openings: 18, closures: 7 },
+            ownershipConcentration: { distinctOwners: 720, topOwnerShare: 0.03, totalParcels: 1000 },
+            ownershipOrigin: { localCount: 280, outsideCount: 400, unknownCount: 320 },
+            permits: { totalReportedCost: 1500000, demolitionCount: 2 },
+          },
+        },
+      },
+    );
+
+    // Vintage: the summary and the trailing-window label both name the
+    // snapshot date, so "trailing 24 months" can never read as "before today".
+    expect(report.summary).toContain("Data as of July 3, 2026");
+    expect(JSON.stringify(report)).toContain("Trailing 24 months ending July 3, 2026");
+    const howToRead = report.sections.find((section) => section.title === "How To Read This");
+    const vintage = howToRead?.items.find((item) => item.label === "Data vintage");
+    expect(vintage?.value).toBe("Snapshot dated July 3, 2026");
+    expect(vintage?.detail).toContain("not the data date");
+
+    // Baseline: the report corridor is read against the other pilot corridors
+    // from the committed snapshot, with denominators, and framed as NOT a
+    // citywide benchmark.
+    const baseline = report.sections.find(
+      (section) => section.title === "Pilot Baseline: The Three Corridors Side By Side",
+    );
+    expect(baseline?.table?.columns).toEqual([
+      "Signal",
+      "ZIP 60617 (this report)",
+      "ZIP 60619",
+      "ZIP 60649",
+    ]);
+    expect(baseline?.description).toContain("not a citywide benchmark");
+    const vacancyRow = baseline?.table?.rows.find((row) => row[0] === "Vacancy signals");
+    expect(vacancyRow?.[1]).toContain("120 / 1,000 parcels");
+    expect(vacancyRow?.[2]).toContain("1,147 / 20,324 parcels");
+    const permitsRow = baseline?.table?.rows.find((row) => row[0] === "Permits");
+    expect(permitsRow?.[3]).toContain("741");
+  });
+
   it("flows restored polygon zone programs into report eligibility", () => {
     const hubzoneProgram = makeProgram({
       id: "hubzone",
