@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * GET /api/corridor?zip=60617
@@ -7,9 +9,14 @@ import { getSQL } from "@/lib/db";
  * Returns the latest corridor metrics snapshot per ZIP corridor.
  * Optional `zip` filter narrows to a single corridor.
  *
- * When DATABASE_URL is not configured the endpoint degrades gracefully and
- * returns an empty corridor list (matching the DB-optional pattern used by
- * other routes), rather than erroring.
+ * DB-first with a static-snapshot fallback: when DATABASE_URL is not
+ * configured, the corridor_metrics table does not exist, or the table
+ * simply has no snapshot for the requested corridor, the endpoint serves
+ * the committed snapshot in public/data/corridor-metrics.json instead of
+ * an empty list. An empty table is not evidence that no snapshot exists
+ * (the same lesson as Zone Evidence v2), and the static entries carry
+ * their own asOf/computedAt so the report's data-window framing stays
+ * honest about the snapshot's age.
  */
 
 interface CorridorRow {
@@ -42,6 +49,29 @@ function serialize(r: CorridorRow) {
   };
 }
 
+type SerializedCorridor = ReturnType<typeof serialize>;
+
+/**
+ * Committed snapshot fallback (public/data/corridor-metrics.json), keyed by
+ * ZIP, already in the serialized (camelCase) response shape. Returns [] when
+ * the file is missing or unreadable — the fallback never throws.
+ */
+async function loadStaticCorridors(
+  zip: string | null
+): Promise<SerializedCorridor[]> {
+  try {
+    const file = join(process.cwd(), "public", "data", "corridor-metrics.json");
+    const byZip = JSON.parse(await readFile(file, "utf8")) as Record<
+      string,
+      SerializedCorridor
+    >;
+    const all = Object.values(byZip);
+    return zip ? all.filter((c) => c.corridorId === zip) : all;
+  } catch {
+    return [];
+  }
+}
+
 function isMissingCorridorTableError(err: unknown): boolean {
   return (
     typeof err === "object" &&
@@ -56,9 +86,9 @@ export async function GET(request: NextRequest) {
 
   const sql = getSQL();
   if (!sql) {
-    // DB not configured — return an empty, well-formed response.
+    // DB not configured — serve the committed static snapshot.
     return NextResponse.json(
-      { corridors: [] },
+      { corridors: await loadStaticCorridors(zip) },
       {
         headers: {
           "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
@@ -91,8 +121,14 @@ export async function GET(request: NextRequest) {
           ORDER BY corridor_type, corridor_id, as_of DESC
         `) as CorridorRow[];
 
+    // Zero rows is not a confident "no snapshot" — the table may exist but
+    // never have been seeded in this environment. Fall back to the committed
+    // static snapshot, whose entries carry their own asOf/computedAt.
+    const corridors =
+      rows.length > 0 ? rows.map(serialize) : await loadStaticCorridors(zip);
+
     return NextResponse.json(
-      { corridors: rows.map(serialize) },
+      { corridors },
       {
         headers: {
           "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
@@ -102,7 +138,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     if (isMissingCorridorTableError(err)) {
       return NextResponse.json(
-        { corridors: [] },
+        { corridors: await loadStaticCorridors(zip) },
         {
           headers: {
             "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300",
