@@ -168,7 +168,6 @@ vi.mock("@/components/report/SiteActivityCard", () => ({
 
 vi.mock("@/components/report/CrossLinkBanner", () => ({
   InlineCrossLinkBanner: () => <div data-testid="stub-inline-cross-link" />,
-  StickyCrossLinkBanner: () => <div data-testid="stub-sticky-cross-link" />,
 }));
 
 vi.mock("@/components/report/ReportEmailGate", () => ({
@@ -237,8 +236,11 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
   "hasRefinedInstantReport",
   "revealedReportKey",
   "persona",
-  "crossLinkDismissed",
-  "bottomZoneInView",
+  // review9 (sunset /qualify + vacant-sites report cross-links): the sticky
+  // cross-link bar's caller-owned dismissal/auto-hide state
+  // (`crossLinkDismissed`, `bottomZoneInView`) was removed from
+  // ReportWizardPage along with StickyCrossLinkBanner itself — see
+  // components/report/CrossLinkBanner.tsx.
   "compareMode",
   "compareReport",
   "compareAddressInput",
@@ -339,8 +341,6 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     isGenerating: false,
     hasRefinedInstantReport: false,
     revealedReportKey: null,
-    crossLinkDismissed: false,
-    bottomZoneInView: false,
     compareMode: false,
     compareReport: null,
     compareAddressInput: "",

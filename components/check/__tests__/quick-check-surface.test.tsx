@@ -147,34 +147,26 @@ describe("/check — legacy deep links", () => {
   });
 });
 
-describe("/check — cross-link banner", () => {
-  const html = render(RESOLVED);
-
-  it("uses the shared banner idiom", () => {
-    expect(html).toContain('data-testid="report-cross-link-banner"');
-  });
-
-  it("hands off to vacant sites and the program fit questions", () => {
-    expect(html).toContain('href="/vacancy"');
-    expect(html).toContain('href="/qualify"');
-    expect(html).toContain("Continue to program fit questions");
-    // The quick check's secondary is the survey, not the report's investment link.
-    expect(html).not.toContain('href="/investment"');
-  });
-
-  it("routes a pilot ZIP to its vacancy edition", () => {
-    const banner = renderToStaticMarkup(
-      <InlineCrossLinkBanner zip="60617" secondary="qualify" />,
-    );
-    expect(banner).toContain('href="/vacancy/60617"');
-    expect(banner).toContain('href="/qualify"');
-  });
-
-  it("leaves the report's own banner on the investment link", () => {
-    // The `secondary` prop is additive: omitting it must not move the report.
-    const banner = renderToStaticMarkup(<InlineCrossLinkBanner zip="60617" />);
+// /check no longer mounts a cross-link banner at all: its only hand-offs
+// were the sunset vacant-sites and program-fit-questions links (owner's
+// ruling — the product boundary is discovery, not compliance), and it never
+// had the report's neighborhood-investment-activity hand-off to fall back
+// to. See components/report/CrossLinkBanner.tsx and
+// components/check/QuickCheckClient.tsx.
+describe("InlineCrossLinkBanner — investment-activity hand-off (shared component, mounted on /report)", () => {
+  it("routes to neighborhood investment activity, and no longer offers vacant sites or program fit questions", () => {
+    const banner = renderToStaticMarkup(<InlineCrossLinkBanner />);
     expect(banner).toContain('href="/investment"');
     expect(banner).toContain("See neighborhood investment activity");
     expect(banner).not.toContain('href="/qualify"');
+    expect(banner).not.toContain('href="/vacancy"');
+  });
+
+  it("gate finding F5: renders as the primary (blue button) treatment now that it is the card's only action, not the old secondary micro-link", () => {
+    const banner = renderToStaticMarkup(<InlineCrossLinkBanner />);
+    const link = banner.match(/<a[^>]*href="\/investment"[^>]*>/)?.[0] ?? "";
+    expect(link).toContain("bg-[#2563EB]");
+    expect(link).toContain("text-white");
+    expect(link).not.toContain("underline-offset-4");
   });
 });

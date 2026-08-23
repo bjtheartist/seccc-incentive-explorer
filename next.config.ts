@@ -42,6 +42,15 @@ const nextConfig: NextConfig = {
         destination: "/map",
         permanent: true,
       },
+      // The /qualify Program Fit Questions surface was sunset (owner's
+      // ruling: the product boundary is discovery, not compliance) —
+      // permanent redirect so old links (bookmarks, external references)
+      // don't 404.
+      {
+        source: "/qualify",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
   async headers() {

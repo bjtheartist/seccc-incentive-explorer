@@ -4,11 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, MapPin, Search, Shield } from "lucide-react";
-import { InlineCrossLinkBanner } from "@/components/report/CrossLinkBanner";
 import { SiteActivityCard } from "@/components/report/SiteActivityCard";
 import { fetchSiteActivity, type SiteActivityState } from "@/lib/site-activity-client";
 import { SITE_ACTIVITY_ERROR_TEXT } from "@/lib/site-activity-lines";
-import { extractChicagoZipCode } from "@/lib/neighborhood-economic-context";
 import { decodeCheckState } from "@/lib/url-state";
 import {
   cachedSiteZones,
@@ -338,26 +336,6 @@ function QuickCheckResults({
     };
   }, [lat, lon]);
 
-  // ZIP powers the cross-link's /vacancy/{zip} destination. Prefer the one the
-  // address string already carries; reverse-geocode only when it has none, the
-  // same fallback the report runs. vacancyHref() degrades to /vacancy on null.
-  const zipFromAddress = extractChicagoZipCode(address);
-  const [reverseZip, setReverseZip] = useState<string | null>(null);
-  const zip = zipFromAddress ?? reverseZip;
-
-  useEffect(() => {
-    if (zipFromAddress) return;
-    const controller = new AbortController();
-    fetch(`/api/geocode?lat=${lat}&lon=${lon}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (controller.signal.aborted) return;
-        setReverseZip(d?.zip ? extractChicagoZipCode(String(d.zip)) : null);
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, [zipFromAddress, lat, lon]);
-
   return (
     <div data-testid="quick-check-results" className="min-h-screen pb-4">
       <header className={`${CARD_SHELL} mt-8`}>
@@ -397,8 +375,6 @@ function QuickCheckResults({
       <ZonePanel zones={zones} />
 
       <QuickCheckActivity lat={lat} lon={lon} />
-
-      <InlineCrossLinkBanner zip={zip} secondary="qualify" />
     </div>
   );
 }

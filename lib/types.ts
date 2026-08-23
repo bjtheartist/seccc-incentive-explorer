@@ -845,57 +845,21 @@ export interface PublicMatchExplanation {
   lastVerifiedAt?: string | null;
 }
 
-export interface SurveyQuestion {
-  id: string;
-  step: number;
-  title: string;
-  subtitle: string;
-  type: "single" | "multi";
-  options: { id: string; label: string }[];
-}
-
+/**
+ * `SurveyAnswers` is NOT part of the sunset /qualify survey wizard, despite
+ * the name overlap — lib/confidence-engine.ts and lib/url-state.ts (the
+ * `sa=` deep-link param) both use this exact answer shape for the LIVE
+ * report wizard's site-incentives goal flow, independent of the deleted
+ * PreQualSurvey UI. `SurveyQuestion`, `ProgramMatch`, and `SurveyResult` —
+ * the three types that WERE exclusive to the deleted survey engine/UI
+ * (components/survey/, lib/survey-engine.ts, app/api/survey/score) — were
+ * removed alongside them; this one stays.
+ */
 export interface SurveyAnswers {
   industry?: string;
   property?: string;
   activities?: string[];
   size?: string;
-}
-
-export interface ProgramMatch {
-  programId: string;
-  program: { name: string; short: string; level: string };
-  explanation: PublicMatchExplanation;
-  /**
-   * build-spec.md 2.6 (audit F12): status shown in the COLLAPSED row, not
-   * only inside the expanded detail — a lapsed program must never surface
-   * looking identical to an open one before the card is opened.
-   */
-  status: {
-    intakeStatus: IntakeStatus;
-    /** Short label for the collapsed row, e.g. "Lapsed", "Closed", "Open". */
-    label: string;
-  };
-}
-
-export interface SurveyResult {
-  /** Answer-derived matches (never includes the always-present universal entry). */
-  matches: ProgramMatch[];
-  /**
-   * build-spec.md 2.6: universal navigation (Small Business Source) shown
-   * separately from answer-derived matches — it is not a consequence of
-   * anything the user answered, and mixing it into `matches` implied it was.
-   */
-  universal: ProgramMatch[];
-  /** Answer keys (e.g. "industry", "activities:hiring") that changed the result. */
-  usedAnswers: string[];
-  /**
-   * Answer keys given but with no catalog rule behind them — build-spec.md
-   * 2.6's honesty requirement: "No catalog rule currently uses this answer
-   * to order programs." Empty today (the inert options were removed), but
-   * the mechanism stays general so a future added option without a rule is
-   * caught and disclosed rather than silently doing nothing.
-   */
-  unusedAnswers: string[];
 }
 
 /* ── Executive Summary (for reports) ── */

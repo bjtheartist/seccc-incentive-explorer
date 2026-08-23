@@ -1,126 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, X } from "lucide-react";
-import { getPilotZipEntry } from "@/lib/pilot-zips";
+import { ArrowRight } from "lucide-react";
 
 /**
- * Cross-link funnel banners (WP2). Two presentations of the same idiom — a
- * white Warm Bureau card on a hairline navy border that hands a visitor who
- * just resolved an address to the next surface (vacant sites, the program fit
- * questions, neighborhood investment activity).
+ * Cross-link funnel banner (WP2). A white Warm Bureau card on a hairline
+ * navy border that hands a visitor who just resolved a full-report address
+ * on to neighborhood investment activity. Print-hidden — it is navigation,
+ * not report content.
  *
- * `sticky` pins to the bottom of the viewport and is dismissible; `inline`
- * sits in the flow below the report. Both are print-hidden — they are
- * navigation, not report content.
+ * This used to have a sibling `StickyCrossLinkBanner` (a bottom-pinned,
+ * dismissible bar) and a `qualify` secondary option, both of which only
+ * ever pointed at the sunset /qualify and /vacancy report cross-links
+ * (owner's ruling: the product boundary is discovery, not compliance —
+ * those hand-offs were removed outright, not re-pointed). The sticky
+ * variant's only content was the vacant-sites hand-off, so it was deleted
+ * entirely along with its mount points and caller-owned dismissal/bottom-
+ * padding logic (app/report/page.tsx) and its sole /check mount
+ * (components/check/QuickCheckClient.tsx, which had no investment-activity
+ * hand-off to fall back to).
+ *
+ * review9 gate finding F5: the deleted vacancy link owned the blue PRIMARY
+ * treatment; the investment link, left on the 10px secondary micro-link
+ * treatment, read as an unfinished afterthought alone in an 850px bordered
+ * card. It is now this card's only action, so it gets the primary
+ * treatment (the same `bg-[#2563EB]` CTA idiom used throughout this report
+ * surface — see components/check/QuickCheckClient.tsx's "Generate Full
+ * Report" CTA and components/report/StartHereCard.tsx), and the card's
+ * layout is a single centered action rather than the two-item
+ * `justify-between` row it was built for.
  */
-
-/**
- * Vacancy detail routes are /vacancy/[zip] and `notFound()` on a non-pilot ZIP
- * (app/vacancy/[zip]/page.tsx -> getPilotZipEntry), so a ZIP we cannot resolve
- * to a published edition falls back to the /vacancy neighborhood picker
- * instead of sending the visitor to a 404.
- */
-export function vacancyHref(zip?: string | null): string {
-  const trimmed = zip?.trim();
-  if (trimmed && getPilotZipEntry(trimmed)) return `/vacancy/${trimmed}`;
-  return "/vacancy";
-}
 
 const PRIMARY_LINK_CLASS =
   "inline-flex min-h-11 items-center justify-center gap-2 bg-[#2563EB] px-6 py-3 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white transition-colors hover:bg-[#1D4ED8]";
 
-const SECONDARY_LINK_CLASS =
-  "inline-flex min-h-11 items-center gap-1.5 font-mono-bureau text-[10px] tracking-[0.1em] uppercase text-[#0C1B33]/70 underline-offset-4 transition-colors hover:text-[#0C1B33] hover:underline";
-
 /**
- * Sticky bottom cross-link shown once address-resolved results are on screen.
- * Dismissal is owned by the caller so the page can drop the matching bottom
- * padding at the same time (the bar overlays the document otherwise).
+ * In-flow cross-link rendered below the report content. No longer takes a
+ * `zip` prop — that only ever fed the now-removed vacant-sites link
+ * (vacancyHref), and the investment-activity link it hands off to is
+ * ZIP-independent.
  */
-export function StickyCrossLinkBanner({
-  zip,
-  onDismiss,
-}: {
-  zip?: string | null;
-  onDismiss: () => void;
-}) {
-  return (
-    <div
-      data-testid="sticky-cross-link-banner"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#0C1B33]/10 bg-white/95 shadow-[0_-1px_12px_rgba(12,27,51,0.06)] backdrop-blur-sm print:hidden"
-    >
-      {/* right padding reserves space for the dismiss X AND the globally mounted
-          concierge launcher (fixed bottom-4 right-4 z-[70]), which otherwise sits
-          on top of this z-40 bar's right edge */}
-      <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 py-4 pr-24 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8 sm:pr-28">
-        <p className="min-w-0 text-[14px] leading-snug text-[#0C1B33]">
-          Explore vacant sites near this address
-        </p>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <Link href={vacancyHref(zip)} className={PRIMARY_LINK_CLASS}>
-            View Vacant Sites →
-          </Link>
-          <Link href="/qualify" className={SECONDARY_LINK_CLASS}>
-            Continue to program fit questions →
-          </Link>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Dismiss"
-        className="absolute right-20 top-3 flex h-8 w-8 items-center justify-center text-[#0C1B33]/35 transition-colors hover:bg-[#0C1B33]/5 hover:text-[#0C1B33] sm:right-24"
-      >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
-
-/**
- * Secondary destinations the in-flow banner can hand off to. The full report
- * sends a reader on to neighborhood investment activity; the quick check —
- * which deliberately stops short of the program layer — sends them to the
- * program fit questions, the same destination the sticky bar offers.
- */
-const INLINE_SECONDARY = {
-  investment: {
-    href: "/investment",
-    label: "See neighborhood investment activity",
-  },
-  qualify: {
-    href: "/qualify",
-    label: "Continue to program fit questions",
-  },
-} as const;
-
-export type InlineCrossLinkSecondary = keyof typeof INLINE_SECONDARY;
-
-/**
- * In-flow cross-link rendered below the report content — same idiom as the
- * sticky bar, no dismissal (it does not overlay anything).
- */
-export function InlineCrossLinkBanner({
-  zip,
-  secondary = "investment",
-}: {
-  zip?: string | null;
-  secondary?: InlineCrossLinkSecondary;
-}) {
-  const next = INLINE_SECONDARY[secondary];
+export function InlineCrossLinkBanner() {
   return (
     <div
       data-testid="report-cross-link-banner"
       className="mx-auto mt-8 max-w-[850px] px-2 pb-10 sm:px-6 print:hidden"
     >
-      <div className="flex flex-col gap-3 border border-[#0C1B33]/10 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6">
-        <Link href={vacancyHref(zip)} className={PRIMARY_LINK_CLASS}>
-          View vacant sites near this address
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-        <Link href={next.href} className={SECONDARY_LINK_CLASS}>
-          {next.label}
+      <div className="flex items-center justify-center border border-[#0C1B33]/10 bg-white px-5 py-6 text-center sm:px-6">
+        <Link href="/investment" className={PRIMARY_LINK_CLASS}>
+          See neighborhood investment activity
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>

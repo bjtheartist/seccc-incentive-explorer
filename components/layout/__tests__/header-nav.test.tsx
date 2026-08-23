@@ -34,7 +34,6 @@ function render(pathname = "/") {
 /** Every approved destination, keyed by its approved label. */
 const APPROVED_ITEMS: Array<[label: string, href: string]> = [
   ["Quick Address Check", "/check"],
-  ["Program Fit Questions", "/qualify"],
   ["Program Directory", "/programs"],
   ["FAQ", "/faq"],
   ["Vacant Sites", "/vacancy"],

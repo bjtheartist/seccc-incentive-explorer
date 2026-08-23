@@ -10,7 +10,6 @@ import { useCallback, useRef } from "react";
 import {
   ArrowRight,
   Building2,
-  ClipboardList,
   MapPin,
   Search,
 } from "lucide-react";
@@ -107,10 +106,10 @@ function DemoAddressChips() {
 }
 
 /* ── Hero intent cards (WP1) ─────────────────────────────────────
-      The three ways in, sitting directly under the address bar: type an
-      address, hunt for space, or answer the survey. Copy is client-approved
-      verbatim. On mobile they stack beneath the search bar, which stays
-      above the fold on its own. ─────────────────────────────────── */
+      The two ways in, sitting directly under the address bar: type an
+      address, or hunt for space. Copy is client-approved verbatim. On
+      mobile they stack beneath the search bar, which stays above the fold
+      on its own. ─────────────────────────────────── */
 
 const INTENT_CARD_CLASS =
   "group flex h-full flex-col items-start gap-1.5 border border-[#0C1B33]/10 bg-white px-4 py-3.5 text-left shadow-[0_10px_30px_-24px_rgba(12,27,51,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2563EB]/40 hover:shadow-[0_20px_40px_-24px_rgba(12,27,51,0.7)] active:translate-y-0";
@@ -148,9 +147,9 @@ function IntentCardFace({
   );
 }
 
-function HeroIntentCards({ onCheckAddress, programCount }: { onCheckAddress: () => void; programCount: number }) {
+function HeroIntentCards({ onCheckAddress }: { onCheckAddress: () => void }) {
   return (
-    <div data-tour="project-paths" className="mx-auto mt-4 grid w-full max-w-[720px] gap-2.5 sm:mt-5 sm:grid-cols-3">
+    <div data-tour="project-paths" className="mx-auto mt-4 grid w-full max-w-[480px] gap-2.5 sm:mt-5 sm:grid-cols-2">
       <button type="button" onClick={onCheckAddress} className={INTENT_CARD_CLASS}>
         <IntentCardFace
           kicker="01"
@@ -165,14 +164,6 @@ function HeroIntentCards({ onCheckAddress, programCount }: { onCheckAddress: () 
           icon={Building2}
           title="Find Commercial Space"
           subtitle="Vacant sites, zoning fit, and the incentive map"
-        />
-      </Link>
-      <Link href="/qualify" className={INTENT_CARD_CLASS}>
-        <IntentCardFace
-          kicker="03"
-          icon={ClipboardList}
-          title="Answer Program Fit Questions"
-          subtitle={`Four questions to organize ${programCount} programs worth reviewing`}
         />
       </Link>
     </div>
@@ -285,7 +276,7 @@ export function HomePageClient({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.85 }}
           >
-            <HeroIntentCards onCheckAddress={focusHeroSearch} programCount={stats.programs} />
+            <HeroIntentCards onCheckAddress={focusHeroSearch} />
           </motion.div>
 
           <motion.div
