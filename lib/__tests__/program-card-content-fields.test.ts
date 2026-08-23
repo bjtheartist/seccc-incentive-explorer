@@ -100,8 +100,12 @@ describe("buildExpectations", () => {
     // actual regression this test protects against.
     expect(expectations).not.toMatch(/no fixed application window/i);
     // Date-qualified either way (gate round 2, BLOCKER 2+3): never a bare
-    // present-tense fact with no date attached at all.
-    expect(expectations).toMatch(new RegExp(sbif.statusAsOf!.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")));
+    // present-tense fact with no date attached at all. Asserts A date is
+    // present, not WHICH date — the open branch carries statusAsOf, the
+    // downgraded branch carries the closed-window date, and this must stay
+    // green across that flip (gate round 4, BLOCKER 28: the exact-date form
+    // went red the day the program's real window closed).
+    expect(expectations).toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 
   it("never claims 'no fixed application window' and stays un-downgraded ('being accepted') for a program whose window is genuinely far in the future — synthetic fixture, not date-fragile against live catalog data", () => {
