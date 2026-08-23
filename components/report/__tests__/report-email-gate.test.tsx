@@ -118,6 +118,40 @@ describe("ReportEmailGate", () => {
         /<button[^>]*aria-pressed="(true|false)"[^>]*>Growing \/ property owner<\/button>/,
       );
       expect(growingButtonMatch?.[1]).toBe("true");
+      // Gate round 2, MAJOR 25 + RULING: this same "no strong signal"
+      // input is exactly the shape that would trip the inference
+      // function's own "looking" branch in isolation — but the real
+      // report here still carries a real reportType ("site-incentives"),
+      // so in production this pre-selects "growing", never "looking".
+      // See lib/persona-inference.ts's updated doc comment and
+      // lib/__tests__/persona-inference.test.ts's "never infers looking
+      // for any input shape the real call site can actually produce" test
+      // for the same claim proven at the pure-function level.
+      const lookingButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Just looking<\/button>/,
+      );
+      expect(lookingButtonMatch?.[1]).toBe("false");
+    });
+
+    // Gate round 2, MAJOR 25 + RULING: "Just looking" must be a VISIBLE,
+    // directly tappable option in this row — the real, reachable path to
+    // the "looking" persona for an actual visitor, since the inference
+    // branch that could otherwise produce it is dead in production (see
+    // the test above and lib/persona-inference.ts). PERSONA_CHIPS.map
+    // renders every chip generically with no persona-specific filter, so
+    // this is really just confirming that generic rendering reaches
+    // "looking" too — but the earlier round's gap was exactly this class
+    // of unstated assumption, so it gets its own explicit assertion.
+    it("renders 'Just looking' as a real, enabled, tappable chip in the row — not merely inferable", () => {
+      const html = renderGate();
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      expect(row).toContain("Just looking");
+      const lookingTag = row.match(/<button[^>]*>Just looking<\/button>/)?.[0];
+      expect(lookingTag).toBeTruthy();
+      expect(lookingTag).not.toMatch(/\sdisabled(=|\/|>)/);
+      expect(lookingTag).toContain('type="button"');
     });
   });
 });

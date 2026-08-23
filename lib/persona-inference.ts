@@ -4,6 +4,13 @@
 // review specified — the chip row shows a PRE-SELECTED chip the visitor can
 // confirm or correct with one tap; it is always optional and never blocks
 // submit or "Continue Without Email".
+//
+// Gate round 2, MAJOR 25 + RULING: this module's ONLY inference input in
+// production always carries a real reportType (see the function doc below
+// for why the "looking" branch is therefore unreachable there). The real,
+// reachable path to the "looking" persona for an actual visitor is the
+// explicit "Just looking" chip in PERSONA_CHIPS' visible row — a genuine
+// user action, not something this inference produces.
 
 import type { PersonaId } from "@/lib/personas";
 
@@ -33,15 +40,26 @@ export interface PersonaInferenceInput {
  *     chamber staffer, or corridor stakeholder — evaluating on someone
  *     else's behalf, not a business owner acting for themselves)
  *   goal = relocation → starting
- *   no industry, no goal, no reportType at all → looking (gate finding
- *     9/10: this repo's intake wizard has no explicit "just looking"
- *     option to read from — verified, none exists in
- *     SITE_PROJECT_TYPE_OPTIONS — but its own goal-selection step already
- *     invites skipping it verbatim, "skip ahead if you are still
- *     exploring." A visitor who genuinely answered nothing carries that
- *     exact real signal; inferring "growing" for them here had NO signal
- *     behind it at all — a bare, unjustified default.)
+ *   no industry, no goal, no reportType at all → looking
  *   any real goal answered, even one not otherwise matched above → growing
+ *
+ * Gate round 2, MAJOR 25 + RULING (corrects gate finding 9/10's framing,
+ * which read as though this branch were a real reachable UX path — it
+ * isn't): the `looking` branch above is exercised as a pure-function unit
+ * case in lib/__tests__/persona-inference.test.ts, but is DEAD in
+ * production. Its only real caller, components/report/ReportEmailGate.tsx,
+ * always passes `reportType: report.reportType`, and
+ * `GeneratedReport.reportType` (lib/report-engine.ts) is a required,
+ * non-optional field — so `!input.reportType` can never be true at the
+ * real call site, and this branch can never actually fire against a real
+ * visitor. `looking` is a genuine, additive PersonaId (lib/personas.ts)
+ * and "Just looking" IS a live, reachable option — but the real path to
+ * it is the explicit chip tap in PERSONA_CHIPS' visible row (both the
+ * ReportEmailGate intake row and the on-report PersonaChips switcher),
+ * never this inference. This branch is kept only as conservative,
+ * defensive fallback logic — never claim `growing` with zero signal
+ * behind it — not as a claim that inference itself ever reaches a
+ * visitor this way.
  */
 export function inferPersonaFromIntake(input: PersonaInferenceInput): PersonaId {
   const goals = new Set([...(input.projectGoals ?? []), input.projectType ?? ""].filter(Boolean));
