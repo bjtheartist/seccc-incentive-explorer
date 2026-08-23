@@ -48,6 +48,7 @@ import type {
   WizardState,
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
+import { dedupeGoalIds } from "@/lib/gate-goal-groups";
 import {
   CONFIRMED_PROGRAMS_SECTION_ID,
   normalizePublicReportForDisplay,
@@ -1787,11 +1788,24 @@ function ReportWizardPage() {
 
   const handlePrepareGatedReport = useCallback(
     async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
-      const normalizedGoals = selectedProjectGoals({ projectGoals });
-      const reportGoals = selectedProjectGoals({
-        projectGoals: report?.metadata?.projectGoals,
-        projectType: report?.metadata?.projectType,
-      });
+      // Gate review round 1, BLOCKER 1: `selectedProjectGoals()` slices to
+      // MAX_PROJECT_GOALS = 3, a real constraint for the OLD "pick up to 3"
+      // wizard selector but wrong here — the gate's own grouped chips can
+      // carry up to 4 real goal ids from 2 selections, and nothing
+      // downstream (GOAL_RULES, projectGoalsFit) has a 3-goal limit. Dedupe
+      // without capping so every id the visitor actually selected survives.
+      const normalizedGoals = dedupeGoalIds(projectGoals);
+      // Read the existing report's goals the same uncapped way — a
+      // previously gate-prepared report can itself already carry 4 ids,
+      // and comparing an uncapped write against a capped read would
+      // spuriously report "changed" (and needlessly regenerate) even when
+      // nothing actually changed.
+      const existingProjectGoals = report?.metadata?.projectGoals?.length
+        ? report.metadata.projectGoals
+        : report?.metadata?.projectType
+          ? [report.metadata.projectType]
+          : [];
+      const reportGoals = dedupeGoalIds(existingProjectGoals);
       if (
         JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
         (report?.metadata?.customGoal || "") === customGoal.trim()

@@ -93,3 +93,48 @@ export function gateGoalChipsToGoalIds(selected: readonly string[]): string[] {
 export function gateGoalSelectionIsComplete(selected: readonly string[]): boolean {
   return selected.length > 0;
 }
+
+/**
+ * Deduplicates a list of goal ids WITHOUT capping it (gate review round 1,
+ * BLOCKER 1). `lib/report-wizard-config.ts`'s `selectedProjectGoals()`
+ * slices to `MAX_PROJECT_GOALS = 3` — a real constraint for the OLD
+ * 11-option, "pick up to 3" wizard selector, but wrong for the gate: 2
+ * grouped chips ("Expand or buy equipment" + "Develop housing or
+ * mixed-use") can carry 4 real goal ids, and `projectGoalsFit`/GOAL_RULES
+ * have no inherent 3-goal limit — the cap was a UI-selection artifact of
+ * a component the gate no longer uses. This is the gate's own combiner:
+ * every id reachable from the visitor's actual selections must survive.
+ */
+export function dedupeGoalIds(ids: readonly string[]): string[] {
+  return Array.from(new Set(ids));
+}
+
+/**
+ * Reverse mapping for seeding the gate from a report that already has
+ * project goals (a completed wizard run, a refined report, a shared link)
+ * — spec guardrail: "keep goal ids stable everywhere else... anything
+ * else that renders goal labels must keep working" plus gate review round
+ * 1, BLOCKER 2 ("never lose typed context"). Chip grouping is coarser
+ * than the raw goal ids (one chip can represent two ids), so seeding a
+ * chip whenever ANY of its ids is present is the closest honest
+ * representation — consistent with spec §A's own grouped-chip contract
+ * ("a grouped chip selecting multiple ids feeds the existing multi-goal
+ * path"). Ids with no chip at all (`vacant-acquisition`, `other`) are
+ * returned separately by `unmatchedGoalIds` below and must be preserved
+ * untouched, never dropped for lack of a chip to show them on.
+ */
+export function goalIdsToGateChipIds(existingGoalIds: readonly string[]): string[] {
+  const existing = new Set(existingGoalIds);
+  const chipIds: string[] = [];
+  for (const chip of GATE_SUBSTANTIVE_CHIPS) {
+    if (chip.goalIds.some((id) => existing.has(id))) chipIds.push(chip.id);
+  }
+  return chipIds;
+}
+
+/** The existing goal ids that no gate chip represents — must be carried
+ *  through untouched (see `goalIdsToGateChipIds` doc above). */
+export function unmatchedGoalIds(existingGoalIds: readonly string[]): string[] {
+  const allChipGoalIds = new Set(GATE_GOAL_CHIPS.flatMap((chip) => chip.goalIds));
+  return existingGoalIds.filter((id) => !allChipGoalIds.has(id));
+}
