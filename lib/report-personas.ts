@@ -295,7 +295,16 @@ function sectionBucketKey(section: ReportSection): SectionBucketKey {
   if (id === SECTION_IDS.siteFacts || title === "Site Facts") return "siteFacts";
   if (id === SECTION_IDS.logisticsAccess || title === "Logistics Access") return "logisticsAccess";
   if (id === SECTION_IDS.civicRepresentation || title === "Civic Representation") return "civicRepresentation";
-  if (title === "Neighborhood Economic Context") return "neighborhoodContext";
+  // Gate finding 19 (regression, real bug this fixes): this was title-only
+  // — no `id` check — even though the engine has stamped a real
+  // `SECTION_IDS.neighborhoodEconomicContext` on this section all along.
+  // Harmless while every persona's title matched the canonical string, but
+  // gate finding 19's own title overrides rename this section for
+  // developer/supporter — a title-only check would have silently
+  // misclassified the section it had JUST renamed, bucketing it into
+  // "rest" (wrong guidepost PART) on the very next call. id-first fixes it
+  // permanently, the same way every other bucket check here already is.
+  if (id === SECTION_IDS.neighborhoodEconomicContext || title === "Neighborhood Economic Context") return "neighborhoodContext";
   if (id === SECTION_IDS.zoningUseStartingPoint || title === "Zoning & Use Starting Point") return "zoning";
   if (
     id === GOAL_MATCH_PROGRAMS_SECTION_ID ||
@@ -310,6 +319,15 @@ function sectionBucketKey(section: ReportSection): SectionBucketKey {
   ) {
     return "programs";
   }
+  // Gate finding 19 (regression, real bug this fixes): "documentReadiness"
+  // has been listed in SectionBucketKey and in every PERSONA_SECTION_ORDER
+  // array since this file's earliest phase, but this function never
+  // actually returned it — no branch existed at all. Every "documentReadiness"
+  // entry in every ordering array has been silently inert this whole time;
+  // gate finding 19's own title override for it would have been equally
+  // dead without this fix. The real section (lib/report-engine.ts, "Document
+  // Readiness Checklist") already carries SECTION_IDS.documentReadinessChecklist.
+  if (id === SECTION_IDS.documentReadinessChecklist || title === "Document Readiness Checklist") return "documentReadiness";
   if (id === CAPITAL_PARTNER_SECTION_ID || title === CAPITAL_PARTNER_SECTION_TITLE) return "financing";
   if (isSupportOrganizationSectionTitle(title) || id === SUPPORT_ORGANIZATIONS_SECTION_ID) return "organizations";
   return "rest";
@@ -343,6 +361,107 @@ function reorderSectionsForPersona(sections: ReportSection[], persona: PersonaId
     })
     .sort((a, b) => a.position - b.position || a.index - b.index)
     .map((entry) => entry.section);
+}
+
+/**
+ * Gate finding 19 — per-persona section titles. Exact strings copied from
+ * the four R5 board files (re-read in full for this pass; every section
+ * header they render is the source of truth): R5DeveloperFinal,
+ * R5OwnerFinal (shared by "starting"/"growing" — both render under the one
+ * "Business owner" board), R5SupporterFinal, R5LookingFinal. A persona/
+ * bucket pair with no entry means the board's title already equals the
+ * current one, or the board doesn't show that section at all — both
+ * intentionally left unmapped rather than forced.
+ *
+ * Two things this deliberately does NOT cover, both real, both out of this
+ * map's mechanism (a bucket→title lookup over generic ReportSection
+ * objects, keyed the same way reorderSectionsForPersona already buckets
+ * them):
+ *   - Chart headers ("Incentive horizon," "Funding windows") — these are
+ *     bespoke chart components with no ReportSection/id of their own, not
+ *     generic titled sections this override can reach.
+ *   - "Contact sheet" — components/report/ContactSheet.tsx's own hardcoded
+ *     <h3>, not a ReportSection.title; its CSS already uppercases the
+ *     rendered text ("CONTACT SHEET") regardless of the source string's
+ *     casing, so the board's lowercase "Contact sheet" vs the component's
+ *     "Contact Sheet" is not a visible mismatch this map could fix anyway.
+ */
+const PERSONA_SECTION_TITLE_OVERRIDES: Partial<Record<Exclude<PersonaId, "all">, Partial<Record<SectionBucketKey, string>>>> = {
+  starting: {
+    siteFacts: "Site facts",
+    logisticsAccess: "Logistics access",
+    civicRepresentation: "Civic representation",
+    zoning: "Zoning",
+    programs: "Programs for your goal",
+    documentReadiness: "Document readiness",
+    financing: "Financing resources",
+  },
+  growing: {
+    siteFacts: "Site facts",
+    logisticsAccess: "Logistics access",
+    civicRepresentation: "Civic representation",
+    zoning: "Zoning",
+    programs: "Programs for your goal",
+    documentReadiness: "Document readiness",
+    financing: "Financing resources",
+  },
+  developer: {
+    siteFacts: "Site facts & county records",
+    logisticsAccess: "Logistics access",
+    civicRepresentation: "Civic representation",
+    zoning: "Zoning & district family",
+    neighborhoodContext: "Neighborhood context",
+    programs: "Capital-relevant programs",
+    financing: "Financing resources",
+  },
+  supporter: {
+    neighborhoodContext: "Neighborhood context",
+    civicRepresentation: "Civic representation",
+    zoning: "Zoning",
+    programs: "Programs for the goal",
+    documentReadiness: "Document readiness",
+    financing: "Financing resources",
+  },
+  looking: {
+    civicRepresentation: "Civic representation",
+  },
+};
+
+/**
+ * Applies PERSONA_SECTION_TITLE_OVERRIDES to an already-lensed, already-
+ * reordered section list — a pure display transform (never touches `id`,
+ * never runs at generation time), consistent with the "lens, never
+ * generator" rule. Skips any section already `collapsedByPersona`
+ * (the "Also at this address" disclosure keeps its own fixed title, never
+ * inherits the "programs" bucket's override) so TOC/anchor state, which
+ * is keyed by `id` and unaffected by this function, never drifts from
+ * what a reader actually sees.
+ */
+function applyPersonaSectionTitles(sections: ReportSection[], persona: PersonaId): ReportSection[] {
+  if (persona === DEFAULT_PERSONA) return sections;
+  const overrides = PERSONA_SECTION_TITLE_OVERRIDES[persona as Exclude<PersonaId, "all">];
+  if (!overrides) return sections;
+  // Regression, real bug this fixes: sectionBucketKey buckets MULTIPLE
+  // distinct titled sections into "programs" together (CONFIRMED_
+  // PROGRAMS_SECTION_TITLE / GOAL_MATCH_PROGRAMS_SECTION_TITLE /
+  // OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE can all legitimately coexist as
+  // separate, non-collapsed sections when items survive the persona
+  // filter in more than one tier) — an unconditional per-bucket override
+  // renamed every one of them to the SAME string, producing two
+  // identically-titled sections on one report and breaking every
+  // find-by-original-title lookup downstream. Each R5 board shows exactly
+  // ONE section per bucket, so the override applies to the FIRST matching
+  // section only; any additional section in the same bucket keeps its own
+  // real title.
+  const appliedBuckets = new Set<SectionBucketKey>();
+  return sections.map((section) => {
+    if (section.collapsedByPersona) return section;
+    const bucket = sectionBucketKey(section);
+    const overrideTitle = overrides[bucket];
+    if (!overrideTitle || overrideTitle === section.title || appliedBuckets.has(bucket)) return section;
+    appliedBuckets.add(bucket);
+    return { ...section, title: overrideTitle };
+  });
 }
 
 /** Which guidepost PART a (already persona-lensed) section belongs in, for
@@ -482,7 +601,7 @@ export function applyPersonaLens(
     });
   }
 
-  const orderedSections = reorderSectionsForPersona(nextSections, persona);
+  const orderedSections = applyPersonaSectionTitles(reorderSectionsForPersona(nextSections, persona), persona);
   const nextRoadmap = reorderActionRoadmap(report.actionRoadmap, persona, lookup);
   const nextStartHere = reorderStartHere(report.startHere, persona, lookup);
 

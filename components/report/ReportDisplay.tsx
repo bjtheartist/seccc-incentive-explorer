@@ -278,16 +278,21 @@ export function ReportDisplay({
   let guidepostBandTracker: GuidepostPart | null = null;
 
   // ── TOC ──
-  const sectionToAnchor = (title: string) =>
-    isSupportOrganizationSectionTitle(title)
+  // Gate finding 19: id-first (see app/report/page.tsx's fuller rationale)
+  // — a title-only anchor would have silently changed the rendered anchor
+  // id out from under every TOC link/deep-link the moment gate finding
+  // 19's per-persona title overrides landed.
+  const sectionToAnchor = (section: ReportSection) =>
+    isSupportOrganizationSectionTitle(section.title)
       ? "your-support-network"
-      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      : section.id ?? section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   /** Stable identity for a section's UI state — see the live fork
    *  (app/report/page.tsx) for the full rationale (adversarial review
    *  finding #9: index-keyed state desyncs when the persona lens reorders
-   *  `lensed.sections`). */
-  const sectionStateKey = (section: ReportSection) => section.id ?? sectionToAnchor(section.title);
+   *  `lensed.sections`). Identical to sectionToAnchor since gate finding
+   *  19 (both are id-first); kept as a separate name for readability. */
+  const sectionStateKey = (section: ReportSection) => sectionToAnchor(section);
 
   // Guidepost band (spec v2 visual law) — see the live fork
   // (app/report/page.tsx) for the full rationale.
@@ -311,7 +316,7 @@ export function ReportDisplay({
     if (lensed.actionRoadmap && lensed.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (lensed.sections) {
       for (const s of lensed.sections) {
-        entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
+        entries.push({ label: s.title, anchor: sectionToAnchor(s) });
       }
     }
     if (lensed.recommendedActions && lensed.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
@@ -1221,11 +1226,12 @@ export function ReportDisplay({
                   <ProgramsMatchedHere
                     report={lensed}
                     persona={persona}
-                    programsAnchor={sectionToAnchor(
-                      lensed.sections?.find(
+                    programsAnchor={(() => {
+                      const programsSection = lensed.sections?.find(
                         (s) => !s.collapsedByPersona && s.items?.some((item) => item.programId),
-                      )?.title ?? "",
-                    )}
+                      );
+                      return programsSection ? sectionToAnchor(programsSection) : "";
+                    })()}
                   />
                 )}
               </div>
@@ -1286,7 +1292,7 @@ export function ReportDisplay({
                         reportType: report.reportType,
                         source: "report_section_toggle",
                         metadata: {
-                          sectionId: sectionToAnchor(section.title),
+                          sectionId: sectionToAnchor(section),
                           sectionTitle: section.title,
                           sectionIndex: sectionIdx,
                           state: event.currentTarget.open ? "expanded" : "collapsed",
@@ -1298,7 +1304,7 @@ export function ReportDisplay({
                 const sectionElement = (
                   <Wrapper
                     key={sectionStateKey(section)}
-                    id={sectionToAnchor(section.title)}
+                    id={sectionToAnchor(section)}
                     className={`report-section mb-14 ${section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}
                     {...(handleSectionToggle
                       ? // The dynamic Wrapper type ("details" | "div") makes JSX validate

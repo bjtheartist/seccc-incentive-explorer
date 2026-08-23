@@ -14,7 +14,7 @@ import { reportEmailGateKey } from "@/lib/report-email";
 import { DEFAULT_PERSONA } from "@/lib/personas";
 import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
-import { CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
+import { CONFIRMED_PROGRAMS_SECTION_ID, CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { ALSO_AT_ADDRESS_TITLE, personaEmptyProgramsDescription } from "@/lib/report-personas";
 import { encodeWizardState } from "@/lib/url-state";
@@ -796,6 +796,7 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
         summary: "Mapped incentive zones were found at this address.",
         sections: [
           {
+            id: CONFIRMED_PROGRAMS_SECTION_ID,
             title: CONFIRMED_PROGRAMS_SECTION_TITLE,
             description: "Programs mapped at this address.",
             items: [
@@ -856,6 +857,7 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
         ...multiProgramReport(),
         sections: [
           {
+            id: CONFIRMED_PROGRAMS_SECTION_ID,
             title: CONFIRMED_PROGRAMS_SECTION_TITLE,
             description: "Programs mapped at this address.",
             items: [{ label: "SBIF Facade Grant", value: "Review published terms", programId: "sbif" }],

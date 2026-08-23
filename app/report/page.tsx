@@ -3712,10 +3712,23 @@ function ReportDisplay({
   let guidepostBandTracker: GuidepostPart | null = null;
 
   // ── TOC ──
-  const sectionToAnchor = (title: string) =>
-    isSupportOrganizationSectionTitle(title)
+  // Gate finding 19 (regression, real bug this fixes): this used to slug
+  // ONLY the title (`title.toLowerCase().replace(...)`) — the rendered DOM
+  // id, every TOC href, and hash-based deep-link navigation all keyed off
+  // it. Gate finding 19's per-persona section-title overrides
+  // (lib/report-personas.ts PERSONA_SECTION_TITLE_OVERRIDES) change
+  // `section.title` at lens time — a title-only anchor would have silently
+  // changed the rendered anchor id out from under every existing bookmark/
+  // TOC link/deep-link the moment a persona-specific title landed, exactly
+  // what "anchors are unaffected" was supposed to guarantee. Now prefers
+  // the section's own stable `id` (same precedent `sectionStateKey`
+  // already used for expand/collapse state — see its own comment below,
+  // now folded into this one function since both need the identical
+  // id-first fallback).
+  const sectionToAnchor = (section: ReportSection) =>
+    isSupportOrganizationSectionTitle(section.title)
       ? "your-support-network"
-      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      : section.id ?? section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   /**
    * Stable identity for a section's UI state (expand/collapse, hash-open),
@@ -3723,11 +3736,12 @@ function ReportDisplay({
    * `report.sections` (and the "Also at this address" disclosure isn't in
    * the canonical array at all), so keying state by array index — the prior
    * behavior — silently desynced whenever the active persona changed a
-   * section's position (adversarial review finding #9). `id` when the
-   * engine set one (same precedent as `sectionMatchesIdOrTitle`), falling
-   * back to the title-derived anchor otherwise.
+   * section's position (adversarial review finding #9). Now identical to
+   * sectionToAnchor (both are id-first since gate finding 19) — kept as a
+   * separate named function only so call sites that are conceptually about
+   * "state identity" vs. "the rendered anchor" stay self-documenting.
    */
-  const sectionStateKey = (section: ReportSection) => section.id ?? sectionToAnchor(section.title);
+  const sectionStateKey = (section: ReportSection) => sectionToAnchor(section);
 
   // TOC derives from the LENSED report (spec v2 build order item 3): a
   // persona-reordered body with a canonical-order TOC pointed readers at the
@@ -3739,7 +3753,7 @@ function ReportDisplay({
     if (lensed.actionRoadmap && lensed.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (lensed.sections) {
       for (const s of lensed.sections) {
-        entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
+        entries.push({ label: s.title, anchor: sectionToAnchor(s) });
       }
     }
     if (lensed.recommendedActions && lensed.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
@@ -3792,7 +3806,7 @@ function ReportDisplay({
       const hash = window.location.hash.replace(/^#/, "");
       if (!hash || !lensed.sections) return;
       const target = lensed.sections.find(
-        (s) => sectionToAnchor(s.title) === hash
+        (s) => sectionToAnchor(s) === hash
       );
       if (target) setExpandedSections((prev) => ({ ...prev, [sectionStateKey(target)]: true }));
     };
@@ -4837,11 +4851,12 @@ function ReportDisplay({
                   <ProgramsMatchedHere
                     report={lensed}
                     persona={persona}
-                    programsAnchor={sectionToAnchor(
-                      lensed.sections?.find(
+                    programsAnchor={(() => {
+                      const programsSection = lensed.sections?.find(
                         (s) => !s.collapsedByPersona && s.items?.some((item) => item.programId),
-                      )?.title ?? "",
-                    )}
+                      );
+                      return programsSection ? sectionToAnchor(programsSection) : "";
+                    })()}
                   />
                 )}
               </div>
@@ -4929,7 +4944,7 @@ function ReportDisplay({
                 const sectionElement = (
                   <div
                     key={sectionKey}
-                    id={sectionToAnchor(section.title)}
+                    id={sectionToAnchor(section)}
                     className={`report-section ${sectionOpen ? "mb-14" : "report-section-collapsed mb-6"}`}
                   >
                     <button
@@ -4943,7 +4958,7 @@ function ReportDisplay({
                           reportType: report.reportType,
                           source: "report_section_toggle",
                           metadata: {
-                            sectionId: sectionToAnchor(section.title),
+                            sectionId: sectionToAnchor(section),
                             sectionTitle: section.title,
                             sectionIndex: sectionIdx,
                             state: sectionOpen ? "collapsed" : "expanded",
