@@ -877,15 +877,26 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       return html.slice(start, nextDivIdx === -1 ? undefined : nextDivIdx);
     }
 
+    // Gate round 2 tail item 1: the earlier version of this test only
+    // checked absence from the ONE confirmed-programs fragment — true to
+    // "not in that fragment," not to the test's own name ("never appears
+    // outside the disclosure"), since the collapsed title could in
+    // principle leak into some OTHER section (e.g. a debug dump, a
+    // duplicate render, a stray TOC entry) and this test would still have
+    // been green. Strengthened to the full document: slice out the
+    // disclosure fragment itself, then assert the title is absent from
+    // everything that remains — genuinely "never appears outside," not
+    // "doesn't appear in this one place I checked."
     it("(a) a collapsed program's title never appears outside the 'Also at this address' disclosure", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
-      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
       const alsoFragment = sectionFragment(html, sectionAnchor(ALSO_AT_ADDRESS_TITLE));
-      // sbif does NOT match "developer" — it must have collapsed OUT of the
-      // primary confirmed-tier fragment...
-      expect(confirmedFragment).not.toContain("SBIF Facade Grant");
-      // ...and INTO the disclosure, not dropped.
+      // sbif does NOT match "developer" — it must have collapsed INTO the
+      // disclosure, not dropped.
       expect(alsoFragment).toContain("SBIF Facade Grant");
+      // ...and it must be ABSENT everywhere else in the rendered document —
+      // not merely absent from the confirmed-programs fragment specifically.
+      const remainder = html.replace(alsoFragment, "");
+      expect(remainder).not.toContain("SBIF Facade Grant");
     });
 
     it("(b) the disclosure sentence itself renders, naming the real count and persona", async () => {
@@ -1024,7 +1035,14 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       }
     });
 
-    it("bare persona=all stays byte-identical to its pre-\"looking\"-persona render (characterization, not just a marker check)", async () => {
+    // Gate round 2 tail item 2: this test's name used to claim
+    // "characterization, not just a marker check" — false; the body below
+    // only ever checked a handful of markers (absence of a few ids/strings,
+    // presence of program names in one fragment), never full-markup
+    // equality against anything. Renamed to what it actually is. The real
+    // byte-level characterization now lives in the dedicated test right
+    // after this one.
+    it("bare persona=all shows the flat kitchen sink — no guidepost bands, no disclosure, no looking-only markers (marker check)", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "all" });
       // "all" renders the flat kitchen sink: no guidepost bands, no
       // Also-at-this-address disclosure (nothing is collapsed on "all"
@@ -1039,6 +1057,52 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(confirmedFragment).toContain("TIF District Program");
       expect(confirmedFragment).toContain("Federal Opportunity Zone");
       expect(confirmedFragment).toContain("High Unemployment Area");
+    });
+
+    // Gate round 2 tail item 2 — the real byte-level characterization the
+    // coordinator asked for. `applyPersonaLens(report, "all")` returns the
+    // identical report REFERENCE (lib/report-personas.ts's own doc comment
+    // on `PersonaLensResult.report`) — but that's a claim about the lens
+    // FUNCTION, proven directly in lib/__tests__/report-personas.test.ts.
+    // What was missing here is proof that this holds through the WHOLE
+    // render pipeline: that running the real lens for persona="all" at
+    // app/report/page.tsx's one call site (`showPersonaLens ?
+    // applyPersonaLens(report, persona).report : report`) produces
+    // full-document output IDENTICAL to never calling the lens at all.
+    // Proven by mocking `applyPersonaLens` itself out to a bare pass-
+    // through for one render and diffing the FULL markup against a normal
+    // render — genuinely byte-level, not a handful of marker checks.
+    it("persona=all render is full-markup byte-identical whether the real persona lens runs or is bypassed entirely (real characterization)", async () => {
+      const withRealLens = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+        persona: "all",
+      });
+
+      vi.resetModules();
+      vi.doMock("@/lib/report-personas", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@/lib/report-personas")>();
+        return {
+          ...actual,
+          // The one real call site (app/report/page.tsx) only ever reads
+          // `.report` off this return value — see the grep-backed claim in
+          // the comment above; a bare pass-through is a faithful bypass.
+          applyPersonaLens: (report: GeneratedReport) => ({
+            report,
+            matchedBefore: 0,
+            matchedAfter: 0,
+          }),
+        };
+      });
+      let withLensBypassed: string;
+      try {
+        withLensBypassed = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+          persona: "all",
+        });
+      } finally {
+        vi.doUnmock("@/lib/report-personas");
+        vi.resetModules();
+      }
+
+      expect(withLensBypassed).toBe(withRealLens);
     });
   });
 });
