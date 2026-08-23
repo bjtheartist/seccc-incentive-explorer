@@ -322,21 +322,41 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  // Gate finding 11: reason chips + the card-face glance row/"Commonly
-  // required"/next-step block moved out of the collapsed "Program review
-  // details" accordion onto the card face in both forks.
-  it("both forks render ReasonChips and ProgramCardFace on the card face, ahead of the (now-narrower) accordion", () => {
+  // Gate finding 11 + gate round 2 BLOCKER 11: ALL "blessed" card content —
+  // ProgramCardFace's glance row/"Commonly required"/next-step, ReasonChips
+  // labeled "Why this is shown," and ProgramCardExtras's "Can combine
+  // with"/"What to expect"/"Verify at the source" — lives on the card face,
+  // in board order, in both forks. None of it inside the accordion, which
+  // retains only genuinely supplementary detail.
+  it("both forks render ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in board order, none inside the accordion", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { ReasonChips }");
       expect(fork).toContain("import { ProgramCardFace }");
-      expect(fork).toContain("<ReasonChips explanation={item.matchExplanation} />");
-      expect(fork).toContain("<ProgramCardFace item={item} />");
+      expect(fork).toContain("import { ProgramCardExtras }");
+      // Board order: face, then reason chips, then the extras block —
+      // ReasonChips no longer renders BEFORE ProgramCardFace (round 1).
+      const faceIdx = fork.indexOf("<ProgramCardFace item={item} />");
+      const chipsIdx = fork.indexOf("<ReasonChips explanation={item.matchExplanation} />");
+      const extrasIdx = fork.indexOf("<ProgramCardExtras item={item} />");
+      expect(faceIdx, `${fork === liveFork ? "live" : "workspace"} fork: ProgramCardFace present`).toBeGreaterThan(-1);
+      expect(chipsIdx, "ReasonChips present").toBeGreaterThan(-1);
+      expect(extrasIdx, "ProgramCardExtras present").toBeGreaterThan(-1);
+      expect(faceIdx).toBeLessThan(chipsIdx);
+      expect(chipsIdx).toBeLessThan(extrasIdx);
       // The accordion's gate no longer includes item.eligibilityRules —
       // that content moved to ProgramCardFace's "Commonly required".
       expect(fork).toContain(
         '{!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (',
       );
       expect(fork).not.toContain("item.matchExplanation || item.eligibilityRules || item.url");
+      // ProgramCardExtras must NOT appear inside the accordion's own
+      // AccordionContent block — only once, on the face.
+      const accordionContentStart = fork.indexOf("report-eligibility pl-4 border-l");
+      const accordionContentEnd = fork.indexOf("</AccordionContent>", accordionContentStart);
+      const accordionContent = fork.slice(accordionContentStart, accordionContentEnd);
+      expect(accordionContent).not.toContain("<ProgramCardExtras");
+      expect(accordionContent).not.toContain("<ReasonChips");
+      expect(accordionContent).not.toContain("<ProgramCardFace");
     }
   });
 

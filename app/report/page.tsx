@@ -5228,22 +5228,30 @@ function ReportDisplay({
                               />
                             )}
 
-                            {/* Gate finding 11: "blessed" card content moved onto the
-                                FACE — reason chips, administrator/status/window,
-                                "Commonly required," next-step/contact. Previously all
-                                of this lived only inside the collapsed accordion below.
-                                Same source data (item.matchExplanation, item.
-                                eligibilityRules, the new administrator/decisionBy/
-                                nextStep/primaryContact fields report-engine.ts already
-                                computes) — only where/how it renders changed. */}
+                            {/* Gate finding 11 + gate round 2 BLOCKER 11: ALL "blessed"
+                                card content lives on the FACE, in board order —
+                                administrator/status/window/"Commonly required"/
+                                next-step (ProgramCardFace), then reason chips
+                                labeled "Why this is shown" (ReasonChips — moved to
+                                render AFTER the face, not before), then "Can combine
+                                with"/"What to expect"/"Verify at the source" +
+                                the traces-to-public-record line (ProgramCardExtras —
+                                moved OUT of the accordion below entirely; round 1's
+                                "stays in the accordion" call was wrong, these ARE
+                                named in the spec's own board order). Same source
+                                data throughout — only where/how it renders changed. */}
                             {!isSupportNetworkItem && (
                               <>
-                                <ReasonChips explanation={item.matchExplanation} />
                                 <ProgramCardFace item={item} />
+                                <ReasonChips explanation={item.matchExplanation} />
+                                <ProgramCardExtras item={item} />
                               </>
                             )}
 
-                            {/* Public program evidence and official navigation */}
+                            {/* Genuinely supplementary detail only — the deeper
+                                match-explanation facts (public data, your answers,
+                                still to confirm, documents to gather, confirm-with)
+                                and official navigation. */}
                             {!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
@@ -5268,7 +5276,6 @@ function ReportDisplay({
                                     {item.lastVerifiedAt && (
                                       <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
                                     )}
-                                    <ProgramCardExtras item={item} />
                                   </AccordionContent>
                                 </AccordionItem>
                               </Accordion>

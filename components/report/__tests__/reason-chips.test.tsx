@@ -21,7 +21,7 @@ describe("ReasonChips (gate finding 11)", () => {
     ).toBe("");
   });
 
-  it("renders each reason as a pill chip, in the SAME order the engine already produces them", () => {
+  it("renders each reason as a pill chip, in the SAME order the engine already produces them, under a 'Why this is shown' label", () => {
     const html = renderToStaticMarkup(
       <ReasonChips
         explanation={{
@@ -35,6 +35,8 @@ describe("ReasonChips (gate finding 11)", () => {
       />,
     );
     expect(html).toContain('data-testid="reason-chips"');
+    // Gate round 2, BLOCKER 11: the real board label, not a generic one.
+    expect(html).toContain("Why this is shown");
     const firstIndex = html.indexOf("Address is inside SBIF-eligible TIF district");
     const secondIndex = html.indexOf("Project goal matches published uses");
     expect(firstIndex).toBeGreaterThan(-1);
