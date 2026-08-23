@@ -242,20 +242,29 @@ export function ReportDisplay({
       ? "your-support-network"
       : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  /** Stable identity for a section's UI state — see the live fork
+   *  (app/report/page.tsx) for the full rationale (adversarial review
+   *  finding #9: index-keyed state desyncs when the persona lens reorders
+   *  `lensed.sections`). */
+  const sectionStateKey = (section: ReportSection) => section.id ?? sectionToAnchor(section.title);
+
+  // TOC derives from the LENSED report (spec v2 build order item 3): a
+  // persona-reordered body with a canonical-order TOC pointed readers at the
+  // wrong anchor position.
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
-    if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
-    if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
-    if (report.sections) {
-      for (const s of report.sections) {
+    if (lensed.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
+    if (lensed.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (lensed.actionRoadmap && lensed.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
+    if (lensed.sections) {
+      for (const s of lensed.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
       }
     }
-    if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
-    if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
+    if (lensed.recommendedActions && lensed.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
+    if (lensed.dataSources && lensed.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
-  }, [report]);
+  }, [lensed]);
 
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
 
@@ -1126,7 +1135,7 @@ export function ReportDisplay({
 
                 return (
                   <Wrapper
-                    key={sectionIdx}
+                    key={sectionStateKey(section)}
                     id={sectionToAnchor(section.title)}
                     className={`report-section mb-14 ${section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}
                     {...(handleSectionToggle

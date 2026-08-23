@@ -133,6 +133,7 @@ import {
   storePersona,
   type PersonaId,
 } from "@/lib/personas";
+import { derivePersonaLensVisible } from "@/lib/workspace";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
@@ -1959,7 +1960,14 @@ function ReportWizardPage() {
           onQuickRefine={handleQuickRefine}
           quickRefineBusy={isGenerating}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
-          showPersonaLens={isInstantMode}
+          // BLOCKER fix (adversarial design review #2): the persona lens
+          // must be visible whenever the wizard state is a site-incentives
+          // report — not just on a fresh instant snapshot. `isInstantMode`
+          // gated the chips off on every shared link and every goal-refined
+          // report, so a forwarded `?persona=` was inert on arrival. This
+          // mirrors the (already-correct) workspace fork
+          // (app/workspace/reports/[id]/page.tsx).
+          showPersonaLens={derivePersonaLensVisible(wizardState)}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -3650,20 +3658,35 @@ function ReportDisplay({
       ? "your-support-network"
       : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  /**
+   * Stable identity for a section's UI state (expand/collapse, hash-open),
+   * independent of its position in the array. The persona lens reorders
+   * `report.sections` (and the "Also at this address" disclosure isn't in
+   * the canonical array at all), so keying state by array index — the prior
+   * behavior — silently desynced whenever the active persona changed a
+   * section's position (adversarial review finding #9). `id` when the
+   * engine set one (same precedent as `sectionMatchesIdOrTitle`), falling
+   * back to the title-derived anchor otherwise.
+   */
+  const sectionStateKey = (section: ReportSection) => section.id ?? sectionToAnchor(section.title);
+
+  // TOC derives from the LENSED report (spec v2 build order item 3): a
+  // persona-reordered body with a canonical-order TOC pointed readers at the
+  // wrong anchor position.
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
-    if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
-    if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
-    if (report.sections) {
-      for (const s of report.sections) {
+    if (lensed.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
+    if (lensed.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (lensed.actionRoadmap && lensed.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
+    if (lensed.sections) {
+      for (const s of lensed.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
       }
     }
-    if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
-    if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
+    if (lensed.recommendedActions && lensed.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
+    if (lensed.dataSources && lensed.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
-  }, [report]);
+  }, [lensed]);
 
   const supportSection = useMemo(
     () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
@@ -3677,26 +3700,33 @@ function ReportDisplay({
     () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
     []
   );
-  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
+  // Keyed by sectionStateKey (section.id, falling back to the title
+  // anchor) — NOT array index. The persona lens reorders `lensed.sections`
+  // on every persona switch; an index-keyed map silently reattached a prior
+  // section's open/closed state to whatever different section now sits at
+  // that position (adversarial review finding #9).
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const isSectionOpen = useCallback(
-    (idx: number, title: string) =>
-      expandedSections[idx] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
+    (key: string, idx: number, title: string) =>
+      expandedSections[key] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
     [expandedSections, ALWAYS_OPEN_SECTIONS]
   );
   useEffect(() => {
     // Auto-expand a collapsed section when a TOC/anchor link targets it.
+    // Reads `lensed` (not canonical `report`) so a hash link opens the
+    // section that's actually rendered under the active persona.
     const openFromHash = () => {
       const hash = window.location.hash.replace(/^#/, "");
-      if (!hash || !report.sections) return;
-      const idx = report.sections.findIndex(
+      if (!hash || !lensed.sections) return;
+      const target = lensed.sections.find(
         (s) => sectionToAnchor(s.title) === hash
       );
-      if (idx >= 0) setExpandedSections((prev) => ({ ...prev, [idx]: true }));
+      if (target) setExpandedSections((prev) => ({ ...prev, [sectionStateKey(target)]: true }));
     };
     openFromHash();
     window.addEventListener("hashchange", openFromHash);
     return () => window.removeEventListener("hashchange", openFromHash);
-  }, [report.sections]);
+  }, [lensed.sections]);
   const supportItems = useMemo(
     () => supportSection?.items.slice(1) ?? [],
     [supportSection]
@@ -4704,17 +4734,18 @@ function ReportDisplay({
             {lensed.sections &&
               lensed.sections.map((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
+                const sectionKey = sectionStateKey(section);
 
                 // Persona lens: the "Also at this address" group defaults to
                 // collapsed (still user-expandable, still in the DOM for print/
                 // anchors — collapse, never hide).
                 const sectionOpen = section.collapsedByPersona
-                  ? (expandedSections[sectionIdx] ?? false)
-                  : isSectionOpen(sectionIdx, section.title);
+                  ? (expandedSections[sectionKey] ?? false)
+                  : isSectionOpen(sectionKey, sectionIdx, section.title);
 
                 return (
                   <div
-                    key={sectionIdx}
+                    key={sectionKey}
                     id={sectionToAnchor(section.title)}
                     className={`report-section ${sectionOpen ? "mb-14" : "report-section-collapsed mb-6"}`}
                   >
@@ -4723,7 +4754,7 @@ function ReportDisplay({
                       onClick={() => {
                         setExpandedSections((prev) => ({
                           ...prev,
-                          [sectionIdx]: !sectionOpen,
+                          [sectionKey]: !sectionOpen,
                         }));
                         trackEvent("section_expanded", {
                           reportType: report.reportType,

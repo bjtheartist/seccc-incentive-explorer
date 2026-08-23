@@ -89,6 +89,10 @@ session could not responsibly fabricate — see that section.
 
 | Item | Locus | Verification | Status |
 |---|---|---|---|
+| "The Brief" half-pager/shareable (branding band, entrepreneur-stage ribbon + new stage-ask question + new wizard/report state field + share param + analytics event, QR code, print 2-up) | would be a new shareable surface + a new intake question + new state | n/a | DEFERRED — arrived as the sixth/seventh scope amendment after this session had already locked its build order to land Tier 1 (hard filter, section-id state, dead-share fix, supporter id, lane ranking, A2/A3 zoning extraction, gate chips, share-link fix, contact-sheet-with-why-lines) as a coherent, shippable, tested increment. This is a genuinely new intake flow (a new question asked before brief generation) plus new versioned state plus a QR-generation capability this build did not add a dependency for — it needs its own build pass with its own test coverage, not a bolt-on in the closing stretch of an already-large session. |
+
+| Item | Locus | Verification | Status |
+|---|---|---|---|
 | "Documents to Gather" section (owner + supporter, first in Part 03) | would derive from Business File preparation-task defs + program requirements | floor-suite presence test | DEFERRED — arrived after Tier 1 (engine hard-filter, section-id state, share fix, supporter id, lane ranking, gate chips, share-link fix, contact sheet, A2/A3 zoning extraction) and Tier 2 core (executive-summary cross-links, guidepost bands, verify/expectations blocks, logistics access) were already committed to as this session's deliverable set. Not built this session — needs its own pass wiring the real Business File task registry and workspace route rather than inventing checklist copy. |
 | Cost signals chips (`costSignals[]`, owner + supporter) | would extend the program schema again | floor-suite non-suppressible-caption test | DEFERRED — same reason; flagged for a follow-up session so the signal content is populated from real program-rules text per program rather than guessed under time pressure. |
 

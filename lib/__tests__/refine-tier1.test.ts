@@ -16,6 +16,7 @@ import type { GeneratedReport } from "@/lib/report-engine";
 import { isAnalyticsEventType } from "@/lib/analytics-events";
 import { REPORT_GENERATED_EVENTS } from "@/lib/analytics-dashboard";
 import { generatedReportEventType } from "@/lib/report-generated-event";
+import { derivePersonaLensVisible } from "@/lib/workspace";
 
 // ─── Corridor Intelligence is a first-class report type (audit RF7/WU7) ──
 
@@ -186,13 +187,23 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(workspaceFork).not.toContain("{isInstantMode && !compact && (");
   });
 
-  it("the live flow feeds showPersonaLens from page-level instant mode, undiminished by hasRefinedInstantReport", () => {
-    // Post-email-gate state (hasRefinedInstantReport=true) keeps the chips:
-    // the prop must be the raw URL-derived isInstantMode.
-    expect(liveFork).toContain("showPersonaLens={isInstantMode}");
+  it("the live flow feeds showPersonaLens from derivePersonaLensVisible(wizardState) — not isInstantMode, dead on every shared/goal-refined link (BLOCKER #2)", () => {
+    // Fresh-context adversarial review, finding #2: `isInstantMode` gated the
+    // chips off on every shared link (`?persona=` arrived, but no chips, no
+    // lens) and on every goal-refined report (the shape the email gate funnels
+    // every real user into). The prop must derive from wizardState the same
+    // way the (already-correct) workspace fork does.
+    expect(liveFork).toContain("showPersonaLens={derivePersonaLensVisible(wizardState)}");
+    expect(liveFork).not.toContain("showPersonaLens={isInstantMode}");
     expect(liveFork).not.toContain(
       "showPersonaLens={isInstantMode && !hasRefinedInstantReport}",
     );
+  });
+
+  it("share-mode regression: a shared link with a non-default wizardState.reportType shows the lens (derivePersonaLensVisible is reportType-driven, not instant-mode-driven)", () => {
+    expect(derivePersonaLensVisible({ ...INITIAL_WIZARD_STATE, reportType: "site-incentives" })).toBe(true);
+    expect(derivePersonaLensVisible({ ...INITIAL_WIZARD_STATE, reportType: "dev-feasibility" })).toBe(false);
+    expect(derivePersonaLensVisible(undefined)).toBe(false);
   });
 
   it("the saved-report page feeds showPersonaLens from the site-report wizard shape", () => {

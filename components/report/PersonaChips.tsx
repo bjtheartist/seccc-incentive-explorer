@@ -55,23 +55,33 @@ export function PersonaChips({
       <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40">
         Viewing As
       </span>
-      <div className="flex flex-wrap gap-2">
-        {PERSONA_CHIPS.map((chip) => {
+      <div className="flex flex-wrap items-center gap-2">
+        {PERSONA_CHIPS.map((chip, index) => {
           const selected = chip.id === persona;
+          // "starting" and "growing" render under one "Business owner" group
+          // label — copy only; the ids, URL/storage vocabulary, and
+          // PROGRAM_PERSONA_TAGS are untouched (Tier 1b BM4 review).
+          const isGroupStart = chip.group && PERSONA_CHIPS[index - 1]?.group !== chip.group;
           return (
-            <button
-              key={chip.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => handleSelect(chip.id)}
-              className={`font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-3 py-1.5 border transition-colors cursor-pointer ${
-                selected
-                  ? "border-[#2563EB] text-[#2563EB] bg-[#2563EB]/[0.06]"
-                  : "border-[#0C1B33]/15 text-[#0C1B33]/50 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
-              }`}
-            >
-              {chip.label}
-            </button>
+            <span key={chip.id} className="flex items-center gap-2">
+              {isGroupStart && (
+                <span className="font-mono-bureau text-[8px] tracking-[0.1em] uppercase text-[#0C1B33]/30">
+                  {chip.group}:
+                </span>
+              )}
+              <button
+                type="button"
+                aria-pressed={selected}
+                onClick={() => handleSelect(chip.id)}
+                className={`font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-3 py-1.5 border transition-colors cursor-pointer ${
+                  selected
+                    ? "border-[#2563EB] text-[#2563EB] bg-[#2563EB]/[0.06]"
+                    : "border-[#0C1B33]/15 text-[#0C1B33]/50 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+                }`}
+              >
+                {chip.label}
+              </button>
+            </span>
           );
         })}
       </div>
