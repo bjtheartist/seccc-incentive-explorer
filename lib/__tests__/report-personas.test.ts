@@ -260,6 +260,33 @@ describe("applyPersonaLens", () => {
     ]);
   });
 
+  // Gate finding 1 (regression, real bug this fixes): Civic Representation
+  // rows for SSA/CCSA carry `programId` (so their copy can program-link),
+  // which used to make them fall through the old un-gated scan and appear
+  // in "Programs matched here" — genuinely wrong for a panel about matched
+  // PROGRAMS. A fixture WITH a civic section proves the gate excludes it.
+  it("excludes Civic Representation's SSA/CCSA rows (they carry programId but are not the 'programs' bucket)", () => {
+    const withCivic: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        ...reportFixture().sections,
+        {
+          id: "civic-representation",
+          title: "Civic Representation",
+          description: "",
+          items: [
+            { label: "SSA", value: "SSA #51", programId: "ssa" },
+            { label: "City corridor", value: "Cottage Grove CCSA", programId: "ccsa" },
+          ],
+        },
+      ],
+    };
+    const { report: lensed } = applyPersonaLens(withCivic, "developer");
+    const names = visiblePersonaProgramNames(lensed);
+    expect(names.some((n) => n.programId === "ssa")).toBe(false);
+    expect(names.some((n) => n.programId === "ccsa")).toBe(false);
+  });
+
   it("guidepostPartForSection assigns the fixed 3-part anatomy and returns null for 'all' (no guidepost)", () => {
     const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
     const confirmed = lensed.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)!;

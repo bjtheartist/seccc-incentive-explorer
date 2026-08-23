@@ -165,7 +165,8 @@ export function BriefPage({
         <span>SCREENING FROM PUBLIC RECORDS — NOT AN ELIGIBILITY DETERMINATION</span>
         <span>
           {brief.preparedVia ? `PREPARED VIA ${brief.preparedVia.toUpperCase()} · ` : ""}
-          GENERATED {brief.generatedDate} · DATA VERIFIED {brief.dataVerifiedMonth.toUpperCase()}
+          GENERATED {brief.generatedDate}
+          {brief.dataVerifiedMonth ? ` · DATA VERIFIED ${brief.dataVerifiedMonth.toUpperCase()}` : ""}
         </span>
       </div>
     </div>

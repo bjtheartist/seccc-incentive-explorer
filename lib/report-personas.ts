@@ -492,6 +492,15 @@ export function applyPersonaLens(
  * "Programs matched here" row — the panel and the body read this off the
  * identical lensed section list, so they can never disagree (spec v2
  * amendment; enforcing test: panel names ≡ rendered card set, in order).
+ *
+ * Gate finding 1 (regression, real bug this fixes): this used to scan
+ * every non-collapsed section for a `programId`, which also picked up
+ * Civic Representation's SSA/CCSA rows (they carry `programId` so the
+ * "Local support" copy could program-link them) — genuinely wrong for a
+ * panel titled "Programs matched here." Gated on
+ * `sectionBucketKey(section) === "programs"` so only the actual program
+ * tiers (goal-match/confirmed/other-confirmed/additional/also-at-address)
+ * ever contribute.
  */
 export function visiblePersonaProgramNames(
   lensed: GeneratedReport,
@@ -500,6 +509,7 @@ export function visiblePersonaProgramNames(
   const names: { programId: string; label: string }[] = [];
   for (const section of lensed.sections ?? []) {
     if (section.collapsedByPersona) continue;
+    if (sectionBucketKey(section) !== "programs") continue;
     for (const item of section.items ?? []) {
       if (!item.programId || seen.has(item.programId)) continue;
       seen.add(item.programId);

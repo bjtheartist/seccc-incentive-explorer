@@ -64,6 +64,37 @@ describe("buildFundingWindowChartData", () => {
     ]);
     expect(buildFundingWindowChartData(report)![0].amber).toBe(false);
   });
+
+  // Gate finding 6 (regression, real bug this fixes): a window already
+  // open (started in the past, not yet closed) is the MOST urgent state —
+  // the old `daysToStart >= 0` check excluded it entirely.
+  it("marks an already-open window (daysToStart < 0, end still in the future) as amber", () => {
+    const openedLastWeek = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const report = reportWithDeadlines([
+      {
+        label: "SBIF window — open now",
+        value: "open",
+        deadlineKind: "sbif_window",
+        deadlineDate: openedLastWeek,
+        deadlineWindowEnd: IN_30_DAYS,
+      },
+    ]);
+    expect(buildFundingWindowChartData(report)![0].amber).toBe(true);
+  });
+
+  it("does not mark a window that has already fully closed as amber", () => {
+    const closedLastMonth = new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10);
+    const report = reportWithDeadlines([
+      {
+        label: "SBIF window — closed",
+        value: "closed",
+        deadlineKind: "sbif_window",
+        deadlineDate: closedLastMonth,
+        deadlineWindowEnd: new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10),
+      },
+    ]);
+    expect(buildFundingWindowChartData(report)![0].amber).toBe(false);
+  });
 });
 
 describe("buildIncentiveHorizonChartData", () => {

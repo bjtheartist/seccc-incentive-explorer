@@ -57,22 +57,45 @@ describe("buildVerifySources", () => {
 });
 
 describe("buildExpectations", () => {
-  it("reads reimbursement structure straight off SBIF's own published benefit text — never a claim this module invents", () => {
+  // Gate finding 2+3 (regression, real bug this fixes): SBIF is
+  // recurring=true AND intakeStatus="open" with real per-TIF-district
+  // windows (the same data FundingWindowChart plots). The old
+  // `recurring && intakeStatus !== "closed"` branch matched SBIF FIRST and
+  // produced "no fixed application window published" — a false statement
+  // that directly contradicted this report's own chart. intakeStatus is
+  // now the only signal, checked via a single switch.
+  it("never claims SBIF has 'no fixed application window' — it has real, resolved windows", () => {
     const sbif = realProgram("sbif");
-    expect(sbif.benefits?.join(" ")).toMatch(/reimburs/i); // sanity: the source fact is real
+    expect(sbif.intakeStatus).toBe("open");
+    expect(sbif.recurring).toBe(true); // the exact condition that used to misfire
     const expectations = buildExpectations(sbif);
-    expect(expectations).toMatch(/reimburs/i);
+    expect(expectations).not.toMatch(/no fixed application window/i);
+    expect(expectations).toBe("Applications are being accepted under the published intake window.");
+  });
+
+  it("never derives a reimbursement claim from benefits[] text — expectations is structured-fields-only now", () => {
+    const sbif = realProgram("sbif");
+    expect(sbif.benefits?.join(" ")).toMatch(/reimburs/i); // sanity: the source fact is real...
+    const expectations = buildExpectations(sbif);
+    expect(expectations).not.toMatch(/reimburs/i); // ...but is no longer surfaced here at all.
   });
 
   it("frames intake cadence from intakeStatus without fabricating a specific timeline", () => {
-    const sbif = realProgram("sbif");
-    const expectations = buildExpectations(sbif);
+    const expectations = buildExpectations({ intakeStatus: "rolling" } as unknown as Program);
     expect(expectations).not.toMatch(/\d+\s*days/); // no invented duration
-    expect(expectations).toMatch(/rolling|competitive|lapsed|pending/i);
+    expect(expectations).toMatch(/rolling/i);
   });
 
-  it("returns undefined when a program has neither an intake signal nor reimbursement language", () => {
-    const bare = { id: "x", name: "X", level: "City", zoneKey: "x", benefits: [] } as unknown as Program;
-    expect(buildExpectations(bare)).toBeUndefined();
+  it("covers every intakeStatus value with exactly one non-overlapping branch", () => {
+    expect(buildExpectations({ intakeStatus: "open" } as unknown as Program)).toMatch(/accepted/i);
+    expect(buildExpectations({ intakeStatus: "rolling" } as unknown as Program)).toMatch(/rolling/i);
+    expect(buildExpectations({ intakeStatus: "closed" } as unknown as Program)).toMatch(/not currently open/i);
+    expect(buildExpectations({ intakeStatus: "lapsed" } as unknown as Program)).toMatch(/lapsed/i);
+    expect(buildExpectations({ intakeStatus: "pending" } as unknown as Program)).toMatch(/not yet opened/i);
+  });
+
+  it("returns undefined (renders nothing) when intakeStatus carries no signal — never a fallback guess", () => {
+    expect(buildExpectations({ intakeStatus: "unknown" } as unknown as Program)).toBeUndefined();
+    expect(buildExpectations({ id: "x", name: "X", level: "City", zoneKey: "x" } as unknown as Program)).toBeUndefined();
   });
 });

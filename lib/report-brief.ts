@@ -88,7 +88,10 @@ export interface BriefData {
    *  carries (e.g. a chamber-facilitated session); otherwise omitted. */
   preparedVia: string | null;
   generatedDate: string;
-  dataVerifiedMonth: string;
+  /** The REPORT's real freshness (lensed.generatedAt), never today's date.
+   *  Null only when the report itself carries no parseable generatedAt —
+   *  the footer omits the clause entirely rather than guessing. */
+  dataVerifiedMonth: string | null;
 }
 
 /**
@@ -118,7 +121,16 @@ export function buildBriefData(
     .slice(0, 3)
     .map((item) => ({ label: item.label, value: item.value }));
 
+  // Gate finding 14: "data verified" must be the REPORT's real freshness
+  // (when this snapshot was actually generated), never today's date — a
+  // Brief built from a report generated last month must say so, not claim
+  // today's vintage. `generatedDate` (the Brief artifact itself) is
+  // legitimately today; `dataVerifiedMonth` is not.
   const now = new Date();
+  const dataVerifiedDate = new Date(lensed.generatedAt);
+  const dataVerifiedMonth = Number.isNaN(dataVerifiedDate.getTime())
+    ? null
+    : dataVerifiedDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
   return {
     address: lensed.metadata?.address ?? null,
@@ -139,6 +151,6 @@ export function buildBriefData(
     // Brief-specific schema change.
     preparedVia: null,
     generatedDate: now.toISOString().slice(0, 10),
-    dataVerifiedMonth: now.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    dataVerifiedMonth,
   };
 }

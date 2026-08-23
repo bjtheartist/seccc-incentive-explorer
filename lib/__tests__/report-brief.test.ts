@@ -106,6 +106,25 @@ describe("buildBriefData", () => {
     expect(brief.stage).toBe("exploring");
     expect(brief.priority).toBe("navigating");
   });
+
+  // Gate finding 14 (regression, real bug this fixes): dataVerifiedMonth
+  // used to read `new Date()` (today) — a Brief built from a stale report
+  // would falsely claim today's data vintage. It must read the REPORT's
+  // own generatedAt.
+  it("derives dataVerifiedMonth from the report's REAL generatedAt, never today's date", () => {
+    const stale: GeneratedReport = { ...reportFixture(), generatedAt: "2025-03-14T00:00:00.000Z" };
+    const brief = buildBriefData(stale, "growing", "growing", "space");
+    expect(brief.dataVerifiedMonth).toBe("Mar 2025");
+    expect(brief.dataVerifiedMonth).not.toBe(
+      new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    );
+  });
+
+  it("leaves dataVerifiedMonth null (never a guess) when the report carries no parseable generatedAt", () => {
+    const bad: GeneratedReport = { ...reportFixture(), generatedAt: "" };
+    const brief = buildBriefData(bad, "growing", "growing", "space");
+    expect(brief.dataVerifiedMonth).toBeNull();
+  });
 });
 
 describe("sm_ params wiring (structural — no DOM environment for the effect itself)", () => {

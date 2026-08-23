@@ -1543,27 +1543,36 @@ export function buildVerifySources(program: Program): ReportItem["verifySources"
   return sources.length > 0 ? sources.slice(0, 3) : undefined;
 }
 
-/** "What to expect" — intake cadence + reimbursement structure, read
- *  straight off intakeStatus/recurring and a keyword scan of the program's
- *  OWN published benefit text (never a claim this module invents). */
+/**
+ * "What to expect" — intake cadence read from EXACTLY ONE structured field,
+ * `intakeStatus`, via a single switch (no overlapping branches). This used
+ * to also check `recurring` first and text-mine `benefits[]` for the word
+ * "reimburs" — both deleted per the eligibility-claims doctrine (gate
+ * finding 2+3): `recurring && intakeStatus !== "closed"` matched SBIF
+ * (recurring=true, intakeStatus="open") and produced "no fixed application
+ * window published", which is FALSE — SBIF has real, resolved per-TIF-
+ * district windows (see FundingWindowChart, which plots them from this
+ * exact program). A keyword match on published prose is not a structured
+ * fact and can silently contradict the program's own real behavior; it is
+ * not an acceptable source for a claim this module makes on its own
+ * authority. If `intakeStatus` carries no signal, this renders nothing —
+ * never a fallback guess.
+ */
 export function buildExpectations(program: Program): string | undefined {
-  const parts: string[] = [];
-  if (program.intakeStatus === "rolling" || (program.recurring && program.intakeStatus !== "closed")) {
-    parts.push("Rolling intake — no fixed application window published");
-  } else if (program.intakeStatus === "open") {
-    parts.push("Competitive review during the published intake window");
-  } else if (program.intakeStatus === "lapsed") {
-    parts.push("Intake authority is currently lapsed — confirm current status before relying on this program");
-  } else if (program.intakeStatus === "pending") {
-    parts.push("Intake has not yet opened for the published window");
+  switch (program.intakeStatus) {
+    case "open":
+      return "Applications are being accepted under the published intake window.";
+    case "rolling":
+      return "Rolling intake — applications are accepted on an ongoing basis.";
+    case "closed":
+      return "Intake is not currently open — confirm the next window before relying on this program.";
+    case "lapsed":
+      return "Intake authority is currently lapsed — confirm current status before relying on this program.";
+    case "pending":
+      return "Intake has not yet opened for the published window.";
+    default:
+      return undefined;
   }
-
-  const benefitText = (program.benefits ?? []).join(" ").toLowerCase();
-  if (benefitText.includes("reimburs")) {
-    parts.push("costs are reimbursed after work is completed and verified, per the published benefit terms");
-  }
-
-  return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
 function programReportItem(

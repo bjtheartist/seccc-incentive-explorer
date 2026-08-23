@@ -37,7 +37,11 @@ function daysFromToday(iso: string): number {
 /**
  * Owner persona (starting/growing) — funding-window intervals. Reads the
  * SBIF application window(s) already resolved for this address in the
- * Upcoming Deadlines section. Amber when the window opens within 60 days.
+ * Upcoming Deadlines section. Amber = time-sensitive: either the window
+ * opens within 60 days, OR it is open RIGHT NOW (gate finding 6 —
+ * `daysToStart >= 0` alone missed the already-open case: a window that
+ * opened last week and closes next week is the MOST urgent state, not a
+ * non-urgent one, and the old check left it un-highlighted).
  */
 export function buildFundingWindowChartData(report: GeneratedReport): FundingWindowRow[] | null {
   const rows = deadlinesSectionItems(report)
@@ -46,11 +50,14 @@ export function buildFundingWindowChartData(report: GeneratedReport): FundingWin
       const start = item.deadlineDate!;
       const end = item.deadlineWindowEnd || item.deadlineDate!;
       const daysToStart = daysFromToday(start);
+      const daysToEnd = daysFromToday(end);
+      const opensSoon = daysToStart >= 0 && daysToStart <= AMBER_WITHIN_DAYS;
+      const openNow = daysToStart < 0 && daysToEnd >= 0;
       return {
         label: item.label,
         startDate: start,
         endDate: end,
-        amber: daysToStart >= 0 && daysToStart <= AMBER_WITHIN_DAYS,
+        amber: opensSoon || openNow,
         tooltip: item.detail || `${item.label}: ${item.value}`,
       };
     });
