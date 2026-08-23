@@ -71,6 +71,7 @@ import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@
 import { ContactSheet } from "@/components/report/ContactSheet";
 import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
+import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -1584,6 +1585,14 @@ export function ReportDisplay({
                 return band ? [band, sectionElement] : sectionElement;
               });
             })()}
+
+            {/* Documents to Gather (spec v2 item 3, owner + supporter only):
+                real Business File foundation-task content, lands at the
+                end of Part 02 (Capital & Programs) — right before the
+                Part 03 band opens below. */}
+            {showPersonaLens && (persona === "starting" || persona === "growing" || persona === "supporter") && (
+              <DocumentsToGather report={lensed} />
+            )}
 
             {/* Contact Sheet (spec v2 deliverable 8, Part-03 correction):
                 Part 03's ONE section on a real persona lens — the raw

@@ -704,4 +704,37 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).not.toContain('data-testid="contact-sheet"');
     });
   });
+
+  describe("Documents to Gather (spec v2 item 3): owner + supporter only, real Business File content", () => {
+    it("renders for 'growing' (owner) with the real foundation-task titles", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "growing" });
+
+      expect(html).toContain('data-testid="documents-to-gather"');
+      expect(html).toContain("Confirm the business identity");
+      expect(html).toContain("Track in Business File");
+      expect(html).toContain('href="/workspace/business-file"');
+    });
+
+    it("renders for 'supporter'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "supporter" });
+
+      expect(html).toContain('data-testid="documents-to-gather"');
+    });
+
+    it("does NOT render for 'developer' (scoped to owner + supporter only)", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "developer" });
+
+      expect(html).not.toContain('data-testid="documents-to-gather"');
+    });
+
+    it("does NOT render on 'all'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+
+      expect(html).not.toContain('data-testid="documents-to-gather"');
+    });
+  });
 });

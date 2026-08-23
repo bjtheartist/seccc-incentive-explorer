@@ -278,4 +278,14 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain("<ProgramCardExtras item={item} />");
     }
   });
+
+  it("both forks render Documents to Gather scoped to owner + supporter only (never developer, never all)", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { DocumentsToGather }");
+      expect(fork).toContain(
+        '(persona === "starting" || persona === "growing" || persona === "supporter") && (',
+      );
+      expect(fork).toContain("<DocumentsToGather report={lensed} />");
+    }
+  });
 });

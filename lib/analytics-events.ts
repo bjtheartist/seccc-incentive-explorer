@@ -36,6 +36,10 @@ export const ANALYTICS_EVENT_TYPES = [
   // reportType, never a blocking question. One event per gate submission,
   // metadata.outcome one of "confirmed" | "corrected" | "skipped".
   "persona_intake_inferred",
+  // Documents to Gather -> Business File bridge (persona spec v2, item 3):
+  // fired when a reader clicks through from the report's foundation-task
+  // list into the real Business File workspace route.
+  "documents_to_gather_tracked",
   "wizard_step_viewed",
   "refine_cta_shown",
   "refine_clicked",
