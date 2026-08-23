@@ -806,6 +806,20 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
 
   describe("persona parity round 2 — closed board inventories", () => {
     const count = (html: string, needle: string) => html.split(needle).length - 1;
+    const nestedElementFragment = (html: string, tag: string, marker: string): string => {
+      const markerIndex = html.indexOf(marker);
+      if (markerIndex < 0) return "";
+      const start = html.lastIndexOf(`<${tag}`, markerIndex);
+      if (start < 0) return "";
+      const tags = new RegExp(`<\\/?${tag}\\b[^>]*>`, "g");
+      tags.lastIndex = start;
+      let depth = 0;
+      for (let match = tags.exec(html); match; match = tags.exec(html)) {
+        depth += match[0].startsWith(`</${tag}`) ? -1 : 1;
+        if (depth === 0) return html.slice(start, tags.lastIndex);
+      }
+      return "";
+    };
     const textHeadings = (html: string) =>
       [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map((match) =>
         match[1].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&[a-z]+;/g, ""),
@@ -898,7 +912,7 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).not.toContain("Leaked Program Deadline");
     });
 
-    it("hard-filters every catalog program name to strict cards, the three-name summary, or the one disclosure through the real engine and route", async () => {
+    it("hard-filters every catalog program name to strict cards, the summary, its document-why links, or the one disclosure through the real engine and route", async () => {
       const state: WizardState = {
         ...BASE_WIZARD_STATE,
         projectGoals: ["rehab", "hire"],
@@ -940,22 +954,34 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
         const summaryFragment = html.slice(summaryStart, summaryEnd);
         for (const name of summaryNames) expect(summaryFragment).toContain(name);
 
-        const disclosureMarker = html.indexOf('data-testid="persona-also-at-address"');
-        const disclosureFragment = disclosureMarker >= 0
-          ? html.slice(
-              html.lastIndexOf("<details", disclosureMarker),
-              html.indexOf("</details>", disclosureMarker) + "</details>".length,
-            )
-          : "";
+        const disclosureFragment = nestedElementFragment(
+          html,
+          "details",
+          'data-testid="persona-also-at-address"',
+        );
+        const documentsFragment = nestedElementFragment(
+          html,
+          "section",
+          'data-testid="documents-to-gather"',
+        );
+        for (const program of catalogPrograms as Program[]) {
+          if (documentsFragment.includes(program.name)) {
+            expect(
+              summaryNames,
+              `persona=${persona}; document readiness linked a program outside the three-name surfaced summary: ${program.name}`,
+            ).toContain(program.name);
+          }
+        }
         const outsideAllowedSurfaces = html
           .replace(summaryFragment, "")
+          .replace(documentsFragment, "")
           .replace(disclosureFragment, "");
 
         for (const program of catalogPrograms as Program[]) {
           if (!strictVisible.has(program.name)) {
             expect(
               outsideAllowedSurfaces,
-              `persona=${persona}; non-strict catalog program leaked outside summary/disclosure: ${program.name}`,
+              `persona=${persona}; non-strict catalog program leaked outside summary/document-why/disclosure: ${program.name}`,
             ).not.toContain(program.name);
           }
         }

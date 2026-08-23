@@ -23,21 +23,52 @@ describe("PersonaAlsoAtAddress", () => {
         confirmWith: [],
       },
     },
+    {
+      label: "Enterprise Zones",
+      value: "Review published terms",
+      programId: "enterprise-zones",
+      detail: "Offers state and local incentives in designated zones.",
+      matchExplanation: {
+        whyItAppears: ["Mapped enterprise zone"],
+        knownFromPublicData: [],
+        basedOnUserAnswers: [],
+        stillToConfirm: [],
+        currentDocumentsToGather: [],
+        confirmWith: [],
+      },
+    },
   ];
 
-  it("is a real one-gesture disclosure that opens and closes the collapsed program record", () => {
+  it("opens the address disclosure, then expands and closes each full program record independently", () => {
     render(<PersonaAlsoAtAddress items={collapsedItems} />);
 
     const disclosure = screen.getByTestId("persona-also-at-address") as HTMLDetailsElement;
-    const summary = within(disclosure).getByText("Also at this address (1)");
+    const summary = within(disclosure).getByText("Also at this address (2)");
     expect(disclosure.tagName).toBe("DETAILS");
     expect(disclosure.open).toBe(false);
 
     fireEvent.click(summary);
     expect(disclosure.open).toBe(true);
-    expect(within(disclosure).getByText("SBIF Facade Grant")).toBeTruthy();
-    expect(within(disclosure).getByText("Funds permanent building improvements.")).toBeTruthy();
-    expect(within(disclosure).getByText("Mapped SBIF district")).toBeTruthy();
+    const programMenus = screen.getAllByTestId("persona-also-program") as HTMLDetailsElement[];
+    expect(programMenus).toHaveLength(2);
+    expect(programMenus.every((menu) => menu.open === false)).toBe(true);
+
+    fireEvent.click(within(programMenus[0]).getByText("SBIF Facade Grant"));
+    expect(programMenus[0].open).toBe(true);
+    expect(programMenus[1].open).toBe(false);
+    expect(within(programMenus[0]).getByText("Funds permanent building improvements.")).toBeTruthy();
+    expect(within(programMenus[0]).getByText("Mapped SBIF district")).toBeTruthy();
+
+    fireEvent.click(within(programMenus[1]).getByText("Enterprise Zones"));
+    expect(programMenus[0].open).toBe(true);
+    expect(programMenus[1].open).toBe(true);
+    expect(
+      within(programMenus[1]).getByText("Offers state and local incentives in designated zones."),
+    ).toBeTruthy();
+
+    fireEvent.click(within(programMenus[0]).getByText("SBIF Facade Grant"));
+    expect(programMenus[0].open).toBe(false);
+    expect(programMenus[1].open).toBe(true);
 
     fireEvent.click(summary);
     expect(disclosure.open).toBe(false);

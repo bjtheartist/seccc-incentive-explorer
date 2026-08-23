@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
 import { ProgramCardFace } from "@/components/report/ProgramCardFace";
@@ -259,14 +260,11 @@ export function PersonaAlsoAtAddress({
   return (
     <details
       data-testid="persona-also-at-address"
-      className="group my-2 border border-[#D8DDE6] bg-white text-[12.5px] text-[#5A6478]"
+      className="group/also my-2 border border-[#D8DDE6] bg-white text-[12.5px] text-[#5A6478]"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]">
-        <span
-          aria-hidden="true"
-          className="text-[11px] transition-transform group-open:rotate-90"
-        >
-          ▸
+        <span className="flex-shrink-0 transition-transform group-open/also:rotate-90">
+          <ChevronRight aria-hidden="true" className="h-3 w-3" />
         </span>
         <span>Also at this address ({items.length})</span>
       </summary>
@@ -275,23 +273,34 @@ export function PersonaAlsoAtAddress({
         className="divide-y divide-[#D8DDE6] border-t border-[#D8DDE6] px-3.5"
       >
         {items.map((item) => (
-          <article
+          <details
             key={item.programId ?? item.label}
+            data-testid="persona-also-program"
             data-program-id={item.programId}
-            className="py-4 text-[#0C1B33]"
+            className="group/program text-[#0C1B33]"
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h3 className="text-[13px] font-semibold">{item.label}</h3>
-              {item.value && (
-                <span className="font-mono-bureau text-[10px] text-[#5A6478]">
-                  {item.value}
-                </span>
-              )}
-            </div>
-            <ProgramCardFace item={item} />
-            <ReasonChips explanation={item.matchExplanation} />
-            <ProgramCardExtras item={item} />
-          </article>
+            <summary className="flex cursor-pointer list-none items-start gap-2 py-3.5 select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]">
+              <span className="mt-0.5 flex-shrink-0 text-[#5A6478] transition-transform group-open/program:rotate-90">
+                <ChevronRight aria-hidden="true" className="h-3 w-3" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="text-[13px] font-semibold">{item.label}</span>
+                {item.value && (
+                  <span className="font-mono-bureau text-[10px] text-[#5A6478]">
+                    {item.value}
+                  </span>
+                )}
+              </span>
+            </summary>
+            <article
+              data-testid="persona-also-program-details"
+              className="border-t border-[#D8DDE6] pb-4 pt-3 pl-5 text-[#0C1B33] sm:pl-6"
+            >
+              <ProgramCardFace item={item} />
+              <ReasonChips explanation={item.matchExplanation} />
+              <ProgramCardExtras item={item} />
+            </article>
+          </details>
         ))}
       </div>
     </details>

@@ -74,12 +74,12 @@ export function PersonaProgramSupplements({
             <FundingWindowChart report={chartReport} showEmailOffer={false} />
           </PersonaReportSection>
         )}
-        <DocumentsToGather report={report} sectionNumber={number(1)} />
+        <DocumentsToGather report={lensedReport} sectionNumber={number(1)} />
       </>
     );
   }
   if (persona === "supporter") {
-    return <DocumentsToGather report={report} sectionNumber={number()} />;
+    return <DocumentsToGather report={lensedReport} sectionNumber={number()} />;
   }
   if (persona === "developer") {
     if (!buildIncentiveHorizonChartData(chartReport)) return null;

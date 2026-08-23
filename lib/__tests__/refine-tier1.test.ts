@@ -148,6 +148,10 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     join(root, "components/report/ReportDisplay.tsx"),
     "utf8",
   );
+  const supplementRenderer = readFileSync(
+    join(root, "components/report/PersonaSectionSupplements.tsx"),
+    "utf8",
+  );
 
   it("both forks render RefineValuePanel", () => {
     expect(liveFork).toContain("RefineValuePanel");
@@ -297,6 +301,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain("PersonaProgramSupplements");
       expect(fork).toContain("lensedReport={lensed}");
     }
+    expect(supplementRenderer.match(/<DocumentsToGather report=\{lensedReport\}/g)).toHaveLength(2);
+    expect(supplementRenderer).not.toContain("<DocumentsToGather report={report}");
   });
 
   it("both forks mount charts only through the shared supplements at their blessed board positions", () => {
