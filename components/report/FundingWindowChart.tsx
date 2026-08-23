@@ -58,7 +58,7 @@ export function FundingWindowChart({ report }: { report: GeneratedReport }) {
                 width={width}
                 height={10}
                 rx={2}
-                fill={row.amber ? "#F59E0B" : "#2563EB"}
+                fill={row.amber ? "#A45B00" : "#2563EB"} /* gate finding 22 (minor): #F59E0B failed contrast as a warning color */
               />
               {row.amber && (
                 <text x={x1 + width + 6} y={y + 4} fontSize="9" fontWeight={600} fill="#0C1B33">

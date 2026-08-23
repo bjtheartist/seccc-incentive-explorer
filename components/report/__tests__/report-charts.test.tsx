@@ -40,7 +40,7 @@ describe("FundingWindowChart", () => {
     expect(html).toContain('data-testid="funding-window-chart"');
     expect(html).toContain("<svg");
     expect(html).toContain("<title>");
-    expect(html).toContain('fill="#F59E0B"'); // amber
+    expect(html).toContain('fill="#A45B00"'); // amber (gate finding 22: contrast-fixed from the earlier #F59E0B)
     expect(html).toContain("opens within 60 days");
   });
 });
