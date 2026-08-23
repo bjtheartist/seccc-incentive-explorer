@@ -219,14 +219,32 @@ describe("real handlePrepareGatedReport execution (gate review round 3, R3-A —
       "instant=true&addr=100+E+Test+St&lat=41.75&lon=-87.6",
     );
 
-    const gate = await waitFor(() => screen.getByTestId("report-email-gate"), {
-      timeout: 15_000,
-    });
+    // `find*` queries (not a single synchronous `getBy*` right after an
+    // earlier `waitFor` resolves) — CI runners can be meaningfully slower
+    // than local dev machines, and the gate's own chip row can still be
+    // settling a render pass after its outer `<dialog>` testid first
+    // appears. Each lookup below retries on its own until found.
+    const gate = await screen.findByTestId("report-email-gate", {}, { timeout: 15_000 });
     expect(gate).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or buy equipment" }));
-    fireEvent.click(screen.getByRole("button", { name: "Develop housing or mixed-use" }));
-    fireEvent.click(screen.getByTestId("report-email-gate-view"));
+    const expandChip = await screen.findByRole(
+      "button",
+      { name: "Expand or buy equipment" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(expandChip);
+    const mixedUseChip = await screen.findByRole(
+      "button",
+      { name: "Develop housing or mixed-use" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(mixedUseChip);
+    const viewButton = await screen.findByTestId(
+      "report-email-gate-view",
+      {},
+      { timeout: 15_000 },
+    );
+    fireEvent.click(viewButton);
 
     await waitFor(
       () => {
