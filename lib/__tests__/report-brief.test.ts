@@ -10,7 +10,7 @@ import {
   isBriefPriority,
   isBriefStage,
 } from "@/lib/report-brief";
-import { CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
+import { CONFIRMED_PROGRAMS_SECTION_TITLE, SECTION_IDS } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
 
@@ -151,6 +151,23 @@ describe("buildBriefData", () => {
     expect(brief.address).toBe("7939 S Cottage Grove Ave");
     expect(brief.zoneClass).toBe("B3-2");
     expect(brief.zoneType).toBe("Community Shopping");
+    expect(brief.siteFacts.some((f) => f.label === "PIN")).toBe(true);
+  });
+
+  // Gate finding 18 (minor, regression): the site-facts lookup used to
+  // select by `s.title === "Site Facts"` only, the exact English-title
+  // coupling PR #156 (853c948) removed. A fixture whose Site Facts section
+  // carries the real id but a DIFFERENT title (as a renamed/localized
+  // section would) proves the id-based match, not the title, is what's
+  // doing the work.
+  it("selects the Site Facts section by id, not by its English title (survives a renamed title)", () => {
+    const renamed: GeneratedReport = {
+      ...reportFixture(),
+      sections: reportFixture().sections.map((s) =>
+        s.title === "Site Facts" ? { ...s, id: SECTION_IDS.siteFacts, title: "Site & Parcel Facts" } : s,
+      ),
+    };
+    const brief = buildBriefData(renamed, "growing", "growing", "space");
     expect(brief.siteFacts.some((f) => f.label === "PIN")).toBe(true);
   });
 

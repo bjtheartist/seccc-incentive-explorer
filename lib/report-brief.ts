@@ -9,6 +9,7 @@
 
 import { visiblePersonaProgramItems } from "@/lib/report-personas";
 import { buildContactSheetRows } from "@/lib/report-contact-sheet";
+import { SECTION_IDS } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { PersonaId } from "@/lib/personas";
 
@@ -144,7 +145,16 @@ export function buildBriefData(
 
   const contactRows = buildContactSheetRows(lensed, persona).slice(0, MAX_BRIEF_CONTACTS);
 
-  const siteFactsSection = lensed.sections?.find((s) => s.title === "Site Facts");
+  // Gate finding 18 (minor, regression): this used to select by
+  // `s.title === "Site Facts"`, reintroducing the English-title coupling
+  // PR #156 (853c948) removed elsewhere — a renamed/localized section
+  // title would silently break the Brief's site-facts column.
+  // lib/report-personas.ts:288's sectionBucketKey does this correctly
+  // (`id === SECTION_IDS.siteFacts || title === "Site Facts"`, id first);
+  // matched here.
+  const siteFactsSection = lensed.sections?.find(
+    (s) => s.id === SECTION_IDS.siteFacts || s.title === "Site Facts",
+  );
   const siteFacts = (siteFactsSection?.items ?? [])
     .filter((item) => !item.programId)
     .slice(0, 3)
