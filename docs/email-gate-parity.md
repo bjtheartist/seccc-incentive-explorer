@@ -6,68 +6,90 @@ see the spec file this branch was built from). Every row below is
 
 Statuses: **PASS** | **INTENTIONAL-DIFF** (reason from the closed list: (a)
 sample→real data, (b) mock-named item absent, (c) illustrative values, (d)
-copy-length from real data) | **PARTIAL** (mechanism built + render-tested +
-zero fabrication + named follow-up).
+copy-length from real data — or, per gate review round 1's binding ruling
+on BLOCKER 4, a written-out reason when the claim-surface rule outranks the
+board) | **PARTIAL** (mechanism built + render-tested + zero fabrication +
+named follow-up).
+
+**Gate review round 1 verdict: FIX-FIRST** (4 BLOCKERs, 8 MAJORs, 3 MINORs).
+Every finding's fix and current status is tracked in the "Gate review round
+1" section near the bottom of this document. All rows in the tables below
+reflect the POST-fix state and have been corrected in place rather than
+left standing next to a rebuttal — the reviewer explicitly re-audits every
+row in that finding's own list.
 
 ## Gate anatomy (R6GateBlessed.dc.html)
 
 | # | Board element | Implementation locus | Verification | Status |
 |---|---|---|---|---|
-| 1 | White card, navy `#0C1B33` header band, shadow | `components/report/ReportEmailGate.tsx` `<dialog>` + `<header>` | `report-email-gate.test.tsx` "renders the fixed anatomy" | PASS |
-| 2 | "Chicago Incentive Explorer" eyebrow | same header | same test | PASS |
-| 3 | "Your report is ready" (Playfair-style editorial heading) | same header, `font-editorial` | same test | PASS |
-| 4 | Address subline | same header, conditional on `report.metadata.address` | same test (fixture carries an address) | PASS |
+| 1 | White card, navy `#0C1B33` header band, shadow | `components/report/ReportEmailGate.tsx` `<dialog>` + `<header>` | `report-email-gate.test.tsx` "renders every board element with literal, hardcoded copy" | PASS |
+| 2 | "Chicago Incentive Explorer" eyebrow | same header | same test — `screen.getByText("Chicago Incentive Explorer")` (a real DOM assertion, not merely present in a larger `toContain` string) | PASS |
+| 3 | "Your report is ready" (Playfair-style editorial heading) | same header, `font-editorial` | same test — `screen.getByText("Your report is ready")` | PASS |
+| 4 | Address subline | same header, conditional on `report.metadata.address` | same test — `screen.getByText("4200 S California Ave, Chicago, IL")` against the test fixture's real address | PASS |
 | 5 | "Which best describes you?" label | persona row | same test | PASS |
-| 6 | Persona chip: "Just looking" | `lib/gate-persona-groups.ts` `GATE_PERSONA_CHIPS[0]` | "renders exactly the 4 board persona chips"; "renders 'Just looking' as a real, enabled, tappable chip" | PASS |
-| 7 | Persona chip: "Business owner" (merges starting+growing, never re-keyed) | `GATE_PERSONA_CHIPS[1]` | same tests + "pre-selects Business owner … when no strong signal is present" | PASS |
-| 8 | Persona chip: "Supporting businesses" | `GATE_PERSONA_CHIPS[2]` | "renders exactly the 4 board persona chips" | PASS |
-| 9 | Persona chip: "Developer" | `GATE_PERSONA_CHIPS[3]` | "pre-selects the inferred lens from industry/goal (developer signal)" | PASS |
-| 10 | "What brings you here? (Pick up to 2 — or just looking)" label | goal row | "renders the fixed anatomy" | PASS |
-| 11 | Goal chip: "Renovate or build out" → rehab | `lib/gate-goal-groups.ts` `GATE_GOAL_CHIPS[0]` | "renders all 8 grouped goal chips in board order" + `goal-coverage.test.ts` (a) | PASS |
-| 12 | Goal chip: "Expand or buy equipment" → expansion, equipment | `GATE_GOAL_CHIPS[1]` | same | PASS |
-| 13 | Goal chip: "Open or relocate" → relocation | `GATE_GOAL_CHIPS[2]` | same | PASS |
+| 6 | Persona chip: "Just looking" | `lib/gate-persona-groups.ts` `GATE_PERSONA_CHIPS[0]` | same test, against a HARDCODED literal string (`BOARD_PERSONA_LABELS`, not `GATE_PERSONA_CHIPS[i].label` — gate review round 1, MAJOR finding 6/F6 fix); "renders 'Just looking' as a real, enabled, tappable chip" | PASS |
+| 7 | Persona chip: "Business owner" (merges starting+growing, never re-keyed) | `GATE_PERSONA_CHIPS[1]` | same hardcoded-literal test + "pre-selects Business owner … when no strong signal is present" (DOM `aria-pressed` assertion) | PASS |
+| 8 | Persona chip: "Supporting businesses" | `GATE_PERSONA_CHIPS[2]` | same hardcoded-literal test | PASS |
+| 9 | Persona chip: "Developer" | `GATE_PERSONA_CHIPS[3]` | same hardcoded-literal test + "pre-selects the inferred lens from industry/goal (developer signal)" | PASS |
+| 10 | "What brings you here? (Pick up to 2 — or just looking)" label | goal row | same test | PASS |
+| 11 | Goal chip: "Renovate or build out" → rehab | `lib/gate-goal-groups.ts` `GATE_GOAL_CHIPS[0]` | HARDCODED literal (`BOARD_GOAL_LABELS`, F6 fix) + "goal chips render in exact board order" (real DOM-position assertion, not a source-order assumption) + `goal-coverage.test.ts` (a) | PASS |
+| 12 | Goal chip: "Expand or buy equipment" → expansion, equipment | `GATE_GOAL_CHIPS[1]` | same, plus `gate-goal-groups.test.ts` "flattens a two-id grouped chip" and the BLOCKER 1 end-to-end test below | PASS |
+| 13 | Goal chip: "Open or relocate" → relocation | `GATE_GOAL_CHIPS[2]` | same hardcoded-literal + DOM-order tests | PASS |
 | 14 | Goal chip: "Hire or train staff" → hiring | `GATE_GOAL_CHIPS[3]` | same | PASS |
 | 15 | Goal chip: "Energy & building upgrades" → energy | `GATE_GOAL_CHIPS[4]` | same | PASS |
 | 16 | Goal chip: "Build new" → new-construction | `GATE_GOAL_CHIPS[5]` | same | PASS |
-| 17 | Goal chip: "Develop housing or mixed-use" → mixed-use, affordable-housing | `GATE_GOAL_CHIPS[6]` | same | PASS |
-| 18 | Goal chip: "Just looking around" — dashed border, distinct, exclusive of the other 7 | `GATE_GOAL_CHIPS[7]` / `GATE_LOOKING_CHIP_ID`, `toggleGateGoalChip` | "renders all 8 grouped goal chips…dashed and distinct" | PASS |
-| 19 | Primary button "View my report" | `report-email-gate-view` button | "VIEW MY REPORT and Save my report are disabled until a goal chip is picked" | PASS |
-| 20 | Disabled state: grey `#C6CCD8`-equivalent, `cursor-not-allowed`, until persona AND ≥1 goal | `disabled:bg-[#C6CCD8]`, `!canProceed` gate | same test | PASS |
-| 21 | Helper line "Pick what brings you here to continue" (shown only while disabled) | `report-email-gate-helper` | same test | PASS |
-| 22 | "Want a hand? (Optional)" eyebrow | support box | "renders the fixed anatomy" | PASS |
-| 23 | Name input | support box | same test (rendered input present) | PASS |
-| 24 | Email input, `you@business.com` placeholder | support box | same test | PASS |
-| 25 | Checkbox "I'd like 1-on-1 support working through this report" | support box | same test (exact copy asserted) | PASS |
-| 26 | Promise line, **exact copy**: "A real person from the Southeast Chicago Chamber of Commerce will follow up within 48 hours." | support box | same test (exact string match) | PASS |
+| 17 | Goal chip: "Develop housing or mixed-use" → mixed-use, affordable-housing | `GATE_GOAL_CHIPS[6]` | same, plus the BLOCKER 1 end-to-end test (this chip is one half of the reviewer's 4-id reproduction) | PASS |
+| 18 | Goal chip: "Just looking around" — dashed border, distinct, exclusive of the other 7 | `GATE_GOAL_CHIPS[7]` / `GATE_LOOKING_CHIP_ID`, `toggleGateGoalChip` | `lib/__tests__/gate-goal-groups.test.ts` (exclusivity + cap, pure-function, both reviewer mutants confirmed killed) + `report-email-gate.test.tsx`'s DOM-level exclusivity describe block (gate review round 1, MAJOR finding 4/F9 fix — the old test only checked labels/order/`border-dashed`, never exclusivity itself) | PASS |
+| 19 | Primary button "View my report" | `report-email-gate-view` button | "View and Save start disabled…" / "picking a goal chip enables both…" (real click-then-assert, not a single static snapshot — gate review round 1, MAJOR finding 5/F5 fix) | PASS |
+| 20 | Disabled state: grey `#C6CCD8`-equivalent, `cursor-not-allowed`, until persona AND ≥1 goal | `disabled:bg-[#C6CCD8]`, `canProceed = Boolean(persona) && selectionComplete && !isBusy` | Same enable-transition tests. **Rewritten honestly per gate review round 1, MAJOR finding 11**: persona genuinely is IN the predicate now (`Boolean(persona)`), but this never blocks in practice — `persona` is seeded by inference the instant the component mounts and is never empty (owner ruling A1). The goal chip is the only condition a visitor's own inaction can leave unmet, matching the board's own disabled-state screenshot (helper line names only the goal requirement). `personaTouched` now separately tracks whether the visitor actually tapped a chip, so analytics (row "Persona analytics honesty" below) can tell an untouched pre-selection apart from a real confirmation — the previous version silently reported every gate completion as "confirmed," including ones where the visitor never touched the row. | PASS |
+| 21 | Helper line "Pick what brings you here to continue" (shown only while disabled) | `report-email-gate-helper` | "View and Save start disabled, with the exact helper copy" — exact-string `.textContent` match, not `toContain` | PASS |
+| 22 | "Want a hand? (Optional)" eyebrow | support box | same anatomy test | PASS |
+| 23 | Name input | support box | same test — `screen.getByPlaceholderText("Name")` (gate review round 1, finding 10 — the old test asserted nothing about this input at all) | PASS |
+| 24 | Email input, `you@business.com` placeholder | support box | same test — `screen.getByPlaceholderText("you@business.com")` (finding 10 — previously unasserted) | PASS |
+| 25 | Checkbox "I'd like 1-on-1 support working through this report" | support box | same test (exact copy asserted against real DOM text, decoded apostrophe) | PASS |
+| 26 | Promise line, **exact copy**: "A real person from the Southeast Chicago Chamber of Commerce will follow up within 48 hours." | support box | same test (exact string match) — reviewer confirmed this row was already genuinely pinned pre-fix (F8, 48→72 hours, correctly failed) | PASS |
 | 27 | "Come back anytime" title | save row | same test | PASS |
-| 28 | "Save this report and pick up right where you left off." subline | save row | same test | PASS |
-| 29 | "Save my report" button, disabled under the same mandatory rule | `report-email-gate-save` | "VIEW MY REPORT and Save my report are disabled…" | PASS |
-| 30 | Footer: "PDF, email & window reminders live inside the report — where you can see what they're about" | footer `<p>` | "renders the fixed anatomy" (HTML-escaped `&amp;` asserted) | PASS |
-| — | Email-delivery-of-report **removed** from the gate (old "Email and View Report" submit) | deleted from `ReportEmailGate.tsx` | "removes email-delivery-of-report and PDF download from the gate" | PASS |
+| 28 | "Save this report and pick up right where you left off." subline | save row | same test — `screen.getByText(...)` full-string match (finding 10 — previously unasserted) | PASS |
+| 29 | "Save my report" button, disabled under the same mandatory rule | `report-email-gate-save` | enable-transition tests | PASS |
+| 30 | Footer copy | footer `<p>` | **Changed** — see BLOCKER 4 below. New exact text: "PDF & email tools live inside the report — where you can see what they're about", asserted in full (finding 10 — the old test only asserted the prefix, never the tail) plus a dedicated negative assertion that "window reminders" and "PDF, email &" never appear | PASS |
+| — | Email-delivery-of-report **removed** from the gate (old "Email and View Report" submit) | deleted from `ReportEmailGate.tsx` | "removes email-delivery-of-report, PDF download, and 'Continue Without Email' from the gate" | PASS |
 | — | PDF download button **removed** from the gate (old `report-pdf-download`) | deleted from `ReportEmailGate.tsx` | same test | PASS |
 | — | "Continue Without Email" **removed** (superseded by unconditional "View my report") | deleted from `ReportEmailGate.tsx` | same test | PASS |
 | — | No newsletter language anywhere on the gate | reviewed copy throughout | same test (`toLowerCase()` scan for "newsletter") | PASS |
-| — | Loading states ("Preparing...", "Saving...") on the two primary buttons | `viewStatus`/`saveStatus` | exercised implicitly by the disabled-state test; not a static-mock element | INTENTIONAL-DIFF (b) — mock-named item absent (the board is a single static frame; interactive busy states have no board equivalent) |
-| — | Inline error alert (red) on prepare/save failure | `error` state block | not directly unit-tested with a forced failure (covered by manual/E2E smoke) | INTENTIONAL-DIFF (b) — mock-named item absent |
-| — | Hidden honeypot "Website" field on the support box | carried over from the pre-redesign gate's anti-abuse pattern | present in rendered markup, off-screen | INTENTIONAL-DIFF (b) — mock-named item absent (invisible by design) |
+| — | Loading states ("Preparing...", "Saving...") on the two primary buttons | `viewStatus`/`saveStatus` | exercised by the enable-transition and support-failure tests (button text changes across the awaited submission) | INTENTIONAL-DIFF — implementation-only affordance with no board equivalent (the board is one static frame; a busy-state label cannot appear on it). Gate review round 1, MINOR finding 13: this is the INVERSE of closed-list reason (b) ("mock-named item absent") — the item is absent from the mock, not from the implementation — so it is written out honestly here rather than mis-citing (b). |
+| — | Inline error alert (red) on prepare/save failure | `error` state block | **Now genuinely tested** — "shows the alert box when onPrepareReport rejects" / "shows a fallback message when onPrepareReport resolves null" (gate review round 1, finding 10/row 51 — previously claimed "manual/E2E smoke," which the parity contract does not permit as verification; now a real forced-failure DOM test) | PASS |
+| — | Hidden honeypot "Website" field on the support box | carried over from the pre-redesign gate's anti-abuse pattern | present in rendered markup, off-screen; exercised functionally by `app/api/support-request/route.ts`'s own honeypot branch | INTENTIONAL-DIFF — implementation-only, invisible-by-design anti-abuse element with no board equivalent (same finding-13 correction as above: not closed-list (b), written out honestly). |
 
 ## §A — Goal grouping
 
 | Item | Locus | Verification | Status |
 |---|---|---|---|
 | 8 UI chips map to existing goal ids, ids never re-keyed | `lib/gate-goal-groups.ts` | `goal-coverage.test.ts` (a); `project-fit.test.ts` unaffected (goal ids unchanged) | PASS |
-| Grouped chip feeds 1–2 real ids into the existing multi-goal path | `gateGoalChipsToGoalIds` → `onPrepareReport(goalIds, "")` → `projectGoalsFit` (already `readonly string[]`-typed) | `report-email-gate.test.tsx`; `project-fit.test.ts` | PASS |
+| Grouped chip feeds its FULL goal-id set into the existing multi-goal path — no truncation | `gateGoalChipsToGoalIds` → `dedupeGoalIds` (uncapped) → `onPrepareReport(goalIds, customGoal)` → `projectGoalsFit` (already `readonly string[]`-typed, no inherent limit) | **Rewritten per gate review round 1, BLOCKER 1.** `lib/__tests__/gate-goal-groups.test.ts`'s "two 2-id chips together carry ALL 4 ids — none dropped" (the reviewer's exact reproduction: `expand-equip` + `housing-mixed-use`) and `report-email-gate.test.tsx`'s "2 grouped chips (4 ids) all reach onPrepareReport" (end-to-end, real click → real mock-call assertion on the args `app/report/page.tsx`'s `handlePrepareGatedReport` actually receives) | PASS |
 | "Just looking around" carries zero goal ids (no filter, pairs with `looking` persona lens) | `GATE_LOOKING_CHIP_ID` → `goalIds: []` | `goal-coverage.test.ts`; existing `report-personas` "looking" lens tests (untouched) | PASS |
+
+**Root cause of BLOCKER 1 (fixed):** `lib/report-wizard-config.ts`'s
+`selectedProjectGoals()` slices to `MAX_PROJECT_GOALS = 3` — correct for the
+OLD 11-option "pick up to 3" wizard selector, wrong for the gate, whose 2
+grouped chips can carry 4 real ids. `app/report/page.tsx`'s
+`handlePrepareGatedReport` now dedupes via the gate's own `dedupeGoalIds`
+(no cap) for both the incoming selection AND the existing-report comparison
+read, instead of routing either through `selectedProjectGoals()`.
+`MAX_PROJECT_GOALS`/`selectedProjectGoals()` themselves were left completely
+untouched — they still govern the OLD wizard selector correctly; only the
+gate's own prepare path stopped using them.
 
 ## §B — GOAL_RULES completion + orphan pass
 
-The prepared draft at `/tmp/project-fit.ts` had **already landed on `main`**
-by the time this branch forked (verified `diff` against
-`lib/project-fit.ts` at branch start — identical). It added
-`new-construction`, `mixed-use`, `affordable-housing`, `vacant-acquisition`
-GOAL_RULES entries and closed 8 of the 20 previously-orphaned ids (`nmtcEligible`,
-`qct`, `ahsap` mapped; `quantumEZ`, `filmCredit`, `liveTheaterCredit`,
-`cannabisR3`, `cookCannabisGrant`, `class8aMicro` already industry-exempt).
+**Gate review round 1, MINOR finding 15 correction:** the previous version
+of this section cited a `diff` against `/tmp/project-fit.ts` as
+verification — `/tmp` is gone and nothing in the repo records that diff, so
+the claim was unfalsifiable as written. What's actually verifiable in this
+repo: `lib/project-fit.ts`'s `GOAL_RULES` carries `new-construction`,
+`mixed-use`, `affordable-housing`, and `vacant-acquisition` entries, each
+with a non-empty `strongProgramIds` set, and all 71 registry ids resolve —
+proven by `lib/__tests__/goal-coverage.test.ts`, not by a historical diff
+claim.
 
 This branch closed the remaining **11 orphans** — computed by diffing the
 full 71-id program registry (`data/programs-internal.json`) against every id
@@ -93,7 +115,8 @@ All three exemption sets (`SPECIALIZED_INDUSTRY_PROGRAM_IDS`,
 exported, committed constants in `lib/project-fit.ts` — not comments — each
 with an inline reason on every entry.
 
-**Coverage test** (`lib/__tests__/goal-coverage.test.ts`, 4 assertions):
+**Coverage test** (`lib/__tests__/goal-coverage.test.ts`, 4 assertions —
+reviewer confirmed F2/F3 injections correctly fail, i.e. the test is real):
 
 | Assertion | Status |
 |---|---|
@@ -106,7 +129,7 @@ with an inline reason on every entry.
 
 | Item | Locus | Verification | Status |
 |---|---|---|---|
-| Inline offer beside the SBIF/funding-window region | `components/report/FundingWindowChart.tsx` → `FundingWindowEmailOffer` | `components/report/__tests__/funding-window-email-offer.test.tsx` (4 tests) | **PARTIAL** |
+| Inline offer beside the SBIF/funding-window region | `components/report/FundingWindowChart.tsx` → `FundingWindowEmailOffer` | `components/report/__tests__/funding-window-email-offer.test.tsx` (6 tests, rewritten to `@testing-library/react` per gate review round 1, MAJOR finding 9 — see below) | **PARTIAL** |
 
 Not on `R6GateBlessed.dc.html` — the board is the *gate* only; §C lives
 inside the report itself. Repo-wide `grep` for "reminder" across
@@ -117,8 +140,18 @@ promise was **not built** — that would be a fabricated promise the system
 cannot keep. What ships instead: a real, honest, non-modal, dismissible
 inline offer that sends the report **immediately**, via the exact same
 verified mechanism the report's own "Email Report" action already uses
-(`POST /api/email-report`). Copy says "right now," never "when this window
-opens." Test asserts the banned future-tense phrasings are absent.
+(`POST /api/email-report`, now also exercised end-to-end by a real
+mocked-fetch interaction test asserting the actual POST body).
+
+**Gate review round 1, MAJOR finding 9/F10 fix:** the banned-phrase test
+previously checked `we'll remind you` against `renderToStaticMarkup`
+output, where React had already escaped the apostrophe to `&#x27;`/`&rsquo;`
+— so the check could never fire against the most likely real phrasing. The
+test file now uses `@testing-library/react` + real DOM `.textContent`
+(always decoded) instead of raw-HTML string matching, and was confirmed by
+re-injecting the reviewer's exact mutant (`We'll remind you before this
+window closes.`) — the rewritten test fails against it, then passes again
+once reverted.
 
 **Named follow-up:** a true future-triggered reminder needs a scheduled
 sender (e.g., a cron hitting a new `/api/window-reminders` job) that does
@@ -129,9 +162,9 @@ silently deferred.
 
 | Item | Locus | Verification | Status |
 |---|---|---|---|
-| Optional support opt-in produces a real signal | `app/api/support-request/route.ts`, `lib/support-lead.ts` | manual route review; reuses `lib/report-email-delivery.ts`'s `createReportLead` (already tested/used in production by `/api/email-report`) | PASS |
-| Chamber-inbox notification | Same route, `Resend` + `process.env.INCENTIVE_HELP_INBOX` | Same conditional pattern already live in `/api/email-report`'s `wantsHelp` branch — not a new mechanism | PASS |
-| Admin/export surface | `lib/analytics-dashboard.ts`'s existing `report_leads` follow-up queue (`wants_incentive_help` ordering) — untouched, already reads this table | pre-existing, unmodified | PASS |
+| Optional support opt-in produces a real signal | `app/api/support-request/route.ts`, `lib/support-lead.ts` | **Now genuinely exercised** — `report-email-gate.test.tsx`'s "the support path is genuinely exercised end to end" describe block asserts the real payload `submitSupportRequest` is called with (gate review round 1, MAJOR finding 7/F7 — previously "manual route review," which the reviewer proved the suite was structurally blind to: injecting `if (true) return;` as the submit function's first line passed 16/16) | PASS |
+| Chamber-inbox notification | Same route, `Resend` + `process.env.INCENTIVE_HELP_INBOX` | Same conditional pattern already live in `/api/email-report`'s `wantsHelp` branch — not a new mechanism, but genuinely env-conditional and silent when unset | **PARTIAL** — per gate review round 1's binding ruling on finding 12. Named follow-up: **verify `RESEND_API_KEY` + `INCENTIVE_HELP_INBOX` are configured on the Vercel production project** — a ship-ritual checklist item, not a code change. The lead is captured (and surfaced in the admin queue below) regardless of whether these are set; only the live email notification depends on them. |
+| Admin/export surface | `lib/analytics-dashboard.ts`'s existing `report_leads` follow-up queue (`wants_incentive_help` ordering) — untouched, already reads this table | pre-existing, unmodified; reviewer confirmed `createReportLead` genuinely writes `wants_incentive_help = true` and the queue orders by that column | PASS |
 
 Investigated before building (per spec instruction): `/api/email-report`
 already has a `wantsHelp` branch that writes to `report_leads` and
@@ -145,35 +178,73 @@ follow-up) is the only thing it actually does. No new outbound mechanism
 was invented — same DB table, same Resend client, same inbox env var as
 the pre-existing path.
 
+Also fixed here per BLOCKER 3 (see below): the submission is now AWAITED
+and its failure surfaced (visible `role="alert"`, dialog stays mounted)
+before either `onReportReady` or the unauthenticated Save redirect fires —
+previously both silently killed an in-flight request.
+
 ## §E — Save my report
 
 | Item | Locus | Verification | Status |
 |---|---|---|---|
-| "Save my report" wired to the existing save mechanism | `ReportEmailGate.tsx` `handleSaveReport`, mirroring the identical authenticated/unauthenticated fork both `ReportDisplay` copies already implement (`useSession` → `SaveReportModal` in place, or `storePendingReport` + redirect to `/login?callbackUrl=/workspace?savePending=1`) | `report-email-gate.test.tsx`'s disabled-state test (save button); manual code review against `components/report/ReportDisplay.tsx`'s and `app/report/page.tsx`'s own `handleSaveReport` | PASS |
-| Disabled under the same mandatory-selection rule as View | `!canProceed` on both buttons | "VIEW MY REPORT and Save my report are disabled…" | PASS |
+| "Save my report" wired to the existing save mechanism | `ReportEmailGate.tsx` `handleSaveReport`, mirroring the identical authenticated/unauthenticated fork both `ReportDisplay` copies already implement (`useSession` → `SaveReportModal` in place, or `storePendingReport` + redirect to `/login?callbackUrl=/workspace?savePending=1`) | `report-email-gate.test.tsx`'s BLOCKER 3(b)/(c) describe block — real interaction tests asserting navigation timing (`window.location.assign` mocked and asserted NOT called until a pending submission resolves) | PASS |
+| Disabled under the same mandatory-selection rule as View | `!canProceed` on both buttons | enable-transition tests | PASS |
+
+## Gate review round 1 — finding-by-finding status
+
+| # | Finding | Fix | Test(s) that now pin it |
+|---|---|---|---|
+| BLOCKER 1 | Two-chip selection silently drops a goal id (`selectedProjectGoals()`'s 3-cap) | `app/report/page.tsx`'s `handlePrepareGatedReport` now uses `dedupeGoalIds` (uncapped) for both the incoming selection and the existing-report comparison read | `gate-goal-groups.test.ts` "two 2-id chips together carry ALL 4 ids"; `report-email-gate.test.tsx` "2 grouped chips (4 ids) all reach onPrepareReport" |
+| BLOCKER 2 | Gate destroyed pre-existing `projectGoals`/`customGoal` on every mount | `ReportEmailGate.tsx` seeds `selectedGoalChips` (via `goalIdsToGateChipIds`), `passthroughGoalIds` (via `unmatchedGoalIds`, for ids with no chip), and `customGoal` from `report.metadata` at mount; all resent verbatim on every prepare call | `report-email-gate.test.tsx`'s "BLOCKER 2" describe block (4 tests: single-id seeding, unmatched-id + customGoal survival, unmatched-id alongside a new pick, explicit "Just looking around" override) |
+| BLOCKER 3 | Support opt-in failed silently in 3 paths | (a) invalid/blank email while checked now blocks with a visible inline error, validated before any prepare call; (b)/(c) the submission is AWAITED before `onReportReady`/the unauthenticated redirect, with `keepalive: true` on the fetch as defense-in-depth; a first failure is surfaced (dialog stays mounted) and a second click proceeds without re-blocking forever | `report-email-gate.test.tsx`'s BLOCKER 3(a) and 3(b)/(c) describe blocks (6 tests total) |
+| BLOCKER 4 | Footer promised "window reminders" — no such mechanism exists | Footer copy changed to "PDF & email tools live inside the report — where you can see what they're about". The board file (`R6GateBlessed.dc.html`) has since been updated to this exact copy, so this is no longer even an INTENTIONAL-DIFF from the current board — it is a literal match, verified by the same hardcoded-copy test as every other row | `report-email-gate.test.tsx` "renders every board element with literal, hardcoded copy"; "BLOCKER 4: footer claims only PDF & email…" (negative assertion) |
+| MAJOR 5 (F5) | Nothing tested the enable transition | New `describe("… enable transition (falsification F5)")` block: disabled-at-mount, enabled-after-a-click, "Just looking around" alone also enables | Confirmed by re-injecting the reviewer's `canProceed = false` mutant: 19/28 tests in the file fail; reverted, 28/28 pass |
+| MAJOR 6 (F7) | Support-lead path untested | `submitSupportRequest` is now mocked and asserted on directly across 6+ tests (payload shape, awaited timing, failure surfacing) | Confirmed by re-injecting `if (true) return true;` at the top of `submitSupportBoxIfNeeded`: 4/28 tests fail; reverted, 28/28 pass |
+| MAJOR 7 (F6) | Board copy parity was self-referential | `BOARD_PERSONA_LABELS`/`BOARD_GOAL_LABELS` are literal string arrays independent of `GATE_GOAL_CHIPS`/`GATE_PERSONA_CHIPS` | Confirmed by re-injecting a relabel (`"Renovate or build out"` → `"Fix up your place"` in the source): 6/28 tests fail; reverted, 28/28 pass |
+| MAJOR 8 (F4/F9) | Exclusivity + 2-chip cap untested | `lib/__tests__/gate-goal-groups.test.ts` tests `toggleGateGoalChip` directly (pure function, no render); `report-email-gate.test.tsx` adds a DOM-level exclusivity describe block | Confirmed by re-injecting both reviewer mutants (`[...selected, GATE_LOOKING_CHIP_ID]`, `if (false)` cap guard) into `lib/gate-goal-groups.ts`: each fails exactly the test(s) written for it; reverted, all pass |
+| MAJOR 9 (F10/F11) | Banned-phrase guard vacuous against the apostrophe-escaped phrasing | `funding-window-email-offer.test.tsx` rewritten to `@testing-library/react`, asserts against real DOM `.textContent` (always decoded) instead of raw HTML | Confirmed by re-injecting the reviewer's exact mutant string: the rewritten test fails against it; reverted, passes |
+| MAJOR 10 | Parity rows cited tests with no matching assertion (rows 2, 4, 23, 24, 28, 30) | Real `screen.getByText`/`getByPlaceholderText` assertions added for every one | See the anatomy table above — every row now names the specific assertion |
+| MAJOR 11 | Persona not actually mandatory; analytics always reported "confirmed" | `canProceed` includes `Boolean(persona)`; `personaTouched` state distinguishes an untouched pre-selection from a real tap; `commitPersonaSelection` reports `"inferred"` / `"confirmed"` / `"corrected"` honestly | `report-email-gate.test.tsx`'s "persona analytics honesty" describe block (3 tests: inferred/untouched, confirmed/same-chip-tapped, corrected/different-chip-tapped) |
+| MAJOR 12 | §D notification row marked PASS while env-conditional and silent | Row reclassified PARTIAL with a named, non-code follow-up | See §D table above |
+| MINOR 13 | INTENTIONAL-DIFF reason (b) misused for impl-only elements | Rows rewritten with an honest, written-out reason instead of mis-citing (b); row 51 (error alert) is now genuinely PASS via a real forced-failure test rather than a diff-reason at all | See anatomy table rows for loading states / error alert / honeypot |
+| MINOR 14 | Claim-surface comment pointed at a nonexistent test path | `lib/public-claim-surfaces.ts` corrected to `components/report/__tests__/report-email-gate.test.tsx` | — |
+| MINOR 15 | §B provenance claim unfalsifiable (`/tmp` diff) | Rewritten to cite only in-repo, re-verifiable facts (GOAL_RULES entries + the coverage test) | `goal-coverage.test.ts` |
 
 ## Judgment calls
 
 1. **Persona "mandatory" rule** is satisfied by the existing pre-selection
-   inference (owner ruling A1) — the board's own disabled-state screenshot
-   shows "Business owner" already highlighted while the button stays
-   disabled, with the helper line naming only the goal requirement. Persona
-   never literally blocks in practice because inference never returns an
-   empty value; this matches the board exactly.
+   inference (owner ruling A1) AND is now literally part of `canProceed`
+   (finding 11) — it just never blocks in practice, because inference
+   never returns an empty value. This matches the board's own
+   disabled-state screenshot, whose helper line names only the goal
+   requirement.
 2. **"Business owner" merged chip** defaults to `starting` when clicked and
    neither `starting` nor `growing` is already active (first in the
    existing vocabulary order, and the inference module's own generic
    fallback). No id was re-keyed; `lib/personas.ts` was not touched.
 3. **Support opt-in has no submit button of its own** on the board — it
    rides alongside whichever primary action (View or Save) the visitor
-   takes, firing only when the checkbox is checked and the email looks
-   valid; otherwise it's silently skipped (never blocks either primary
-   action).
+   takes. Per the round 1 fix, a checked box with a blank/invalid email now
+   BLOCKS with a visible error instead of silently skipping; a real
+   submission failure is surfaced once and does not block a second click
+   forever ("never blocks the report" has to mean something once the
+   visitor has actually seen the failure).
 4. **Inline funding-window offer sends immediately** rather than promising
    a future-triggered reminder, since no scheduled-send infrastructure
    exists in this repo — see §C above.
+5. **`supportGaveUp` bypass (new, round 1):** after a support-submission
+   failure has been shown once, a second click of View/Save proceeds
+   without retrying the failed request. This is a deliberate choice to
+   keep "never blocks the report" true even when the chamber-notification
+   path is genuinely down, while still surfacing the failure at least once
+   rather than swallowing it (the original bug this whole finding was
+   about).
 
 ## Deviations from a literal reading of the spec
 
-- None beyond the PARTIAL row in §C, which the spec itself explicitly
-  allows ("PARTIAL allowed only for C/D backend sends per above").
+- The §C inline offer remains PARTIAL (spec explicitly allows this: "PARTIAL
+  allowed only for C/D backend sends per above").
+- The §D chamber-inbox notification row is now ALSO PARTIAL, per gate
+  review round 1's binding ruling on finding 12 — env-var configuration
+  verification is a ship-ritual checklist item, not something this branch's
+  code can prove from inside the repo.

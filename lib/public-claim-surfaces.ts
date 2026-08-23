@@ -138,8 +138,10 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     // baseline as part of this rewrite (new copy — the 48-hour support
     // promise, the mandatory persona+goal helper line, the footer — all
     // reviewed against the goal-independent PDF/email/save mechanisms it
-    // actually wires to). See lib/__tests__/report-email-gate.test.tsx for
-    // the dedicated rendered-output check.
+    // actually wires to). See components/report/__tests__/report-email-gate.test.tsx
+    // for the dedicated rendered-output check (gate review round 1,
+    // MINOR finding 14 — this comment previously pointed at
+    // lib/__tests__/report-email-gate.test.tsx, which does not exist).
     id: "report-email-gate",
     description: "The mandatory persona+goal report gate: 8 grouped goal chips, optional 1-on-1 support opt-in, and the save-report affordance.",
     contracts: ["reviewed-copy"],
