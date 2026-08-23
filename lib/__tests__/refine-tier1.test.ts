@@ -289,12 +289,20 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  it("both forks render the FundingWindowChart (owner) and IncentiveHorizonChart (developer), each reading real committed data", () => {
+  it("both forks render the FundingWindowChart (owner), IncentiveHorizonChart (developer), and CorridorInvestmentChart (supporter), each reading real committed data", () => {
+    // Gate round 2, MAJOR 24: CorridorInvestmentChart was registered as a
+    // public-claim surface (BLOCKER 12) but had NO fork-parity assertion
+    // here at all — the same class of gap gate finding 8 closed for The
+    // Brief. Both app/report/page.tsx and components/report/
+    // ReportDisplay.tsx were confirmed byte-identical for this block
+    // before writing this assertion.
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { FundingWindowChart }");
       expect(fork).toContain("import { IncentiveHorizonChart }");
+      expect(fork).toContain("import { CorridorInvestmentChart }");
       expect(fork).toContain('(persona === "starting" || persona === "growing") && (\n              <FundingWindowChart report={lensed} />');
       expect(fork).toContain('persona === "developer" && (\n              <IncentiveHorizonChart report={lensed} />');
+      expect(fork).toContain('persona === "supporter" && (\n              <CorridorInvestmentChart report={lensed} />');
     }
   });
 

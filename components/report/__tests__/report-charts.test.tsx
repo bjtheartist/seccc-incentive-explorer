@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FundingWindowChart } from "@/components/report/FundingWindowChart";
 import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
+import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
 import type { GeneratedReport } from "@/lib/report-engine";
 
 function reportWithDeadlines(items: GeneratedReport["sections"][number]["items"]): GeneratedReport {
@@ -106,5 +107,65 @@ describe("IncentiveHorizonChart", () => {
     ]);
     const html = renderToStaticMarkup(<IncentiveHorizonChart report={report} />);
     expect(html).toMatch(/City of Chicago TIF Annual Reports/);
+  });
+});
+
+// Gate round 2, MAJOR 24: CorridorInvestmentChart (registered as a
+// public-claim surface under BLOCKER 12) had a pure data-builder test
+// (lib/__tests__/report-charts.test.ts's buildCorridorInvestmentChartData
+// suite, gate finding 5) but no render-level component test — the same
+// gap the FundingWindowChart/IncentiveHorizonChart suites above already
+// close for their own components.
+describe("CorridorInvestmentChart", () => {
+  function reportWithCorridorInvestment(
+    corridorInvestment: GeneratedReport["corridorInvestment"],
+  ): GeneratedReport {
+    return { ...reportWithDeadlines([]), corridorInvestment };
+  }
+
+  it("renders nothing when the community area has no committed corridorInvestment series", () => {
+    expect(
+      renderToStaticMarkup(<CorridorInvestmentChart report={reportWithCorridorInvestment(undefined)} />),
+    ).toBe("");
+    expect(
+      renderToStaticMarkup(
+        <CorridorInvestmentChart
+          report={reportWithCorridorInvestment({ communityArea: "Chatham", series: [], source: "FFIEC" })}
+        />,
+      ),
+    ).toBe("");
+  });
+
+  it("renders a bar per year from the real resolved series, with the exact on-screen FFIEC source citation the coordinator required be kept verbatim", () => {
+    const source =
+      "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)";
+    const report = reportWithCorridorInvestment({
+      communityArea: "Chatham",
+      source,
+      series: [
+        { year: 2022, smallBusinessLoanCount: 30, smallBusinessLoanDollars: 5_000_000 },
+        { year: 2023, smallBusinessLoanCount: 35, smallBusinessLoanDollars: 7_000_000 },
+        { year: 2024, smallBusinessLoanCount: 40, smallBusinessLoanDollars: 9_000_000 },
+      ],
+    });
+    const html = renderToStaticMarkup(<CorridorInvestmentChart report={report} />);
+    expect(html).toContain('data-testid="corridor-investment-chart"');
+    expect(html).toContain("<svg");
+    expect(html).toContain("Chatham");
+    expect(html).toContain(source);
+    expect(html).toContain("2022");
+    expect(html).toContain("2023");
+    expect(html).toContain("2024");
+    expect((html.match(/<rect/g) ?? []).length).toBe(3);
+  });
+
+  it("carries a real per-year hover title naming the dollar amount, not a generic label", () => {
+    const report = reportWithCorridorInvestment({
+      communityArea: "Chatham",
+      source: "FFIEC",
+      series: [{ year: 2024, smallBusinessLoanCount: 40, smallBusinessLoanDollars: 9_000_000 }],
+    });
+    const html = renderToStaticMarkup(<CorridorInvestmentChart report={report} />);
+    expect(html).toContain("<title>2024: $9.0M in small-business loan originations</title>");
   });
 });
