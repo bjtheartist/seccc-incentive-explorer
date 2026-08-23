@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Gate review round 3, MAJOR finding R3-A (the THIRD round flagging this
@@ -94,7 +94,12 @@ vi.mock("@/components/concierge/SiteConciergeProvider", () => ({
   ConciergePageContextBridge: () => <div data-testid="stub-concierge-bridge" />,
 }));
 vi.mock("@/components/report/RefineValuePanel", () => ({ RefineValuePanel: () => <div /> }));
-vi.mock("@/components/report/PersonaChips", () => ({ PersonaChips: () => <div /> }));
+// `PersonaChips` is DELIBERATELY ABSENT from this mock list (gate review
+// follow-up, ITEM A) — it is the one thing the new persona-propagation
+// test below needs real: it's the live report's own "Viewing As" row, the
+// only place that renders the persona the gate committed via
+// `aria-pressed`, independent of `ReportEmailGate`'s own (differently
+// labeled) persona intake chips.
 vi.mock("@/components/report/GroupedReportDetail", () => ({ GroupedReportDetail: () => <div /> }));
 vi.mock("@/components/incentive-preparation/StartPreparationPacketButton", () => ({
   StartPreparationPacketButton: () => <div />,
@@ -125,7 +130,14 @@ class StubIntersectionObserver {
     return [];
   }
 }
-vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
+// Re-stubbed in `beforeEach`, not once at module scope: this file's own
+// `afterEach` calls `vi.unstubAllGlobals()` (needed to reset the `fetch`
+// stub each test installs) — with only ONE test in this file that never
+// mattered, but a stub installed here only once would be silently gone
+// for every test after the first now that there's more than one.
+beforeEach(() => {
+  vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
+});
 if (!window.scrollTo || !vi.isMockFunction(window.scrollTo)) {
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 }
@@ -211,6 +223,15 @@ afterEach(() => {
   vi.doUnmock("next/navigation");
   vi.unstubAllGlobals();
   vi.resetModules();
+  // The persona-propagation test below (ITEM A) reads
+  // `resolveInitialPersona`'s sessionStorage fallback (lib/personas.ts) at
+  // mount — jsdom's `sessionStorage` is NOT reset between tests in the
+  // same file on its own, so a persona `commitPersonaSelection` wrote in
+  // an earlier test (real ReportEmailGate, real storePersona call) would
+  // otherwise leak into the next test's initial persona and desync it
+  // from "All", the value every test in this file actually expects to
+  // start from.
+  window.sessionStorage.clear();
 });
 
 describe("real handlePrepareGatedReport execution (gate review round 3, R3-A — the primary fix)", () => {
@@ -269,5 +290,81 @@ describe("real handlePrepareGatedReport execution (gate review round 3, R3-A —
       new Set(["expansion", "equipment", "mixed-use", "affordable-housing"]),
     );
     expect(sentGoals.length).toBe(4);
+  });
+});
+
+describe("gate persona propagates to the live report view (gate review follow-up, ITEM A — real bug Billy hit live)", () => {
+  it("completing the gate as Business owner + a goal makes the live report's persona lens active immediately, without a reload", async () => {
+    const { calls } = await renderReportRouteForSearch(
+      "instant=true&addr=100+E+Test+St&lat=41.75&lon=-87.6",
+    );
+
+    const gate = await screen.findByTestId("report-email-gate", {}, { timeout: 15_000 });
+    expect(gate).toBeTruthy();
+
+    // Sanity, not the fix under test: BEFORE the gate resolves, the live
+    // report's own "Viewing As" row (real `PersonaChips`, un-mocked in
+    // this file — see the mock list above) is still on the untouched
+    // default persona ("All"). This makes the assertion below a real
+    // before/after transition, not a coincidental pre-existing pass.
+    const allChipBefore = await screen.findByRole(
+      "button",
+      { name: "All" },
+      { timeout: 15_000 },
+    );
+    expect(allChipBefore.getAttribute("aria-pressed")).toBe("true");
+
+    // Complete the gate as Business owner + a goal — the exact repro
+    // Billy hit live.
+    const businessOwnerChip = await screen.findByRole(
+      "button",
+      { name: "Business owner" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(businessOwnerChip);
+    const expandChip = await screen.findByRole(
+      "button",
+      { name: "Expand or buy equipment" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(expandChip);
+    const viewButton = await screen.findByTestId(
+      "report-email-gate-view",
+      {},
+      { timeout: 15_000 },
+    );
+    fireEvent.click(viewButton);
+
+    await waitFor(
+      () => {
+        const generateCalls = calls.filter(
+          (call) => call.method === "POST" && call.url.includes("/api/report/generate"),
+        );
+        expect(generateCalls.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 15_000 },
+    );
+
+    // The gate closes (`revealedReportKey` now matches) and the SAME,
+    // already-mounted `ReportDisplay` instance — never remounted, never a
+    // page reload — must now render the persona lens the visitor just
+    // picked. `report.metadata` here carries no industry/goal signal that
+    // would infer anything other than "growing" for a plain
+    // reportType="site-incentives" report (see
+    // lib/persona-inference.ts's final fallback), and "growing" is one of
+    // the two PersonaIds the gate's single "Business owner" chip covers
+    // (lib/gate-persona-groups.ts) — this is BOTH the inferred AND the
+    // explicitly-tapped value, so a regression back to the pre-fix
+    // behavior (gate persona never reaching the live view;
+    // `guidepostPartForSection` returns null for `DEFAULT_PERSONA`, i.e.
+    // "All") is unambiguous: "All" would still show pressed instead.
+    const growingChip = await screen.findByRole(
+      "button",
+      { name: "Growing / property owner" },
+      { timeout: 15_000 },
+    );
+    expect(growingChip.getAttribute("aria-pressed")).toBe("true");
+    const allChipAfter = screen.getByRole("button", { name: "All" });
+    expect(allChipAfter.getAttribute("aria-pressed")).toBe("false");
   });
 });

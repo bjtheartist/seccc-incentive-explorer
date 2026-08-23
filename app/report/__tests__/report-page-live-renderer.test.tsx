@@ -209,9 +209,17 @@ vi.mock("@/components/workspace/SaveReportModal", () => ({
 
 /**
  * `useState` call order inside `ReportWizardPage`, app/report/page.tsx
- * lines ~622-1261. Extracted mechanically (regex over that line range for
+ * lines ~622-1290. Extracted mechanically (regex over that line range for
  * `const [x, setX] = useState`) rather than by eye — see the maintenance
  * warning above for how to regenerate this if it drifts.
+ *
+ * gate-persona-lens-sunset round: `"persona"` MOVED here from
+ * `REPORT_DISPLAY_STATE_ORDER` below — the state itself was lifted from
+ * `ReportDisplay` up to `ReportWizardPage` so `ReportEmailGate` (a sibling
+ * of `ReportDisplay`, not a child) can commit a persona choice into the
+ * same value `ReportDisplay` renders from. Same slot count overall, just a
+ * different owning component — see `ReportDisplay`'s new `persona`/
+ * `onPersonaSelect` PROPS (no longer its own `useState`).
  */
 const REPORT_WIZARD_PAGE_STATE_ORDER = [
   "wizardState",
@@ -221,6 +229,7 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
   "isGenerating",
   "hasRefinedInstantReport",
   "revealedReportKey",
+  "persona",
   "crossLinkDismissed",
   "bottomZoneInView",
   "compareMode",
@@ -276,10 +285,14 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
 
 /**
  * `useState` call order inside `ReportDisplay`, app/report/page.tsx lines
- * ~4152-4499 (continues the SAME shared slot counter, since the mocked
+ * ~3690-4171 (continues the SAME shared slot counter, since the mocked
  * `useState` is a single module-level function shared by every component in
  * the render tree — `ReportDisplay` is rendered as a child of
  * `ReportWizardPage` within the same synchronous pass).
+ *
+ * gate-persona-lens-sunset round: `"persona"` REMOVED from here — moved to
+ * `REPORT_WIZARD_PAGE_STATE_ORDER` above. `ReportDisplay` no longer calls
+ * `useState` for it; it receives `persona` as a prop instead.
  */
 const REPORT_DISPLAY_STATE_ORDER = [
   "linkCopied",
@@ -291,7 +304,6 @@ const REPORT_DISPLAY_STATE_ORDER = [
   "vacancySpreadsheetFeatures",
   "vacancySpreadsheetError",
   "editedSummaryText",
-  "persona",
   "expandedSections",
   "downloadGateOpen",
   // spec v2 item 5 (The Brief): a single new useState slot, added

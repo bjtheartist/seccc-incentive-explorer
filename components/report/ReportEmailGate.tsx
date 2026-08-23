@@ -34,6 +34,20 @@ interface ReportEmailGateProps {
     customGoal: string,
   ) => Promise<GeneratedReport | null>;
   onReportReady: (deliveredReport: GeneratedReport) => void;
+  /**
+   * Fired alongside `storePersona` in `commitPersonaSelection` (both the
+   * View and Save paths), with the visitor's final persona choice —
+   * inferred-and-unconfirmed, or explicitly tapped. Lets the caller
+   * propagate the choice into a LIVE view's persona state, not just
+   * sessionStorage: `storePersona` alone only reaches a FUTURE mount (a
+   * fresh page load re-reading storage), never a `ReportDisplay` instance
+   * that is already mounted as this gate's sibling when the gate closes —
+   * which is exactly what leaves a just-gated report rendering
+   * `DEFAULT_PERSONA` (no guidepost PART bands) without this. Optional so
+   * every existing direct-render test of this component (none of which
+   * care about a live sibling view) keeps compiling unchanged.
+   */
+  onPersonaCommitted?: (persona: PersonaId) => void;
 }
 
 type ActionStatus = "idle" | "preparing";
@@ -59,6 +73,7 @@ export function ReportEmailGate({
   wizardState,
   onPrepareReport,
   onReportReady,
+  onPersonaCommitted,
 }: ReportEmailGateProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { status: authStatus } = useSession();
@@ -201,6 +216,7 @@ export function ReportEmailGate({
 
   const commitPersonaSelection = (preparedReport: GeneratedReport) => {
     storePersona(persona);
+    onPersonaCommitted?.(persona);
     const outcome = !personaTouched
       ? "inferred"
       : persona === inferredPersona

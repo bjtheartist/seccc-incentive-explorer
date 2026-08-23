@@ -702,6 +702,35 @@ function ReportWizardPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
   const [revealedReportKey, setRevealedReportKey] = useState<string | null>(null);
+  // ── Persona lens (Tier 1b, audit BM4) — lifted here from ReportDisplay
+  // (gate-persona-lens-sunset round) ──
+  // `ReportDisplay` used to own this as local state, but `ReportEmailGate`
+  // is rendered as its SIBLING here, not its child — the gate's own
+  // `commitPersonaSelection` could only ever write to sessionStorage
+  // (`storePersona`), which `ReportDisplay`'s mount-time effect had already
+  // read-and-discarded before the gate ever closed. A visitor who answered
+  // "Business owner" in the gate got a report rendered with
+  // `DEFAULT_PERSONA` regardless — the flat "All" structure, no guidepost
+  // PART bands (`guidepostPartForSection` returns null for
+  // `DEFAULT_PERSONA`). Owning the state here lets BOTH `ReportDisplay`
+  // (as a controlled `persona`/`onPersonaSelect` prop pair — see its own
+  // signature below) and `ReportEmailGate` (via `onPersonaCommitted`,
+  // wired below) read and write the SAME value. See
+  // report-page-live-renderer.test.tsx's ordinal-`useState` maintenance
+  // warning: this slot moved from `ReportDisplay`'s state order into this
+  // component's, in the same commit as this change.
+  const [persona, setPersona] = useState<PersonaId>(DEFAULT_PERSONA);
+  useEffect(() => {
+    setPersona(
+      resolveInitialPersona(
+        typeof window !== "undefined" ? window.location.search : null,
+      ),
+    );
+  }, []);
+  const handlePersonaSelect = useCallback((next: PersonaId) => {
+    setPersona(next);
+    storePersona(next);
+  }, []);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
   // Sticky cross-link dismissal lives here, not in the banner: the page has to
   // drop its matching bottom padding in the same render or the document keeps
@@ -2022,6 +2051,8 @@ function ReportWizardPage() {
           // mirrors the (already-correct) workspace fork
           // (app/workspace/reports/[id]/page.tsx).
           showPersonaLens={derivePersonaLensVisible(wizardState)}
+          persona={persona}
+          onPersonaSelect={handlePersonaSelect}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -2058,6 +2089,7 @@ function ReportWizardPage() {
             wizardState={wizardState}
             onPrepareReport={handlePrepareGatedReport}
             onReportReady={handleGatedReportReady}
+            onPersonaCommitted={setPersona}
           />
         )}
         {/* The guide yields to the optional email dialog and returns once the
@@ -3617,6 +3649,8 @@ function ReportDisplay({
   refineContext,
   isInstantMode,
   showPersonaLens,
+  persona = DEFAULT_PERSONA,
+  onPersonaSelect: handlePersonaSelect = () => {},
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -3644,6 +3678,15 @@ function ReportDisplay({
    * email gate funnels every real user into.
    */
   showPersonaLens?: boolean;
+  /**
+   * Persona lens value + committer — lifted to `ReportWizardPage`
+   * (gate-persona-lens-sunset round) so `ReportEmailGate`, a SIBLING of
+   * this component (not a child), can commit a persona choice into the
+   * same state this component renders from. See `ReportWizardPage`'s own
+   * `persona`/`handlePersonaSelect` for the owning state.
+   */
+  persona?: PersonaId;
+  onPersonaSelect?: (next: PersonaId) => void;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -3688,18 +3731,12 @@ function ReportDisplay({
   // Viewing lens over this snapshot: re-orders and collapses existing content
   // client-side. Canonical `report` stays untouched (save/email/PDF/refine use
   // it); only the on-screen sections + roadmap read the lensed copy.
-  const [persona, setPersona] = useState<PersonaId>(DEFAULT_PERSONA);
-  useEffect(() => {
-    setPersona(
-      resolveInitialPersona(
-        typeof window !== "undefined" ? window.location.search : null,
-      ),
-    );
-  }, []);
-  const handlePersonaSelect = useCallback((next: PersonaId) => {
-    setPersona(next);
-    storePersona(next);
-  }, []);
+  // `persona`/`handlePersonaSelect` (aliased from the `onPersonaSelect` prop
+  // above) used to be local state + a mount effect here — moved up to
+  // `ReportWizardPage` (gate-persona-lens-sunset round) so `ReportEmailGate`
+  // can commit into the same value. Every OTHER reference to `persona` /
+  // `handlePersonaSelect` below this point is unchanged — they're still the
+  // same identifiers, just sourced from props now instead of local state.
   // Shared-link recipient experience (spec v2 deliverable 7): a framed link
   // opens in the sender's chosen lens. Derived at render time (not its own
   // state — avoids adding a useState slot, which would desync the
