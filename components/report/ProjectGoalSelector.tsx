@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import {
+  MAX_ENGINE_GOALS,
   MAX_PROJECT_GOALS,
   SITE_PROJECT_TYPE_OPTIONS,
 } from "@/lib/report-wizard-config";
@@ -27,8 +28,24 @@ export function ProjectGoalSelector({
   required = false,
   compact = false,
 }: ProjectGoalSelectorProps) {
-  const selectedGoals = Array.from(new Set(goals)).slice(0, MAX_PROJECT_GOALS);
+  // Gate review round 2, NEW-3/ruling #4: read against MAX_ENGINE_GOALS
+  // (now 5), not MAX_PROJECT_GOALS (3) — a gate-produced report can
+  // legitimately carry more than 3 real goal ids, and this display read
+  // used to silently truncate them the instant this component rendered,
+  // before the visitor touched anything. `atLimit` (below) intentionally
+  // STAYS at MAX_PROJECT_GOALS — that's the wizard's own "pick up to 3"
+  // fresh-selection growth limit, untouched by this fix.
+  const selectedGoals = Array.from(new Set(goals)).slice(0, MAX_ENGINE_GOALS);
   const atLimit = selectedGoals.length >= MAX_PROJECT_GOALS;
+  // Gate review round 3, MINOR R3-2: the counter and "at limit" copy used
+  // to hardcode MAX_PROJECT_GOALS/"Three" even when a gate-seeded report
+  // already has MORE goals selected than that — rendering the genuinely
+  // confusing "4/3 selected" and "Three goals selected." with 4 checked.
+  // Both now derive from whichever is actually larger: the normal 3-goal
+  // cap, or however many are already selected (only possible via a
+  // pre-existing seed, never through this component's own growth path,
+  // which `atLimit` — unchanged — still blocks at 3).
+  const displayCap = Math.max(MAX_PROJECT_GOALS, selectedGoals.length);
 
   const toggleGoal = (goalId: string) => {
     if (disabled) return;
@@ -48,7 +65,7 @@ export function ProjectGoalSelector({
           {label}
         </legend>
         <span className="font-mono-bureau text-[8px] uppercase tracking-[0.14em] text-[#0C1B33]/30">
-          {selectedGoals.length}/{MAX_PROJECT_GOALS}{required ? " selected" : ""}
+          {selectedGoals.length}/{displayCap}{required ? " selected" : ""}
         </span>
       </div>
       <p className="mb-3 text-[12px] leading-relaxed text-[#0C1B33]/45">
@@ -116,7 +133,7 @@ export function ProjectGoalSelector({
 
       {atLimit && (
         <p className="mt-2 text-[10px] leading-relaxed text-[#0C1B33]/40">
-          Three goals selected. Remove one to choose another.
+          {displayCap} goal{displayCap === 1 ? "" : "s"} selected. Remove one to choose another.
         </p>
       )}
     </fieldset>

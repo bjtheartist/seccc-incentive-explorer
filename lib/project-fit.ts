@@ -24,7 +24,7 @@ type ProgramProjectProfile = Pick<Program, "id" | "name"> &
     >
   >;
 
-interface GoalRule {
+export interface GoalRule {
   strongProgramIds: ReadonlySet<string>;
   relatedProgramIds: ReadonlySet<string>;
   keywords: readonly string[];
@@ -34,7 +34,7 @@ function ids(values: readonly string[]): ReadonlySet<string> {
   return new Set(values);
 }
 
-const GOAL_RULES: Record<string, GoalRule> = {
+export const GOAL_RULES: Record<string, GoalRule> = {
   rehab: {
     strongProgramIds: ids([
       "sbif",
@@ -48,6 +48,10 @@ const GOAL_RULES: Record<string, GoalRule> = {
       "classC",
       "bmec",
       "cookBrownfield",
+      // Orphan pass (email-gate redesign): nrhpDistricts IS the 20% federal
+      // rehabilitation tax credit — its whole benefit is "certified
+      // rehabilitation costs," a direct rehab-goal match, not incidental.
+      "nrhpDistricts",
     ]),
     relatedProgramIds: ids([
       "enterprise",
@@ -59,6 +63,15 @@ const GOAL_RULES: Record<string, GoalRule> = {
       "cdgLarge",
       "microMarketRecovery",
       "ccsa",
+      // Orphan pass (email-gate redesign): landmarkDistricts unlocks local
+      // preservation incentives for "rehabilitating historically
+      // significant buildings" per program copy — related, since the
+      // concrete tax benefit routes through the separate Class L entry.
+      "landmarkDistricts",
+      // cdfiBond financing deploys to commercial real estate rehab/reuse
+      // projects via local CDFIs — same financing-mechanism family as
+      // hudSection108/sba7a504 above.
+      "cdfiBond",
     ]),
     keywords: [
       "renovat",
@@ -95,6 +108,19 @@ const GOAL_RULES: Record<string, GoalRule> = {
       "alliesCommunityBusiness",
       "workforceSolutions",
       "aim",
+      // Orphan pass (email-gate redesign): class6bSer is the hardship variant
+      // of class6b (already strong above) for long-tenured industrial
+      // operations continuing at the same site — an expansion-adjacent
+      // outcome, not a new project type of its own.
+      "class6bSer",
+      // industrialCorridors zoning protections explicitly cover "existing
+      // ... industrial users" per program copy — an expansion-adjacent fit
+      // for businesses growing in place within a protected corridor.
+      "industrialCorridors",
+      // cdfiBond financing deploys to "commercial real estate ... in
+      // SECCC-area neighborhoods" per program copy — a growth-financing
+      // mechanism, same family as sba7a504/hudSection108 above.
+      "cdfiBond",
     ]),
     keywords: [
       "expan",
@@ -184,6 +210,11 @@ const GOAL_RULES: Record<string, GoalRule> = {
       "smallBizSource",
       "nof",
       "tif",
+      // Orphan pass (email-gate redesign): industrialCorridors zoning
+      // protections explicitly cover "prospective industrial users" per
+      // program copy — a relocation-adjacent fit for businesses locating
+      // into a protected corridor.
+      "industrialCorridors",
     ]),
     keywords: [
       "relocat",
@@ -259,7 +290,7 @@ const GOAL_RULES: Record<string, GoalRule> = {
   },
 };
 
-const SPECIALIZED_INDUSTRY_PROGRAM_IDS = ids([
+export const SPECIALIZED_INDUSTRY_PROGRAM_IDS = ids([
   "rev",
   "micro",
   "dataCenter",
@@ -270,6 +301,56 @@ const SPECIALIZED_INDUSTRY_PROGRAM_IDS = ids([
   "liveTheaterCredit",
   "cannabisR3",
   "cookCannabisGrant",
+]);
+
+/**
+ * Goal-independent exemption fixture (email-gate redesign, spec §B orphan
+ * pass). Every program id in the registry must end up either goal-reachable
+ * (explicit strong/relatedProgramIds membership in GOAL_RULES above) or
+ * documented here with an honest reason — see
+ * lib/__tests__/goal-coverage.test.ts, which fails on drift in either set.
+ *
+ * PLACE_BASED_EXEMPT_PROGRAM_IDS: the benefit is keyed to the address/zone
+ * itself, not to what the visitor is trying to do there. A business owner
+ * renovating, expanding, or relocating into one of these zones gets the
+ * same eligibility regardless of which project goal they picked — the zone
+ * status is surfaced through the report's location/zone layer, not through
+ * goal filtering.
+ */
+export const PLACE_BASED_EXEMPT_PROGRAM_IDS = ids([
+  // Investor capital-gains deferral tied to Qualified Opportunity Fund
+  // investment in a designated zone — the incentive attaches to the
+  // investment vehicle and the zone, not to a renovate/expand/hire project
+  // type.
+  "federalOZ",
+  "illinoisOZ",
+  // Federal contracting set-aside eligibility keyed to a business's
+  // principal-office zone and residence of its workforce — a location/
+  // workforce-composition eligibility test, not a project-goal fit.
+  "hubzone",
+]);
+
+/**
+ * GOAL_INDEPENDENT_EXEMPT_PROGRAM_IDS: the program is real and mapped at
+ * the address, but eligibility turns on something no project-goal chip
+ * represents — a declared disaster, or an applicant type the site visitor
+ * (an individual business) is not. Each reason is program-specific, not a
+ * catch-all.
+ */
+export const GOAL_INDEPENDENT_EXEMPT_PROGRAM_IDS = ids([
+  // SBA Disaster EIDL eligibility turns on having suffered economic injury
+  // from the declared July 2025 Cook County storm/flood event — a
+  // time-boxed disaster declaration, not a project type.
+  "sbaDisasterEidl",
+  // EDA Build to Scale's prime applicants are nonprofits, EDOs,
+  // universities, and governments (SECCC could only be a sub-awardee) — not
+  // an individual business selecting a project goal.
+  "edaBuildToScale",
+  // Invest in Cook funds local governments, transit agencies, and
+  // public-land agencies; private organizations may only participate as a
+  // partner to an eligible public sponsor — not directly actionable by a
+  // site visitor's own project goal.
+  "investInCook",
 ]);
 
 const PROJECT_FIT_PRIORITY: Record<ProjectFitLevel, number> = {

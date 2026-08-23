@@ -48,6 +48,7 @@ import type {
   WizardState,
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
+import { resolveGatePrepareGoals } from "@/lib/gate-goal-groups";
 import {
   CONFIRMED_PROGRAMS_SECTION_ID,
   normalizePublicReportForDisplay,
@@ -1787,17 +1788,26 @@ function ReportWizardPage() {
 
   const handlePrepareGatedReport = useCallback(
     async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
-      const normalizedGoals = selectedProjectGoals({ projectGoals });
-      const reportGoals = selectedProjectGoals({
-        projectGoals: report?.metadata?.projectGoals,
-        projectType: report?.metadata?.projectType,
+      // Gate review round 1, BLOCKER 1 / round 2, ruling #6: the
+      // truncation-vs-noop decision lives in `resolveGatePrepareGoals`
+      // (lib/gate-goal-groups.ts) — the exact function this line calls,
+      // unit-tested directly (including a passthrough-plus-chip-picks
+      // probe, which `selectedProjectGoals()`'s MAX_ENGINE_GOALS cap
+      // (lib/report-wizard-config.ts — see its own doc comment for the
+      // provable-ceiling derivation) would truncate but this must not) so
+      // a regression here is caught without mounting the whole report page.
+      const existingProjectGoals = report?.metadata?.projectGoals?.length
+        ? report.metadata.projectGoals
+        : report?.metadata?.projectType
+          ? [report.metadata.projectType]
+          : [];
+      const { isNoop, normalizedGoals } = resolveGatePrepareGoals({
+        incomingGoalIds: projectGoals,
+        incomingCustomGoal: customGoal,
+        existingProjectGoals,
+        existingCustomGoal: report?.metadata?.customGoal || "",
       });
-      if (
-        JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
-        (report?.metadata?.customGoal || "") === customGoal.trim()
-      ) {
-        return report;
-      }
+      if (isNoop) return report;
 
       const preparedState: WizardState = {
         ...wizardState,
@@ -2045,6 +2055,7 @@ function ReportWizardPage() {
           <ReportEmailGate
             report={report}
             source={reportSource}
+            wizardState={wizardState}
             onPrepareReport={handlePrepareGatedReport}
             onReportReady={handleGatedReportReady}
           />
