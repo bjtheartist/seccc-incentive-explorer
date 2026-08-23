@@ -16,12 +16,12 @@ const report: GeneratedReport = {
   },
 };
 
-function renderGate() {
+function renderGate(reportOverride: GeneratedReport = report) {
   return renderToStaticMarkup(
     <ReportEmailGate
-      report={report}
+      report={reportOverride}
       source="test"
-      onPrepareReport={async () => report}
+      onPrepareReport={async () => reportOverride}
       onReportReady={() => {}}
     />,
   );
@@ -78,5 +78,46 @@ describe("ReportEmailGate", () => {
     // assertion above is proving reachability rather than that this render
     // simply never emits `disabled`.
     expect(html).toContain("disabled=\"\"");
+  });
+
+  // ─── Persona intake (owner ruling A1, spec v2 deliverable 6) ──────────
+  describe("persona intake chip row", () => {
+    it("renders as an optional row, not a blocking question", () => {
+      const html = renderGate();
+      expect(html).toContain('data-testid="report-email-gate-persona-row"');
+      expect(html).toContain("Which best describes you? (Optional)");
+      // Still reachable: the row never disables the PDF/continue paths.
+      const pdfTag = openTagFor(html, "report-pdf-download");
+      expect(pdfTag).not.toContain("disabled");
+    });
+
+    it("pre-selects the inferred lens from industry/goal (developer signal)", () => {
+      const developerSignal: GeneratedReport = {
+        ...report,
+        metadata: { ...report.metadata, industry: "realEstate" },
+      };
+      const html = renderGate(developerSignal);
+      // Exactly one chip in the persona row carries aria-pressed="true".
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      expect((row.match(/aria-pressed="true"/g) || []).length).toBe(1);
+      // The pressed chip is the developer one specifically.
+      const developerButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Developer or investor<\/button>/,
+      );
+      expect(developerButtonMatch?.[1]).toBe("true");
+    });
+
+    it("pre-selects growing (the default) when no strong signal is present", () => {
+      const html = renderGate();
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      const growingButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Growing \/ property owner<\/button>/,
+      );
+      expect(growingButtonMatch?.[1]).toBe("true");
+    });
   });
 });

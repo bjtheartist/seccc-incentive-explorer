@@ -31,6 +31,11 @@ export const ANALYTICS_EVENT_TYPES = [
   "demo_address_clicked",
   "map_preview_clicked",
   "persona_chip_selected",
+  // Intake inference (owner ruling A1, spec v2 deliverable 6): the
+  // ReportEmailGate persona chip row is pre-selected from goal/industry/
+  // reportType, never a blocking question. One event per gate submission,
+  // metadata.outcome one of "confirmed" | "corrected" | "skipped".
+  "persona_intake_inferred",
   "wizard_step_viewed",
   "refine_cta_shown",
   "refine_clicked",

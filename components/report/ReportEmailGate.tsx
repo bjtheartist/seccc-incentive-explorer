@@ -17,6 +17,8 @@ import {
 import type { GeneratedReport } from "@/lib/report-engine";
 import { selectedProjectGoals } from "@/lib/report-wizard-config";
 import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
+import { PERSONA_CHIPS, storePersona, type PersonaId } from "@/lib/personas";
+import { inferPersonaFromIntake } from "@/lib/persona-inference";
 
 interface ReportEmailGateProps {
   report: GeneratedReport;
@@ -48,6 +50,19 @@ export function ReportEmailGate({
     }),
   );
   const [customGoal, setCustomGoal] = useState(report.metadata?.customGoal || "");
+  // Persona intake (owner ruling A1): inferred once from what the visitor
+  // already told the report (industry/goals/reportType), pre-selected — a
+  // chip row, never a blocking question. Confirming or correcting it costs
+  // one optional tap and never gates submit or "Continue Without Email".
+  const [inferredPersona] = useState<PersonaId>(() =>
+    inferPersonaFromIntake({
+      industry: report.metadata?.industry,
+      projectGoals: report.metadata?.projectGoals,
+      projectType: report.metadata?.projectType,
+      reportType: report.reportType,
+    }),
+  );
+  const [persona, setPersona] = useState<PersonaId>(inferredPersona);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -70,6 +85,26 @@ export function ReportEmailGate({
       if (dialog?.open) dialog.close();
     };
   }, []);
+
+  /**
+   * Persists the visitor's chosen lens for the report view to pick up (the
+   * report's own persona state resolves from `?persona=` or this same
+   * sessionStorage key on mount — see lib/personas.ts `resolveInitialPersona`)
+   * and fires exactly one intake-inference event, capturing whether the
+   * pre-selected chip was confirmed, corrected, or the row went untouched.
+   */
+  const commitPersonaSelection = (preparedReport: GeneratedReport) => {
+    storePersona(persona);
+    trackEvent("persona_intake_inferred", {
+      reportType: preparedReport.reportType,
+      source: "report_email_gate",
+      metadata: {
+        inferredPersona,
+        selectedPersona: persona,
+        outcome: persona === inferredPersona ? "confirmed" : "corrected",
+      },
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,6 +155,7 @@ export function ReportEmailGate({
         });
       }
 
+      commitPersonaSelection(preparedReport);
       onReportReady(preparedReport, identity);
     } catch (deliveryError) {
       setError(
@@ -145,6 +181,7 @@ export function ReportEmailGate({
         address: preparedReport.metadata?.address || null,
         metadata: { projectType: projectGoals[0], projectGoals, entrySource: source },
       });
+      commitPersonaSelection(preparedReport);
       onReportReady(preparedReport);
     } catch (preparationError) {
       setError(
@@ -243,6 +280,35 @@ export function ReportEmailGate({
         </div>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+          {/* Persona intake (owner ruling A1): inferred, pre-selected, always
+              optional — never a blocking question, never gates submit. */}
+          <div data-testid="report-email-gate-persona-row">
+            <span className="mb-2 block font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55">
+              Which best describes you? (Optional)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {PERSONA_CHIPS.map((chip) => {
+                const selected = chip.id === persona;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    aria-pressed={selected}
+                    disabled={isBusy}
+                    onClick={() => setPersona(chip.id)}
+                    className={`font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-3 py-1.5 border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 ${
+                      selected
+                        ? "border-[#2563EB] text-[#2563EB] bg-[#2563EB]/[0.06]"
+                        : "border-[#0C1B33]/18 text-[#0C1B33]/50 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <ProjectGoalSelector
             goals={projectGoals}
             customGoal={customGoal}
