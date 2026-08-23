@@ -336,6 +336,62 @@ describe("ReportEmailGate — BLOCKER 2: never destroys pre-existing goals or cu
   });
 });
 
+describe("ReportEmailGate — gate review round 3, R3-5: un-tapping 'Just looking around' restores pass-through goals", () => {
+  it("the reviewer's exact probe: seed ['other'] + custom text, tap looking, untap — button stays recoverable, original goal survives", async () => {
+    const { onPrepareReport } = renderGate({
+      report: {
+        ...baseReport,
+        metadata: {
+          ...baseReport.metadata,
+          projectGoals: ["other"],
+          projectType: "other",
+          customGoal: "converting a church into a daycare",
+        },
+      },
+    });
+
+    // Starts enabled — the visitor already answered this in the wizard.
+    expect(viewButton().disabled).toBe(false);
+
+    fireEvent.click(goalChip("Just looking around"));
+    expect(goalChip("Just looking around").getAttribute("aria-pressed")).toBe("true");
+    expect(viewButton().disabled).toBe(false); // looking alone is a valid answer too
+
+    // Change of mind: untap looking.
+    fireEvent.click(goalChip("Just looking around"));
+    expect(goalChip("Just looking around").getAttribute("aria-pressed")).toBe("false");
+
+    // Must NOT be stuck disabled — the original pass-through goal is back.
+    expect(viewButton().disabled).toBe(false);
+
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds, customGoal] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(goalIds).toEqual(["other"]);
+    expect(customGoal).toBe("converting a church into a daycare");
+  });
+
+  it("restoration also fires when looking is cleared IMPLICITLY by picking a substantive chip instead of re-tapping looking", async () => {
+    const { onPrepareReport } = renderGate({
+      report: {
+        ...baseReport,
+        metadata: { ...baseReport.metadata, projectGoals: ["vacant-acquisition"] },
+      },
+    });
+    fireEvent.click(goalChip("Just looking around"));
+
+    // Instead of re-tapping "Just looking around," pick a real chip —
+    // toggleGateGoalChip's own logic clears looking as a side effect.
+    fireEvent.click(goalChip("Renovate or build out"));
+    expect(goalChip("Just looking around").getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(new Set(goalIds)).toEqual(new Set(["vacant-acquisition", "rehab"]));
+  });
+});
+
 describe("ReportEmailGate — gate review round 2, NEW-1: seeding must never silently ADD an id", () => {
   it("an existing single-id goal ('expansion') pre-presses its grouped chip for display, but View sends ONLY the original id — never the chip's other id ('equipment')", async () => {
     const { onPrepareReport } = renderGate({

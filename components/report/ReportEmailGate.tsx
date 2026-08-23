@@ -103,9 +103,17 @@ export function ReportEmailGate({
   const [selectedGoalChips, setSelectedGoalChips] = useState<string[]>(() =>
     goalIdsToGateChipIds(originalGoalIds),
   );
+  // Gate review round 3, MAJOR finding R3-5: the LIVE passthrough state
+  // used for emission, cleared while "Just looking around" is active.
+  // `originalPassthroughGoalIds` (below) is the frozen, never-mutated
+  // source of truth used to RESTORE it — without this, seeding
+  // `["other"]` + custom text, tapping "Just looking around," then
+  // un-tapping it left the box permanently disabled with no way back
+  // short of a reload.
   const [passthroughGoalIds, setPassthroughGoalIds] = useState<string[]>(() =>
     unmatchedGoalIds(originalGoalIds),
   );
+  const [originalPassthroughGoalIds] = useState<string[]>(() => unmatchedGoalIds(originalGoalIds));
   // NEW-2/ruling #3: seeded state above MAX_GATE_GOAL_CHIPS (e.g. a
   // legacy 3-goal wizard run) is legal and must stay recoverable — the
   // visitor may freely deselect/reselect any of THOSE chips without a
@@ -215,12 +223,27 @@ export function ReportEmailGate({
     // array, verbatim" to "derived from whatever's pressed" — see
     // `projectGoalIds` below.
     setHasToggledGoals(true);
-    // An explicit "Just looking around" tap is an unambiguous "no goal
-    // filter" signal — it overrides any passed-through, chip-less ids from
-    // the report's existing metadata the same way it overrides the visible
-    // chips (spec §A: exclusive of the other 7).
-    if (chipId === GATE_LOOKING_CHIP_ID) setPassthroughGoalIds([]);
-    setSelectedGoalChips((current) => toggleGateGoalChip(current, chipId, goalChipCap));
+
+    const next = toggleGateGoalChip(selectedGoalChips, chipId, goalChipCap);
+    const wasLookingSelected = selectedGoalChips.includes(GATE_LOOKING_CHIP_ID);
+    const isLookingSelectedNow = next.includes(GATE_LOOKING_CHIP_ID);
+    // Gate review round 3, MAJOR finding R3-5: an explicit "Just looking
+    // around" tap is an unambiguous "no goal filter" signal — it clears
+    // any passed-through, chip-less ids from the report's existing
+    // metadata the same way it overrides the visible chips (spec §A:
+    // exclusive of the other 7). But that must be RECOVERABLE: whenever
+    // looking gets deselected again — either by tapping it a second time,
+    // or implicitly, by picking a substantive chip while looking was
+    // active — the original pass-through ids come back. Without this,
+    // tapping looking then changing your mind left the gate permanently
+    // disabled for any report seeded with a chip-less goal, with no way
+    // back short of a reload.
+    if (isLookingSelectedNow && !wasLookingSelected) {
+      setPassthroughGoalIds([]);
+    } else if (wasLookingSelected && !isLookingSelectedNow) {
+      setPassthroughGoalIds(originalPassthroughGoalIds);
+    }
+    setSelectedGoalChips(next);
   };
 
   const selectPersonaChip = (chipId: string) => {
