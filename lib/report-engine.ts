@@ -1612,33 +1612,66 @@ export function buildVerifySources(program: Program): ReportItem["verifySources"
   return sources.length > 0 ? sources.slice(0, 3) : undefined;
 }
 
+/** Compares an ISO YYYY-MM-DD date string against today's date (local
+ *  midnight). Returns true when `dateIso` is strictly before today. Never
+ *  throws on an unparseable date — a bad string simply doesn't count as
+ *  "in the past" (fails closed toward not downgrading a claim it can't
+ *  actually evaluate). */
+function isPastDate(dateIso: string | null | undefined): boolean {
+  if (!dateIso) return false;
+  const parsed = new Date(`${dateIso}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return parsed.getTime() < today.getTime();
+}
+
 /**
- * "What to expect" — intake cadence read from EXACTLY ONE structured field,
- * `intakeStatus`, via a single switch (no overlapping branches). This used
- * to also check `recurring` first and text-mine `benefits[]` for the word
- * "reimburs" — both deleted per the eligibility-claims doctrine (gate
- * finding 2+3): `recurring && intakeStatus !== "closed"` matched SBIF
- * (recurring=true, intakeStatus="open") and produced "no fixed application
- * window published", which is FALSE — SBIF has real, resolved per-TIF-
- * district windows (see FundingWindowChart, which plots them from this
- * exact program). A keyword match on published prose is not a structured
- * fact and can silently contradict the program's own real behavior; it is
- * not an acceptable source for a claim this module makes on its own
- * authority. If `intakeStatus` carries no signal, this renders nothing —
- * never a fallback guess.
+ * "What to expect" — intake cadence read from structured fields only,
+ * never text-mined prose (gate finding 2+3's doctrine, still in force).
+ *
+ * Gate round 2, BLOCKER 2+3: `intakeStatus === "open"` alone used to
+ * produce an unqualified, undated present-tense claim — "Applications are
+ * being accepted under the published intake window." — for EVERY program
+ * marked open, with no check on whether the program's own published
+ * window had already closed. Verified false for three real catalog
+ * programs (ccsa, cdgSmall, cdgMedium): all three carry `intakeStatus:
+ * "open"` but their own `nextWindow.expected` dates (2026-08-21,
+ * 2026-08-14, 2026-08-14) are DAYS IN THE PAST relative to when this
+ * comment was written (2026-08-23) — the catalog's `intakeStatus` field
+ * had gone stale without a corresponding `nextWindow` update, and this
+ * function was repeating the stale claim verbatim as if it were current.
+ *
+ * Fixed using the repo's own established pattern
+ * (lib/program-public.ts's `benefitQualifier`, lines ~98-100): every
+ * claim is date-qualified via `statusAsOf` ("as of {date}"), NEVER a bare
+ * unqualified present-tense fact — and an "open" claim is additionally
+ * checked against `nextWindow.expected`: when that date is in the past,
+ * the claim downgrades to naming the real closed date instead of
+ * asserting the window is still active. `isPastDate` fails closed (an
+ * absent or unparseable window date never triggers a downgrade) so this
+ * can only ever become MORE cautious, never fabricate a close date that
+ * isn't real.
  */
 export function buildExpectations(program: Program): string | undefined {
+  const statusAsOf = program.statusAsOf;
+  const asOfClause = statusAsOf ? ` as of ${statusAsOf}` : "";
   switch (program.intakeStatus) {
-    case "open":
-      return "Applications are being accepted under the published intake window.";
+    case "open": {
+      const windowClosed = isPastDate(program.nextWindow?.expected);
+      if (windowClosed) {
+        return `Most recent published window closed ${program.nextWindow!.expected} — check for the next round.`;
+      }
+      return `Applications are being accepted under the published intake window${asOfClause}.`;
+    }
     case "rolling":
-      return "Rolling intake — applications are accepted on an ongoing basis.";
+      return `Rolling intake — applications are accepted on an ongoing basis${asOfClause}.`;
     case "closed":
-      return "Intake is not currently open — confirm the next window before relying on this program.";
+      return `Intake is not currently open${asOfClause} — confirm the next window before relying on this program.`;
     case "lapsed":
-      return "Intake authority is currently lapsed — confirm current status before relying on this program.";
+      return `Intake authority is currently lapsed${asOfClause} — confirm current status before relying on this program.`;
     case "pending":
-      return "Intake has not yet opened for the published window.";
+      return `Intake has not yet opened for the published window${asOfClause}.`;
     default:
       return undefined;
   }

@@ -77,9 +77,46 @@ describe("buildExpectations", () => {
     const sbif = realProgram("sbif");
     expect(sbif.intakeStatus).toBe("open");
     expect(sbif.recurring).toBe(true); // the exact condition that used to misfire
+    // SBIF's real nextWindow.expected is in the future relative to any
+    // date this test could plausibly run on within this catalog's shelf
+    // life, so the claim stays un-downgraded — date-qualified via
+    // statusAsOf (gate round 2, BLOCKER 2+3), never a bare present-tense
+    // fact.
     const expectations = buildExpectations(sbif);
     expect(expectations).not.toMatch(/no fixed application window/i);
-    expect(expectations).toBe("Applications are being accepted under the published intake window.");
+    expect(expectations).toBe(`Applications are being accepted under the published intake window as of ${sbif.statusAsOf}.`);
+  });
+
+  // Gate round 2, BLOCKER 2+3 (regression, real bug this fixes): three
+  // REAL catalog programs carry intakeStatus="open" while their own
+  // published nextWindow.expected date has already passed — the catalog's
+  // status field going stale without the window field following. The old
+  // code repeated "Applications are being accepted..." verbatim for all
+  // three, an unqualified present-tense claim that was simply false the
+  // day this was written (2026-08-23: ccsa's window closed 2026-08-21,
+  // cdgSmall/cdgMedium's closed 2026-08-14).
+  it("downgrades an 'open' claim to the real closed-window date for every REAL catalog program whose published window has already passed", () => {
+    for (const id of ["ccsa", "cdgSmall", "cdgMedium"]) {
+      const program = realProgram(id);
+      expect(program.intakeStatus, `${id}.intakeStatus`).toBe("open");
+      const windowDate = program.nextWindow?.expected;
+      expect(windowDate, `${id}.nextWindow.expected`).toBeTruthy();
+      const expectations = buildExpectations(program);
+      expect(expectations, `${id} expectations`).not.toMatch(/being accepted/i);
+      expect(expectations, `${id} expectations`).toBe(
+        `Most recent published window closed ${windowDate} — check for the next round.`,
+      );
+    }
+  });
+
+  it("never downgrades a program whose nextWindow is genuinely in the future, or has no nextWindow at all", () => {
+    const futureWindow = buildExpectations({ intakeStatus: "open", statusAsOf: "2026-08-01", nextWindow: { expected: "2099-01-01", note: "" } } as unknown as Program);
+    expect(futureWindow).toMatch(/being accepted/i);
+    expect(futureWindow).not.toMatch(/closed/i);
+
+    const noWindow = buildExpectations({ intakeStatus: "open", statusAsOf: "2026-08-01" } as unknown as Program);
+    expect(noWindow).toMatch(/being accepted/i);
+    expect(noWindow).not.toMatch(/closed/i);
   });
 
   it("never derives a reimbursement claim from benefits[] text — expectations is structured-fields-only now", () => {
