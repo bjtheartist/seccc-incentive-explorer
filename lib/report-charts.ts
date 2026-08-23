@@ -20,7 +20,10 @@ export interface FundingWindowRow {
   tooltip: string;
 }
 
-function deadlinesSectionItems(report: GeneratedReport): ReportItem[] {
+/** Exported for lib/report-looking-overview.ts's "What's notable" panel
+ *  (gate finding 9/10) — the same real, already-resolved deadline items
+ *  every chart in this file already reads, reused rather than re-derived. */
+export function deadlinesSectionItems(report: GeneratedReport): ReportItem[] {
   const section = report.sections?.find(
     (s) => s.id === SECTION_IDS.upcomingDeadlines || s.title === "Upcoming Deadlines Near This Address",
   );

@@ -987,5 +987,57 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       });
       expect(html).toContain('data-testid="stub-report-email-gate"');
     });
+
+    // Gate finding 9/10: the additive `looking` persona — render-level
+    // proof its R5LookingFinal board panels actually mount, AND that bare
+    // persona="all" stays byte-equivalent (the ruling's explicit
+    // requirement) despite the new branch existing in the same file.
+    // Nested inside Floor suite (not a sibling) to reuse its
+    // multiProgramReport()/sectionFragment() helpers.
+    describe("The 'looking' persona (gate finding 9/10, R5LookingFinal board)", () => {
+    it("renders Location snapshot, What's notable, and Explore by interest for persona=looking", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "looking" });
+      expect(html).toContain('data-testid="location-snapshot"');
+      expect(html).toContain('data-testid="explore-by-interest"');
+      expect(html).toContain("I own a business");
+      expect(html).toContain("I support businesses");
+      expect(html).toContain("I develop property");
+      expect(html).toContain('data-testid="full-picture-line"');
+    });
+
+    it("does NOT collapse any program into 'Also at this address' for persona=looking — it is a screening-overview lens, not a filtered one", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "looking" });
+      expect(html).not.toContain('id="also-at-this-address"');
+      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+      // sbif does not match ANY of the four filtering personas' tags, but
+      // "looking" filters nothing — it must still be present on the face.
+      expect(confirmedFragment).toContain("SBIF Facade Grant");
+    });
+
+    it("none of the looking-only panels render for any OTHER persona, including 'all'", async () => {
+      for (const persona of ["all", "starting", "growing", "developer", "supporter"] as const) {
+        const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona });
+        expect(html, `persona=${persona}`).not.toContain('data-testid="location-snapshot"');
+        expect(html, `persona=${persona}`).not.toContain('data-testid="explore-by-interest"');
+      }
+    });
+
+    it("bare persona=all stays byte-identical to its pre-\"looking\"-persona render (characterization, not just a marker check)", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "all" });
+      // "all" renders the flat kitchen sink: no guidepost bands, no
+      // Also-at-this-address disclosure (nothing is collapsed on "all"
+      // either), none of the new looking-only markers, and the confirmed
+      // section carries every program including the persona-mismatched one.
+      expect(html).not.toContain('id="also-at-this-address"');
+      expect(html).not.toContain("PART 01");
+      expect(html).not.toContain("data-testid=\"location-snapshot\"");
+      expect(html).not.toContain("data-testid=\"explore-by-interest\"");
+      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+      expect(confirmedFragment).toContain("SBIF Facade Grant");
+      expect(confirmedFragment).toContain("TIF District Program");
+      expect(confirmedFragment).toContain("Federal Opportunity Zone");
+      expect(confirmedFragment).toContain("High Unemployment Area");
+    });
   });
+});
 });

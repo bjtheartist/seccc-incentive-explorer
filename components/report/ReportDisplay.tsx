@@ -77,6 +77,11 @@ import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import { FundingWindowChart } from "@/components/report/FundingWindowChart";
 import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
 import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
+import {
+  LocationSnapshotPanel,
+  WhatsNotablePanel,
+  ExploreByInterestPanel,
+} from "@/components/report/LookingOverview";
 import { BriefStageAsk } from "@/components/report/BriefStageAsk";
 import { BriefPage } from "@/components/report/BriefPage";
 import {
@@ -1665,6 +1670,16 @@ export function ReportDisplay({
               <CorridorInvestmentChart report={lensed} />
             )}
 
+            {/* "Just looking" overview (gate finding 9/10, R5LookingFinal
+                board): Location snapshot stat row + What's notable — both
+                additive, both persona="looking" only. */}
+            {showPersonaLens && persona === "looking" && (
+              <>
+                <LocationSnapshotPanel report={lensed} />
+                <WhatsNotablePanel report={lensed} />
+              </>
+            )}
+
             {/* Documents to Gather (spec v2 item 3, owner + supporter only):
                 real Business File foundation-task content, lands at the
                 end of Part 02 (Capital & Programs) — right before the
@@ -1685,6 +1700,16 @@ export function ReportDisplay({
                   <ContactSheet report={lensed} persona={persona} />
                 </div>
               </>
+            )}
+
+            {/* "Explore by interest" + the full-picture line (gate finding
+                9/10, R5LookingFinal board PART 03) — persona="looking" only,
+                moves someone off this screening lens once they know what
+                they're looking for. */}
+            {showPersonaLens && persona === "looking" && (
+              <div className="mt-8">
+                <ExploreByInterestPanel report={lensed} />
+              </div>
             )}
 
             {/* ── Recommended Actions ──

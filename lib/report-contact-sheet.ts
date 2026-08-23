@@ -47,6 +47,10 @@ const PERSONA_LANE_PREFERENCE: Record<Exclude<PersonaId, "all">, LocalSupportLan
   growing: ["business_navigation", "capital_readiness", "small_business_capital"],
   supporter: ["corridor_place_based", "business_navigation", "property_community_development"],
   developer: ["property_community_development", "capital_readiness", "small_business_capital"],
+  // Gate finding 9/10: "looking" has no specific goal to prefer a lane by
+  // yet — business_navigation first (the broadest, most generally useful
+  // starting point for someone still exploring), same order as "starting".
+  looking: ["business_navigation", "legal_support", "workforce"],
 };
 
 function organizationWhyLine(item: ReportItem, persona: PersonaId): string | null {

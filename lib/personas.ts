@@ -9,7 +9,16 @@
 // eligibility. All persona copy stays descriptive ("programs most often
 // used by developers"), never determinative.
 
-export type PersonaId = "all" | "starting" | "growing" | "developer" | "supporter";
+/**
+ * Gate finding 9/10 RULING: `looking` is an ADDITIVE persona id (the same
+ * precedent `supporter` set) — added, never re-keying any existing id.
+ * Unlike the other four real lenses, `looking` does NOT filter programs by
+ * persona tag (there is no "goal" yet to match against) — it is a
+ * screening-overview lens: real committed data, summarized and
+ * highlighted rather than filtered. See lib/report-personas.ts's
+ * applyPersonaLens for the exact (additive) branch this adds.
+ */
+export type PersonaId = "all" | "starting" | "growing" | "developer" | "supporter" | "looking";
 
 export interface PersonaChip {
   id: PersonaId;
@@ -55,6 +64,15 @@ export const PERSONA_CHIPS: readonly PersonaChip[] = [
     label: "Supporting local businesses",
     descriptor:
       "programs most often used by organizations and advisors supporting local businesses and corridors",
+  },
+  {
+    id: "looking",
+    label: "Just looking",
+    // Deliberately NOT "programs most often used by..." — this lens doesn't
+    // filter by persona tag at all (see report-personas.ts applyPersonaLens),
+    // so the descriptor stays honest about what it actually shows: a
+    // screening overview of everything mapped, not a filtered slice.
+    descriptor: "a quick screening overview of everything mapped at this address",
   },
 ] as const;
 

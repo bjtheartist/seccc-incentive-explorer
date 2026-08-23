@@ -27,7 +27,7 @@ function reportFixture(): GeneratedReport {
 }
 
 describe("PersonaChips", () => {
-  it("renders the VIEWING AS row with all five lenses (additive supporter id)", () => {
+  it("renders the VIEWING AS row with all six lenses (additive supporter + looking ids)", () => {
     const html = renderToStaticMarkup(
       <PersonaChips persona="all" onSelect={() => {}} report={reportFixture()} />,
     );
@@ -37,6 +37,7 @@ describe("PersonaChips", () => {
     expect(html).toContain("Growing / property owner");
     expect(html).toContain("Developer or investor");
     expect(html).toContain("Supporting local businesses");
+    expect(html).toContain("Just looking");
     // Descriptive framing only — never an eligibility claim on the chips.
     expect(html).not.toContain("eligible");
     expect(html).not.toContain("qualify");
@@ -52,7 +53,7 @@ describe("PersonaChips", () => {
     );
     // The selected chip carries aria-pressed="true"; exactly one is active.
     expect((html.match(/aria-pressed="true"/g) || []).length).toBe(1);
-    expect((html.match(/aria-pressed="false"/g) || []).length).toBe(4);
+    expect((html.match(/aria-pressed="false"/g) || []).length).toBe(5);
   });
 
   it("hides from print (export renders the canonical 'All' view)", () => {

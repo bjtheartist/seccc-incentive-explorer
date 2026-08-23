@@ -339,4 +339,17 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).not.toContain("item.matchExplanation || item.eligibilityRules || item.url");
     }
   });
+
+  // Gate finding 9/10: the additive `looking` persona's R5LookingFinal
+  // board panels (Location snapshot, What's notable, Explore by interest
+  // + the full-picture line), both forks.
+  it("both forks render the 'looking' persona's overview panels, gated to persona === \"looking\" only", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import {\n  LocationSnapshotPanel,\n  WhatsNotablePanel,\n  ExploreByInterestPanel,\n} from \"@/components/report/LookingOverview\"");
+      expect(fork).toContain('showPersonaLens && persona === "looking" && (');
+      expect(fork).toContain("<LocationSnapshotPanel report={lensed} />");
+      expect(fork).toContain("<WhatsNotablePanel report={lensed} />");
+      expect(fork).toContain("<ExploreByInterestPanel report={lensed} />");
+    }
+  });
 });

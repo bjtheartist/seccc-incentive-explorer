@@ -187,7 +187,13 @@ export function programMatchesPersona(
   persona: PersonaId,
   lookup: PersonaTagLookup = defaultLookup,
 ): boolean {
-  if (persona === DEFAULT_PERSONA) return true;
+  // Gate finding 9/10: "looking" has no goal yet to match programs
+  // against — it is a screening-overview lens, not a filtered one (see
+  // its PERSONA_CHIPS descriptor). Treated the same as "all" here so
+  // applyPersonaLens's hard filter never collapses anything into "Also at
+  // this address" for it, and reorderActionRoadmap/reorderStartHere never
+  // reprioritize by a persona tag that doesn't apply yet.
+  if (persona === DEFAULT_PERSONA || persona === "looking") return true;
   if (!programId) return false;
   return lookup(programId).includes(persona);
 }
@@ -204,6 +210,7 @@ const PERSONA_LANE_PREFERENCE: Record<Exclude<PersonaId, "all">, LocalSupportLan
   growing: ["business_navigation", "capital_readiness", "small_business_capital"],
   supporter: ["corridor_place_based", "business_navigation", "property_community_development"],
   developer: ["property_community_development", "capital_readiness", "small_business_capital"],
+  looking: ["business_navigation", "legal_support", "workforce"],
 };
 
 /** Shim a flattened report item into the shape `inferSupportLanes` reads —
@@ -318,6 +325,10 @@ const PERSONA_SECTION_ORDER: Record<Exclude<PersonaId, "all">, SectionBucketKey[
   growing: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "documentReadiness", "financing", "organizations", "rest"],
   supporter: ["neighborhoodContext", "civicRepresentation", "zoning", "programs", "financing", "organizations", "siteFacts", "logisticsAccess", "rest"],
   developer: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations", "neighborhoodContext", "rest"],
+  // Gate finding 9/10: R5LookingFinal's PART 01 leads with civic context
+  // (Location snapshot + Civic representation) ahead of the raw site-facts
+  // detail — mirrors "supporter"'s context-forward ordering.
+  looking: ["civicRepresentation", "siteFacts", "logisticsAccess", "zoning", "programs", "financing", "organizations", "neighborhoodContext", "rest"],
 };
 
 function reorderSectionsForPersona(sections: ReportSection[], persona: PersonaId): ReportSection[] {

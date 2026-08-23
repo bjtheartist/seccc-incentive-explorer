@@ -33,7 +33,15 @@ export interface PersonaInferenceInput {
  *     chamber staffer, or corridor stakeholder — evaluating on someone
  *     else's behalf, not a business owner acting for themselves)
  *   goal = relocation → starting
- *   otherwise → growing
+ *   no industry, no goal, no reportType at all → looking (gate finding
+ *     9/10: this repo's intake wizard has no explicit "just looking"
+ *     option to read from — verified, none exists in
+ *     SITE_PROJECT_TYPE_OPTIONS — but its own goal-selection step already
+ *     invites skipping it verbatim, "skip ahead if you are still
+ *     exploring." A visitor who genuinely answered nothing carries that
+ *     exact real signal; inferring "growing" for them here had NO signal
+ *     behind it at all — a bare, unjustified default.)
+ *   any real goal answered, even one not otherwise matched above → growing
  */
 export function inferPersonaFromIntake(input: PersonaInferenceInput): PersonaId {
   const goals = new Set([...(input.projectGoals ?? []), input.projectType ?? ""].filter(Boolean));
@@ -46,6 +54,9 @@ export function inferPersonaFromIntake(input: PersonaInferenceInput): PersonaId 
   }
   if (goals.has("relocation")) {
     return "starting";
+  }
+  if (goals.size === 0 && !input.industry && !input.reportType) {
+    return "looking";
   }
   return "growing";
 }
