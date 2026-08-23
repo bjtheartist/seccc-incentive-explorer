@@ -100,11 +100,18 @@ import {
 const REPO_INPUT_DIR = join(process.cwd(), "data", "curated", "investment-inputs");
 const INPUT_DIR = process.env.INPUT_DIR || REPO_INPUT_DIR;
 const GEOCODE_CACHE_PATH = join(INPUT_DIR, "geocode-cache.json");
-const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
+// Outputs default to the committed data/private/ tree; OUTPUT_DIR overrides all
+// three as a set (mirroring INPUT_DIR above) so tests that run the real main()
+// end-to-end can land the artifacts in a throwaway directory instead of
+// rewriting the committed files' generatedAt stamps in place — a full test run
+// must leave `git status` clean.
+const REPO_OUTPUT_DIR = join(process.cwd(), "data", "private");
+const OUTPUT_DIR = process.env.OUTPUT_DIR || REPO_OUTPUT_DIR;
+const OUT_PATH = join(OUTPUT_DIR, "community-investment.json");
 /** Coordinate-less capital CONTEXT (per-district TIF series, CRA/CDFI, state awards). */
-const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
+const CONTEXT_OUT_PATH = join(OUTPUT_DIR, "capital-context.json");
 /** Sol gate finding 3 — record-level, source-keyed exclusion ledger sibling. */
-const EXCLUSION_LEDGER_OUT_PATH = join(process.cwd(), "data", "private", "investment-exclusion-ledger.json");
+const EXCLUSION_LEDGER_OUT_PATH = join(OUTPUT_DIR, "investment-exclusion-ledger.json");
 /** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
