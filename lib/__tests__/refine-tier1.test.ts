@@ -240,4 +240,20 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(liveFork).not.toContain("generateReportPdf(lensed)");
     expect(workspaceFork).not.toContain("generateReportPdf(lensed)");
   });
+
+  // ─── spec v2: guidepost bands + Contact Sheet, both forks ─────────────
+  it("both forks render the guidepost band via the shared guidepostPartForSection lookup, never a hardcoded persona check", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("guidepostPartForSection(section, persona)");
+      expect(fork).toContain("renderGuidepostBand(guidepostPart)");
+    }
+  });
+
+  it("both forks render the shared ContactSheet component, gated to a real persona lens (never on 'all')", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ContactSheet }");
+      expect(fork).toContain("showPersonaLens && persona !== DEFAULT_PERSONA && (");
+      expect(fork).toContain("<ContactSheet report={lensed} persona={persona} />");
+    }
+  });
 });

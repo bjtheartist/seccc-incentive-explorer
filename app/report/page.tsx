@@ -126,7 +126,8 @@ import {
 } from "@/components/report/NeighborhoodEconomics";
 import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
 import { PersonaChips } from "@/components/report/PersonaChips";
-import { applyPersonaLens } from "@/lib/report-personas";
+import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
+import { ContactSheet } from "@/components/report/ContactSheet";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -270,6 +271,14 @@ function reportAnalyticsPayload(
     },
   };
 }
+
+/** Fixed 3-part guidepost anatomy (spec v2 visual law) — same order always;
+ *  personas change what fills each part, never the parts themselves. */
+const GUIDEPOST_PART_LABELS: Record<GuidepostPart, string> = {
+  1: "Site & Standing",
+  2: "Capital & Programs",
+  3: "Partners & Next Steps",
+};
 
 const ALLOWED_REPORT_SOURCES = new Set([
   "homepage",
@@ -3719,6 +3728,20 @@ function ReportDisplay({
     () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
     []
   );
+  // Guidepost band (spec v2 visual law): every REAL persona view reads in
+  // the same fixed 3-part anatomy, never on "all". `guidepostPartForSection`
+  // is a pure lookup off the already-lensed, already-ordered section — this
+  // just notices when the part number changes as we walk the list and
+  // drops a band in front of the section that starts the next part.
+  const renderGuidepostBand = (part: GuidepostPart) => (
+    <div key={`guidepost-part-${part}`} className="mt-10 mb-6 flex items-center gap-3 print:hidden">
+      <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-white bg-[#0C1B33] px-2.5 py-1">
+        {`PART ${String(part).padStart(2, "0")}`}
+      </span>
+      <span className="font-editorial text-xl sm:text-2xl text-[#0C1B33]">{GUIDEPOST_PART_LABELS[part]}</span>
+      <span className="h-[2px] flex-grow bg-[#0C1B33]" />
+    </div>
+  );
   // Keyed by sectionStateKey (section.id, falling back to the title
   // anchor) — NOT array index. The persona lens reorders `lensed.sections`
   // on every persona switch; an index-keyed map silently reattached a prior
@@ -4772,10 +4795,17 @@ function ReportDisplay({
             )}
 
             {/* ── Content Sections ── */}
-            {lensed.sections &&
-              lensed.sections.map((section, sectionIdx) => {
+            {(() => {
+              let previousGuidepostPart: GuidepostPart | null = null;
+              return lensed.sections?.flatMap((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
                 const sectionKey = sectionStateKey(section);
+                const guidepostPart = guidepostPartForSection(section, persona);
+                const band =
+                  guidepostPart !== null && guidepostPart !== previousGuidepostPart
+                    ? renderGuidepostBand(guidepostPart)
+                    : null;
+                previousGuidepostPart = guidepostPart;
 
                 // Persona lens: the "Also at this address" group defaults to
                 // collapsed (still user-expandable, still in the DOM for print/
@@ -4784,7 +4814,7 @@ function ReportDisplay({
                   ? (expandedSections[sectionKey] ?? false)
                   : isSectionOpen(sectionKey, sectionIdx, section.title);
 
-                return (
+                const sectionElement = (
                   <div
                     key={sectionKey}
                     id={sectionToAnchor(section.title)}
@@ -5155,7 +5185,20 @@ function ReportDisplay({
                     )}
                   </div>
                 );
-              })}
+                return band ? [band, sectionElement] : sectionElement;
+              });
+            })()}
+
+            {/* Contact Sheet (spec v2 deliverable 8): the review's
+                highest-value new surface, added to Part 03 alongside
+                (not replacing) the existing support-organizations section.
+                Persona-only — the "all" kitchen sink keeps its
+                un-consolidated section list. */}
+            {showPersonaLens && persona !== DEFAULT_PERSONA && (
+              <div className="mt-8">
+                <ContactSheet report={lensed} persona={persona} />
+              </div>
+            )}
 
             {/* ── Recommended Actions ──
                 Demoted behind native disclosure when report.startHere is
