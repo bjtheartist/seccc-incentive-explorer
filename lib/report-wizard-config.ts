@@ -209,22 +209,29 @@ export const MAX_PROJECT_GOALS = 3;
 
 /**
  * The maximum goal-id SET the engine itself (GOAL_RULES, projectGoalsFit,
- * the report generator) is ever asked to carry — gate review round 2,
- * NEW-3/ruling #4. `MAX_PROJECT_GOALS` above is the WIZARD's own "pick up
- * to 3" fresh-selection UI limit (unchanged, still governs how many NEW
- * goals `ProjectGoalSelector` lets a visitor add in one sitting) — it is
- * NOT an engine constraint. The email gate's 8 grouped chips (spec §A)
- * let a visitor carry up to 4 real ids from 2 chips ("Expand or buy
- * equipment" + "Develop housing or mixed-use" = expansion + equipment +
- * mixed-use + affordable-housing), and nothing downstream has ever had an
- * actual 3-goal limit — that cap was only ever a wizard-selector UI
- * artifact. `selectedProjectGoals()` and `ProjectGoalSelector`'s own
- * display read both slice against THIS constant, not `MAX_PROJECT_GOALS`,
- * so a gate-produced 4-goal report round-trips through the wizard's
- * project-intake screen and the inline refine panel intact instead of
- * being silently truncated back to 3 the first time either is opened.
+ * the report generator, `lib/report-engine.ts`'s two `selectedProjectGoals`
+ * call sites) is ever asked to carry — gate review round 2, NEW-3/ruling
+ * #4, raised again in gate review round 3, MAJOR finding R3-1.
+ * `MAX_PROJECT_GOALS` above is the WIZARD's own "pick up to 3"
+ * fresh-selection UI limit (unchanged, still governs how many NEW goals
+ * `ProjectGoalSelector` lets a visitor add in one sitting) — it is NOT an
+ * engine constraint.
+ *
+ * This is the PROVABLE ceiling, not a guess: a gate visit seeds at most
+ * `MAX_PROJECT_GOALS` (3) raw existing goal ids (an ordinary wizard run
+ * never produces more), each of which either matches a grouped chip
+ * (contributing that chip's full `goalIds` count once ANY chip is
+ * toggled — spec §A) or is a pass-through id with no chip (contributing
+ * 1). The worst case picks the two 2-id chips first ("Expand or buy
+ * equipment", "Develop housing or mixed-use") plus any 3rd 1-id
+ * chip/pass-through id: 2 + 2 + 1 = 5. `lib/__tests__/gate-goal-groups.test.ts`
+ * computes this number FROM `GATE_GOAL_CHIPS`' actual shape (not a
+ * hardcoded copy of this reasoning) and asserts `MAX_ENGINE_GOALS` is at
+ * least that — so a future chip regrouping that raises the worst case
+ * breaks that test, prompting a deliberate bump here, instead of quietly
+ * reintroducing silent truncation in production reports.
  */
-export const MAX_ENGINE_GOALS = 4;
+export const MAX_ENGINE_GOALS = 5;
 
 export function selectedProjectGoals(
   state: { projectGoals?: readonly string[]; projectType?: string | null },
