@@ -88,7 +88,20 @@ import {
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
 import { authorityReferenceLine } from "./authority-routing";
 import { policeDistrictLabel } from "./police-districts";
-import { loadCapitalContextForArea, type CraYearRow } from "./investment-analysis";
+// NOTE (build-breaking regression, fixed): do NOT statically import
+// lib/investment-analysis.ts here. This file (report-engine.ts) is bundled
+// into the CLIENT (app/report/page.tsx is 'use client' and imports it
+// directly for types/pure functions) — investment-analysis.ts pulls in
+// node:fs/node:path/node:crypto, and a static top-level import of it broke
+// the webpack client build with "UnhandledSchemeError" (caught by CI, not
+// by local tsc/vitest — neither runs a real client bundle). Only the
+// CraYearRow type is imported here (type-only, erased at compile time,
+// bundle-safe); the actual loadCapitalContextForArea() call now happens
+// server-side in app/api/report/generate/route.ts, which enriches
+// ReportContext.capitalContext before calling generateReportData().
+// buildCorridorInvestmentContext below is a pure reshape of that
+// already-resolved data, never a loader call.
+import type { CraYearRow } from "./investment-analysis";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -3415,28 +3428,36 @@ function generateLocationIncentives(
     marketContext,
     stackingAnalysis,
     communityAssets: communityAssetsData,
-    corridorInvestment: buildCorridorInvestmentContext(communityAssetsData?.communityArea),
+    corridorInvestment: buildCorridorInvestmentContext(communityAssetsData?.communityArea, ctx.capitalContext),
     dataSources,
   };
 }
 
 /**
- * Gate finding 5: supporter corridor-investment chart source. Reads the
- * REAL FFIEC CRA series already committed for this community area — never
- * fetched, never derived from unrelated program data. Returns null (chart
- * renders nothing) when there is no community area to key on, or the file
- * has no series for it. `source` is read from the file's own sources[]
- * list by matching "FFIEC" — never hardcoded to an array index, so if the
- * citation text changes upstream this does not silently go stale.
+ * Gate finding 5: supporter corridor-investment chart source. Pure reshape
+ * ONLY — the REAL FFIEC CRA series is resolved server-side by the caller
+ * (app/api/report/generate/route.ts, via loadCapitalContextForArea) and
+ * passed in as `capitalContext`; this file never calls that loader itself
+ * (see the import-site note above `CraYearRow` — a static import of
+ * lib/investment-analysis.ts here broke the client webpack build, since
+ * this module is bundled into 'use client' app/report/page.tsx). Returns
+ * null (chart renders nothing) when there is no community area, no
+ * capitalContext was supplied, it's for a different area, or it carries no
+ * series. `source` is read from the caller-supplied sources[] list by
+ * matching "FFIEC" — never hardcoded to an array index.
  */
 export function buildCorridorInvestmentContext(
   communityArea: string | null | undefined,
+  capitalContext: { communityArea: string; cra: CraYearRow[] | null; sources: string[] } | null | undefined,
 ): { communityArea: string; series: CraYearRow[]; source: string } | null {
   if (!communityArea) return null;
-  const ctx = loadCapitalContextForArea(communityArea);
-  if (!ctx.cra || ctx.cra.length === 0) return null;
-  const source = ctx.sources.find((s) => s.includes("FFIEC")) ?? ctx.sources[0] ?? "FFIEC CRA small-business lending data";
-  return { communityArea, series: ctx.cra, source };
+  if (!capitalContext || capitalContext.communityArea !== communityArea) return null;
+  if (!capitalContext.cra || capitalContext.cra.length === 0) return null;
+  const source =
+    capitalContext.sources.find((s) => s.includes("FFIEC")) ??
+    capitalContext.sources[0] ??
+    "FFIEC CRA small-business lending data";
+  return { communityArea, series: capitalContext.cra, source };
 }
 
 function buildZoningReportItem(
@@ -5288,6 +5309,18 @@ export interface ReportContext {
   transport?: TransportAccess | null;
   mobilityAccess?: MobilityAccess | null;
   locationContext?: LocationContext;
+  /**
+   * Gate finding 5 — supporter corridor-investment chart. The REAL FFIEC
+   * CRA series for this report's community area, resolved server-side by
+   * the caller (app/api/report/generate/route.ts calls
+   * loadCapitalContextForArea() there, which is safe because Route
+   * Handlers are never bundled into the client) and passed in already
+   * resolved. This module (report-engine.ts) never fetches it itself — a
+   * static import of the fs-backed loader here broke the client webpack
+   * build, since this file is bundled into 'use client' app/report/page.tsx.
+   * Plain, client-safe data shape, matching every other ctx field.
+   */
+  capitalContext?: { communityArea: string; cra: CraYearRow[] | null; sources: string[] } | null;
 }
 
 /**

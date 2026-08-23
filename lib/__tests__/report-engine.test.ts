@@ -7,6 +7,7 @@ import {
   normalizePublicReportForDisplay,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
+import { loadCapitalContextForArea } from "../investment-analysis";
 import type { GeneratedReport } from "../report-engine";
 import type { Program } from "../types";
 import citywideSupportData from "@/data/curated/citywide_business_support_resources.json";
@@ -2100,25 +2101,60 @@ describe("generateReportData — zoning copy never names a generic City without 
 });
 
 describe("buildCorridorInvestmentContext (gate finding 5)", () => {
-  // Real, committed data/private/capital-context.json — not a hand-built
-  // fixture. Albany Park is one of the 77 community areas the file actually
-  // carries a craByCommunityArea series for.
-  it("returns the REAL FFIEC CRA series for a community area the file covers, with the real citation text", () => {
-    const ctx = buildCorridorInvestmentContext("Albany Park");
+  // buildCorridorInvestmentContext is a PURE reshape now — it takes an
+  // already-resolved capitalContext instead of calling
+  // loadCapitalContextForArea itself (a static import of that fs-backed
+  // loader here broke the client webpack build, since report-engine.ts is
+  // bundled into 'use client' app/report/page.tsx; the real loader call
+  // now happens server-side in app/api/report/generate/route.ts). These
+  // tests cover the reshape logic with a synthetic capitalContext; a
+  // real-file smoke check lives in the route's own test coverage.
+  it("reshapes a matching capitalContext into the chart-ready shape, with the real citation text passed through", () => {
+    const ctx = buildCorridorInvestmentContext("Albany Park", {
+      communityArea: "Albany Park",
+      cra: [{ year: 2024, smallBusinessLoanCount: 10, smallBusinessLoanDollars: 5_000_000 }],
+      sources: ["FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS"],
+    });
     expect(ctx).not.toBeNull();
     expect(ctx?.communityArea).toBe("Albany Park");
-    expect(ctx?.series.length).toBeGreaterThan(0);
-    expect(ctx?.series.every((row: { smallBusinessLoanDollars: number }) => typeof row.smallBusinessLoanDollars === "number")).toBe(true);
+    expect(ctx?.series).toEqual([{ year: 2024, smallBusinessLoanCount: 10, smallBusinessLoanDollars: 5_000_000 }]);
     expect(ctx?.source).toMatch(/FFIEC/);
   });
 
-  it("returns null (chart renders nothing) for a community area with no committed CRA series", () => {
-    expect(buildCorridorInvestmentContext("Nonexistent Place")).toBeNull();
+  it("returns null when capitalContext is for a DIFFERENT community area than requested — never cross-wires areas", () => {
+    const ctx = buildCorridorInvestmentContext("Chatham", {
+      communityArea: "Albany Park",
+      cra: [{ year: 2024, smallBusinessLoanCount: 10, smallBusinessLoanDollars: 5_000_000 }],
+      sources: ["FFIEC"],
+    });
+    expect(ctx).toBeNull();
+  });
+
+  it("returns null (chart renders nothing) when capitalContext is absent or carries no series", () => {
+    expect(buildCorridorInvestmentContext("Albany Park", undefined)).toBeNull();
+    expect(buildCorridorInvestmentContext("Albany Park", null)).toBeNull();
+    expect(buildCorridorInvestmentContext("Albany Park", { communityArea: "Albany Park", cra: [], sources: [] })).toBeNull();
+    expect(buildCorridorInvestmentContext("Albany Park", { communityArea: "Albany Park", cra: null, sources: [] })).toBeNull();
   });
 
   it("returns null when there is no community area to key on — never guesses one", () => {
-    expect(buildCorridorInvestmentContext(undefined)).toBeNull();
-    expect(buildCorridorInvestmentContext(null)).toBeNull();
-    expect(buildCorridorInvestmentContext("")).toBeNull();
+    const validCtx = { communityArea: "Albany Park", cra: [{ year: 2024, smallBusinessLoanCount: 1, smallBusinessLoanDollars: 1 }], sources: ["FFIEC"] };
+    expect(buildCorridorInvestmentContext(undefined, validCtx)).toBeNull();
+    expect(buildCorridorInvestmentContext(null, validCtx)).toBeNull();
+    expect(buildCorridorInvestmentContext("", validCtx)).toBeNull();
+  });
+});
+
+describe("buildCorridorInvestmentContext + real capital-context.json (route-level sanity)", () => {
+  // Confirms the REAL committed file still has what app/api/report/generate/
+  // route.ts's server-side loadCapitalContextForArea() call depends on —
+  // Albany Park is one of the 77 community areas with a real CRA series.
+  it("the real file has a non-empty CRA series for Albany Park, shaped as buildCorridorInvestmentContext expects", () => {
+    const raw = loadCapitalContextForArea("Albany Park");
+    expect(raw.cra).not.toBeNull();
+    expect(raw.cra!.length).toBeGreaterThan(0);
+    expect(raw.sources.some((s) => s.includes("FFIEC"))).toBe(true);
+    const ctx = buildCorridorInvestmentContext("Albany Park", { communityArea: "Albany Park", cra: raw.cra, sources: raw.sources });
+    expect(ctx).not.toBeNull();
   });
 });
