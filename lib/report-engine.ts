@@ -235,6 +235,19 @@ export interface ReportItem {
   worksWith?: { label: string; detail: string }[];
   verifySources?: { label: string; url: string; dated?: string | null }[];
   expectations?: string;
+  /**
+   * Raw ISO date (YYYY-MM-DD) for an "Upcoming Deadlines" item — the same
+   * `item.date` lib/deadlines.ts already resolves correctly per-address
+   * (SBIF window start, TIF expiration, program deadline), carried through
+   * unformatted so chart components can plot it. `value` on these items
+   * stays the human "In 5 days — 2026-03-01" display string; this is only
+   * for chart math. Set only on items in the deadlines section.
+   */
+  deadlineDate?: string;
+  /** Which kind of deadline this is — see lib/deadlines.ts DeadlineKind. */
+  deadlineKind?: "program_deadline" | "sbif_window" | "tif_expiration";
+  /** Window close date (ISO) — set only for deadlineKind="sbif_window". */
+  deadlineWindowEnd?: string;
 }
 
 export interface DataSourceCitation {
@@ -2847,6 +2860,9 @@ function buildDeadlinesSection(
       sourceUrl: program?.sourceUrl,
       applicationPortals: program?.applicationPortals,
       verificationSteps: program?.verificationSteps,
+      deadlineDate: item.date,
+      deadlineKind: item.kind,
+      deadlineWindowEnd: item.windowEnd,
     };
   });
 

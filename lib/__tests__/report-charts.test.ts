@@ -1,0 +1,87 @@
+import { describe, expect, it } from "vitest";
+import { buildFundingWindowChartData, buildIncentiveHorizonChartData } from "@/lib/report-charts";
+import type { GeneratedReport } from "@/lib/report-engine";
+
+function reportWithDeadlines(items: GeneratedReport["sections"][number]["items"]): GeneratedReport {
+  return {
+    title: "Test",
+    subtitle: "",
+    reportType: "site-incentives",
+    generatedAt: new Date().toISOString(),
+    summary: "",
+    sections: [
+      {
+        title: "Upcoming Deadlines Near This Address",
+        description: "",
+        items,
+      },
+    ],
+    recommendedActions: [],
+    metadata: {},
+  };
+}
+
+const IN_30_DAYS = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+const IN_120_DAYS = new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10);
+
+describe("buildFundingWindowChartData", () => {
+  it("returns null (renders nothing) when the address has no SBIF window in the deadlines section", () => {
+    expect(buildFundingWindowChartData(reportWithDeadlines([]))).toBeNull();
+    expect(
+      buildFundingWindowChartData(
+        reportWithDeadlines([
+          { label: "TIF", value: "x", deadlineKind: "tif_expiration", deadlineDate: IN_30_DAYS },
+        ]),
+      ),
+    ).toBeNull();
+  });
+
+  it("marks a window opening within 60 days as amber, using the REAL resolved start/end dates", () => {
+    const report = reportWithDeadlines([
+      {
+        label: "SBIF application window — Test TIF",
+        value: "opens soon",
+        deadlineKind: "sbif_window",
+        deadlineDate: IN_30_DAYS,
+        deadlineWindowEnd: IN_120_DAYS,
+      },
+    ]);
+    const rows = buildFundingWindowChartData(report);
+    expect(rows).toHaveLength(1);
+    expect(rows![0].startDate).toBe(IN_30_DAYS);
+    expect(rows![0].endDate).toBe(IN_120_DAYS);
+    expect(rows![0].amber).toBe(true);
+  });
+
+  it("does not mark a window further than 60 days out as amber", () => {
+    const report = reportWithDeadlines([
+      {
+        label: "SBIF window",
+        value: "later",
+        deadlineKind: "sbif_window",
+        deadlineDate: IN_120_DAYS,
+      },
+    ]);
+    expect(buildFundingWindowChartData(report)![0].amber).toBe(false);
+  });
+});
+
+describe("buildIncentiveHorizonChartData", () => {
+  it("returns null when nothing in the deadlines section is a TIF expiration or program deadline", () => {
+    expect(buildIncentiveHorizonChartData(reportWithDeadlines([]))).toBeNull();
+  });
+
+  it("includes TIF expirations and program deadlines (e.g. the real federal OZ 2028 sunset) — excludes SBIF windows", () => {
+    const report = reportWithDeadlines([
+      { label: "87th/Cottage Grove TIF expires", value: "x", deadlineKind: "tif_expiration", deadlineDate: IN_120_DAYS },
+      { label: "Federal Opportunity Zones — OZ 1.0 sunset", value: "x", deadlineKind: "program_deadline", deadlineDate: "2028-12-31" },
+      { label: "SBIF window", value: "x", deadlineKind: "sbif_window", deadlineDate: IN_30_DAYS },
+    ]);
+    const rows = buildIncentiveHorizonChartData(report);
+    expect(rows).toHaveLength(2);
+    expect(rows!.map((r) => r.label)).toEqual([
+      "87th/Cottage Grove TIF expires",
+      "Federal Opportunity Zones — OZ 1.0 sunset",
+    ]);
+  });
+});

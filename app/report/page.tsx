@@ -131,6 +131,8 @@ import { ContactSheet } from "@/components/report/ContactSheet";
 import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
 import { DocumentsToGather } from "@/components/report/DocumentsToGather";
+import { FundingWindowChart } from "@/components/report/FundingWindowChart";
+import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -5224,6 +5226,19 @@ function ReportDisplay({
                 return band ? [band, sectionElement] : sectionElement;
               });
             })()}
+
+            {/* Charts (spec v2 item 4): real committed data only, render
+                nothing when the address has none. Owner (starting/growing)
+                gets the SBIF funding-window chart; developer gets the
+                incentive-horizon chart. Supporter's corridor-investment
+                chart and "all"'s program-mix chart are not built this pass
+                — see docs/persona-report-parity.md. */}
+            {showPersonaLens && (persona === "starting" || persona === "growing") && (
+              <FundingWindowChart report={lensed} />
+            )}
+            {showPersonaLens && persona === "developer" && (
+              <IncentiveHorizonChart report={lensed} />
+            )}
 
             {/* Documents to Gather (spec v2 item 3, owner + supporter only):
                 real Business File foundation-task content, lands at the

@@ -288,4 +288,13 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain("<DocumentsToGather report={lensed} />");
     }
   });
+
+  it("both forks render the FundingWindowChart (owner) and IncentiveHorizonChart (developer), each reading real committed data", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { FundingWindowChart }");
+      expect(fork).toContain("import { IncentiveHorizonChart }");
+      expect(fork).toContain('(persona === "starting" || persona === "growing") && (\n              <FundingWindowChart report={lensed} />');
+      expect(fork).toContain('persona === "developer" && (\n              <IncentiveHorizonChart report={lensed} />');
+    }
+  });
 });

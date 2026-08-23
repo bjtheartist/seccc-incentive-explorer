@@ -139,6 +139,8 @@ export interface DeadlineItem {
   tifDistrict?: string;
   /** Optional supplemental note. */
   note?: string;
+  /** Window close date (ISO YYYY-MM-DD) — set only for kind="sbif_window". */
+  windowEnd?: string;
 }
 
 export interface TifExpirationAlert {
@@ -275,6 +277,7 @@ export function deadlinesForAddress(
           daysFromToday: inWindow ? 0 : daysToStart > 0 ? daysToStart : daysToEnd,
           isPast,
           tifDistrict: tifDistrict,
+          windowEnd: match.windowEnd,
           note: inWindow
             ? `Window open through ${match.windowEnd}`
             : isPast
