@@ -540,6 +540,10 @@ export const SECTION_IDS = {
   siteFacts: "site-facts",
   zoningUseStartingPoint: "zoning-use-starting-point",
   propertyAnalysis: "property-analysis",
+  logisticsAccess: "logistics-access",
+  civicRepresentation: "civic-representation",
+  documentReadiness: "document-readiness",
+  contactSheet: "contact-sheet",
 } as const;
 
 /** Kebab-case id for a `${level}-Level Programs` section, e.g. "city-level-programs". */
@@ -4744,6 +4748,88 @@ function buildTransportationSiteAccessItem(mobility: MobilityAccess): ReportItem
   };
 }
 
+/**
+ * Logistics Access section (persona spec v2, "shortlist infra precedent"):
+ * a dedicated, row-per-mode breakdown of the same mobility-access data
+ * `buildTransportationSiteAccessItem` already summarizes into one Site Facts
+ * item. Building this as a genuine canonical section (not a lens-time
+ * fabrication) keeps the "engine emits one canonical section set, persona is
+ * a pure display transform" boundary intact — the persona order map decides
+ * where this sits, it never invents the data. Truck-route access is
+ * deliberately omitted: no committed source backs it.
+ */
+function buildLogisticsAccessSection(
+  mobility: MobilityAccess | null | undefined,
+  transport: TransportAccess | null | undefined,
+): ReportSection | null {
+  const items: ReportItem[] = [];
+
+  if (mobility) {
+    const rail = mobility.ctaRailStations[0];
+    if (rail) {
+      items.push({
+        label: "Nearest 'L'",
+        value: [formatAccessPointName(rail), formatMiles(rail.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(rail) || undefined,
+      });
+    }
+    const bus = mobility.busStops[0];
+    if (bus) {
+      items.push({
+        label: "Bus",
+        value: [formatAccessPointName(bus), formatMiles(bus.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(bus) || undefined,
+      });
+    }
+    const expressway = mobility.expressways[0];
+    if (expressway) {
+      items.push({
+        label: "Expressway",
+        value: `${humanizeTransportationName(expressway.name)} ramp · ${formatMiles(expressway.miles)}`,
+      });
+    }
+    const midway = mobility.airports.find((a) => /midway/i.test(a.name));
+    const ohare = mobility.airports.find((a) => /o'?hare/i.test(a.name));
+    if (midway || ohare) {
+      items.push({
+        label: "Airports",
+        value: [
+          midway ? `Midway ${formatMiles(midway.miles)}` : null,
+          ohare ? `O'Hare ${formatMiles(ohare.miles)}` : null,
+        ].filter(Boolean).join(" · "),
+      });
+    }
+    const metra = mobility.metraStations[0];
+    if (metra) {
+      items.push({
+        label: "Metra",
+        value: [formatAccessPointName(metra), formatMiles(metra.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(metra) || undefined,
+      });
+    }
+  } else if (transport) {
+    if (transport.rail) {
+      items.push({ label: "Freight rail", value: `${transport.rail.name} · ${formatMiles(transport.rail.miles)}` });
+    }
+    if (transport.expressway) {
+      items.push({ label: "Expressway", value: `${transport.expressway.name} · ${formatMiles(transport.expressway.miles)}` });
+    }
+    items.push({
+      label: "Airports",
+      value: `Midway ${formatMiles(transport.midwayMiles)} · O'Hare ${formatMiles(transport.ohareMiles)}`,
+    });
+  }
+
+  if (items.length === 0) return null;
+
+  return {
+    id: SECTION_IDS.logisticsAccess,
+    title: "Logistics Access",
+    description: "Straight-line distance to transit, expressway, and airport access points. Verify travel time, truck access, and loading before relying on this for a project decision.",
+    items,
+  };
+}
+
 function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
   const lines = [
     siteSignals.nofAwardsNearby > 0
@@ -4823,6 +4909,68 @@ function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null 
       ...(officials.length > 0 ? [`Current officials: ${officials.join(" · ")}`] : []),
       "Representative info is civic context only; verify with the source offices before formal outreach or applications.",
     ].join("\n"),
+  };
+}
+
+/**
+ * Civic Representation section (persona spec v2). Re-presents the SAME
+ * sourced `DistrictData` (ward/alderperson, county commissioner district —
+ * each carrying its own sourceId/sourceLabel/sourceUrl/refreshedAt
+ * provenance) plus the community area and SSA/corridor zone names the
+ * engine already computes, as a dedicated section instead of one folded
+ * item. Genuinely canonical, not lens-time: this only reorganizes data the
+ * engine already sourced and verified — it adds nothing new.
+ *
+ * Police district is deliberately absent: no committed, sourced
+ * police-district boundary dataset exists in this repo. Per the product's
+ * no-fabrication rule this row is omitted entirely rather than guessed —
+ * see docs/persona-report-parity.md.
+ */
+function buildCivicRepresentationSection(
+  districts: DistrictData | null | undefined,
+  zones: Record<string, boolean> | null | undefined,
+  zoneNames: Record<string, string> | null | undefined,
+  communityArea: string | null | undefined,
+): ReportSection | null {
+  const items: ReportItem[] = [];
+
+  if (districts?.ward) {
+    const alder = districts.officials?.alderperson;
+    items.push({
+      label: "Ward",
+      value: alder ? `${districts.ward} · Ald. ${alder.name}` : districts.ward,
+      detail: alder ? `Source: ${alder.sourceLabel}, verified ${alder.refreshedAt}` : undefined,
+      sourceUrl: alder?.sourceUrl,
+    });
+  }
+  if (communityArea) {
+    items.push({ label: "Community area", value: communityArea });
+  }
+  if (districts?.commissionerDistrict) {
+    const commissioner = districts.officials?.commissioner;
+    items.push({
+      label: "County commissioner district",
+      value: commissioner
+        ? `${districts.commissionerDistrict} · Comm. ${commissioner.name}`
+        : districts.commissionerDistrict,
+      detail: commissioner ? `Source: ${commissioner.sourceLabel}, verified ${commissioner.refreshedAt}` : undefined,
+      sourceUrl: commissioner?.sourceUrl,
+    });
+  }
+  if (zones?.ssa && zoneNames?.ssa) {
+    items.push({ label: "SSA", value: zoneNames.ssa, programId: "ssa" });
+  }
+  if (zones?.ccsa && zoneNames?.ccsa) {
+    items.push({ label: "City corridor", value: zoneNames.ccsa, programId: "ccsa" });
+  }
+
+  if (items.length === 0) return null;
+
+  return {
+    id: SECTION_IDS.civicRepresentation,
+    title: "Civic Representation",
+    description: "Elected and appointed representation for this address, from the same sourced district data used elsewhere in this report. Police district is not yet included — no sourced boundary dataset for it is committed to this build.",
+    items,
   };
 }
 
@@ -5041,6 +5189,20 @@ export function generateReportData(
     }
 
     if (reportType === "site-incentives" || reportType === "location-incentives") {
+      // Logistics Access + Civic Representation are genuine canonical
+      // sections (persona spec v2) — built from data the engine already
+      // computes and sources elsewhere, never dropped, only reordered by
+      // the persona lens. Unshifted first here so they sit after Site
+      // Facts once Site Facts and Zoning are unshifted below them.
+      const civicRepresentationSection = buildCivicRepresentationSection(
+        districts,
+        zones,
+        zoneNames,
+        ctx.localBusinessSupport?.communityArea,
+      );
+      if (civicRepresentationSection) report.sections.unshift(civicRepresentationSection);
+      const logisticsAccessSection = buildLogisticsAccessSection(mobilityAccess, transport);
+      if (logisticsAccessSection) report.sections.unshift(logisticsAccessSection);
       if (contextItems.length > 0) {
         report.sections.unshift({
           id: SECTION_IDS.siteFacts,

@@ -9,7 +9,7 @@
 // eligibility. All persona copy stays descriptive ("programs most often
 // used by developers"), never determinative.
 
-export type PersonaId = "all" | "starting" | "growing" | "developer";
+export type PersonaId = "all" | "starting" | "growing" | "developer" | "supporter";
 
 export interface PersonaChip {
   id: PersonaId;
@@ -17,30 +17,57 @@ export interface PersonaChip {
   label: string;
   /** Descriptive framing used in the "Also at this address" copy. */
   descriptor: string;
+  /**
+   * Copy-only grouping for the chip row (Tier 1b extension: additive
+   * `supporter` id). "starting" and "growing" render under one "Business
+   * owner" label in the row — this never changes their PersonaId, the
+   * URL/storage vocabulary, or PROGRAM_PERSONA_TAGS, only how the row is
+   * labeled visually.
+   */
+  group?: string;
 }
 
-/** Chip vocabulary — exact copy from docs/refine-tier1b-design.md §1. */
+/** Chip vocabulary — exact copy from docs/refine-tier1b-design.md §1, extended
+ *  additively (Tier 1b BM4 review: add exactly one id — `supporter` — never
+ *  re-key the existing four). */
 export const PERSONA_CHIPS: readonly PersonaChip[] = [
   { id: "all", label: "All", descriptor: "all programs tied to this address" },
   {
     id: "starting",
     label: "Starting a business",
     descriptor: "programs most often used by new and small businesses",
+    group: "Business owner",
   },
   {
     id: "growing",
     label: "Growing / property owner",
     descriptor:
       "programs most often used by existing businesses and property owners",
+    group: "Business owner",
   },
   {
     id: "developer",
     label: "Developer or investor",
     descriptor: "programs most often used by developers and investors",
   },
+  {
+    id: "supporter",
+    label: "Supporting local businesses",
+    descriptor:
+      "programs most often used by organizations and advisors supporting local businesses and corridors",
+  },
 ] as const;
 
 export const DEFAULT_PERSONA: PersonaId = "all";
+
+/**
+ * Guidepost anatomy (spec v2 visual law) renders for every REAL persona
+ * lens — never for "all", which stays the flat, unlensed kitchen-sink view
+ * (print/PDF/email canonical shape, and the "switch to All" escape hatch).
+ */
+export function hasGuidepostAnatomy(persona: PersonaId): boolean {
+  return persona !== DEFAULT_PERSONA;
+}
 
 /** sessionStorage key + share-URL query param (round-trips a forwarded lens). */
 export const PERSONA_STORAGE_KEY = "seccc.persona";

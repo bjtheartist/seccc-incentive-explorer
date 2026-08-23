@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-13T17:25:47.388Z",
-  "catalogRevision": "2241512139bdd2b0e0de5d48ed126f0dc95d242573db0201d4757f3e53c2ede6",
+  "generatedAt": "2026-08-23T00:21:26.626Z",
+  "catalogRevision": "a658184d97593379074b28ad57cb8190b15ebdd10a523a6b89e9e1bd5e082a58",
   "programs": [
     {
       "id": "tif",
@@ -378,6 +378,7 @@
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
+        "supporter",
         "growing"
       ],
       "zoneKey": "ssa"
@@ -488,6 +489,7 @@
         "administeringAgency": "Cook County Bureau of Economic Development"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -564,6 +566,7 @@
         "administeringAgency": "Cook County Small Business Source"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -640,6 +643,7 @@
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -753,6 +757,7 @@
         "administeringAgency": "City of Chicago Department of Planning and Development — Historic Preservation"
       },
       "personas": [
+        "supporter",
         "growing",
         "developer"
       ],
@@ -829,6 +834,7 @@
         "administeringAgency": "Chicago Department of Housing"
       },
       "personas": [
+        "supporter",
         "growing",
         "developer"
       ],
@@ -904,6 +910,7 @@
         "administeringAgency": "Allies for Community Business (Program Administrator)"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -1579,6 +1586,7 @@
         "administeringAgency": "Illinois DCEO"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -1617,6 +1625,7 @@
         "administeringAgency": "Illinois DCEO Office of Economic Equity & Empowerment"
       },
       "personas": [
+        "supporter",
         "starting"
       ],
       "zoneKey": null
@@ -2379,6 +2388,7 @@
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
+        "supporter",
         "growing"
       ],
       "zoneKey": null
@@ -2639,6 +2649,7 @@
         "administeringAgency": "Greenwood Archer Capital"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],
@@ -2677,6 +2688,7 @@
         "administeringAgency": "Allies for Community Business"
       },
       "personas": [
+        "supporter",
         "starting",
         "growing"
       ],

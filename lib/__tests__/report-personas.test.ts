@@ -4,9 +4,12 @@ import { join } from "path";
 import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
+  guidepostPartForSection,
+  personaEmptyProgramsDescription,
   personaSelectionEvent,
   programMatchesPersona,
   PROGRAM_PERSONA_TAGS,
+  visiblePersonaProgramNames,
 } from "@/lib/report-personas";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
@@ -108,7 +111,7 @@ describe("applyPersonaLens", () => {
     expect(report).toEqual(snapshot);
   });
 
-  it("ranks matched programs first and collapses the rest — never hides them", () => {
+  it("hard filter: visible = persona-tagged ∪ pinned overlays; the rest collapses — never hides them", () => {
     const report = reportFixture();
     const { report: lensed, matchedBefore, matchedAfter } = applyPersonaLens(
       report,
@@ -120,26 +123,29 @@ describe("applyPersonaLens", () => {
     )!;
     const also = lensed.sections.find((s) => s.title === ALSO_AT_ADDRESS_TITLE)!;
 
-    // Matched (tif, federalOZ) + the non-program lead note stay primary.
+    // Matched (tif, federalOZ) + the PINNED overlay (highUnemployment — context,
+    // not a program, always visible) + the non-program lead note stay primary.
     expect(confirmed.items.map((i) => i.programId)).toEqual([
       "tif",
       "federalOZ",
+      "highUnemployment",
       undefined,
     ]);
-    // Everything else collapses under a disclosure — present, not dropped.
+    // Only the persona-mismatched program (sbif) collapses under a
+    // disclosure — present, not dropped.
     expect(also).toBeDefined();
     expect(also.collapsedByPersona).toBe(true);
-    expect(also.items.map((i) => i.programId)).toEqual(["sbif", "highUnemployment"]);
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif"]);
 
     // Collapse-not-hide: the full program set is preserved across the split.
     expect(new Set(programIds(lensed))).toEqual(
       new Set(["tif", "federalOZ", "sbif", "highUnemployment"]),
     );
     expect(matchedBefore).toBe(4);
-    expect(matchedAfter).toBe(2);
+    expect(matchedAfter).toBe(3);
   });
 
-  it("leaves a section untouched when the persona matches nothing in it", () => {
+  it("keeps pinned overlay items visible even when nothing persona-tagged survives in the section", () => {
     const report: GeneratedReport = {
       ...reportFixture(),
       sections: [
@@ -156,15 +162,35 @@ describe("applyPersonaLens", () => {
     const { report: lensed, matchedAfter } = applyPersonaLens(report, "developer");
     expect(lensed.sections.some((s) => s.title === ALSO_AT_ADDRESS_TITLE)).toBe(false);
     expect(lensed.sections[0].items).toHaveLength(2);
-    expect(matchedAfter).toBe(0);
+    expect(matchedAfter).toBe(1);
   });
 
-  it("composes with a goal-refined report: both confirmed sections partition into ONE combined disclosure", () => {
+  it("renders explicit empty-state copy (never a blank page, never the unfiltered list) when a confirmed tier has zero visible programs", () => {
+    const report: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: [{ label: "SBIF", value: "", programId: "sbif" }],
+        },
+      ],
+    };
+    const { report: lensed } = applyPersonaLens(report, "developer");
+    const confirmed = lensed.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)!;
+    expect(confirmed.items).toHaveLength(0);
+    expect(confirmed.description).toBe(personaEmptyProgramsDescription("developer"));
+    const also = lensed.sections.find((s) => s.title === ALSO_AT_ADDRESS_TITLE)!;
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif"]);
+  });
+
+  it("folds a fully-demoted tier (Other Programs Mapped / Additional Programs to Explore) ENTIRELY into the disclosure — goal-matched ∩ persona-tagged never includes it, pinned overlays excepted", () => {
     // The email gate funnels every real instant-flow user into the refined
-    // shape: "Programs to Review for Your Goal" + "Other Programs Tied to This
-    // Address". Persona (audience) and goal (outcome) are orthogonal lenses —
-    // the persona lens must re-rank both sections and pool their out-of-lens
-    // programs into a single "Also at this address" after the last one.
+    // shape: "Programs to Review for Your Goal" + "Other Programs Mapped at
+    // This Address". Persona (audience) and goal (outcome) are orthogonal —
+    // "Other Programs Mapped" is NOT goal-matched by construction, so under a
+    // persona lens it folds into the ONE disclosure in full (its pinned
+    // overlay item excepted — context, not a program).
     const refined: GeneratedReport = {
       ...reportFixture(),
       sections: [
@@ -198,8 +224,7 @@ describe("applyPersonaLens", () => {
     );
 
     const titles = lensed.sections.map((s) => s.title);
-    // Exactly one combined disclosure, placed right after the last confirmed
-    // section (no duplicate "Also at this address" anchors in the DOM).
+    // Exactly one combined disclosure.
     expect(titles.filter((t) => t === ALSO_AT_ADDRESS_TITLE)).toHaveLength(1);
     expect(titles).toEqual([
       GOAL_MATCH_PROGRAMS_SECTION_TITLE,
@@ -208,15 +233,15 @@ describe("applyPersonaLens", () => {
       "Neighborhood Economic Context",
     ]);
 
-    // Goal-ranked order is preserved inside each lensed section.
+    // Goal-matched tier: persona-tag filtered as before (federalOZ matches
+    // developer, sbif does not).
     expect(lensed.sections[0].items.map((i) => i.programId)).toEqual(["federalOZ"]);
-    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["tif"]);
+    // Fully-demoted tier: TIF is not goal-matched, so it is NOT rescued by
+    // matching "developer" — only the pinned overlay survives here.
+    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["highUnemployment"]);
     const also = lensed.sections[2];
     expect(also.collapsedByPersona).toBe(true);
-    expect(also.items.map((i) => i.programId)).toEqual([
-      "sbif",
-      "highUnemployment",
-    ]);
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif", "tif"]);
 
     // Collapse-not-hide across the refined shape too.
     expect(new Set(programIds(lensed))).toEqual(
@@ -224,6 +249,29 @@ describe("applyPersonaLens", () => {
     );
     expect(matchedBefore).toBe(4);
     expect(matchedAfter).toBe(2);
+  });
+
+  it("visiblePersonaProgramNames reads off the SAME lensed section list the cards render, in order — the executive-summary panel and the body can never disagree", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
+    expect(visiblePersonaProgramNames(lensed)).toEqual([
+      { programId: "tif", label: "TIF" },
+      { programId: "federalOZ", label: "Federal OZ" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+    ]);
+  });
+
+  it("guidepostPartForSection assigns the fixed 3-part anatomy and returns null for 'all' (no guidepost)", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
+    const confirmed = lensed.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)!;
+    const support = lensed.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE)!;
+    expect(guidepostPartForSection(confirmed, "developer")).toBe(2);
+    expect(guidepostPartForSection(support, "developer")).toBe(3);
+    expect(guidepostPartForSection(confirmed, "all")).toBeNull();
+  });
+
+  it("reorders sections per the persona's fixed part order (supporter leads with Neighborhood context, never touching the 3-part anatomy)", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "supporter");
+    expect(lensed.sections[0].title).toBe("Neighborhood Economic Context");
   });
 
   it("reorders the action roadmap so persona-relevant actions lead (all kept)", () => {
@@ -331,7 +379,7 @@ describe("personaSelectionEvent — exactly once per selection", () => {
       persona: "developer",
       reportType: "site-incentives",
       matchedProgramsBefore: 4,
-      matchedProgramsAfter: 2,
+      matchedProgramsAfter: 3,
     });
   });
 });
