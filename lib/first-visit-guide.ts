@@ -95,9 +95,9 @@ export const SPOTLIGHT_HOME_STEPS: FirstVisitSpotlightStep[] = [
   {
     key: "project-paths",
     selector: '[data-tour="project-paths"]',
-    title: "Three ways in",
+    title: "Two ways in",
     description:
-      "Check a location, look for commercial space, or answer a few program-fit questions. Every path ends at the same place: a report you can act on.",
+      "Check a location or look for commercial space. Either path ends at the same place: a report you can act on.",
     side: "top",
   },
   {

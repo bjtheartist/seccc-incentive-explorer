@@ -312,12 +312,17 @@ describe("public-claim-surfaces-verify — repo-wide checks against the REAL cod
     expect(overlap).toEqual([]);
   });
 
-  it("the three review6 S11 routes created this session are genuinely REGISTERED (not merely absent from the known-gaps list)", () => {
+  // review6 S11 created three routes; review9 (sunset /qualify + vacant-sites
+  // report cross-links) deleted the third, app/api/survey/score/route.ts,
+  // outright (owner's ruling: the compliance-flavored Q&A disappears
+  // entirely, not merely goes unregistered) — dropped from this list rather
+  // than asserted absent-but-registered, since the file no longer exists to
+  // register.
+  it("the two surviving review6 S11 routes are genuinely REGISTERED (not merely absent from the known-gaps list)", () => {
     const registeredFiles = new Set(PUBLIC_CLAIM_SURFACES.flatMap((s) => s.files));
     for (const route of [
       "app/api/programs/match/route.ts",
       "app/api/report/generate/route.ts",
-      "app/api/survey/score/route.ts",
     ]) {
       expect(registeredFiles.has(route), route).toBe(true);
       expect(PUBLIC_CLAIM_SURFACES_KNOWN_GAPS, route).not.toContain(route);

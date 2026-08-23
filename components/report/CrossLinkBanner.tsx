@@ -19,10 +19,20 @@ import { ArrowRight } from "lucide-react";
  * padding logic (app/report/page.tsx) and its sole /check mount
  * (components/check/QuickCheckClient.tsx, which had no investment-activity
  * hand-off to fall back to).
+ *
+ * review9 gate finding F5: the deleted vacancy link owned the blue PRIMARY
+ * treatment; the investment link, left on the 10px secondary micro-link
+ * treatment, read as an unfinished afterthought alone in an 850px bordered
+ * card. It is now this card's only action, so it gets the primary
+ * treatment (the same `bg-[#2563EB]` CTA idiom used throughout this report
+ * surface — see components/check/QuickCheckClient.tsx's "Generate Full
+ * Report" CTA and components/report/StartHereCard.tsx), and the card's
+ * layout is a single centered action rather than the two-item
+ * `justify-between` row it was built for.
  */
 
-const SECONDARY_LINK_CLASS =
-  "inline-flex min-h-11 items-center gap-1.5 font-mono-bureau text-[10px] tracking-[0.1em] uppercase text-[#0C1B33]/70 underline-offset-4 transition-colors hover:text-[#0C1B33] hover:underline";
+const PRIMARY_LINK_CLASS =
+  "inline-flex min-h-11 items-center justify-center gap-2 bg-[#2563EB] px-6 py-3 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white transition-colors hover:bg-[#1D4ED8]";
 
 /**
  * In-flow cross-link rendered below the report content. No longer takes a
@@ -36,8 +46,8 @@ export function InlineCrossLinkBanner() {
       data-testid="report-cross-link-banner"
       className="mx-auto mt-8 max-w-[850px] px-2 pb-10 sm:px-6 print:hidden"
     >
-      <div className="flex flex-col gap-3 border border-[#0C1B33]/10 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6">
-        <Link href="/investment" className={SECONDARY_LINK_CLASS}>
+      <div className="flex items-center justify-center border border-[#0C1B33]/10 bg-white px-5 py-6 text-center sm:px-6">
+        <Link href="/investment" className={PRIMARY_LINK_CLASS}>
           See neighborhood investment activity
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>

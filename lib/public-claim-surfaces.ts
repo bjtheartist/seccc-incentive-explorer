@@ -250,13 +250,12 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["app/api/report/generate/route.ts"],
     findings: ["S11"],
   },
-  {
-    id: "survey-score-api",
-    description: "POST /api/survey/score — server-side survey-engine execution for /qualify; returns a SurveyResult, never a raw Program.",
-    contracts: ["PublicProgramView"],
-    files: ["app/api/survey/score/route.ts"],
-    findings: ["S11"],
-  },
+  // review9 (sunset /qualify + vacant-sites report cross-links): the
+  // "survey-score-api" entry (POST /api/survey/score) was removed here —
+  // the route, its lib/survey-engine.ts engine, and the whole
+  // components/survey/ UI it served were deleted outright, not
+  // re-registered. See the "qualify-survey" removal below for the other
+  // half of the same deletion.
 
   // ── SEO / content pages ───────────────────────────────────────────────
   {
@@ -287,13 +286,15 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["app/quiz", "lib/quiz-bank-extension.ts"],
     findings: ["F9"],
   },
-  {
-    id: "qualify-survey",
-    description: "The /qualify survey wizard and results.",
-    contracts: ["PublicProgramView", "reviewed-copy"],
-    files: ["app/qualify", "components/survey/SurveyResults.tsx", "lib/survey-engine.ts"],
-    findings: ["F12"],
-  },
+  // review9 (sunset /qualify + vacant-sites report cross-links): the
+  // "qualify-survey" entry (app/qualify, components/survey/SurveyResults.tsx,
+  // lib/survey-engine.ts) was removed here — owner's ruling was "the
+  // compliance-flavored Q&A disappears entirely," not that it gets
+  // re-pointed. app/qualify/ is gone outright (a permanent redirect to "/"
+  // lives in next.config.ts instead, pinned by
+  // lib/__tests__/qualify-retirement.test.ts); components/survey/ and
+  // lib/survey-engine.ts were fully orphaned (zero living importers,
+  // verified before deletion) and deleted with it.
 
   // ── Quick check / map / shortlist ────────────────────────────────────
   {

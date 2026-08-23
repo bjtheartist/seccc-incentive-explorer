@@ -40,7 +40,7 @@ test("tours the homepage, hands off to the sample report, and returns to the add
   await expect(page.locator('[data-tour="address-search"]')).toHaveClass(/driver-active-element/);
 
   await popover.getByRole("button", { name: "Next" }).click();
-  await expect(popover.locator(".driver-popover-title")).toHaveText("Three ways in");
+  await expect(popover.locator(".driver-popover-title")).toHaveText("Two ways in");
   await expect(page.locator('[data-tour="project-paths"]')).toHaveClass(/driver-active-element/);
 
   await popover.getByRole("button", { name: "Next" }).click();
@@ -116,7 +116,7 @@ test("a stray overlay click advances instead of ending the run", async ({ page }
   );
 
   await page.locator("svg.driver-overlay").click({ position: { x: 10, y: 10 }, force: true });
-  await expect(popover.locator(".driver-popover-title")).toHaveText("Three ways in");
+  await expect(popover.locator(".driver-popover-title")).toHaveText("Two ways in");
   await expect(popover).toBeVisible();
 });
 

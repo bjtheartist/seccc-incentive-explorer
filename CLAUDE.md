@@ -58,7 +58,7 @@ The current package scripts cover vacant-property maintenance plus the business 
 
 3. **Geocoding:** `/api/geocode` uses OpenStreetMap Nominatim. `/api/zoning` queries the City ArcGIS zoning feature layer (**layer 1**, with `inSR=4326` — layer 0 is a group layer that errors inside HTTP 200) with an authoritative Chicago Data Portal GeoJSON fallback, bounded retry, explicit availability states, and source metadata. Total source failure returns 503 `status: "unavailable"`, never 200 with a null zone — and so does an empty result from one mirror when the other could not be checked, because an absence is only published as `not_found` when every mirror was able to answer. The **API payload** carries a `vintage` block reporting both mirrors side by side: each mirror's own query outcome, the timestamp of the record it returned, and the dataset-wide freshness it publishes, with scopes named because the two disagree. Nothing RENDERS it yet, but it is not confined to the API: `lib/report-engine.ts` carries the block verbatim inside `locationContext.geography.cityZoning.value` (`normalizePublicReportForDisplay` strips only `posture` and `programs`), and that payload is persisted as saved-report jsonb — so a change to the vintage shape reaches stored user reports, not just live responses. See `data/curated/zoning/README.md`.
 
-4. **Survey engine:** `lib/survey-engine.ts` scores 4-step questionnaire answers against a rules matrix, producing program matches with confidence levels (high/medium/low). `lib/confidence-engine.ts` (492 LOC) handles the detailed eligibility scoring.
+4. **Confidence engine:** `lib/confidence-engine.ts` (492 LOC) scores the report wizard's site-incentives goal answers (`SurveyAnswers` — industry/property/activities/size) against a rules matrix, producing program matches with confidence levels (high/medium/low) and detailed eligibility scoring. (The standalone `/qualify` questionnaire that used to share this answer shape — `lib/survey-engine.ts`, `components/survey/`, `POST /api/survey/score` — was sunset: owner's ruling was that the product boundary is discovery, not compliance, and that surface had drifted into it.)
 
 5. **Report generation:** `lib/report-engine.ts` (1862 LOC) orchestrates report data, `lib/pdf-report.ts` (872 LOC) renders jsPDF output with maps and stacking analysis.
 
@@ -85,7 +85,6 @@ The current package scripts cover vacant-property maintenance plus the business 
 
 - `/` — Landing with address/business search, hero, video demo, coverage stats
 - `/programs` — Filterable directory of 24 incentive programs (by government level and industry)
-- `/qualify` — 4-step pre-qualification survey → program matches
 - `/locate` — Sector-based location finder with zoning compatibility and area recommendations
 - `/map` — Interactive map with zone layers, search bar, census stats
 - `/check` — Address eligibility check flow

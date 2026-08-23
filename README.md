@@ -27,7 +27,6 @@ Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
 - `/report` - Report wizard and instant report generation from `lat`, `lon`, and `addr` URL params.
 - `/map` - Interactive incentive map with zone layers, vacant properties, parcels, zoning, presets, and map snapshots.
 - `/programs` - Incentive program directory with level and industry filters.
-- `/qualify` - Four-step pre-qualification survey.
 - `/locate` - Location finder for sector/zoning fit and area recommendations.
 - `/check` - Address eligibility check flow.
 - `/faq` - Public FAQ.

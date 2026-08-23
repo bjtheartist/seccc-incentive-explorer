@@ -161,4 +161,12 @@ describe("InlineCrossLinkBanner — investment-activity hand-off (shared compone
     expect(banner).not.toContain('href="/qualify"');
     expect(banner).not.toContain('href="/vacancy"');
   });
+
+  it("gate finding F5: renders as the primary (blue button) treatment now that it is the card's only action, not the old secondary micro-link", () => {
+    const banner = renderToStaticMarkup(<InlineCrossLinkBanner />);
+    const link = banner.match(/<a[^>]*href="\/investment"[^>]*>/)?.[0] ?? "";
+    expect(link).toContain("bg-[#2563EB]");
+    expect(link).toContain("text-white");
+    expect(link).not.toContain("underline-offset-4");
+  });
 });
