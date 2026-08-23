@@ -19,6 +19,7 @@ import { ReportEmailGate } from "@/components/report/ReportEmailGate";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { trackEvent } from "@/lib/analytics-events";
 import { submitSupportRequest } from "@/lib/support-lead";
+import { selectedProjectGoals } from "@/lib/report-wizard-config";
 
 const { authState } = vi.hoisted(() => ({
   authState: { status: "unauthenticated" as "authenticated" | "unauthenticated" },
@@ -389,6 +390,60 @@ describe("ReportEmailGate — gate review round 3, R3-5: un-tapping 'Just lookin
     await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
     const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(new Set(goalIds)).toEqual(new Set(["vacant-acquisition", "rehab"]));
+  });
+});
+
+describe("ReportEmailGate — gate review round 4, THE BLOCKER: the true 6-id worst case survives whole, all the way to the engine, without blanking customGoal", () => {
+  it("the reviewer's exact live repro: seed 2 pass-through ids + 1 chip-matching id + customGoal, tap one more chip — 6 ids emitted, 6 survive selectedProjectGoals(), customGoal untouched", async () => {
+    const { onPrepareReport } = renderGate({
+      report: {
+        ...baseReport,
+        metadata: {
+          ...baseReport.metadata,
+          projectGoals: ["vacant-acquisition", "other", "expansion"],
+          customGoal: "converting a church into a daycare",
+        },
+      },
+    });
+
+    // "expand-equip" is pre-pressed for display from the seeded
+    // "expansion" id; tap the OTHER 2-id chip — goalChipCap floors at
+    // MAX_GATE_GOAL_CHIPS (2) since only 1 chip was actually seeded, so
+    // this is a legal 2nd pick.
+    const mixedUseChip = goalChip("Develop housing or mixed-use");
+    expect(mixedUseChip.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(mixedUseChip);
+    expect(mixedUseChip.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds, customGoal] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+
+    const expected = new Set([
+      "expansion",
+      "equipment",
+      "mixed-use",
+      "affordable-housing",
+      "vacant-acquisition",
+      "other",
+    ]);
+    expect(new Set(goalIds)).toEqual(expected);
+    expect(goalIds.length).toBe(6);
+
+    // The engine-level boundary (lib/report-engine.ts's two
+    // selectedProjectGoals() call sites) must ALSO keep all 6 — this is
+    // where round 3's cap of 5 silently dropped "other" specifically.
+    const engineGoals = selectedProjectGoals({ projectGoals: goalIds });
+    expect(engineGoals.length).toBe(6);
+    expect(new Set(engineGoals)).toEqual(expected);
+
+    // R1-BLOCKER-2's failure mode, a third time, one boundary further
+    // downstream: app/report/page.tsx's handlePrepareGatedReport only
+    // preserves customGoal when "other" is present in the (engine-facing)
+    // goal set it writes back — the engine-level survival asserted above
+    // is exactly what keeps that condition true for this 6-id case. The
+    // gate itself always passes customGoal through verbatim regardless.
+    expect(customGoal).toBe("converting a church into a daycare");
   });
 });
 
