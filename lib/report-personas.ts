@@ -778,6 +778,33 @@ export function visiblePersonaProgramNames(
 }
 
 /**
+ * Owner ruling 2026-08-23 (persona-parity punch-list Q1): the executive
+ * summary fills to three program names even when the strict persona card set
+ * contains fewer than three. Strict visible matches always lead; the remaining
+ * slots come, in lens order, from the one collapsed "Also at this address"
+ * section. This reads only the already-lensed report — never the canonical
+ * report — and does not promote the fill programs into the visible card set.
+ */
+export function personaSummaryProgramNames(
+  lensed: GeneratedReport,
+): { programId: string; label: string }[] {
+  const results = visiblePersonaProgramNames(lensed);
+  const seen = new Set(results.map(({ programId }) => programId));
+
+  for (const section of lensed.sections ?? []) {
+    if (!section.collapsedByPersona || sectionBucketKey(section) !== "programs") continue;
+    for (const item of section.items ?? []) {
+      if (!item.programId || seen.has(item.programId)) continue;
+      seen.add(item.programId);
+      results.push({ programId: item.programId, label: item.label });
+      if (results.length === 3) return results;
+    }
+  }
+
+  return results.slice(0, 3);
+}
+
+/**
  * Same visible-program resolution as visiblePersonaProgramNames (gate
  * finding 1's "programs" bucket gate applies here too), but also carries
  * the full ReportItem each name came from. Gate finding 7 needs this: the

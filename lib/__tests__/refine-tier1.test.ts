@@ -261,10 +261,17 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  it("both forks feed the shared executive-summary panel the SAME lensed report the program cards render", () => {
+  it("both forks feed the shared executive-summary panel the lensed report (strict cards first, disclosure fill handled by the shared panel)", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("PersonaExecutiveSummary");
       expect(fork).toContain('report={boardPersona === "looking" ? report : lensed}');
+    }
+  });
+
+  it("both forks feed the shared Also disclosure the collapsed lensed items, not a dead count-only line", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("<PersonaAlsoAtAddress items={personaAlsoSection.items} />");
+      expect(fork).not.toContain("<PersonaAlsoAtAddress count=");
     }
   });
 

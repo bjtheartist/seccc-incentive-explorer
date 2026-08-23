@@ -1337,6 +1337,7 @@ export function ReportDisplay({
                   <Wrapper
                     key={sectionStateKey(section)}
                     id={sectionToAnchor(section)}
+                    data-persona-section-open={showPersonaView ? "true" : undefined}
                     className={`report-section ${showPersonaView ? "mb-0 border-b border-[#D8DDE6] py-4" : "mb-14"} ${!showPersonaView && section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}
                     {...(handleSectionToggle
                       ? // The dynamic Wrapper type ("details" | "div") makes JSX validate
@@ -1708,7 +1709,7 @@ export function ReportDisplay({
                     {showPersonaView &&
                       section.guidepostBucket === "programs" &&
                       personaAlsoSection && (
-                        <PersonaAlsoAtAddress count={personaAlsoSection.items.length} />
+                        <PersonaAlsoAtAddress items={personaAlsoSection.items} />
                       )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
                       <>

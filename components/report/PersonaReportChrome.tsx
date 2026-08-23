@@ -1,12 +1,19 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
+import { ProgramCardFace } from "@/components/report/ProgramCardFace";
+import { ReasonChips } from "@/components/report/ReasonChips";
 import { selectedProjectGoalLabels } from "@/lib/report-wizard-config";
 import { buildLocationSnapshot } from "@/lib/report-looking-overview";
-import { visiblePersonaProgramNames } from "@/lib/report-personas";
+import { personaSummaryProgramNames } from "@/lib/report-personas";
 import { DEFAULT_PERSONA, type PersonaId } from "@/lib/personas";
 import { SITE_URL } from "@/lib/seo";
-import { SECTION_IDS, type GeneratedReport } from "@/lib/report-engine";
+import {
+  SECTION_IDS,
+  type GeneratedReport,
+  type ReportItem,
+} from "@/lib/report-engine";
 
 export const PERSONA_SCREENING_DISCLOSURE =
   "Screening report from public records — not an eligibility determination. Full record one line below. Confirm zoning with the Zoning Board of Appeals.";
@@ -179,7 +186,7 @@ export function PersonaExecutiveSummary({
   sectionNumber?: string;
 }) {
   const snapshot = buildLocationSnapshot(report);
-  const names = visiblePersonaProgramNames(report).slice(0, 3);
+  const names = personaSummaryProgramNames(report);
   const tiles = [
     snapshot.zoneClass ? { label: "Zoning", value: snapshot.zoneClass } : null,
     snapshot.mappedZoneCount != null
@@ -210,7 +217,10 @@ export function PersonaExecutiveSummary({
           <span className="block font-mono-bureau text-[8.5px] tracking-[0.14em] uppercase text-[#5A6478]">
             Programs matched here
           </span>
-          <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#0C1B33]">
+          <p
+            data-testid="persona-summary-programs"
+            className="mt-0.5 text-[12.5px] leading-relaxed text-[#0C1B33]"
+          >
             {names.map((program, index) => (
               <span key={program.programId}>
                 {index > 0 && " · "}
@@ -242,17 +252,49 @@ export function PersonaExecutiveSummary({
 }
 
 export function PersonaAlsoAtAddress({
-  count,
+  items,
 }: {
-  count: number;
+  items: ReportItem[];
 }) {
   return (
-    <div
+    <details
       data-testid="persona-also-at-address"
-      className="my-2 border border-[#D8DDE6] bg-white px-3.5 py-2.5 text-[12.5px] text-[#5A6478]"
+      className="group my-2 border border-[#D8DDE6] bg-white text-[12.5px] text-[#5A6478]"
     >
-      ▸ Also at this address ({count})
-    </div>
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]">
+        <span
+          aria-hidden="true"
+          className="text-[11px] transition-transform group-open:rotate-90"
+        >
+          ▸
+        </span>
+        <span>Also at this address ({items.length})</span>
+      </summary>
+      <div
+        data-testid="persona-also-program-list"
+        className="divide-y divide-[#D8DDE6] border-t border-[#D8DDE6] px-3.5"
+      >
+        {items.map((item) => (
+          <article
+            key={item.programId ?? item.label}
+            data-program-id={item.programId}
+            className="py-4 text-[#0C1B33]"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="text-[13px] font-semibold">{item.label}</h3>
+              {item.value && (
+                <span className="font-mono-bureau text-[10px] text-[#5A6478]">
+                  {item.value}
+                </span>
+              )}
+            </div>
+            <ProgramCardFace item={item} />
+            <ReasonChips explanation={item.matchExplanation} />
+            <ProgramCardExtras item={item} />
+          </article>
+        ))}
+      </div>
+    </details>
   );
 }
 

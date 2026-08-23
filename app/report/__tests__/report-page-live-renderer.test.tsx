@@ -25,6 +25,7 @@ import type { Program } from "@/lib/types";
 import catalogPrograms from "@/data/programs-internal.json";
 import {
   applyPersonaLens,
+  personaSummaryProgramNames,
   personaEmptyProgramsDescription,
   visiblePersonaProgramNames,
 } from "@/lib/report-personas";
@@ -831,6 +832,23 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
     });
 
     it.each(["starting", "supporter", "developer", "looking"] as const)(
+      "pins every canonical %s board section visibly open",
+      async (persona) => {
+        const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+        const wrappers = [...html.matchAll(
+          /<div[^>]*data-persona-section-open="([^"]+)"[^>]*class="([^"]*\breport-section\b[^"]*)"/g,
+        )];
+        expect(wrappers.length, `persona=${persona}; canonical report sections`).toBeGreaterThan(0);
+        for (const [, open, classes] of wrappers) {
+          expect(open, `persona=${persona}; persona section open state`).toBe("true");
+          expect(classes, `persona=${persona}; persona section classes`).not.toContain(
+            "report-section-collapsed",
+          );
+        }
+      },
+    );
+
+    it.each(["starting", "supporter", "developer", "looking"] as const)(
       "removes every audited unapproved block and program-detail accordion for %s",
       async (persona) => {
         const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
@@ -866,17 +884,21 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       },
     );
 
-    it("renders one expanded program face, compact siblings, the one Also-line, and no excluded owner names", async () => {
+    it("renders one expanded visible program face and a real inline Also disclosure with the excluded owner programs", async () => {
       const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona: "starting" });
-      expect(count(html, 'data-testid="program-card-face"')).toBe(1);
+      const disclosureStart = html.indexOf('data-testid="persona-also-at-address"');
+      expect(disclosureStart).toBeGreaterThanOrEqual(0);
+      expect(count(html.slice(0, disclosureStart), 'data-testid="program-card-face"')).toBe(1);
       expect(html).toContain("SBIF Facade Grant");
-      expect(html).toContain('data-testid="persona-also-at-address"');
-      expect(html).not.toContain("TIF District Program");
-      expect(html).not.toContain("SSA Rebate");
+      expect(html).toMatch(/<details[^>]*data-testid="persona-also-at-address"/);
+      expect(html).toContain("Also at this address (2)");
+      expect(html).toContain('data-testid="persona-also-program-list"');
+      expect(html).toContain("TIF District Program");
+      expect(html).toContain("SSA Rebate");
       expect(html).not.toContain("Leaked Program Deadline");
     });
 
-    it("hard-filters every catalog program name through the real engine and real route for all four boards", async () => {
+    it("hard-filters every catalog program name to strict cards, the three-name summary, or the one disclosure through the real engine and route", async () => {
       const state: WizardState = {
         ...BASE_WIZARD_STATE,
         projectGoals: ["rehab", "hire"],
@@ -903,17 +925,37 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
 
       for (const persona of ["starting", "supporter", "developer", "looking"] as const) {
         const html = await renderReportRoute(realReport, state, { persona });
-        const allowed = new Set(
+        const lensed = persona === "looking" ? realReport : applyPersonaLens(realReport, persona).report;
+        const strictVisible = new Set(
           (persona === "looking"
-            ? visiblePersonaProgramNames(realReport).slice(0, 3)
-            : visiblePersonaProgramNames(applyPersonaLens(realReport, persona).report)
+            ? personaSummaryProgramNames(lensed)
+            : visiblePersonaProgramNames(lensed)
           ).map(({ label }) => label),
         );
+        const summaryNames = personaSummaryProgramNames(lensed).map(({ label }) => label);
+        const summaryMarker = html.indexOf('data-testid="persona-summary-programs"');
+        expect(summaryMarker, `persona=${persona}; summary program row`).toBeGreaterThanOrEqual(0);
+        const summaryStart = html.lastIndexOf("<p", summaryMarker);
+        const summaryEnd = html.indexOf("</p>", summaryMarker) + 4;
+        const summaryFragment = html.slice(summaryStart, summaryEnd);
+        for (const name of summaryNames) expect(summaryFragment).toContain(name);
+
+        const disclosureMarker = html.indexOf('data-testid="persona-also-at-address"');
+        const disclosureFragment = disclosureMarker >= 0
+          ? html.slice(
+              html.lastIndexOf("<details", disclosureMarker),
+              html.indexOf("</details>", disclosureMarker) + "</details>".length,
+            )
+          : "";
+        const outsideAllowedSurfaces = html
+          .replace(summaryFragment, "")
+          .replace(disclosureFragment, "");
+
         for (const program of catalogPrograms as Program[]) {
-          if (!allowed.has(program.name)) {
+          if (!strictVisible.has(program.name)) {
             expect(
-              html,
-              `persona=${persona}; excluded catalog program leaked: ${program.name}`,
+              outsideAllowedSurfaces,
+              `persona=${persona}; non-strict catalog program leaked outside summary/disclosure: ${program.name}`,
             ).not.toContain(program.name);
           }
         }
@@ -1095,26 +1137,27 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       return html.slice(start, nextDivIdx === -1 ? undefined : nextDivIdx);
     }
 
-    // Gate round 2 tail item 1: the earlier version of this test only
-    // checked absence from the ONE confirmed-programs fragment — true to
-    // "not in that fragment," not to the test's own name ("never appears
-    // outside the disclosure"), since the collapsed title could in
-    // principle leak into some OTHER section (e.g. a debug dump, a
-    // duplicate render, a stray TOC entry) and this test would still have
-    // been green. Strengthened to the full document: slice out the
-    // disclosure fragment itself, then assert the title is absent from
-    // everything that remains — genuinely "never appears outside," not
-    // "doesn't appear in this one place I checked."
-    it("(a) an excluded program name is absent from the entire persona DOM and represented only by the one Also count", async () => {
+    // Consultant review round 2 finding 2: excluded programs remain behind
+    // the one native disclosure (collapse, never hide), while the hard
+    // filter still forbids their names everywhere outside that disclosure.
+    it("(a) an excluded program name appears inside the one Also disclosure and nowhere else on the persona board", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
-      expect(html).toContain('data-testid="persona-also-at-address"');
+      const marker = html.indexOf('data-testid="persona-also-at-address"');
+      const start = html.lastIndexOf("<details", marker);
+      const end = html.indexOf("</details>", marker) + "</details>".length;
+      const disclosure = html.slice(start, end);
       expect(html).toContain("Also at this address (1)");
-      expect(html).not.toContain("SBIF Facade Grant");
+      expect(disclosure).toContain("SBIF Facade Grant");
+      expect(html.replace(disclosure, "")).not.toContain("SBIF Facade Grant");
     });
 
-    it("(b) the disclosure renders only the board's compact real-count line", async () => {
+    it("(b) the compact Also line is a real native disclosure containing the collapsed program list", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toMatch(/<details[^>]*data-testid="persona-also-at-address"/);
+      expect(html).toMatch(/<summary[^>]*>.*Also at this address \(1\).*<\/summary>/);
+      expect(html).toContain('data-testid="persona-also-program-list"');
       expect(html).toContain("Also at this address (1)");
+      expect(html).toContain("SBIF Facade Grant");
       expect(html).not.toContain("other program tied to this address");
       expect(html).not.toContain("Nothing is removed");
     });

@@ -4982,6 +4982,7 @@ function ReportDisplay({
                   <div
                     key={sectionKey}
                     id={sectionToAnchor(section)}
+                    data-persona-section-open={showPersonaView ? sectionOpen : undefined}
                     className={`report-section ${
                       showPersonaView
                         ? "mb-0 border-b border-[#D8DDE6] py-4"
@@ -5368,7 +5369,7 @@ function ReportDisplay({
                       </div>
                     )}
                     {isPersonaProgramSection && personaAlsoSection && (
-                      <PersonaAlsoAtAddress count={personaAlsoSection.items.length} />
+                      <PersonaAlsoAtAddress items={personaAlsoSection.items} />
                     )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
                       <>

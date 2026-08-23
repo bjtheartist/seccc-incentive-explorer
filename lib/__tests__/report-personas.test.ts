@@ -5,6 +5,7 @@ import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
   guidepostPartForSection,
+  personaSummaryProgramNames,
   personaEmptyProgramsDescription,
   personaSelectionEvent,
   programMatchesPersona,
@@ -329,13 +330,31 @@ describe("applyPersonaLens", () => {
     expect(matchedAfter).toBe(2);
   });
 
-  it("visiblePersonaProgramNames reads off the SAME lensed section list the cards render, in order — the executive-summary panel and the body can never disagree", () => {
+  it("visiblePersonaProgramNames remains the strict card set, in rendered order", () => {
     const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
     expect(visiblePersonaProgramNames(lensed)).toEqual([
       { programId: "tif", label: "TIF" },
       { programId: "federalOZ", label: "Federal OZ" },
       { programId: "highUnemployment", label: "High Unemployment" },
     ]);
+  });
+
+  it("fills the executive summary to three from the lensed disclosure after strict matches, without promoting those programs into the card set", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "starting");
+    expect(visiblePersonaProgramNames(lensed)).toEqual([
+      { programId: "sbif", label: "SBIF" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+    ]);
+    expect(personaSummaryProgramNames(lensed)).toEqual([
+      { programId: "sbif", label: "SBIF" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+      { programId: "tif", label: "TIF" },
+    ]);
+    expect(
+      lensed.sections.find((section) => section.collapsedByPersona)?.items.map(
+        (item) => item.programId,
+      ),
+    ).toContain("tif");
   });
 
   // Gate finding 1 (regression, real bug this fixes): Civic Representation
