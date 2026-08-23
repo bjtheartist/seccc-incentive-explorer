@@ -92,17 +92,47 @@ async function queryWard(lat: number, lon: number): Promise<string | null> {
   return null;
 }
 
+/**
+ * City of Chicago "Boundaries - Police Districts" (Socrata `9vmg-9p8p`),
+ * queried live the same way `queryWard` reads `p293-wvbd` — no committed
+ * boundary file, no client-side geometry work; Socrata does the
+ * intersects() test server-side. `DIST_NUM="31"` is excluded: it is not one
+ * of the 22 current geographic patrol districts (verified against the
+ * dataset's own row count — see lib/__tests__/district-lookup.test.ts).
+ */
+async function queryPoliceDistrict(lat: number, lon: number): Promise<string | null> {
+  const url = new URL("https://data.cityofchicago.org/resource/9vmg-9p8p.json");
+  url.searchParams.set(
+    "$where",
+    `intersects(the_geom, 'POINT (${lon} ${lat})') AND DIST_NUM != '31'`,
+  );
+  url.searchParams.set("$limit", "1");
+  url.searchParams.set("$select", "DIST_NUM");
+
+  const res = await fetchWithRetry(url.toString(), {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  if (data && data.length > 0 && data[0].DIST_NUM) {
+    return String(data[0].DIST_NUM);
+  }
+  return null;
+}
+
 export async function getDistrictData(lat: number, lon: number): Promise<DistrictData> {
-  const cacheKey = `districts:v3:${roundCoord(lat)}:${roundCoord(lon)}`;
+  const cacheKey = `districts:v4:${roundCoord(lat)}:${roundCoord(lon)}`;
 
   return cached<DistrictData>(cacheKey, DISTRICT_CACHE_TTL_SECONDS, async () => {
-    const [ward, commissioner, congressional, stateHouse, stateSenate] =
+    const [ward, commissioner, congressional, stateHouse, stateSenate, policeDistrict] =
       await Promise.allSettled([
         queryWard(lat, lon),
         queryArcGISLayer(9, "DISTRICT_INT", lat, lon),
         queryArcGISLayer(13, "DISTRICT_INT", lat, lon),
         queryArcGISLayer(11, "DISTRICT_INT", lat, lon),
         queryArcGISLayer(12, "DISTRICT_INT", lat, lon),
+        queryPoliceDistrict(lat, lon),
       ]);
 
     return {
@@ -115,6 +145,8 @@ export async function getDistrictData(lat: number, lon: number): Promise<Distric
         stateHouse.status === "fulfilled" ? stateHouse.value : null,
       stateSenateDistrict:
         stateSenate.status === "fulfilled" ? stateSenate.value : null,
+      policeDistrict:
+        policeDistrict.status === "fulfilled" ? policeDistrict.value : null,
     };
   });
 }

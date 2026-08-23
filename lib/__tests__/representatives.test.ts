@@ -89,6 +89,7 @@ describe("representatives", () => {
         stateHouseDistrict: "25",
         stateSenateDistrict: "13",
         commissionerDistrict: "4",
+        policeDistrict: "4",
       },
       {
         wardOffices: {

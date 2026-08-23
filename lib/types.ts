@@ -703,6 +703,11 @@ export interface DistrictData {
   stateHouseDistrict: string | null;
   stateSenateDistrict: string | null;
   commissionerDistrict: string | null;
+  /** Chicago Police district number (e.g. "6"), from the City's live
+   *  boundary layer — no elected official attached, so it has no entry in
+   *  DistrictOfficials. See lib/police-districts.ts for the district-name
+   *  lookup (e.g. "6th (Gresham)"). */
+  policeDistrict: string | null;
   officials?: DistrictOfficials;
   sources?: DistrictSource[];
   refreshedAt?: string;

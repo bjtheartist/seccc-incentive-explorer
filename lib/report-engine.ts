@@ -86,6 +86,7 @@ import {
 } from "./support-organization-copy";
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
 import { authorityReferenceLine } from "./authority-routing";
+import { policeDistrictLabel } from "./police-districts";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -4914,17 +4915,16 @@ function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null 
 
 /**
  * Civic Representation section (persona spec v2). Re-presents the SAME
- * sourced `DistrictData` (ward/alderperson, county commissioner district —
- * each carrying its own sourceId/sourceLabel/sourceUrl/refreshedAt
- * provenance) plus the community area and SSA/corridor zone names the
- * engine already computes, as a dedicated section instead of one folded
- * item. Genuinely canonical, not lens-time: this only reorganizes data the
- * engine already sourced and verified — it adds nothing new.
- *
- * Police district is deliberately absent: no committed, sourced
- * police-district boundary dataset exists in this repo. Per the product's
- * no-fabrication rule this row is omitted entirely rather than guessed —
- * see docs/persona-report-parity.md.
+ * sourced `DistrictData` (ward/alderperson, county commissioner district,
+ * police district — each carrying its own sourceId/sourceLabel/sourceUrl/
+ * refreshedAt provenance where an elected official is attached) plus the
+ * community area and SSA/corridor zone names the engine already computes,
+ * as a dedicated section instead of one folded item. Genuinely canonical,
+ * not lens-time: this only reorganizes data the engine already sourced and
+ * verified — it adds nothing new. Police district comes from
+ * lib/district-lookup.ts's live query against the City's boundary layer
+ * (Socrata `9vmg-9p8p`, the same intersects()-query pattern the ward lookup
+ * already used) — see lib/police-districts.ts for the district-name map.
  */
 function buildCivicRepresentationSection(
   districts: DistrictData | null | undefined,
@@ -4945,6 +4945,13 @@ function buildCivicRepresentationSection(
   }
   if (communityArea) {
     items.push({ label: "Community area", value: communityArea });
+  }
+  if (districts?.policeDistrict) {
+    items.push({
+      label: "Police district",
+      value: policeDistrictLabel(districts.policeDistrict),
+      sourceLabel: "City of Chicago Boundaries — Police Districts",
+    });
   }
   if (districts?.commissionerDistrict) {
     const commissioner = districts.officials?.commissioner;
@@ -4969,7 +4976,7 @@ function buildCivicRepresentationSection(
   return {
     id: SECTION_IDS.civicRepresentation,
     title: "Civic Representation",
-    description: "Elected and appointed representation for this address, from the same sourced district data used elsewhere in this report. Police district is not yet included — no sourced boundary dataset for it is committed to this build.",
+    description: "Elected and appointed representation for this address, from the same sourced district data used elsewhere in this report.",
     items,
   };
 }

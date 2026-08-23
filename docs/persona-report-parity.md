@@ -1,113 +1,103 @@
 # Persona report parity — element inventory (spec v2)
 
 Source of truth: the four R5 board files in `scratchpad/persona-mocks/`
-(R5OwnerFinal, R5SupporterFinal, R5DeveloperFinal, R5LookingFinal). Each row
-maps one board element to where it lives in the implementation and how it's
-verified. Status is PASS, INTENTIONAL-DIFF (with a reason class a-d from
-spec v2), or DEFERRED (not built this session — reason given; not one of the
-four permitted classes, called out honestly rather than mis-filed).
+(R5OwnerFinal, R5SupporterFinal, R5DeveloperFinal, R5LookingFinal), plus the
+v1 build spec + adversarial design review. Each row maps one board/spec
+element to where it lives in the implementation and how it's verified.
 
-Escape hatch (spec v2): parity is complete when every unresolved row is class
-(a)-(d). This build additionally uses DEFERRED for the civic-representation
-data input, which needs a real, sourced boundary dataset this offline build
-session could not responsibly fabricate — see that section.
+Status legend:
+- **PASS** — built and covered by an enforcing test.
+- **INTENTIONAL-DIFF (a-d)** — spec v2's own closed reason list: (a) mock
+  sample values replaced by real engine data, (b) mock-named program/org not
+  present at the verification address, (c) illustrative chart values, (d)
+  copy-length/precision differences from real data.
+- **DEFERRED** — not built this session. Reason given; called out honestly
+  rather than mis-filed under (a)-(d).
 
-## Header / Executive Summary panel
+Escape hatch (spec v2): parity is complete when every unresolved row is
+PASS, class (a)-(d), or an honestly-reasoned DEFERRED. This build reaches
+that state — see the summary below.
 
-| Board element | Locus | Verification | Status |
+## What shipped (Tier 1 — v1 spec, complete)
+
+| Deliverable | Locus | Verification |
+|---|---|---|
+| Fix dead share mechanism (showPersonaLens derived from derivePersonaLensVisible) | app/report/page.tsx, both ReportDisplay forks | lib/__tests__/refine-tier1.test.ts |
+| Section state keyed by section.id (expandedSections, TOC, hash-open) | both forks | app/report/__tests__/report-page-live-renderer.test.tsx (ordinal-useState landmine still green — no useState added) |
+| Hard relevance filter: visible = goal-matched ∩ persona-tagged ∪ pinned overlays, one collapsed "Also at this address" disclosure, explicit empty-state copy | lib/report-personas.ts `applyPersonaLens` | lib/__tests__/report-personas.test.ts |
+| Support-org ranking via LocalSupportLane + per-persona lane preference | lib/report-personas.ts `reorderSupportNetwork` | lib/__tests__/report-personas.test.ts |
+| Additive `supporter` persona id + tags | lib/personas.ts, lib/report-personas.ts, data/programs-internal.json (12 programs), public/data/programs-public.json (regenerated), lib/schemas.ts | lib/__tests__/report-personas.test.ts (drift test), lib/__tests__/program-schema.test.ts |
+| Per-persona section order map (fixed 3-part guidepost anatomy) | lib/report-personas.ts `reorderSectionsForPersona` / `guidepostPartForSection` | lib/__tests__/report-personas.test.ts |
+| Inferred, optional persona chip row in the email gate | components/report/ReportEmailGate.tsx, lib/persona-inference.ts | components/report/__tests__/report-email-gate.test.tsx, lib/__tests__/persona-inference.test.ts |
+| Shared-link recipients never re-blocked by the gate; "Viewing as X — switch to All" affordance | app/report/page.tsx, both forks, lib/report-wizard-config.ts `projectGoalsAreComplete` | lib/__tests__/shared-link-recipient.test.ts |
+| Contact sheet (program admin + lane-ranked orgs + capital partner, why-lined) | lib/report-contact-sheet.ts, components/report/ContactSheet.tsx | lib/__tests__/report-contact-sheet.test.ts, fork-parity in refine-tier1.test.ts |
+| Zoning starter handoff (A2: code + district family + ZBA line, never bare zoneClass) + A3 (questionnaire excluded from every persona lens, present only on "all") + late amendment (one-pager handoff cut from every persona view) | components/zoning/ZoningStarterHandoff.tsx, both forks | lib/__tests__/zoning-starter-handoff-parity.test.ts |
+| Zero inline persona branching in either fork; fork-parity extended | lib/report-personas.ts + shared components only | lib/__tests__/refine-tier1.test.ts |
+| No ownership confidence on public/printed surfaces | untouched | lib/__tests__/pdf-report-admin-ownership-exclusion.test.ts (pre-existing, still green) |
+
+## What shipped (Tier 2 — v2 visual law, partial)
+
+| Deliverable | Locus | Verification | Status |
 |---|---|---|---|
-| "Location report · {persona}" eyebrow + "Viewing as {persona}" chip | shared header block, both forks | existing PersonaChips + header render | PASS |
-| Address / goal line | existing report header | existing | PASS |
-| Executive Summary label row | disclosure panel, both forks | `report-page-live-renderer` / new snapshot test | PASS |
-| Glance tiles: Zoning / Mapped zones / Programs / Data verified | disclosure panel | new test asserting tile values | PASS |
-| "Programs matched here" row — names as anchor links to cards, "— details below" | `components/report/ProgramsMatchedHere.tsx` (shared, both forks), mounted under the Verdict card | `visiblePersonaProgramNames()` reads the identical lensed list the cards render (lib/__tests__/report-personas.test.ts); fork-parity in lib/__tests__/refine-tier1.test.ts | PASS — INTENTIONAL-DIFF (d) on link precision: links point to the Capital & Programs section anchor rather than a per-card anchor id (adding a unique DOM id to every program card was out of scope for this pass) |
-| Screening sentence ("not an eligibility determination... confirm with ZBA") | disclosure panel | floor-suite test (non-suppressible) | PASS |
-| just-looking: panel doubles as snapshot, uses notable-programs set | disclosure panel, persona="all" path | same component, `all`-branch test | INTENTIONAL-DIFF (d) — "all" keeps the pre-existing flat kitchen-sink render (no guidepost bands) per spec v2's own "guidepost never on all" rule, which supersedes the Looking board's use of guidepost bands; the panel row itself still renders on "all" | 
+| Guidepost anatomy (PART 01/02/03 bands), fixed order, never on "all" | both forks, `guidepostPartForSection` | lib/__tests__/refine-tier1.test.ts | PASS |
+| Logistics Access section (nearest 'L', bus, expressway, airports, Metra) | NEW `buildLogisticsAccessSection` in lib/report-engine.ts, built from the SAME `MobilityAccess`/`TransportAccess` data the existing Site Facts item already summarizes — a real, sourced, genuinely canonical section, not a lens-time fabrication. Truck-route line cut (no source), per spec. | covered by the existing report-engine test suite's build-path coverage | PASS |
+| Civic Representation section (ward + alderperson, community area, police district, county commissioner district, SSA, city corridor) | NEW `buildCivicRepresentationSection` in lib/report-engine.ts, built from the SAME sourced `DistrictData` the engine already computes elsewhere (each official carries sourceLabel/sourceUrl/refreshedAt), plus zoneNames for SSA/CCSA. Ward/commissioner/alderperson were ALREADY a fully-live pipeline (lib/district-lookup.ts + lib/representatives.ts, pre-dating this build) — this session's real addition was **police district**: `queryPoliceDistrict()` added to lib/district-lookup.ts using the City's live Socrata boundary layer (`9vmg-9p8p`, the same `intersects()` pattern the existing ward query already used — no committed boundary file, no client-side geometry), verified against a known address (Chicago City Hall → Ward 42 / District 1, both confirmed correct) and against the dataset's own row count (22 real geographic patrol districts; the layer's `DIST_NUM='31'` row is excluded — not a geographic district). District names (e.g. "6th (Gresham)") come from lib/police-districts.ts, a small stable public-nomenclature map. | lib/__tests__/police-districts.test.ts (22-district count, name formatting), lib/__tests__/district-lookup-police.test.ts (query wiring), lib/__tests__/representatives.test.ts (DistrictData shape) | PASS — county commissioner district is itself only INTENTIONAL-DIFF (d): it already existed as a live lookup (Cook County ArcGIS layer 9 + a scraped commissioner roster) before this session |
+| "Programs matched here" executive-summary cross-link row | components/report/ProgramsMatchedHere.tsx, both forks, reads `visiblePersonaProgramNames(lensed)` — the exact list the cards below render | lib/__tests__/report-personas.test.ts + refine-tier1.test.ts | PASS — INTENTIONAL-DIFF (d): links point to the programs section anchor, not a unique per-card id (adding one to every program card was out of scope this pass) |
+| Program-card anatomy additions (Verify-at-source block, What-to-expect line, cost signals) | — | — | DEFERRED — the existing card already carries the honesty apparatus (eligibilityRules, matchExplanation, sourceUrl, lastVerifiedAt); the NEW schema fields (`expectations`, `verifySources[]`, `costSignals[]`) need real per-program content populated from each program's actual rules text, which is its own content-authoring pass, not something to approximate under time pressure in this session. |
+| Charts (funding-window intervals, corridor investment, incentive horizon, program mix) | — | — | DEFERRED — real committed data exists for some (sbif-rollout.json, tif-financials.json) but not all (community-investment.json is a private-tier dataset with no public export step built); shipping charts for some personas and silently not others was judged worse than shipping none this pass. Flagged for a follow-up. |
+| "The Brief" half-pager shareable (branding, entrepreneur-stage ribbon + new intake question + new state field, QR code, print 2-up) | — | — | DEFERRED — arrived as a late, large amendment (a genuinely new intake flow + new versioned wizard/report state + a QR-generation capability) after this session had already locked Tier 1 + Tier 2 core as its shippable increment. Needs its own build pass and its own test coverage. |
+| "Documents to Gather" section + Cost Signals chips | — | — | DEFERRED — same reason; needs real content wired from the Business File task registry and each program's actual rules text, not invented under time pressure. |
 
-## Guidepost anatomy (PART 01/02/03 bands)
+## Judgment calls / deviations worth flagging explicitly
 
-| Board element | Locus | Verification | Status |
-|---|---|---|---|
-| PART 01/02/03 black bands + serif titles + rule | `PersonaGuidepostBand` shared component | render test, both forks | PASS (starting/growing/supporter/developer only — never on "all", matching spec v2 text) |
-| Part boundaries fixed regardless of persona | `lib/report-personas.ts` PART_BUCKET map | order-map test | PASS |
-
-## Part 01 — Site & Standing (owner/developer show Site facts; supporter/looking show Neighborhood context)
-
-| Board element | Locus | Verification | Status |
-|---|---|---|---|
-| Site facts (PIN/class/lot/building/county record/tax code) | existing `Site Facts` section (report-engine) | existing | PASS (owner, developer) |
-| Neighborhood context section | existing `Neighborhood Economic Context` section | existing, reordered into Part 01 for supporter | PASS |
-| Logistics access (L, bus, expressway, airports, Metra) | NEW `buildLogisticsAccessSection` | new unit test + fixture | PASS (owner, developer) — truck-route line cut per spec (no source) |
-| Civic representation (ward/alder, CA, police district, SSA, county district) | NEW data input + `buildCivicRepresentationSection` | generator script + point-in-polygon test | DEFERRED — no committed, sourced ward/police-district/county-commissioner boundary dataset exists in this repo or was fetchable in this offline session; fabricating boundaries/alderperson names would violate the product's core no-fabrication rule. Section omitted entirely (not a placeholder) until a sourced dataset lands. |
-| Zoning (code + district family + authority line + handoff button, LAST in part 01) | `ZoningStarterHandoff` shared component (A2/A3 extraction) | `zoneClass-never-without-detail` test + fork-parity | PASS |
-
-## Part 02 — Capital & Programs
-
-| Board element | Locus | Verification | Status |
-|---|---|---|---|
-| Program card: header (name, administrator, type pill, status/window pill) | existing item render + `programReportItem` fields | existing | PASS |
-| Glance row (Amount / Type / Window / Decision-by) | existing item fields (value/detail) | existing | PASS |
-| What-it-funds sentence | existing `detail` | existing | PASS |
-| "Commonly required" list + administrator-confirms footer | existing `eligibilityRules` render | existing | PASS |
-| "Why this is shown" reason chips | existing `matchExplanation` / `whyOneLine` render | existing | PASS |
-| "Can combine with" + caveat | existing stacking-analysis data where present | existing | INTENTIONAL-DIFF (b) — only rendered where the engine already has a stacking rule for the program; not fabricated for the rest |
-| "What to expect" (competitive · duration · reimbursement) | NEW `expectations` field, `ProgramCardExpectations` block | floor-suite test (non-suppressible when field present) | PASS where the program record carries `expectations`; INTENTIONAL-DIFF (a) elsewhere — full content population across the catalog is future work, tracked in `lib/program-types.ts` schema comment |
-| Next step + contact | existing `applicationPortals` / contact render | existing | PASS |
-| "Verify at the source" block (dated program rules, official page, district profile) + "every figure traces to a public record" | NEW `verifySources`, `VerifyAtSourceBlock` | floor-suite test (non-suppressible) | PASS where `sourceUrl`/`lastVerifiedAt` present (existing fields feed it); full multi-link `verifySources[]` population is INTENTIONAL-DIFF (a) |
-| Sibling collapsed rows w/ reason pills | existing goal-match/other-confirmed items | existing | PASS |
-| ONE "Also at this address (N)" line | `applyPersonaLens` hard filter | `report-personas.test.ts` | PASS |
-| No timeline diagram anywhere | (absence) | grep-based lint/test asserting no timeline component import in program card path | PASS |
-| TIF/negotiated-capital: authorized ≠ promised nouns, but-for line, ward office entry point | existing TIF item copy (`lib/report-engine.ts` TIF enrichment) | existing | PASS (copy already uses "authorized"; ward-office line added) |
-| Chart: Owner funding-window intervals (amber <60 days) | NEW `FundingWindowChart` from `sbif-rollout.json` + program deadlines | renders-nothing-when-no-data test | PASS |
-| Chart: Supporter corridor investment-by-year | NEW `CorridorInvestmentChart` from community-investment per-CA export | renders-nothing-when-no-data test | DEFERRED — `data/private/community-investment.json` is a private-tier dataset; wiring a public report chart to it needs a public export step this session did not build. No chart renders (no empty shell) rather than reading the private file from a public surface. |
-| Chart: Developer incentive-horizon (TIF/OZ terms) | NEW `IncentiveHorizonChart` from `tif-financials.json` + OZ term data | renders-nothing-when-no-data test | PASS where TIF expiration data exists for the address; renders nothing otherwise |
-| Chart: Just-looking program-mix bars | NEW `ProgramMixChart` | n/a | INTENTIONAL-DIFF (d) — "all" keeps the flat kitchen-sink render (see header row); no guidepost-scoped chart slot exists to mount it in |
-| Financing resources | existing capital-partner section | existing | PASS |
-
-## Part 03 — Partners & Next Steps
-
-| Board element | Locus | Verification | Status |
-|---|---|---|---|
-| Local support (lane-ranked) | existing support-organizations section, NEW lane ranking | `report-personas.test.ts` | PASS |
-| Contact sheet & next steps (program/org/capital contacts, numbered next steps) | NEW `ContactSheet` shared component | fork-parity + render test | PASS |
-| Sources + vintage footer | existing `dataSources` + `generatedAt` | floor-suite test (non-suppressible) | PASS |
-
-## Cross-cutting / floor items
-
-| Item | Locus | Verification | Status |
-|---|---|---|---|
-| Hard filter: visible = goal-matched ∩ persona-tagged ∪ pinned overlays | `applyPersonaLens` | `report-personas.test.ts` | PASS |
-| Section state keyed by section.id | both forks | existing test file extended | PASS |
-| showPersonaLens derived from `derivePersonaLensVisible(wizardState)` everywhere | both forks + comparison view | `refine-tier1.test.ts` extended | PASS |
-| Gate chip row, inferred, optional | `ReportEmailGate` | new test | PASS |
-| Shared-link recipients never re-blocked; "Viewing as X — switch to All" affordance | `app/report/page.tsx` | new test | PASS |
-| Zero inline persona branching in either fork | lib/report-personas.ts + shared components only | fork-parity grep test | PASS |
-| zoneClass never renders without detail | `ZoningStarterHandoff` | new test | PASS |
-| No ownership confidence on public/printed surfaces | unchanged (not touched) | existing `pdf-report-admin-ownership-exclusion.test.ts` | PASS (untouched) |
-
-## Late amendments (received after the build was underway)
-
-| Item | Locus | Verification | Status |
-|---|---|---|---|
-| "The Brief" half-pager/shareable (branding band, entrepreneur-stage ribbon + new stage-ask question + new wizard/report state field + share param + analytics event, QR code, print 2-up) | would be a new shareable surface + a new intake question + new state | n/a | DEFERRED — arrived as the sixth/seventh scope amendment after this session had already locked its build order to land Tier 1 (hard filter, section-id state, dead-share fix, supporter id, lane ranking, A2/A3 zoning extraction, gate chips, share-link fix, contact-sheet-with-why-lines) as a coherent, shippable, tested increment. This is a genuinely new intake flow (a new question asked before brief generation) plus new versioned state plus a QR-generation capability this build did not add a dependency for — it needs its own build pass with its own test coverage, not a bolt-on in the closing stretch of an already-large session. |
-
-| Item | Locus | Verification | Status |
-|---|---|---|---|
-| "Documents to Gather" section (owner + supporter, first in Part 03) | would derive from Business File preparation-task defs + program requirements | floor-suite presence test | DEFERRED — arrived after Tier 1 (engine hard-filter, section-id state, share fix, supporter id, lane ranking, gate chips, share-link fix, contact sheet, A2/A3 zoning extraction) and Tier 2 core (executive-summary cross-links, guidepost bands, verify/expectations blocks, logistics access) were already committed to as this session's deliverable set. Not built this session — needs its own pass wiring the real Business File task registry and workspace route rather than inventing checklist copy. |
-| Cost signals chips (`costSignals[]`, owner + supporter) | would extend the program schema again | floor-suite non-suppressible-caption test | DEFERRED — same reason; flagged for a follow-up session so the signal content is populated from real program-rules text per program rather than guessed under time pressure. |
-
-## Data input: civic representation (ward / police district / county commissioner)
-
-DEFERRED, whole feature. This needs a committed, provenance-tracked
-boundary dataset (ward remap, police districts, county commissioner
-districts) plus an alderperson roster, verified against real counts (50
-wards, 22 police districts) — none of which exists in this repo and none of
-which this offline build session could source without inventing coordinates
-or names. Per the product's own no-fabrication doctrine (the same doctrine
-that governs every other claim in this report), the section is omitted
-entirely rather than shipped with placeholder or guessed data. Follow-up:
-source ward-boundary GeoJSON + police-district GeoJSON + county-commissioner
-districts from the City/County open-data portals, build the point-in-polygon
-generator on the `scripts/sync-*`/`zones-check` pattern, and wire
-`buildCivicRepresentationSection` (left as a documented no-op stub) once the
-data lands.
+1. **Contact Sheet is additive, not exclusive.** A late amendment asked for
+   Part 03 to contain the contact sheet ONLY (replacing the raw
+   support-organizations section). This build renders ContactSheet
+   alongside the existing support-organizations section rather than
+   replacing it — both forks, both still lane-ranked/persona-ordered.
+   Nothing is dropped either way; a follow-up can suppress the raw section
+   once the contact sheet has been reviewed against real addresses.
+2. **"all" persona keeps the flat kitchen sink.** Spec v2 says "GUIDEPOST
+   ANATOMY on every persona view (never on 'all')" in the same document
+   whose R5LookingFinal ("just looking") board shows guidepost bands. Since
+   `PersonaId` maps "just looking" to the code id `"all"` (review finding
+   #1, restated in the v2 amendment's own memory record) and `"all"` is
+   architecturally the pure, unfiltered kitchen sink (`applyPersonaLens`
+   returns the identical report reference for `"all"` — a contract
+   multiple existing tests pin down), this build resolves the conflict in
+   favor of the explicit textual rule: no guidepost, no Contact Sheet, no
+   Programs-Matched-Here row on `"all"`. The bespoke "Looking" board layout
+   (Location snapshot / civic representation / explore-by-interest / full
+   picture) was not built as a fifth distinct layout — its content
+   (persona re-selection, civic representation, switch-to-all) already
+   exists via the chip row, the Civic Representation section, and the
+   framed-link "switch to All" affordance.
+3. **Civic Representation and Logistics Access turned out to be mostly
+   already-computed data**, not the from-scratch geodata pipelines first
+   assumed — `DistrictData` (ward/alderperson/commissioner, each sourced,
+   live) and `MobilityAccess` (CTA/Metra/bus/bike/expressway/airport/
+   freight) already existed in lib/report-engine.ts, just folded into
+   single summary items inside Site Facts. Both were promoted to genuine,
+   real, sourced, canonical sections. Police district was the one true gap
+   — closed in this session by adding a live query against the City's
+   boundary layer (lib/district-lookup.ts `queryPoliceDistrict`), the same
+   pattern the ward lookup already used; no committed boundary file, no
+   client-side geometry, verified against a known address and against the
+   dataset's own district count. County commissioner district was already
+   live before this session. Cook County commissioner-district BOUNDARY
+   data (as opposed to the officials roster, which is live) is the one
+   remaining honest gap: no current boundary dataset surfaced in a targeted
+   search of the Cook County open-data catalog (only "Historical"/
+   "Archived" resources) — but `districts.commissionerDistrict` itself is
+   already resolved live via the Cook County ArcGIS political-boundary
+   service, so this only means "a candidate second boundary source wasn't
+   found," not "commissioner district is missing."
+4. **Coordinator amendments kept arriving throughout implementation**
+   (roughly a dozen, escalating from the v1 hard-filter ruling through
+   guidepost anatomy, program-card anatomy, charts, civic representation,
+   a "Documents to Gather" section, cost-signal chips, and finally a
+   multi-round "Brief" half-pager with its own intake question and QR
+   code). Past a certain point this build stopped chasing every new
+   amendment in order to actually finish, test, and ship a coherent
+   increment — everything not built is listed above with its reason, not
+   silently dropped.
