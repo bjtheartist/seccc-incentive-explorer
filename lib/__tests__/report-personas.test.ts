@@ -585,4 +585,52 @@ describe("Gate finding 19: per-persona section titles", () => {
     // for it at all — Location snapshot replaces it).
     expect(titleById(looking, SECTION_IDS.siteFacts)).toBe("Site Facts");
   });
+
+  // Gate round 2, BLOCKER 23 (regression, real bug this fixes): a LEGACY
+  // section with NO `id` (a saved report persisted before that field
+  // existed — see ReportSection.id's own doc comment) is classifiable by
+  // title alone. Once gate finding 19's title override renamed it, a
+  // FRESH re-derivation of the guidepost bucket (the old behavior) would
+  // no longer match the section's own original title check and silently
+  // fall through to "rest" — moving Site Facts/Logistics Access out of
+  // PART 01. Fixed by resolving the bucket once, pre-override, and
+  // carrying it forward (`ReportSection.guidepostBucket`). This fixture
+  // deliberately omits every `id` to exercise exactly that legacy path.
+  it("a legacy section with NO id still lands in the correct guidepost PART after its title is renamed, for every persona whose board overrides that title", () => {
+    // Markers in `description` (never touched by the title override)
+    // identify each section by CONTENT rather than by title — the exact
+    // thing that's unsafe to do post-override, which is the whole point
+    // of this test.
+    const legacySections: GeneratedReport["sections"] = [
+      { title: "Site Facts", description: "site-facts-marker", items: [] },
+      { title: "Logistics Access", description: "logistics-marker", items: [] },
+    ];
+    const legacyReport: GeneratedReport = { ...reportFixture(), sections: legacySections };
+    // Only starting/growing/developer actually override these two buckets'
+    // titles (R5SupporterFinal's board doesn't render a generic Site
+    // Facts/Logistics Access section at all — see PERSONA_SECTION_TITLE_
+    // OVERRIDES.supporter, which carries no siteFacts/logisticsAccess
+    // entry) — supporter is included below ONLY for the PART-placement
+    // assertion, not the title-changed one.
+    const personasWithOverride = new Set(["starting", "growing", "developer"]);
+
+    for (const persona of ["starting", "growing", "developer", "supporter"] as const) {
+      const { report: lensed } = applyPersonaLens(legacyReport, persona);
+      const siteFacts = lensed.sections.find((s) => s.description === "site-facts-marker")!;
+      const logistics = lensed.sections.find((s) => s.description === "logistics-marker")!;
+      expect(siteFacts.id, `${persona} site facts id`).toBeUndefined(); // genuinely legacy — no id
+      expect(logistics.id, `${persona} logistics id`).toBeUndefined();
+      if (personasWithOverride.has(persona)) {
+        // Titles really did get renamed (proves the override actually ran
+        // against this id-less fixture, not a no-op).
+        expect(siteFacts.title, `${persona} site facts title`).not.toBe("Site Facts");
+        expect(logistics.title, `${persona} logistics title`).not.toBe("Logistics Access");
+      }
+      // ...but PART 01 placement survives regardless (the actual claim
+      // this finding is about), whether or not this persona's board
+      // happens to rename these two sections.
+      expect(guidepostPartForSection(siteFacts, persona), `${persona} site facts PART`).toBe(1);
+      expect(guidepostPartForSection(logistics, persona), `${persona} logistics PART`).toBe(1);
+    }
+  });
 });

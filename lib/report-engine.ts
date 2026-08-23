@@ -171,6 +171,21 @@ export interface ReportSection {
    * canonical report; only the lensed view sets it.
    */
   collapsedByPersona?: boolean;
+  /**
+   * Gate round 2, BLOCKER 23. Opaque internal marker: the persona lens's
+   * guidepost bucket (lib/report-personas.ts's private `SectionBucketKey`
+   * — not re-exported here to avoid a circular import between this file
+   * and report-personas.ts, hence the loose `string` type; only
+   * report-personas.ts itself ever reads or narrows it), resolved ONCE
+   * against the pristine section (id-first, title-fallback) before any
+   * per-persona title override runs, and carried forward so a later
+   * guidepost-PART lookup never has to re-derive the bucket from a
+   * (possibly since-renamed) title. Absent on the canonical report and on
+   * "all" lens output — only a real, non-"all" persona lens sets it, and
+   * only for the duration of that single render. Never persisted: lensed
+   * reports are display-time only and are never the thing saved/exported.
+   */
+  guidepostBucket?: string;
 }
 
 export interface ReportDetailGroup {

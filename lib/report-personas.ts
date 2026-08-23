@@ -349,6 +349,23 @@ const PERSONA_SECTION_ORDER: Record<Exclude<PersonaId, "all">, SectionBucketKey[
   looking: ["civicRepresentation", "siteFacts", "logisticsAccess", "zoning", "programs", "financing", "organizations", "neighborhoodContext", "rest"],
 };
 
+/**
+ * Gate round 2, BLOCKER 23 (regression, real bug this fixes): the
+ * guidepost bucket used to be re-derived from scratch every time
+ * `guidepostPartForSection` was called — including in the UI render loop,
+ * where it runs on `lensed.sections`, i.e. AFTER gate finding 19's
+ * `applyPersonaSectionTitles` has already overwritten `.title`.
+ * `sectionBucketKey`'s id-first checks protect any section that carries a
+ * real `id`, but a LEGACY section with no `id` (a saved report persisted
+ * before that field existed — see `ReportSection.id`'s own doc comment)
+ * is classifiable by title alone, and a title-only classification
+ * silently breaks the moment that exact title is renamed. Fixed by
+ * resolving the bucket exactly ONCE, here, against the PRISTINE section
+ * (before any title override has touched it) and stamping it onto the
+ * section object as `guidepostBucket` — every downstream consumer
+ * (`applyPersonaSectionTitles`, `guidepostPartForSection`) reads this
+ * stamped value instead of re-deriving.
+ */
 function reorderSectionsForPersona(sections: ReportSection[], persona: PersonaId): ReportSection[] {
   if (persona === DEFAULT_PERSONA) return sections;
   const order = PERSONA_SECTION_ORDER[persona as Exclude<PersonaId, "all">];
@@ -356,8 +373,9 @@ function reorderSectionsForPersona(sections: ReportSection[], persona: PersonaId
   return sections
     .map((section, index) => {
       const bucket = sectionBucketKey(section);
+      const stamped: ReportSection = { ...section, guidepostBucket: bucket };
       const position = order.indexOf(bucket);
-      return { section, index, position: position === -1 ? order.length : position };
+      return { section: stamped, index, position: position === -1 ? order.length : position };
     })
     .sort((a, b) => a.position - b.position || a.index - b.index)
     .map((entry) => entry.section);
@@ -456,7 +474,13 @@ function applyPersonaSectionTitles(sections: ReportSection[], persona: PersonaId
   const appliedBuckets = new Set<SectionBucketKey>();
   return sections.map((section) => {
     if (section.collapsedByPersona) return section;
-    const bucket = sectionBucketKey(section);
+    // Gate round 2, BLOCKER 23: prefer the bucket reorderSectionsForPersona
+    // already stamped on this section (resolved against the pristine,
+    // pre-override section) — this function runs strictly after that one
+    // in the applyPersonaLens pipeline, so the stamp is always present in
+    // production. Falls back to a fresh derivation only for direct/
+    // unit-test calls that skip the full pipeline.
+    const bucket = (section.guidepostBucket as SectionBucketKey | undefined) ?? sectionBucketKey(section);
     const overrideTitle = overrides[bucket];
     if (!overrideTitle || overrideTitle === section.title || appliedBuckets.has(bucket)) return section;
     appliedBuckets.add(bucket);
@@ -464,15 +488,26 @@ function applyPersonaSectionTitles(sections: ReportSection[], persona: PersonaId
   });
 }
 
-/** Which guidepost PART a (already persona-lensed) section belongs in, for
- *  the shared band-rendering component. Returns null for "all" (no
- *  guidepost). */
+/**
+ * Which guidepost PART a (already persona-lensed) section belongs in, for
+ * the shared band-rendering component. Returns null for "all" (no
+ * guidepost).
+ *
+ * Gate round 2, BLOCKER 23: prefers `section.guidepostBucket` — the
+ * bucket `reorderSectionsForPersona` already resolved once against the
+ * PRISTINE section (id-first, title-fallback) before gate finding 19's
+ * title override touched it — over a fresh re-derivation. Falling back
+ * to `sectionBucketKey(section)` (title-current) only when the stamp is
+ * absent keeps this safe for direct/unit-test callers that construct a
+ * section by hand and never ran it through `applyPersonaLens`.
+ */
 export function guidepostPartForSection(
   section: ReportSection,
   persona: PersonaId,
 ): GuidepostPart | null {
   if (persona === DEFAULT_PERSONA) return null;
-  return BUCKET_PART[sectionBucketKey(section)];
+  const bucket = (section.guidepostBucket as SectionBucketKey | undefined) ?? sectionBucketKey(section);
+  return BUCKET_PART[bucket];
 }
 
 // ─── Confirmed-program partitioning ──────────────────────────────────
