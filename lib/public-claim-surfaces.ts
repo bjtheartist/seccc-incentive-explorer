@@ -75,6 +75,19 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["lib/pdf-report.ts"],
   },
   {
+    // Gate finding 12: this component's own file-header comment says every
+    // field it renders is "derived at generation time from real catalog
+    // data" — a PublicProgramView-shaped claim surface — but it was never
+    // added to this registry when introduced. Shared by both report forks
+    // (report-live-route, report-saved-fork already cover the pages that
+    // render it; this entry tracks the component itself so a future rename
+    // or deletion is caught by this registry's own freshness test).
+    id: "program-card-extras",
+    description: "Program-card content extras (Can combine with / What to expect / Verify at the source / Cost signals), shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/ProgramCardExtras.tsx"],
+  },
+  {
     id: "report-email",
     description: "Report-summary email routes and the shared email-content helpers (program count, sections).",
     contracts: ["PublicProgramView", "reviewed-copy"],
