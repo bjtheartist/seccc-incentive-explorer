@@ -144,7 +144,10 @@ killed, not relocated:** `ProjectGoalSelector.tsx`'s own display read
 report back to 3 the instant either was opened (the wizard's own
 project-intake screen, reachable via "Refine your report," reads
 `selectedProjectGoals(wizardState)` directly). A new named constant,
-`MAX_ENGINE_GOALS = 4` (`lib/report-wizard-config.ts`), replaces
+`MAX_ENGINE_GOALS` (`lib/report-wizard-config.ts` — introduced by this
+round at 4, a value the later rounds re-derived upward; the constant's own
+doc comment, not this historical entry, carries the current ceiling and
+its derivation), replaces
 `MAX_PROJECT_GOALS` in both of those READ paths — `MAX_PROJECT_GOALS`
 itself, and `ProjectGoalSelector`'s `atLimit` (the wizard's own "pick up to
 3" fresh-selection growth limit), are UNTOUCHED, per the ruling's explicit

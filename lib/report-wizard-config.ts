@@ -243,7 +243,13 @@ export const MAX_PROJECT_GOALS = 3;
  * closed form) to find the true max, asserting `MAX_ENGINE_GOALS` is at
  * least that — so a future chip regrouping breaks that test, prompting a
  * deliberate bump here, instead of quietly reintroducing silent
- * truncation in production reports.
+ * truncation in production reports. Gate review round 5, NEW-R5-2: the
+ * same file's re-gate fixed-point block goes further — a saved report
+ * stores this capped set in `metadata.projectGoals` and
+ * `reportEmailGateKey` re-seeds a fresh gate from it at the next address,
+ * so the test iterates emission → capped storage → re-seed to a fixed
+ * point and asserts the max over that FULL universe still equals this
+ * constant.
  */
 export const MAX_ENGINE_GOALS = 6;
 

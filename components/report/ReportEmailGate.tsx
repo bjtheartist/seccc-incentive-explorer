@@ -19,7 +19,7 @@ import {
   unmatchedGoalIds,
 } from "@/lib/gate-goal-groups";
 import { GATE_PERSONA_CHIPS } from "@/lib/gate-persona-groups";
-import { storePersona, type PersonaId } from "@/lib/personas";
+import { DEFAULT_PERSONA, resolveInitialPersona, storePersona, type PersonaId } from "@/lib/personas";
 import { inferPersonaFromIntake } from "@/lib/persona-inference";
 import { submitSupportRequest } from "@/lib/support-lead";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
@@ -34,6 +34,20 @@ interface ReportEmailGateProps {
     customGoal: string,
   ) => Promise<GeneratedReport | null>;
   onReportReady: (deliveredReport: GeneratedReport) => void;
+  /**
+   * Fired alongside `storePersona` in `commitPersonaSelection` (both the
+   * View and Save paths), with the visitor's final persona choice —
+   * inferred-and-unconfirmed, or explicitly tapped. Lets the caller
+   * propagate the choice into a LIVE view's persona state, not just
+   * sessionStorage: `storePersona` alone only reaches a FUTURE mount (a
+   * fresh page load re-reading storage), never a `ReportDisplay` instance
+   * that is already mounted as this gate's sibling when the gate closes —
+   * which is exactly what leaves a just-gated report rendering
+   * `DEFAULT_PERSONA` (no guidepost PART bands) without this. Optional so
+   * every existing direct-render test of this component (none of which
+   * care about a live sibling view) keeps compiling unchanged.
+   */
+  onPersonaCommitted?: (persona: PersonaId) => void;
 }
 
 type ActionStatus = "idle" | "preparing";
@@ -59,6 +73,7 @@ export function ReportEmailGate({
   wizardState,
   onPrepareReport,
   onReportReady,
+  onPersonaCommitted,
 }: ReportEmailGateProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { status: authStatus } = useSession();
@@ -80,7 +95,26 @@ export function ReportEmailGate({
       reportType: report.reportType,
     }),
   );
-  const [persona, setPersona] = useState<PersonaId>(inferredPersona);
+  // Gate review follow-up round 1, MAJOR-1: a sender-framed `?persona=`
+  // share link (`handleShareReport`, app/report/page.tsx) hits this gate
+  // exactly like any other site-incentives report — `reportRequiresEmailGate`
+  // does not carve out an exception for one. Before this fix, the gate's
+  // pre-selected chip always came from `inferredPersona` (pure intake
+  // inference), so a recipient who read the sender's "shared as Developer"
+  // notice, picked a goal, and clicked View without touching the
+  // pre-selected row silently got their OWN inferred persona instead —
+  // the notice's "the lens this link was shared with" claim became false
+  // the moment the gate closed. Seeding from the SAME `resolveInitialPersona`
+  // call the live view itself uses (app/report/page.tsx's `ReportWizardPage`)
+  // keeps both surfaces in agreement: the gate chip shows the sender's lens,
+  // the visitor can still change it, and an untouched row propagates the
+  // framed lens truthfully instead of overwriting it.
+  const [persona, setPersona] = useState<PersonaId>(() => {
+    const framedPersona = resolveInitialPersona(
+      typeof window !== "undefined" ? window.location.search : null,
+    );
+    return framedPersona !== DEFAULT_PERSONA ? framedPersona : inferredPersona;
+  });
   const [personaTouched, setPersonaTouched] = useState(false);
 
   // Gate review round 1, BLOCKER 2 + gate review round 2, NEW-1/NEW-2/
@@ -201,6 +235,7 @@ export function ReportEmailGate({
 
   const commitPersonaSelection = (preparedReport: GeneratedReport) => {
     storePersona(persona);
+    onPersonaCommitted?.(persona);
     const outcome = !personaTouched
       ? "inferred"
       : persona === inferredPersona

@@ -59,4 +59,41 @@ describe("wizard URL state", () => {
     expect(decoded?.projectGoals).toEqual(["hiring", "equipment", "rehab"]);
     expect(decoded?.projectType).toBe("hiring");
   });
+
+  it("drops unknown and duplicate goal ids from a crafted pg, keeping known ids and other/customGoal", () => {
+    // NEW-R4-3: pg is attacker-writable — junk strings must not become goal
+    // ids that ride the gate's pass-through budget into the engine.
+    const encodedGoals = btoa(
+      JSON.stringify(["constructor", "hiring", "hiring", "not-a-goal", "other"])
+    );
+    const decoded = decodeWizardState(
+      new URLSearchParams(`wv=2&rt=si&pg=${encodedGoals}&cg=Community+kitchen`)
+    );
+    expect(decoded?.projectGoals).toEqual(["hiring", "other"]);
+    expect(decoded?.projectType).toBe("hiring");
+    expect(decoded?.customGoal).toBe("Community kitchen");
+  });
+
+  it("decodes an all-junk pg to no goals at all", () => {
+    const encodedGoals = btoa(JSON.stringify(["aaa", "bbb", "ccc"]));
+    const decoded = decodeWizardState(new URLSearchParams(`wv=2&rt=si&pg=${encodedGoals}`));
+    expect(decoded?.projectGoals).toEqual([]);
+    expect(decoded?.projectType).toBe("");
+  });
+
+  it("ignores an unknown pt so junk never becomes the fallback goal", () => {
+    const decoded = decodeWizardState(new URLSearchParams("wv=2&rt=si&pt=nonsense"));
+    expect(decoded?.projectType).toBe("");
+    expect(decoded?.projectGoals).toEqual([]);
+  });
+
+  it("never casts an unknown rt into reportType, while legacy full names still map", () => {
+    expect(decodeWizardState(new URLSearchParams("wv=2&rt=junk"))?.reportType).toBeNull();
+    expect(
+      decodeWizardState(new URLSearchParams("wv=2&rt=location-incentives"))?.reportType
+    ).toBe("site-incentives");
+    expect(decodeWizardState(new URLSearchParams("wv=2&rt=ci"))?.reportType).toBe(
+      "corridor-intelligence"
+    );
+  });
 });

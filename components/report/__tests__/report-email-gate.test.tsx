@@ -20,6 +20,7 @@ import type { GeneratedReport } from "@/lib/report-engine";
 import { trackEvent } from "@/lib/analytics-events";
 import { submitSupportRequest } from "@/lib/support-lead";
 import { selectedProjectGoals } from "@/lib/report-wizard-config";
+import type { PersonaId } from "@/lib/personas";
 
 const { authState } = vi.hoisted(() => ({
   authState: { status: "unauthenticated" as "authenticated" | "unauthenticated" },
@@ -79,20 +80,23 @@ function renderGate(
     report: GeneratedReport;
     onPrepareReport: (goals: string[], customGoal: string) => Promise<GeneratedReport | null>;
     onReportReady: (report: GeneratedReport) => void;
+    onPersonaCommitted: (persona: PersonaId) => void;
   }> = {},
 ) {
   const onPrepareReport =
     overrides.onPrepareReport ?? vi.fn(async (_goals: string[], _customGoal: string) => baseReport);
   const onReportReady = overrides.onReportReady ?? vi.fn();
+  const onPersonaCommitted = overrides.onPersonaCommitted ?? vi.fn();
   const utils = render(
     <ReportEmailGate
       report={overrides.report ?? baseReport}
       source="test"
       onPrepareReport={onPrepareReport}
       onReportReady={onReportReady}
+      onPersonaCommitted={onPersonaCommitted}
     />,
   );
-  return { ...utils, onPrepareReport, onReportReady };
+  return { ...utils, onPrepareReport, onReportReady, onPersonaCommitted };
 }
 
 function viewButton() {
@@ -119,6 +123,16 @@ beforeEach(() => {
   trackEventMock.mockClear();
   submitSupportRequestMock.mockReset();
   submitSupportRequestMock.mockResolvedValue({ success: true, notified: true });
+  // Gate review follow-up round 1, MAJOR-1: the gate's own persona seed now
+  // reads `resolveInitialPersona` (lib/personas.ts), which falls back to
+  // `loadStoredPersona()` — jsdom's `sessionStorage` when no `?persona=` is
+  // in `window.location.search` — and is NOT reset between tests in the
+  // same file on its own. Every gate completion in this file calls
+  // `commitPersonaSelection` -> `storePersona`, which always writes a
+  // real, non-default persona (the gate never offers "all"), so without
+  // this clear, whichever persona the PREVIOUS test's gate committed leaks
+  // into the next test's inferred pre-selection.
+  window.sessionStorage.clear();
 });
 
 afterEach(() => {
@@ -755,6 +769,43 @@ describe("ReportEmailGate — persona analytics honesty (finding 11)", () => {
     const call = trackEventMock.mock.calls.find(([type]) => type === "persona_intake_inferred");
     expect(call?.[1]?.metadata?.outcome).toBe("corrected");
     expect(call?.[1]?.metadata?.selectedPersona).toBe("developer");
+  });
+
+  // Gate review follow-up round 1, MODERATE-1+2: MODERATE-1 (Save-path
+  // propagation entirely untested — injecting `commitPersonaSelection`'s
+  // call into `handleViewReport` only left the full suite green) and
+  // MODERATE-2 (a test that can't tell the visitor's ACTUAL choice from the
+  // inferred one — injecting `onPersonaCommitted?.(inferredPersona)` in
+  // place of `onPersonaCommitted?.(persona)` also left the full suite
+  // green, because every existing test's inferred value happened to equal
+  // its tapped value) close together: infer "growing" (the signal-free
+  // `baseReport`'s default — see lib/persona-inference.ts's final
+  // fallback), explicitly tap "Developer" (a real correction, not a
+  // confirmation), and assert `onPersonaCommitted` fires with the TAPPED
+  // value, not the inferred one — once via each entry point.
+  it("View: onPersonaCommitted fires with the visitor's tapped choice ('developer'), not the inferred one ('growing')", async () => {
+    const { onReportReady, onPersonaCommitted } = renderGate();
+    fireEvent.click(screen.getByRole("button", { name: "Developer" }));
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+
+    expect(onPersonaCommitted).toHaveBeenCalledTimes(1);
+    expect(onPersonaCommitted).toHaveBeenCalledWith("developer");
+  });
+
+  it("Save: onPersonaCommitted fires with the visitor's tapped choice ('developer'), not the inferred one ('growing')", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, assign: vi.fn() },
+      writable: true,
+    });
+    const { onPersonaCommitted } = renderGate();
+    fireEvent.click(screen.getByRole("button", { name: "Developer" }));
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onPersonaCommitted).toHaveBeenCalledTimes(1));
+
+    expect(onPersonaCommitted).toHaveBeenCalledWith("developer");
   });
 });
 
