@@ -130,6 +130,8 @@ import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@
 import { ContactSheet } from "@/components/report/ContactSheet";
 import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
+import { ReasonChips } from "@/components/report/ReasonChips";
+import { ProgramCardFace } from "@/components/report/ProgramCardFace";
 import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import { FundingWindowChart } from "@/components/report/FundingWindowChart";
 import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
@@ -5206,8 +5208,23 @@ function ReportDisplay({
                               />
                             )}
 
+                            {/* Gate finding 11: "blessed" card content moved onto the
+                                FACE — reason chips, administrator/status/window,
+                                "Commonly required," next-step/contact. Previously all
+                                of this lived only inside the collapsed accordion below.
+                                Same source data (item.matchExplanation, item.
+                                eligibilityRules, the new administrator/decisionBy/
+                                nextStep/primaryContact fields report-engine.ts already
+                                computes) — only where/how it renders changed. */}
+                            {!isSupportNetworkItem && (
+                              <>
+                                <ReasonChips explanation={item.matchExplanation} />
+                                <ProgramCardFace item={item} />
+                              </>
+                            )}
+
                             {/* Public program evidence and official navigation */}
-                            {!isSupportNetworkItem && (item.matchExplanation || item.eligibilityRules || item.url || hasNavigationLinks) && (
+                            {!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -5215,29 +5232,6 @@ function ReportDisplay({
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
                                     <MatchExplanationDetails explanation={item.matchExplanation} />
-                                    {/* review6 S11 investigation: the raw `item.whoQualifies`
-                                        block that used to render here (labeled "Published
-                                        Applicant Requirements") was removed — it displayed
-                                        unfiltered internal catalog prose verbatim, the exact
-                                        field PublicProgramView deliberately excludes and for
-                                        the same reason. `item.eligibilityRules` below covers
-                                        the same underlying fact through the reviewed,
-                                        structured form. */}
-                                    {item.eligibilityRules && item.eligibilityRules.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
-                                          Requirements
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.eligibilityRules.map((rule, rIdx) => (
-                                            <li key={rIdx} className="flex items-start gap-2 text-[11px] text-[#0C1B33]/40 leading-relaxed">
-                                              <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
-                                              <span>{rule.description}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
                                     {item.url && (
 	                                      <a
 	                                        href={item.url}

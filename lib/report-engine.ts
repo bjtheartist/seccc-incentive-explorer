@@ -275,6 +275,24 @@ export interface ReportItem {
    */
   nextWindow?: { expected: string | null; note: string | null };
   /**
+   * Gate finding 11 — card-face glance row. All derived from structured
+   * catalog fields the engine already reads elsewhere on this same
+   * program (contacts[], howToApply[]) — never invented. `administrator`
+   * is the primary contact's agency name; `decisionBy` joins every
+   * contact's abbreviation (e.g. "SomerCor + DPD") for programs
+   * administered jointly; `nextStep` is the program's own first published
+   * how-to-apply step. Each is undefined when the program carries no
+   * contacts/howToApply — never a fallback guess. "Amount" and "Type"
+   * tiles from the R5 board are deliberately NOT built: no structured,
+   * non-blocklisted amount field exists (see the note above on
+   * `benefitRange`), and no structured program-category field exists in
+   * the catalog at all — both are honest omissions, not oversights.
+   */
+  administrator?: string;
+  decisionBy?: string;
+  nextStep?: string;
+  primaryContact?: { agency: string; phone?: string; email?: string };
+  /**
    * Raw ISO date (YYYY-MM-DD) for an "Upcoming Deadlines" item — the same
    * `item.date` lib/deadlines.ts already resolves correctly per-address
    * (SBIF window start, TIF expiration, program deadline), carried through
@@ -1662,6 +1680,34 @@ export function buildCostSignals(
   return tags.map((tag) => COST_SIGNAL_COPY[tag]);
 }
 
+/** Gate finding 11 — card-face glance row. See the ReportItem.administrator doc comment. */
+export function buildAdministrator(program: Program): string | undefined {
+  return program.contacts?.[0]?.agency;
+}
+
+/** Gate finding 11 — joins every listed contact's abbreviation ("SomerCor + DPD"). */
+export function buildDecisionBy(program: Program): string | undefined {
+  const abbreviations = (program.contacts ?? [])
+    .map((c) => c.abbreviation)
+    .filter((a): a is string => Boolean(a));
+  if (abbreviations.length === 0) return undefined;
+  return [...new Set(abbreviations)].join(" + ");
+}
+
+/** Gate finding 11 — the program's own first published how-to-apply step. */
+export function buildNextStep(program: Program): string | undefined {
+  return program.howToApply?.[0];
+}
+
+/** Gate finding 11 — primary administrator contact, for a face-level "call/email" line. */
+export function buildPrimaryContact(
+  program: Program,
+): { agency: string; phone?: string; email?: string } | undefined {
+  const first = program.contacts?.[0];
+  if (!first) return undefined;
+  return { agency: first.agency, phone: first.phone, email: first.email };
+}
+
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
@@ -1705,6 +1751,10 @@ function programReportItem(
     expectations: buildExpectations(program),
     costSignals: buildCostSignals(program),
     nextWindow: program.nextWindow,
+    administrator: buildAdministrator(program),
+    decisionBy: buildDecisionBy(program),
+    nextStep: buildNextStep(program),
+    primaryContact: buildPrimaryContact(program),
   };
 }
 

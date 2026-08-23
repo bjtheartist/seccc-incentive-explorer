@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { buildCostSignals, buildExpectations, buildVerifySources, buildWorksWith } from "@/lib/report-engine";
+import {
+  buildAdministrator,
+  buildCostSignals,
+  buildDecisionBy,
+  buildExpectations,
+  buildNextStep,
+  buildPrimaryContact,
+  buildVerifySources,
+  buildWorksWith,
+} from "@/lib/report-engine";
 import type { CostSignalTag, Program } from "@/lib/types";
 
 // ─── Program-card content fields (spec v2 amendment) ─────────────────────
@@ -146,5 +155,43 @@ describe("buildCostSignals (gate finding 4)", () => {
     expect(sbif.benefits?.join(" ")).toMatch(/reimburs/i); // sanity: prose is real
     expect(sbif.requiredDocs?.join(" ")).toMatch(/permit/i); // sanity: prose is real
     expect(buildCostSignals(sbif)).toBeUndefined(); // but neither leaks through
+  });
+});
+
+describe("card-face glance row builders (gate finding 11)", () => {
+  it("buildAdministrator returns the REAL primary contact's agency for SBIF", () => {
+    const sbif = realProgram("sbif");
+    expect(sbif.contacts?.[0]?.agency).toBeTruthy();
+    expect(buildAdministrator(sbif)).toBe(sbif.contacts![0].agency);
+  });
+
+  it("buildDecisionBy joins every REAL contact's abbreviation for SBIF (administered jointly)", () => {
+    const sbif = realProgram("sbif");
+    expect(sbif.contacts?.length).toBeGreaterThan(1); // sanity: SBIF really is multi-contact
+    const decisionBy = buildDecisionBy(sbif);
+    for (const contact of sbif.contacts ?? []) {
+      expect(decisionBy).toContain(contact.abbreviation);
+    }
+  });
+
+  it("buildNextStep returns the program's own REAL first published how-to-apply step for SBIF", () => {
+    const sbif = realProgram("sbif");
+    expect(sbif.howToApply?.[0]).toBeTruthy();
+    expect(buildNextStep(sbif)).toBe(sbif.howToApply![0]);
+  });
+
+  it("buildPrimaryContact returns the REAL first contact's agency/phone/email for SBIF", () => {
+    const sbif = realProgram("sbif");
+    const contact = buildPrimaryContact(sbif);
+    expect(contact?.agency).toBe(sbif.contacts![0].agency);
+    expect(contact?.phone).toBe(sbif.contacts![0].phone);
+  });
+
+  it("all four return undefined (honest omission) for a program with no contacts/howToApply — never a fallback guess", () => {
+    const bare = { id: "x", name: "X", level: "City", zoneKey: "x" } as unknown as Program;
+    expect(buildAdministrator(bare)).toBeUndefined();
+    expect(buildDecisionBy(bare)).toBeUndefined();
+    expect(buildNextStep(bare)).toBeUndefined();
+    expect(buildPrimaryContact(bare)).toBeUndefined();
   });
 });

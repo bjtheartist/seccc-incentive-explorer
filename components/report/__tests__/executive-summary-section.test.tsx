@@ -51,13 +51,24 @@ describe("MatchExplanationDetails", () => {
     const html = renderToStaticMarkup(
       <MatchExplanationDetails explanation={explanation} />,
     );
-    expect(html).toContain("Why it appears");
     expect(html).toContain("Still to confirm");
     expect(html).not.toContain("Based on your answers");
     expect(html).toContain("Confirm with");
     expect(html).toContain("https://example.org/ssa5");
     expect(html).toContain("City of Chicago SSA page");
     expect(html).toContain("Information reviewed July 2026");
+  });
+
+  // Gate finding 11 (regression): "Why it appears" moved onto the card
+  // face as pill-styled ReasonChips (both forks render ReasonChips
+  // immediately before this component) — it must no longer render here
+  // too, or the same reasons would print twice on one card.
+  it("no longer renders 'Why it appears' — that moved to ReasonChips on the card face", () => {
+    const html = renderToStaticMarkup(
+      <MatchExplanationDetails explanation={explanation} />,
+    );
+    expect(html).not.toContain("Why it appears");
+    expect(html).not.toContain("Address is inside the SSA #5 boundary");
   });
 });
 

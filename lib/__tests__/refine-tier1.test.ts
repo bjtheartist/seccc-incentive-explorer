@@ -321,4 +321,22 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain('id="brief-print-2up"');
     }
   });
+
+  // Gate finding 11: reason chips + the card-face glance row/"Commonly
+  // required"/next-step block moved out of the collapsed "Program review
+  // details" accordion onto the card face in both forks.
+  it("both forks render ReasonChips and ProgramCardFace on the card face, ahead of the (now-narrower) accordion", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ReasonChips }");
+      expect(fork).toContain("import { ProgramCardFace }");
+      expect(fork).toContain("<ReasonChips explanation={item.matchExplanation} />");
+      expect(fork).toContain("<ProgramCardFace item={item} />");
+      // The accordion's gate no longer includes item.eligibilityRules —
+      // that content moved to ProgramCardFace's "Commonly required".
+      expect(fork).toContain(
+        '{!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (',
+      );
+      expect(fork).not.toContain("item.matchExplanation || item.eligibilityRules || item.url");
+    }
+  });
 });
