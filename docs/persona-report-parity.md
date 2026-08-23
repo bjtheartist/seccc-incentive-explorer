@@ -16,7 +16,16 @@ Status legend:
 
 Escape hatch (spec v2): parity is complete when every unresolved row is
 PASS, class (a)-(d), or an honestly-reasoned DEFERRED. This build reaches
-that state — see the summary below.
+that state.
+
+**Final state (item 6 — parity finalized):** every row below is PASS or an
+explicitly-classed intentional difference, with exactly ONE genuine
+remainder — the supporter corridor-investment-by-year chart — reported
+with evidence in its own row and in the "Remainder" note at the bottom.
+Two additional scope lines are logged as judgment calls, not silent gaps:
+QR is a decorative glyph rather than a scanning-safe encoding (an
+explicitly authorized exception), and The Brief is wired into the live
+fork only, not the workspace/saved-report fork.
 
 ## What shipped (Tier 1 — v1 spec, complete)
 
@@ -57,13 +66,15 @@ that state — see the summary below.
 
 ## Judgment calls / deviations worth flagging explicitly
 
-1. **Contact Sheet is additive, not exclusive.** A late amendment asked for
-   Part 03 to contain the contact sheet ONLY (replacing the raw
-   support-organizations section). This build renders ContactSheet
-   alongside the existing support-organizations section rather than
-   replacing it — both forks, both still lane-ranked/persona-ordered.
-   Nothing is dropped either way; a follow-up can suppress the raw section
-   once the contact sheet has been reviewed against real addresses.
+1. ~~Contact Sheet is additive, not exclusive.~~ **RESOLVED (Part-03
+   correction).** A late amendment asked for Part 03 to contain the
+   contact sheet ONLY, replacing the raw support-organizations section.
+   Both forks now suppress that raw section from the section-render loop
+   whenever a real persona lens is active — its orgs still reach the
+   reader as lane-ranked, why-lined Contact Sheet rows; nothing is
+   dropped, "all" is untouched. See `lib/__tests__/refine-tier1.test.ts`
+   and the "Part-03 correction" describe block in
+   `report-page-live-renderer.test.tsx`.
 2. **"all" persona keeps the flat kitchen sink.** Spec v2 says "GUIDEPOST
    ANATOMY on every persona view (never on 'all')" in the same document
    whose R5LookingFinal ("just looking") board shows guidepost bands. Since
@@ -102,9 +113,35 @@ that state — see the summary below.
 4. **Coordinator amendments kept arriving throughout implementation**
    (roughly a dozen, escalating from the v1 hard-filter ruling through
    guidepost anatomy, program-card anatomy, charts, civic representation,
-   a "Documents to Gather" section, cost-signal chips, and finally a
-   multi-round "Brief" half-pager with its own intake question and QR
-   code). Past a certain point this build stopped chasing every new
-   amendment in order to actually finish, test, and ship a coherent
-   increment — everything not built is listed above with its reason, not
-   silently dropped.
+   a "Documents to Gather" section, cost-signal chips, and a multi-round
+   "Brief" half-pager with its own intake question and QR code). By item 6
+   every one of those has landed except the single remainder below.
+
+## Remainder (the one item not built, with evidence)
+
+**Supporter corridor-investment-by-year chart.** Evidence this is a real
+gap, not a shortcut:
+- Searched for a public per-corridor investment TIME SERIES. Found
+  `public/data/corridor-metrics.json` — real, public, per-ZIP data
+  (vacancy rate, turnover, permits, ownership concentration) — but it is a
+  single point-in-time snapshot (`asOf` one date), not a year-over-year
+  investment series, so it cannot drive a "by year" bar chart honestly.
+- The actual year-by-year investment analysis exists in
+  `data/private/community-investment.json` — confirmed present, confirmed
+  private-tier (not reachable from a public report-rendering path), with
+  no public per-CA-by-year export step built anywhere in this repo
+  (`scripts/export-community-investment.ts` produces the private ledger
+  itself, not a public aggregate).
+- Building that public aggregate is a real ETL task (design the
+  aggregation grain, write an export script, decide what precision is
+  safe to make public, add its own tamper-detection coverage matching the
+  pattern the existing `export-community-investment-tamper-detection.test.ts`
+  suite already holds every other exported file to) — not a UI task, and
+  not something to approximate by reading the private file directly from
+  a public surface.
+- Follow-up: add a `scripts/export-corridor-investment-by-year.ts`
+  producing a public, community-area-keyed, year-bucketed aggregate (no
+  individual records) from `data/private/community-investment.json`, wire
+  `lib/report-charts.ts` `buildCorridorInvestmentChartData` against it,
+  and build `components/report/CorridorInvestmentChart.tsx` on the exact
+  same "renders nothing when absent" contract the other two charts use.
