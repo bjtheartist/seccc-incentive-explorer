@@ -330,13 +330,19 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  // Gate finding 11 + gate round 2 BLOCKER 11: ALL "blessed" card content —
-  // ProgramCardFace's glance row/"Commonly required"/next-step, ReasonChips
-  // labeled "Why this is shown," and ProgramCardExtras's "Can combine
-  // with"/"What to expect"/"Verify at the source" — lives on the card face,
-  // in board order, in both forks. None of it inside the accordion, which
-  // retains only genuinely supplementary detail.
-  it("both forks render ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in board order, none inside the accordion", () => {
+  // Gate finding 11 + gate round 2 BLOCKER 11. Demoted, gate round 3
+  // BLOCKER 11 RULING: this is a SOURCE-GREP check — it proves the three
+  // components (ProgramCardFace, ReasonChips, ProgramCardExtras) are
+  // MOUNTED in that order in both forks' source text, and that none of
+  // them appear inside the accordion. It does NOT and cannot prove the
+  // fine-grained board order WITHIN each component (cost signals before
+  // "What it funds" before "Commonly required" inside Face; "Can combine
+  // with" before next-step before "What to expect" before "Verify at the
+  // source" inside Extras) — the earlier title's "in board order" claimed
+  // more than this test actually checks. The real, render-level proof of
+  // full board order lives in
+  // components/report/__tests__/program-card-order.test.tsx.
+  it("both forks MOUNT ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in that order, none inside the accordion (source-grep mount-order check — see program-card-order.test.tsx for the real render-level board-order proof)", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { ReasonChips }");
       expect(fork).toContain("import { ProgramCardFace }");

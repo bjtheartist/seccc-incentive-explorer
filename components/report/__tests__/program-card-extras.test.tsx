@@ -8,7 +8,7 @@ function baseItem(overrides: Partial<ReportItem> = {}): ReportItem {
 }
 
 describe("ProgramCardExtras", () => {
-  it("renders nothing when none of worksWith/expectations/verifySources are present — never an empty shell", () => {
+  it("renders nothing when none of worksWith/nextStep/primaryContact/expectations/verifySources are present — never an empty shell", () => {
     const html = renderToStaticMarkup(<ProgramCardExtras item={baseItem()} />);
     expect(html).toBe("");
   });
@@ -59,27 +59,43 @@ describe("ProgramCardExtras", () => {
     expect(html).toContain("Funded through TIF dollars.");
   });
 
-  it("renders cost-signal pills with the non-suppressible caption (gate finding 4)", () => {
+  // Gate round 3 BLOCKER 11 RULING: cost signals MOVED OUT to
+  // ProgramCardFace — see components/report/__tests__/program-card-face.test.tsx.
+  it("does NOT render cost signals — moved to ProgramCardFace (gate round 3 BLOCKER 11 RULING)", () => {
     const html = renderToStaticMarkup(
       <ProgramCardExtras
         item={baseItem({
-          costSignals: [
-            { label: "Free to apply", severity: "info" },
-            { label: "Permit fees apply", severity: "amber" },
-          ],
+          expectations: "Rolling intake",
+          costSignals: [{ label: "Free to apply", severity: "info" }],
         })}
       />,
     );
-    expect(html).toContain("Cost signals");
-    expect(html).toContain("Free to apply");
-    expect(html).toContain("Permit fees apply");
-    expect(html).toMatch(/Signals, not estimates/);
+    expect(html).not.toContain("Cost signals");
+    expect(html).not.toContain("Free to apply");
+    expect(html).not.toMatch(/Signals, not estimates/);
   });
 
-  it("omits the cost-signals block entirely when the item carries no confirmed tags", () => {
+  // Gate round 3 BLOCKER 11 RULING: next-step + primary contact MOVED IN
+  // from ProgramCardFace, positioned between "Can combine with" and
+  // "What to expect" per the board's SBIF card sequence.
+  it("renders next-step and primary contact from real structured catalog fields, moved IN from ProgramCardFace (gate round 3 BLOCKER 11 RULING)", () => {
+    const html = renderToStaticMarkup(
+      <ProgramCardExtras
+        item={baseItem({
+          nextStep: "Attend a mandatory SBIF orientation session",
+          primaryContact: { agency: "SomerCor 504", phone: "(312) 360-3384" },
+        })}
+      />,
+    );
+    expect(html).toContain("Next step");
+    expect(html).toContain("Attend a mandatory SBIF orientation session");
+    expect(html).toContain("SomerCor 504");
+    expect(html).toContain("(312) 360-3384");
+  });
+
+  it("omits next-step and primary contact honestly when both are absent", () => {
     const html = renderToStaticMarkup(<ProgramCardExtras item={baseItem({ expectations: "Rolling" })} />);
-    expect(html).not.toContain("Cost signals");
-    expect(html).not.toMatch(/Signals, not estimates/);
+    expect(html).not.toContain("Next step");
   });
 
   it("never renders a timeline/process diagram (owner ruling — timeline treatment REJECTED)", () => {

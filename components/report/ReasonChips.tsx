@@ -9,10 +9,14 @@
 // component only changes WHERE and HOW it renders, never what it says.
 //
 // Gate round 2, BLOCKER 11: labeled "Why this is shown" and positioned
-// AFTER ProgramCardFace in both forks, matching the R5 board's own order
-// (glance row / cost signals / description / commonly required / "Why
-// this is shown" / can combine with / next step / what to expect / verify
-// at the source) — this used to render FIRST, ahead of the face content.
+// AFTER ProgramCardFace in both forks, matching the R5 board's own order.
+// Gate round 3 BLOCKER 11 RULING confirmed and refined the exact sequence:
+// header (administrator + status/window pills) / glance row / cost
+// signals / "What it funds" / Commonly required (all ProgramCardFace) /
+// "Why this is shown" (this component) / Can combine with / next
+// step+contact / What to expect / Verify at the source (all
+// ProgramCardExtras) — this used to render FIRST, ahead of the face
+// content, before round 2 moved it here.
 
 import type { PublicMatchExplanation } from "@/lib/types";
 

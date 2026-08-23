@@ -1494,6 +1494,14 @@ export function ReportDisplay({
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
                           const hasSideValue = Boolean(item.value && !hasGroupedDetail);
+                          // Gate round 3 BLOCKER 11 RULING: real program items'
+                          // `item.detail` (== program.summary) now renders as
+                          // ProgramCardFace's "What it funds" block instead of
+                          // here, matching the board's sequence — suppressed
+                          // below so it never renders in both places on one
+                          // card. `programId` is set on every ReportItem
+                          // programReportItem() builds, regardless of section.
+                          const isProgramCardItem = Boolean(item.programId);
                           // review7 S20 (MEDIUM): the itemProgram/programById
                           // fallback removed — see ReportNavigationLinks.tsx's
                           // own comment; programReportItem() already sets
@@ -1536,7 +1544,7 @@ export function ReportDisplay({
                                   )}
                                   {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
-                                {!hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
+                                {!isProgramCardItem && !hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const { documentName, programs, cost } = parseDocumentCostLine(line);
@@ -1554,7 +1562,7 @@ export function ReportDisplay({
                                       );
                                     })}
                                   </ul>
-                                ) : !hasGroupedDetail && item.detail ? (
+                                ) : !isProgramCardItem && !hasGroupedDetail && item.detail ? (
                                   <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || sectionMatchesIdOrTitle(section, CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE) ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
@@ -1577,18 +1585,23 @@ export function ReportDisplay({
                               />
                             )}
 
-                            {/* Gate finding 11 + gate round 2 BLOCKER 11: ALL "blessed"
-                                card content lives on the FACE, in board order —
-                                administrator/status/window/"Commonly required"/
-                                next-step (ProgramCardFace), then reason chips
-                                labeled "Why this is shown" (ReasonChips — moved to
-                                render AFTER the face, not before), then "Can combine
-                                with"/"What to expect"/"Verify at the source" +
-                                the traces-to-public-record line (ProgramCardExtras —
-                                moved OUT of the accordion below entirely; round 1's
-                                "stays in the accordion" call was wrong, these ARE
-                                named in the spec's own board order). Same source
-                                data throughout — only where/how it renders changed. */}
+                            {/* Gate finding 11 + gate round 2 BLOCKER 11 + gate round 3
+                                BLOCKER 11 RULING: ALL "blessed" card content lives on
+                                the FACE, in the BOARD's exact sequence (the board wins
+                                over spec v2 prose per the round-3 ruling) — header
+                                (administrator/status/window pills), glance row, cost
+                                signals, "What it funds," Commonly required (all
+                                ProgramCardFace), then reason chips labeled "Why this
+                                is shown" (ReasonChips), then Can combine with,
+                                next-step+contact, What to expect, Verify at the source
+                                + the traces-to-public-record line (all
+                                ProgramCardExtras — moved OUT of the accordion below
+                                entirely). Same source data throughout — only
+                                where/how it renders changed. See ProgramCardFace.tsx's
+                                and ProgramCardExtras.tsx's own header comments for the
+                                full board-order rationale, and
+                                lib/__tests__/refine-tier1.test.ts's real render-order
+                                test for the enforcing proof. */}
                             {!isSupportNetworkItem && (
                               <>
                                 <ProgramCardFace item={item} />
