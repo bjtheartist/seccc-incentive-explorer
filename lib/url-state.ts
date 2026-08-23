@@ -2,8 +2,20 @@ import type { SurveyAnswers } from "./types";
 import type { WizardState, ReportType } from "./report-wizard-config";
 import {
   INITIAL_WIZARD_STATE,
+  MAX_PROJECT_GOALS,
+  PROJECT_TYPE_LABELS,
   selectedProjectGoals,
 } from "./report-wizard-config";
+
+// Share-link params are attacker-writable, so goal ids decoded from `pg`/`pt`
+// must be checked against the ids the wizard can actually produce (site +
+// vacancy option lists) before they enter wizard state — otherwise arbitrary
+// strings ride the gate's uncapped pass-through budget into the engine
+// (finding NEW-R4-3). `hasOwnProperty.call` rather than `in`, so prototype
+// keys ("constructor", "__proto__") don't count as known ids.
+function isKnownGoalId(goalId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(PROJECT_TYPE_LABELS, goalId);
+}
 
 export interface CheckState {
   lat: number;
@@ -153,8 +165,15 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
 
   const state: WizardState = { ...INITIAL_WIZARD_STATE };
 
+  // Accept short codes and full report-type names (current or legacy), but
+  // never cast an unrecognized string into `reportType` — an unknown value
+  // leaves it null so the wizard re-asks instead of rendering a junk type.
   const rt = params.get("rt");
-  if (rt) state.reportType = SHORT_TO_REPORT_TYPE[rt] || (rt as ReportType);
+  if (rt) {
+    const mapped: ReportType | undefined =
+      SHORT_TO_REPORT_TYPE[rt] || SHORT_TO_REPORT_TYPE[REPORT_TYPE_SHORT[rt]];
+    if (mapped) state.reportType = mapped;
+  }
 
   const addr = params.get("addr");
   if (addr) state.address = addr;
@@ -173,8 +192,11 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   const bud = params.get("bud");
   if (bud) state.budgetRange = bud;
 
+  // `pt` is a goal id too (legacy single-goal links, and the fallback into
+  // `projectGoals` below) — an unknown id here would flow into the engine the
+  // same way a junk `pg` entry would, so it gets the same validation.
   const pt = params.get("pt");
-  if (pt) state.projectType = pt;
+  if (pt && isKnownGoalId(pt)) state.projectType = pt;
 
   const customGoal = params.get("cg");
   if (customGoal) state.customGoal = customGoal.slice(0, 240);
@@ -214,9 +236,9 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   state.creditsToAnalyze = decodeArray("cta");
   state.documentsAvailable = decodeArray("docs");
   state.supportNeeded = decodeArray("need");
-  state.projectGoals = decodeArray("pg")
-    .filter((goal): goal is string => typeof goal === "string" && Boolean(goal))
-    .slice(0, 3);
+  state.projectGoals = Array.from(
+    new Set(decodeArray("pg").filter((goal) => Boolean(goal) && isKnownGoalId(goal)))
+  ).slice(0, MAX_PROJECT_GOALS);
   if (state.projectGoals.length === 0 && state.projectType) {
     state.projectGoals = [state.projectType];
   }
