@@ -8,11 +8,14 @@ import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { projectGoalDisplayLabel } from "@/lib/report-wizard-config";
 import {
+  dedupeGoalIds,
   GATE_GOAL_CHIPS,
   GATE_LOOKING_CHIP_ID,
   gateGoalChipsToGoalIds,
   gateGoalSelectionIsComplete,
+  goalIdsToGateChipIds,
   toggleGateGoalChip,
+  unmatchedGoalIds,
 } from "@/lib/gate-goal-groups";
 import { GATE_PERSONA_CHIPS } from "@/lib/gate-persona-groups";
 import { storePersona, type PersonaId } from "@/lib/personas";
@@ -35,6 +38,20 @@ interface ReportEmailGateProps {
 type ActionStatus = "idle" | "preparing";
 type SupportStatus = "idle" | "sending" | "sent" | "error";
 
+/**
+ * The existing report's goal ids, read the SAME uncapped way
+ * `app/report/page.tsx`'s `handlePrepareGatedReport` now reads them (gate
+ * review round 1, BLOCKER 1/2) — never through `selectedProjectGoals()`,
+ * which slices to 3 and would silently re-drop a 4th id on every reseed of
+ * an already gate-prepared report.
+ */
+function existingGoalIdsFor(report: GeneratedReport): string[] {
+  const goals = report.metadata?.projectGoals;
+  if (goals && goals.length > 0) return dedupeGoalIds(goals);
+  const projectType = report.metadata?.projectType;
+  return projectType ? [projectType] : [];
+}
+
 export function ReportEmailGate({
   report,
   source,
@@ -46,13 +63,14 @@ export function ReportEmailGate({
   const { status: authStatus } = useSession();
 
   // Persona intake (owner ruling A1, carried into the redesign): inferred
-  // once from what the visitor already told the report, pre-selected. The
-  // gate's own mandatory rule (spec anatomy item 2) is satisfied the
-  // moment a real report exists, because inference always resolves to one
-  // of the four real gate chips — never "all", never empty — so this
-  // never actually blocks VIEW MY REPORT on its own; only the goal row
-  // does (matching the blessed board's own disabled-state screenshot,
-  // whose helper line names only the goal requirement).
+  // once from what the visitor already told the report, pre-selected.
+  // Gate review round 1, finding 11: persona IS part of the mandatory
+  // predicate below (`canProceed`) — it just never blocks in PRACTICE,
+  // because inference always resolves to one of the four real gate chips,
+  // never empty. `personaTouched` tracks whether the visitor actually
+  // tapped a chip, so analytics can honestly report "inferred" (untouched)
+  // vs. "confirmed"/"corrected" (a real tap) instead of always claiming
+  // "confirmed" for a chip nobody touched.
   const [inferredPersona] = useState<PersonaId>(() =>
     inferPersonaFromIntake({
       industry: report.metadata?.industry,
@@ -62,8 +80,24 @@ export function ReportEmailGate({
     }),
   );
   const [persona, setPersona] = useState<PersonaId>(inferredPersona);
+  const [personaTouched, setPersonaTouched] = useState(false);
 
-  const [selectedGoalChips, setSelectedGoalChips] = useState<string[]>([]);
+  // Gate review round 1, BLOCKER 2: the gate must never destroy goals or
+  // custom-goal text the visitor already entered (a completed wizard run,
+  // a refine, a shared link with goals baked in — `reportRequiresEmailGate`
+  // fires for every site-incentives/location-incentives report, including
+  // those). Seed the grouped chips from whatever the report already
+  // carries; ids with no chip representation (`vacant-acquisition`,
+  // `other`) are kept in `passthroughGoalIds` and always resubmitted
+  // untouched, even though no chip shows them. `customGoal` is preserved
+  // verbatim and resent on every prepare call — never hardcoded empty.
+  const [selectedGoalChips, setSelectedGoalChips] = useState<string[]>(() =>
+    goalIdsToGateChipIds(existingGoalIdsFor(report)),
+  );
+  const [passthroughGoalIds, setPassthroughGoalIds] = useState<string[]>(() =>
+    unmatchedGoalIds(existingGoalIdsFor(report)),
+  );
+  const [customGoal] = useState(report.metadata?.customGoal || "");
 
   const [supportName, setSupportName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
@@ -71,6 +105,12 @@ export function ReportEmailGate({
   const [website, setWebsite] = useState("");
   const [supportStatus, setSupportStatus] = useState<SupportStatus>("idle");
   const [supportError, setSupportError] = useState("");
+  const [supportEmailError, setSupportEmailError] = useState("");
+  // Once a support-submission failure has been shown once, a second click
+  // of View/Save proceeds without blocking again (gate review round 1,
+  // finding 3: surface the failure, but "never blocks the report" still
+  // has to mean something after the visitor has SEEN the failure).
+  const [supportGaveUp, setSupportGaveUp] = useState(false);
 
   const [viewStatus, setViewStatus] = useState<ActionStatus>("idle");
   const [saveStatus, setSaveStatus] = useState<ActionStatus>("idle");
@@ -78,32 +118,60 @@ export function ReportEmailGate({
   const [error, setError] = useState("");
 
   const isBusy = viewStatus !== "idle" || saveStatus !== "idle";
-  const selectionComplete = gateGoalSelectionIsComplete(selectedGoalChips);
-  const canProceed = selectionComplete && !isBusy;
+  const selectionComplete =
+    gateGoalSelectionIsComplete(selectedGoalChips) || passthroughGoalIds.length > 0;
+  // Persona is genuinely part of the predicate (finding 11) even though it
+  // is never actually falsy — `persona` always holds a real, chip-backed
+  // PersonaId from the moment this component mounts.
+  const canProceed = Boolean(persona) && selectionComplete && !isBusy;
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (dialog && !dialog.open) dialog.showModal();
+    if (!dialog || dialog.open) return;
+    // jsdom (this repo's test environment) does not implement
+    // HTMLDialogElement.showModal() — a real browser without full <dialog>
+    // support at least gets the plain `open` attribute, which keeps this
+    // effect from throwing in @testing-library/react interaction tests
+    // AND keeps a closed (hence accessibility-hidden) <dialog> from
+    // silently swallowing every control inside it.
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
     return () => {
-      if (dialog?.open) dialog.close();
+      if (dialog.open) {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      }
     };
   }, []);
 
   const commitPersonaSelection = (preparedReport: GeneratedReport) => {
     storePersona(persona);
+    const outcome = !personaTouched
+      ? "inferred"
+      : persona === inferredPersona
+        ? "confirmed"
+        : "corrected";
     trackEvent("persona_intake_inferred", {
       reportType: preparedReport.reportType,
       source: "report_email_gate",
       metadata: {
         inferredPersona,
         selectedPersona: persona,
-        outcome: persona === inferredPersona ? "confirmed" : "corrected",
+        outcome,
       },
     });
   };
 
   const toggleGoalChip = (chipId: string) => {
     if (isBusy) return;
+    // An explicit "Just looking around" tap is an unambiguous "no goal
+    // filter" signal — it overrides any passed-through, chip-less ids from
+    // the report's existing metadata the same way it overrides the visible
+    // chips (spec §A: exclusive of the other 7).
+    if (chipId === GATE_LOOKING_CHIP_ID) setPassthroughGoalIds([]);
     setSelectedGoalChips((current) => toggleGateGoalChip(current, chipId));
   };
 
@@ -111,35 +179,30 @@ export function ReportEmailGate({
     if (isBusy) return;
     const chip = GATE_PERSONA_CHIPS.find((c) => c.id === chipId);
     if (!chip) return;
+    setPersonaTouched(true);
     setPersona((current) =>
       chip.personaIds.includes(current) ? current : chip.defaultPersonaId,
     );
   };
 
-  const projectGoalIds = () => gateGoalChipsToGoalIds(selectedGoalChips);
+  const projectGoalIds = () =>
+    dedupeGoalIds([...gateGoalChipsToGoalIds(selectedGoalChips), ...passthroughGoalIds]);
 
   /**
-   * The optional support opt-in (spec §D). Submitted alongside whichever
-   * primary action the visitor actually takes (View or Save) — the box
-   * has no submit button of its own on the board, and the promise is
-   * "a real person will follow up," never "we'll email you the report,"
-   * so this never touches report delivery. Silently skipped if the box
-   * wasn't checked or the email is empty/invalid: the box is entirely
-   * optional and must never block the primary action it rides alongside.
+   * Real send for the support opt-in (spec §D). Assumes the caller has
+   * already validated `wantsSupport` + a real-looking email — see
+   * `validateSupportBoxOrShowError` and `submitSupportBoxIfNeeded` below,
+   * which is what every entry point actually calls.
    */
-  const maybeSubmitSupportRequest = async (preparedReport: GeneratedReport) => {
-    if (!wantsSupport) return;
-    const trimmedEmail = supportEmail.trim();
-    if (!trimmedEmail.includes("@")) return;
-
+  const submitSupportBox = async (preparedReport: GeneratedReport): Promise<boolean> => {
     setSupportStatus("sending");
     setSupportError("");
     try {
       const goalIds = projectGoalIds();
-      const projectGoal = goalIds.map((id) => projectGoalDisplayLabel(id)).join(", ");
+      const projectGoal = goalIds.map((id) => projectGoalDisplayLabel(id, customGoal)).join(", ");
       await submitSupportRequest({
         name: supportName.trim() || undefined,
-        email: trimmedEmail,
+        email: supportEmail.trim(),
         address: preparedReport.metadata?.address,
         reportTitle: preparedReport.title,
         reportType: preparedReport.reportType,
@@ -154,6 +217,7 @@ export function ReportEmailGate({
         address: preparedReport.metadata?.address || null,
         metadata: { projectGoals: goalIds, entrySource: source },
       });
+      return true;
     } catch (supportSubmitError) {
       setSupportStatus("error");
       setSupportError(
@@ -161,11 +225,59 @@ export function ReportEmailGate({
           ? supportSubmitError.message
           : "We could not send your request. Please try again.",
       );
+      return false;
     }
   };
 
+  /**
+   * Gate review round 1, BLOCKER 3(a), orchestrator ruling: an invalid or
+   * blank email while the box is checked BLOCKS the primary action with a
+   * visible inline error on the email field — it does not silently skip a
+   * promise the visitor just read. Checked synchronously, before any
+   * report preparation, so an invalid box never even spends the (async)
+   * prepare call.
+   */
+  const supportEmailIsValid = (): boolean => {
+    if (!wantsSupport) return true;
+    return supportEmail.trim().includes("@");
+  };
+
+  const validateSupportBoxOrShowError = (): boolean => {
+    if (supportEmailIsValid()) {
+      setSupportEmailError("");
+      return true;
+    }
+    setSupportEmailError("Enter an email so we know where to follow up.");
+    return false;
+  };
+
+  /**
+   * Gate review round 1, BLOCKER 3(b)/(c), orchestrator ruling: the
+   * request is AWAITED before either `onReportReady` (which unmounts this
+   * dialog) or the unauthenticated Save redirect fires, so a real failure
+   * is surfaced (role="alert", still mounted) instead of being killed by
+   * navigation or unmount. Once shown once (`supportGaveUp`), a second
+   * click proceeds without retrying — "never blocks the report" has to
+   * mean something once the visitor has actually SEEN the failure.
+   * Assumes `validateSupportBoxOrShowError` already passed. Returns false
+   * when the caller must stop (a failure was just surfaced for the first
+   * time).
+   */
+  const submitSupportBoxIfNeeded = async (
+    preparedReport: GeneratedReport,
+  ): Promise<boolean> => {
+    if (!wantsSupport || supportStatus === "sent" || supportGaveUp) return true;
+
+    const ok = await submitSupportBox(preparedReport);
+    if (!ok) {
+      setSupportGaveUp(true);
+      return false;
+    }
+    return true;
+  };
+
   const prepareReport = async (): Promise<GeneratedReport | null> => {
-    const preparedReport = await onPrepareReport(projectGoalIds(), "");
+    const preparedReport = await onPrepareReport(projectGoalIds(), customGoal);
     if (!preparedReport) throw new Error("We could not prepare the report. Please try again.");
     return preparedReport;
   };
@@ -173,10 +285,14 @@ export function ReportEmailGate({
   const handleViewReport = async () => {
     if (!canProceed) return;
     setError("");
+    if (!validateSupportBoxOrShowError()) return;
     setViewStatus("preparing");
     try {
       const preparedReport = await prepareReport();
       if (!preparedReport) return;
+
+      const canContinue = await submitSupportBoxIfNeeded(preparedReport);
+      if (!canContinue) return;
 
       trackEvent("report_email_gate_skipped", {
         reportType: preparedReport.reportType,
@@ -185,7 +301,6 @@ export function ReportEmailGate({
         metadata: { projectGoals: projectGoalIds(), entrySource: source },
       });
       commitPersonaSelection(preparedReport);
-      void maybeSubmitSupportRequest(preparedReport);
       onReportReady(preparedReport);
     } catch (viewError) {
       setError(
@@ -210,13 +325,16 @@ export function ReportEmailGate({
   const handleSaveReport = async () => {
     if (!canProceed) return;
     setError("");
+    if (!validateSupportBoxOrShowError()) return;
     setSaveStatus("preparing");
     try {
       const preparedReport = await prepareReport();
       if (!preparedReport) return;
 
+      const canContinue = await submitSupportBoxIfNeeded(preparedReport);
+      if (!canContinue) return;
+
       commitPersonaSelection(preparedReport);
-      void maybeSubmitSupportRequest(preparedReport);
 
       trackEvent("save_report_clicked", {
         reportType: preparedReport.reportType,
@@ -385,18 +503,27 @@ export function ReportEmailGate({
             <input
               type="email"
               value={supportEmail}
-              onChange={(event) => setSupportEmail(event.target.value)}
+              onChange={(event) => {
+                setSupportEmail(event.target.value);
+                if (supportEmailError) setSupportEmailError("");
+              }}
               autoComplete="email"
               disabled={isBusy}
               placeholder="you@business.com"
-              className="min-w-0 flex-[1.4] border border-[#D8DDE6] bg-white px-3 py-2.5 text-[12px] outline-none placeholder:text-[#0C1B33]/40 focus:border-[#2563EB] disabled:opacity-55"
+              aria-invalid={Boolean(supportEmailError)}
+              className={`min-w-0 flex-[1.4] border bg-white px-3 py-2.5 text-[12px] outline-none placeholder:text-[#0C1B33]/40 focus:border-[#2563EB] disabled:opacity-55 ${
+                supportEmailError ? "border-red-400" : "border-[#D8DDE6]"
+              }`}
             />
           </div>
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               checked={wantsSupport}
-              onChange={(event) => setWantsSupport(event.target.checked)}
+              onChange={(event) => {
+                setWantsSupport(event.target.checked);
+                if (!event.target.checked) setSupportEmailError("");
+              }}
               disabled={isBusy}
               className="h-3.5 w-3.5 shrink-0 accent-[#2563EB]"
             />
@@ -408,6 +535,11 @@ export function ReportEmailGate({
             A real person from the Southeast Chicago Chamber of Commerce will follow up within 48
             hours.
           </p>
+          {supportEmailError && (
+            <p role="alert" className="text-[10px] text-red-600">
+              {supportEmailError}
+            </p>
+          )}
           {supportStatus === "error" && supportError && (
             <p role="alert" className="text-[10px] text-red-600">
               {supportError}
@@ -444,10 +576,15 @@ export function ReportEmailGate({
           </button>
         </div>
 
-        {/* Footer — spec anatomy item 7 (email-delivery-of-report removed from the gate). */}
+        {/* Footer — spec anatomy item 7. Gate review round 1, BLOCKER 4:
+            the board's own "window reminders" clause claims a mechanism
+            that does not exist anywhere in this repo (no scheduled
+            reminder-send infra — see FundingWindowChart.tsx's own doc
+            comment). The claim-surface rule outranks the board here:
+            this copy names only what actually lives inside the report. */}
         <p className="text-center text-[11px] text-[#5A6478]">
-          PDF, email &amp; window reminders live inside the report — where you can see what
-          they&rsquo;re about
+          PDF &amp; email tools live inside the report — where you can see what they&rsquo;re
+          about
         </p>
       </div>
 
