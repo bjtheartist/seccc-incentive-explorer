@@ -211,27 +211,41 @@ export const MAX_PROJECT_GOALS = 3;
  * The maximum goal-id SET the engine itself (GOAL_RULES, projectGoalsFit,
  * the report generator, `lib/report-engine.ts`'s two `selectedProjectGoals`
  * call sites) is ever asked to carry — gate review round 2, NEW-3/ruling
- * #4, raised again in gate review round 3, MAJOR finding R3-1.
- * `MAX_PROJECT_GOALS` above is the WIZARD's own "pick up to 3"
- * fresh-selection UI limit (unchanged, still governs how many NEW goals
- * `ProjectGoalSelector` lets a visitor add in one sitting) — it is NOT an
- * engine constraint.
+ * #4; raised to 5 in round 3, MAJOR finding R3-1; corrected to 6 in round
+ * 4, THE BLOCKER, after round 3's derivation turned out to still
+ * undercount. `MAX_PROJECT_GOALS` above is the WIZARD's own "pick up to
+ * 3" fresh-selection UI limit (unchanged, still governs how many NEW
+ * goals `ProjectGoalSelector` lets a visitor add in one sitting) — it is
+ * NOT an engine constraint.
  *
- * This is the PROVABLE ceiling, not a guess: a gate visit seeds at most
- * `MAX_PROJECT_GOALS` (3) raw existing goal ids (an ordinary wizard run
- * never produces more), each of which either matches a grouped chip
- * (contributing that chip's full `goalIds` count once ANY chip is
- * toggled — spec §A) or is a pass-through id with no chip (contributing
- * 1). The worst case picks the two 2-id chips first ("Expand or buy
- * equipment", "Develop housing or mixed-use") plus any 3rd 1-id
- * chip/pass-through id: 2 + 2 + 1 = 5. `lib/__tests__/gate-goal-groups.test.ts`
- * computes this number FROM `GATE_GOAL_CHIPS`' actual shape (not a
- * hardcoded copy of this reasoning) and asserts `MAX_ENGINE_GOALS` is at
- * least that — so a future chip regrouping that raises the worst case
- * breaks that test, prompting a deliberate bump here, instead of quietly
- * reintroducing silent truncation in production reports.
+ * This is the PROVABLE ceiling, not a guess — but it took two attempts to
+ * get the derivation right. Round 3's version treated a pass-through id
+ * (a raw goal with no chip at all — only `vacant-acquisition` and `other`
+ * qualify) as if it consumed one of the gate's chip "slots." It doesn't:
+ * `ReportEmailGate.tsx` tracks TWO INDEPENDENT budgets that both ride
+ * together in `projectGoalIds()` once any chip is toggled —
+ *   1. the CHIP budget: up to `goalChipCap` chips
+ *      (`Math.max(MAX_GATE_GOAL_CHIPS, <chips the seed happened to hit>)`,
+ *      never below 2) — freely chosen, not restricted to whichever chips
+ *      the original seed touched, so the worst case fills every slot with
+ *      the highest-yield chips available (the two 2-id chips, "Expand or
+ *      buy equipment" and "Develop housing or mixed-use," first);
+ *   2. the PASS-THROUGH budget: `unmatchedGoalIds(originalGoalIds)`,
+ *      completely uncapped by the chip budget.
+ * Worst witnessed case: a 3-raw-id seed carrying BOTH pass-through ids
+ * (`vacant-acquisition`, `other`) plus one chip-matching id still only
+ * floors `goalChipCap` at 2 (1 seeded chip doesn't raise it) — so the
+ * visitor can then freely pick both 2-id chips (2 + 2 = 4) *on top of*
+ * the 2 pass-through ids already riding along = 6.
+ * `lib/__tests__/gate-goal-groups.test.ts`'s "provable ceiling" describe
+ * block now models both budgets separately and brute-forces every
+ * possible seed up to `MAX_PROJECT_GOALS` in size (not a hand-derived
+ * closed form) to find the true max, asserting `MAX_ENGINE_GOALS` is at
+ * least that — so a future chip regrouping breaks that test, prompting a
+ * deliberate bump here, instead of quietly reintroducing silent
+ * truncation in production reports.
  */
-export const MAX_ENGINE_GOALS = 5;
+export const MAX_ENGINE_GOALS = 6;
 
 export function selectedProjectGoals(
   state: { projectGoals?: readonly string[]; projectType?: string | null },

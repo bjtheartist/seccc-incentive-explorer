@@ -12,7 +12,12 @@ import {
   toggleGateGoalChip,
   unmatchedGoalIds,
 } from "../gate-goal-groups";
-import { MAX_ENGINE_GOALS, MAX_PROJECT_GOALS, selectedProjectGoals } from "../report-wizard-config";
+import {
+  MAX_ENGINE_GOALS,
+  MAX_PROJECT_GOALS,
+  selectedProjectGoals,
+  SITE_PROJECT_TYPE_OPTIONS,
+} from "../report-wizard-config";
 
 // ─── Gate goal grouping — pure-function tests (gate review round 1) ─────
 // The reviewer's falsification pass proved the ORIGINAL suite blind to
@@ -226,9 +231,10 @@ describe("resolveGatePrepareGoals — the R1-BLOCKER-1 pin (gate review round 2,
   });
 
   it("a 5-id set (an existing pass-through goal plus a fresh 2-chip pick) survives whole ALL THE WAY TO THE ENGINE (gate review round 3, R3-1)", () => {
-    // Sanity: this scenario is exactly at the gate's provable ceiling —
-    // see the "provable ceiling" describe block below for where 5 comes
-    // from and why it is not a guess.
+    // Sanity: this scenario is one below the gate's TRUE provable
+    // ceiling (6, corrected in gate review round 4 — see the "provable
+    // ceiling" describe block below); kept as a simpler, single-chip
+    // probe alongside the full worst-case witness test there.
     expect(MAX_ENGINE_GOALS).toBeGreaterThanOrEqual(5);
 
     const incomingGoalIds = [
@@ -310,51 +316,93 @@ describe("resolveGatePrepareGoals — the R1-BLOCKER-1 pin (gate review round 2,
   });
 });
 
-describe("MAX_ENGINE_GOALS — the provable ceiling, derived from GATE_GOAL_CHIPS (gate review round 3, R3-1)", () => {
+describe("MAX_ENGINE_GOALS — the provable ceiling, derived from GATE_GOAL_CHIPS (gate review round 3, R3-1; corrected in round 4, THE BLOCKER)", () => {
   /**
-   * Computes the worst-case number of real goal ids a single gate visit
-   * can legitimately emit, from the chip definitions themselves — not a
-   * hardcoded copy of the reasoning in lib/report-wizard-config.ts's
-   * MAX_ENGINE_GOALS comment. An ordinary wizard run seeds at most
-   * MAX_PROJECT_GOALS raw ids; each seeds at most one DISTINCT chip
-   * (goalIdsToGateChipIds never seeds the same chip twice), and once any
-   * chip is toggled, ALL selected chips emit their full `goalIds` set
-   * (round 2 ruling #2). The worst case fills as many seed "slots" as
-   * possible with the chips that carry the most ids each; a slot that
-   * cannot reach a not-yet-used 2-id chip still contributes at least 1
-   * (a 1-id chip, or a pass-through id with no chip at all).
+   * Round 3's version of this function treated a pass-through id (a raw
+   * seed goal with no chip at all — only `vacant-acquisition` and `other`
+   * qualify) as if it consumed one of the gate's chip "slots." It
+   * doesn't: `ReportEmailGate.tsx` tracks the CHIP budget
+   * (`goalChipCap` chips, freely chosen once any toggle happens — never
+   * restricted to whichever chips the original seed happened to touch)
+   * and the PASS-THROUGH budget (`unmatchedGoalIds`, uncapped by the
+   * chip budget) as two INDEPENDENT numbers that both ride together in
+   * `projectGoalIds()`. This version models both separately and
+   * brute-forces every possible raw seed up to `MAX_PROJECT_GOALS` in
+   * size, drawn from the real wizard option universe
+   * (`SITE_PROJECT_TYPE_OPTIONS`) — not a hand-derived closed form — the
+   * same verification technique the reviewer used to find round 3's
+   * undercount.
    */
-  function worstCaseReachableEngineGoalCount(): number {
+  const ALL_GOAL_IDS = SITE_PROJECT_TYPE_OPTIONS.map((option) => option.id);
+
+  function* seedsUpToSize(ids: readonly string[], maxSize: number): Generator<string[]> {
+    function* combinations(start: number, chosen: string[]): Generator<string[]> {
+      yield chosen;
+      for (let i = start; i < ids.length; i++) {
+        if (chosen.length >= maxSize) return;
+        yield* combinations(i + 1, [...chosen, ids[i]]);
+      }
+    }
+    yield* combinations(0, []);
+  }
+
+  function reachableGoalCountForSeed(seed: readonly string[]): number {
+    const passthroughCount = unmatchedGoalIds(seed).length;
+    const seededChipCount = goalIdsToGateChipIds(seed).length;
+    const goalChipCap = Math.max(MAX_GATE_GOAL_CHIPS, seededChipCount);
+
+    // The chip budget is freely fillable, not restricted to the chips the
+    // seed happened to touch — the worst case picks the highest-yield
+    // chips available, up to the cap, from ALL substantive chips.
     const idCountsDesc = [...GATE_SUBSTANTIVE_CHIPS]
       .map((chip) => chip.goalIds.length)
       .sort((a, b) => b - a);
+    const chipSum = idCountsDesc.slice(0, goalChipCap).reduce((sum, n) => sum + n, 0);
 
-    let total = 0;
-    let slotsLeft = MAX_PROJECT_GOALS;
-    for (const count of idCountsDesc) {
-      if (slotsLeft <= 0) break;
-      total += count;
-      slotsLeft -= 1;
-    }
-    // Any remaining seed slots (fewer distinct chips available than
-    // MAX_PROJECT_GOALS) still each contribute at least 1 real id — a
-    // 1-id chip, or a pass-through id with no chip representation.
-    total += slotsLeft;
-    return total;
+    return passthroughCount + chipSum;
   }
 
-  it("MAX_ENGINE_GOALS is at least the worst case computed from the CURRENT chip definitions", () => {
-    const worstCase = worstCaseReachableEngineGoalCount();
-    expect(MAX_ENGINE_GOALS).toBeGreaterThanOrEqual(worstCase);
+  function worstCaseReachableEngineGoalCount(): { max: number; witness: string[] } {
+    let max = 0;
+    let witness: string[] = [];
+    for (const seed of seedsUpToSize(ALL_GOAL_IDS, MAX_PROJECT_GOALS)) {
+      const total = reachableGoalCountForSeed(seed);
+      if (total > max) {
+        max = total;
+        witness = seed;
+      }
+    }
+    return { max, witness };
+  }
+
+  it("MAX_ENGINE_GOALS is at least the worst case computed from the CURRENT chip definitions, brute-forced over every possible seed", () => {
+    const { max } = worstCaseReachableEngineGoalCount();
+    expect(MAX_ENGINE_GOALS).toBeGreaterThanOrEqual(max);
   });
 
-  it("today's worst case is exactly 5 (two 2-id chips + one 1-id chip, from a 3-goal seed) — documents WHY MAX_ENGINE_GOALS is 5, not a magic number", () => {
-    expect(worstCaseReachableEngineGoalCount()).toBe(5);
+  it("today's worst case is exactly 6 (2 pass-through ids + both 2-id chips, from a 3-raw-id seed) — documents WHY MAX_ENGINE_GOALS is 6, not a magic number", () => {
+    const { max, witness } = worstCaseReachableEngineGoalCount();
+    expect(max).toBe(6);
+    // The witness seed must carry BOTH pass-through ids — that's the
+    // mechanism round 3 missed (a 3rd chip-matching id never lowers the
+    // total below 6, since a single seeded chip still floors the cap at
+    // MAX_GATE_GOAL_CHIPS).
+    expect(witness).toEqual(expect.arrayContaining(["vacant-acquisition", "other"]));
+
     // Sanity on the inputs the formula depends on, so a chip-definition
-    // change is caught here first, with an explicit reason, rather than
-    // as an unexplained MAX_ENGINE_GOALS mismatch above.
+    // or wizard-option change is caught here first, with an explicit
+    // reason, rather than as an unexplained MAX_ENGINE_GOALS mismatch.
     const twoIdChipCount = GATE_SUBSTANTIVE_CHIPS.filter((chip) => chip.goalIds.length === 2).length;
     expect(twoIdChipCount).toBe(2);
     expect(GATE_GOAL_CHIPS.length).toBe(8); // 7 substantive + "Just looking around"
+    const passthroughEligibleIds = ALL_GOAL_IDS.filter(
+      (id) => unmatchedGoalIds([id]).length === 1,
+    );
+    expect(passthroughEligibleIds.sort()).toEqual(["other", "vacant-acquisition"]);
+  });
+
+  it("the reviewer's exact witness seed reproduces 6 directly", () => {
+    expect(reachableGoalCountForSeed(["vacant-acquisition", "other", "expansion"])).toBe(6);
+    expect(reachableGoalCountForSeed(["rehab", "vacant-acquisition", "other"])).toBe(6);
   });
 });

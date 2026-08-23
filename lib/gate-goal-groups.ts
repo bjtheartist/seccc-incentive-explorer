@@ -189,12 +189,16 @@ export interface GatePrepareGoalsResult {
  * exact goal-truncation decision that function makes is unit-testable
  * without mounting the whole report page. Deliberately uses `dedupeGoalIds`
  * (truly uncapped), NOT `selectedProjectGoals()` (capped at
- * `MAX_ENGINE_GOALS = 4` in lib/report-wizard-config.ts): the gate's own
- * emission can exceed 4 when pass-through ids (goals with no chip
- * representation) ride alongside a fresh 2-chip pick — e.g. an existing
- * `vacant-acquisition` goal plus two freshly toggled chips is 5 real ids.
- * `lib/__tests__/gate-goal-groups.test.ts` pins this with a 5-id probe
- * that a reversion to the capped wizard function would fail.
+ * `MAX_ENGINE_GOALS` in lib/report-wizard-config.ts — see its own doc
+ * comment for the current provable-ceiling number and how it's derived):
+ * the gate's own emission can exceed that cap because the chip budget
+ * (up to `goalChipCap` chips, chosen freely once any toggle happens) and
+ * the pass-through budget (`unmatchedGoalIds`, ids with no chip at all)
+ * are INDEPENDENT and both ride together in `projectGoalIds()` — gate
+ * review round 4, R4-1 fixed a stale hardcoded number here after the
+ * ceiling was corrected twice. `lib/__tests__/gate-goal-groups.test.ts`
+ * pins this with the reviewer's worst-case probe that a reversion to the
+ * capped wizard function would fail.
  */
 export function resolveGatePrepareGoals(
   input: GatePrepareGoalsInput,

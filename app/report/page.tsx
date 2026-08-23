@@ -1791,10 +1791,11 @@ function ReportWizardPage() {
       // Gate review round 1, BLOCKER 1 / round 2, ruling #6: the
       // truncation-vs-noop decision lives in `resolveGatePrepareGoals`
       // (lib/gate-goal-groups.ts) — the exact function this line calls,
-      // unit-tested directly (including a 5-id probe: a passthrough id
-      // plus a fresh 2-chip pick, which `selectedProjectGoals()`'s
-      // MAX_ENGINE_GOALS=4 cap would truncate but this must not) so a
-      // regression here is caught without mounting the whole report page.
+      // unit-tested directly (including a passthrough-plus-chip-picks
+      // probe, which `selectedProjectGoals()`'s MAX_ENGINE_GOALS cap
+      // (lib/report-wizard-config.ts — see its own doc comment for the
+      // provable-ceiling derivation) would truncate but this must not) so
+      // a regression here is caught without mounting the whole report page.
       const existingProjectGoals = report?.metadata?.projectGoals?.length
         ? report.metadata.projectGoals
         : report?.metadata?.projectType
