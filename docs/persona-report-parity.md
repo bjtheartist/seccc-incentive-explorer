@@ -20,7 +20,7 @@ session could not responsibly fabricate — see that section.
 | Address / goal line | existing report header | existing | PASS |
 | Executive Summary label row | disclosure panel, both forks | `report-page-live-renderer` / new snapshot test | PASS |
 | Glance tiles: Zoning / Mapped zones / Programs / Data verified | disclosure panel | new test asserting tile values | PASS |
-| "Programs matched here" row — names as anchor links to cards, "— details below" | disclosure panel | new test: panel names ≡ rendered card set, in order | PASS |
+| "Programs matched here" row — names as anchor links to cards, "— details below" | `components/report/ProgramsMatchedHere.tsx` (shared, both forks), mounted under the Verdict card | `visiblePersonaProgramNames()` reads the identical lensed list the cards render (lib/__tests__/report-personas.test.ts); fork-parity in lib/__tests__/refine-tier1.test.ts | PASS — INTENTIONAL-DIFF (d) on link precision: links point to the Capital & Programs section anchor rather than a per-card anchor id (adding a unique DOM id to every program card was out of scope for this pass) |
 | Screening sentence ("not an eligibility determination... confirm with ZBA") | disclosure panel | floor-suite test (non-suppressible) | PASS |
 | just-looking: panel doubles as snapshot, uses notable-programs set | disclosure panel, persona="all" path | same component, `all`-branch test | INTENTIONAL-DIFF (d) — "all" keeps the pre-existing flat kitchen-sink render (no guidepost bands) per spec v2's own "guidepost never on all" rule, which supersedes the Looking board's use of guidepost bands; the panel row itself still renders on "all" | 
 

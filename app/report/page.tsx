@@ -128,6 +128,7 @@ import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
 import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
 import { ContactSheet } from "@/components/report/ContactSheet";
+import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -4746,6 +4747,17 @@ function ReportDisplay({
             {report.verdict && (
               <div id="verdict">
                 <VerdictCard verdict={report.verdict} />
+                {showPersonaLens && (
+                  <ProgramsMatchedHere
+                    report={lensed}
+                    persona={persona}
+                    programsAnchor={sectionToAnchor(
+                      lensed.sections?.find(
+                        (s) => !s.collapsedByPersona && s.items?.some((item) => item.programId),
+                      )?.title ?? "",
+                    )}
+                  />
+                )}
               </div>
             )}
 

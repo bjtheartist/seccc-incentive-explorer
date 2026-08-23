@@ -256,4 +256,11 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain("<ContactSheet report={lensed} persona={persona} />");
     }
   });
+
+  it("both forks feed ProgramsMatchedHere the SAME lensed report the program cards render — panel and body read one source, can never disagree", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ProgramsMatchedHere }");
+      expect(fork).toContain("<ProgramsMatchedHere\n                    report={lensed}");
+    }
+  });
 });
