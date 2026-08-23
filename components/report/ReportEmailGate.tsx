@@ -14,6 +14,7 @@ import {
   gateGoalChipsToGoalIds,
   gateGoalSelectionIsComplete,
   goalIdsToGateChipIds,
+  MAX_GATE_GOAL_CHIPS,
   toggleGateGoalChip,
   unmatchedGoalIds,
 } from "@/lib/gate-goal-groups";
@@ -82,21 +83,47 @@ export function ReportEmailGate({
   const [persona, setPersona] = useState<PersonaId>(inferredPersona);
   const [personaTouched, setPersonaTouched] = useState(false);
 
-  // Gate review round 1, BLOCKER 2: the gate must never destroy goals or
-  // custom-goal text the visitor already entered (a completed wizard run,
-  // a refine, a shared link with goals baked in — `reportRequiresEmailGate`
+  // Gate review round 1, BLOCKER 2 + gate review round 2, NEW-1/NEW-2/
+  // NEW-5 (ruling #2/#3): the gate must never destroy — NOR silently
+  // ADD TO — goals the visitor already entered (a completed wizard run, a
+  // refine, a shared link with goals baked in — `reportRequiresEmailGate`
   // fires for every site-incentives/location-incentives report, including
-  // those). Seed the grouped chips from whatever the report already
-  // carries; ids with no chip representation (`vacant-acquisition`,
-  // `other`) are kept in `passthroughGoalIds` and always resubmitted
-  // untouched, even though no chip shows them. `customGoal` is preserved
-  // verbatim and resent on every prepare call — never hardcoded empty.
+  // those). `originalGoalIds` is the visitor's ORIGINAL array, frozen
+  // verbatim (order included) at mount — it is what actually gets
+  // resubmitted until a real chip toggle happens (see `projectGoalIds`
+  // below), never re-derived from the coarser chip mapping. Seeding chips
+  // for DISPLAY only — via `goalIdsToGateChipIds`/`unmatchedGoalIds` — is
+  // a SEPARATE, display-only concern: pre-pressing "Expand or buy
+  // equipment" for a report that only ever had "expansion" is honest
+  // DISPLAY (the closest chip), but re-deriving "equipment" from that
+  // press and sending it back would be inventing data the visitor never
+  // chose — exactly what NEW-1 caught. `customGoal` is preserved verbatim
+  // and resent on every prepare call — never hardcoded empty.
+  const [originalGoalIds] = useState<string[]>(() => existingGoalIdsFor(report));
   const [selectedGoalChips, setSelectedGoalChips] = useState<string[]>(() =>
-    goalIdsToGateChipIds(existingGoalIdsFor(report)),
+    goalIdsToGateChipIds(originalGoalIds),
   );
   const [passthroughGoalIds, setPassthroughGoalIds] = useState<string[]>(() =>
-    unmatchedGoalIds(existingGoalIdsFor(report)),
+    unmatchedGoalIds(originalGoalIds),
   );
+  // NEW-2/ruling #3: seeded state above MAX_GATE_GOAL_CHIPS (e.g. a
+  // legacy 3-goal wizard run) is legal and must stay recoverable — the
+  // visitor may freely deselect/reselect any of THOSE chips without a
+  // re-add getting silently and permanently blocked. Frozen at mount, so
+  // a fresh visitor (0 or ≤2 seeded) keeps the normal 2-chip cap for new
+  // growth, while a legacy 3-seed session gets a 3-chip cap for its
+  // entire lifetime (a deliberately small amount of extra headroom for a
+  // 4th, never-seeded pick — the simplest fix that guarantees no seeded
+  // chip is ever strandable, at the cost of not distinguishing "a
+  // re-added seeded chip" from "a brand-new 3rd/4th pick" once above 2).
+  const [goalChipCap] = useState<number>(() =>
+    Math.max(MAX_GATE_GOAL_CHIPS, goalIdsToGateChipIds(originalGoalIds).length),
+  );
+  // Ruling #2: flips true on the visitor's FIRST real chip toggle (any
+  // chip, including "Just looking around") — only then does emission
+  // switch from "resend the original array verbatim" to "derive ids from
+  // whatever's currently pressed."
+  const [hasToggledGoals, setHasToggledGoals] = useState(false);
   const [customGoal] = useState(report.metadata?.customGoal || "");
 
   const [supportName, setSupportName] = useState("");
@@ -118,8 +145,14 @@ export function ReportEmailGate({
   const [error, setError] = useState("");
 
   const isBusy = viewStatus !== "idle" || saveStatus !== "idle";
-  const selectionComplete =
-    gateGoalSelectionIsComplete(selectedGoalChips) || passthroughGoalIds.length > 0;
+  // Ruling #2: before any real toggle, "complete" means the report already
+  // had a real goal to resubmit verbatim — not whatever the display chips
+  // happen to derive to (avoids the same silent-add the emission fix
+  // avoids). After a toggle, the normal chip/passthrough completeness
+  // rule applies.
+  const selectionComplete = hasToggledGoals
+    ? gateGoalSelectionIsComplete(selectedGoalChips) || passthroughGoalIds.length > 0
+    : originalGoalIds.length > 0;
   // Persona is genuinely part of the predicate (finding 11) even though it
   // is never actually falsy — `persona` always holds a real, chip-backed
   // PersonaId from the moment this component mounts.
@@ -128,23 +161,34 @@ export function ReportEmailGate({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || dialog.open) return;
-    // jsdom (this repo's test environment) does not implement
-    // HTMLDialogElement.showModal() — a real browser without full <dialog>
-    // support at least gets the plain `open` attribute, which keeps this
-    // effect from throwing in @testing-library/react interaction tests
-    // AND keeps a closed (hence accessibility-hidden) <dialog> from
-    // silently swallowing every control inside it.
     if (typeof dialog.showModal === "function") {
       dialog.showModal();
-    } else {
-      dialog.setAttribute("open", "");
+      return () => {
+        if (dialog.open) dialog.close();
+      };
     }
-    return () => {
-      if (dialog.open) {
-        if (typeof dialog.close === "function") dialog.close();
-        else dialog.removeAttribute("open");
-      }
-    };
+    // Gate review round 2, MINOR NEW-7: jsdom (this repo's test
+    // environment) does not implement HTMLDialogElement.showModal(), and
+    // this fallback (the plain `open` attribute, no backdrop/focus trap)
+    // is what keeps a closed — hence accessibility-hidden — <dialog> from
+    // silently swallowing every control inside it during
+    // @testing-library/react interaction tests. That same fallback would
+    // be a real, bypassable gate (no modal semantics at all) if it ever
+    // ran in production, so it is guarded to test environments only. A
+    // real production browser missing `showModal()` is left with a
+    // CLOSED, non-interactive dialog and a logged error, never a silently
+    // downgraded one — the correct failure mode for a gate is "does not
+    // render," not "renders unenforced."
+    if (process.env.NODE_ENV !== "production") {
+      dialog.setAttribute("open", "");
+      return () => {
+        if (dialog.open) dialog.removeAttribute("open");
+      };
+    }
+    console.error(
+      "ReportEmailGate: HTMLDialogElement.showModal() is unavailable — the gate cannot render safely in this browser.",
+    );
+    return undefined;
   }, []);
 
   const commitPersonaSelection = (preparedReport: GeneratedReport) => {
@@ -167,12 +211,16 @@ export function ReportEmailGate({
 
   const toggleGoalChip = (chipId: string) => {
     if (isBusy) return;
+    // Ruling #2: ANY real chip toggle switches emission from "the original
+    // array, verbatim" to "derived from whatever's pressed" — see
+    // `projectGoalIds` below.
+    setHasToggledGoals(true);
     // An explicit "Just looking around" tap is an unambiguous "no goal
     // filter" signal — it overrides any passed-through, chip-less ids from
     // the report's existing metadata the same way it overrides the visible
     // chips (spec §A: exclusive of the other 7).
     if (chipId === GATE_LOOKING_CHIP_ID) setPassthroughGoalIds([]);
-    setSelectedGoalChips((current) => toggleGateGoalChip(current, chipId));
+    setSelectedGoalChips((current) => toggleGateGoalChip(current, chipId, goalChipCap));
   };
 
   const selectPersonaChip = (chipId: string) => {
@@ -185,8 +233,21 @@ export function ReportEmailGate({
     );
   };
 
+  /**
+   * Gate review round 2, NEW-1/NEW-5, ruling #2: before any real chip
+   * toggle, resubmit the visitor's ORIGINAL goal-id array verbatim — same
+   * ids, same order — so an untouched gate never regenerates the report
+   * (`app/report/page.tsx`'s JSON.stringify comparison matches exactly)
+   * and never silently adds an id a pre-pressed-but-untouched chip merely
+   * IMPLIES (e.g. `["expansion"]` pre-presses "Expand or buy equipment"
+   * for display, but must never emit the chip's other id, `equipment`,
+   * unless the visitor actually interacts). Only after a toggle does this
+   * switch to the chip-derived mapping plus any pass-through ids.
+   */
   const projectGoalIds = () =>
-    dedupeGoalIds([...gateGoalChipsToGoalIds(selectedGoalChips), ...passthroughGoalIds]);
+    hasToggledGoals
+      ? dedupeGoalIds([...gateGoalChipsToGoalIds(selectedGoalChips), ...passthroughGoalIds])
+      : originalGoalIds;
 
   /**
    * Real send for the support opt-in (spec §D). Assumes the caller has

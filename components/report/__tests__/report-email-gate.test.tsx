@@ -106,6 +106,13 @@ function goalChip(label: string) {
   return screen.getByRole("button", { name: label });
 }
 
+// Gate review round 2, MINOR NEW-8: two tests below redefine
+// `window.location` via `Object.defineProperty` to mock `.assign` and
+// never restored it, leaking the mock into every subsequent test in this
+// file. Captured once and restored centrally after every test, whether or
+// not that particular test touched it.
+const originalLocationDescriptor = Object.getOwnPropertyDescriptor(window, "location");
+
 beforeEach(() => {
   authState.status = "unauthenticated";
   trackEventMock.mockClear();
@@ -115,6 +122,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  if (originalLocationDescriptor) {
+    Object.defineProperty(window, "location", originalLocationDescriptor);
+  }
 });
 
 describe("ReportEmailGate — fixed anatomy and literal board copy", () => {
@@ -326,6 +336,101 @@ describe("ReportEmailGate — BLOCKER 2: never destroys pre-existing goals or cu
   });
 });
 
+describe("ReportEmailGate — gate review round 2, NEW-1: seeding must never silently ADD an id", () => {
+  it("an existing single-id goal ('expansion') pre-presses its grouped chip for display, but View sends ONLY the original id — never the chip's other id ('equipment')", async () => {
+    const { onPrepareReport } = renderGate({
+      report: { ...baseReport, metadata: { ...baseReport.metadata, projectGoals: ["expansion"] } },
+    });
+    // Display: the closest chip is honestly pre-pressed.
+    expect(goalChip("Expand or buy equipment").getAttribute("aria-pressed")).toBe("true");
+
+    // Emission: untouched, so only the REAL original id goes out.
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(goalIds).toEqual(["expansion"]);
+    expect(goalIds).not.toContain("equipment");
+  });
+
+  it("same probe for 'mixed-use' alone — 'affordable-housing' must never be silently added", async () => {
+    const { onPrepareReport } = renderGate({
+      report: { ...baseReport, metadata: { ...baseReport.metadata, projectGoals: ["mixed-use"] } },
+    });
+    expect(goalChip("Develop housing or mixed-use").getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(goalIds).toEqual(["mixed-use"]);
+  });
+
+  it("an ACTUAL toggle switches emission to the chip-derived mapping — deselecting then reselecting the same chip legitimately sends both real ids", async () => {
+    const { onPrepareReport } = renderGate({
+      report: { ...baseReport, metadata: { ...baseReport.metadata, projectGoals: ["expansion"] } },
+    });
+    // A real interaction: deselect, then reselect the same chip.
+    fireEvent.click(goalChip("Expand or buy equipment"));
+    fireEvent.click(goalChip("Expand or buy equipment"));
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    // Now a real toggle happened, so the chip's full, real mapping applies.
+    expect(new Set(goalIds)).toEqual(new Set(["expansion", "equipment"]));
+  });
+});
+
+describe("ReportEmailGate — gate review round 2, NEW-2: seeded state above the 2-chip cap stays recoverable", () => {
+  it("a 3-goal wizard run pre-presses all 3 chips, even though the board says 'Pick up to 2'", () => {
+    renderGate({
+      report: {
+        ...baseReport,
+        metadata: { ...baseReport.metadata, projectGoals: ["rehab", "hiring", "energy"] },
+      },
+    });
+    expect(goalChip("Renovate or build out").getAttribute("aria-pressed")).toBe("true");
+    expect(goalChip("Hire or train staff").getAttribute("aria-pressed")).toBe("true");
+    expect(goalChip("Energy & building upgrades").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("deselecting a seeded chip and re-clicking it recovers it — never stranded (the reviewer's exact reproduction)", () => {
+    renderGate({
+      report: {
+        ...baseReport,
+        metadata: { ...baseReport.metadata, projectGoals: ["rehab", "hiring", "energy"] },
+      },
+    });
+    fireEvent.click(goalChip("Energy & building upgrades"));
+    expect(goalChip("Energy & building upgrades").getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(goalChip("Energy & building upgrades"));
+    expect(goalChip("Energy & building upgrades").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("a fresh visitor (no seed) is still capped at 2 substantive chips", () => {
+    renderGate();
+    fireEvent.click(goalChip("Renovate or build out"));
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(goalChip("Energy & building upgrades"));
+    expect(goalChip("Energy & building upgrades").getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("ReportEmailGate — gate review round 2, NEW-5: an untouched gate never regenerates or flips projectType", () => {
+  it("an untouched 2-goal report emits the ORIGINAL array verbatim, in the ORIGINAL order — not chip-definition order", async () => {
+    // "hiring" is chip-definition-order AFTER "rehab" (GATE_GOAL_CHIPS has
+    // "renovate" before "hire-train") — storing them reversed is exactly
+    // the probe that would flip if emission re-derived from chips.
+    const { onPrepareReport } = renderGate({
+      report: {
+        ...baseReport,
+        metadata: { ...baseReport.metadata, projectGoals: ["hiring", "rehab"] },
+      },
+    });
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onPrepareReport).toHaveBeenCalledTimes(1));
+    const [goalIds] = (onPrepareReport as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(goalIds).toEqual(["hiring", "rehab"]);
+  });
+});
+
 describe("ReportEmailGate — BLOCKER 3(a): invalid support email blocks with a visible inline error", () => {
   it("checking the box with a blank email blocks View — no prepare call, no navigation, visible error", async () => {
     const { onPrepareReport, onReportReady } = renderGate();
@@ -465,6 +570,44 @@ describe("ReportEmailGate — the support path is genuinely exercised end to end
     fireEvent.click(viewButton());
     await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
     expect(submitSupportRequestMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("ReportEmailGate — persona pre-selection (gate review round 2, NEW-4/row 6-9 fix — these tests genuinely exist now)", () => {
+  it("pre-selects Business owner via aria-pressed when no strong signal is present", () => {
+    renderGate();
+    expect(
+      screen.getByRole("button", { name: "Business owner" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Just looking" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Supporting businesses" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Developer" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("pre-selects the inferred lens from industry/goal (developer signal) via aria-pressed", () => {
+    renderGate({
+      report: { ...baseReport, metadata: { ...baseReport.metadata, industry: "realEstate" } },
+    });
+    expect(
+      screen.getByRole("button", { name: "Developer" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "Business owner" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("renders 'Just looking' as a real, enabled, tappable chip — not merely inferable", () => {
+    renderGate();
+    const chip = screen.getByRole("button", { name: "Just looking" }) as HTMLButtonElement;
+    expect(chip.disabled).toBe(false);
+    fireEvent.click(chip);
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
   });
 });
 
