@@ -70,6 +70,8 @@ import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens } from "@/lib/report-personas";
 import {
   DEFAULT_PERSONA,
+  personaFromSearch,
+  personaLabel,
   personaShareParam,
   resolveInitialPersona,
   storePersona,
@@ -230,6 +232,11 @@ export function ReportDisplay({
     setPersona(next);
     storePersona(next);
   }, []);
+  // Shared-link recipient experience (spec v2 deliverable 7) — see the live
+  // fork (app/report/page.tsx) for the full rationale on why this is a
+  // render-time derivation rather than its own useState slot.
+  const isFramedPersonaLink =
+    typeof window !== "undefined" && personaFromSearch(window.location.search) !== DEFAULT_PERSONA;
   const lensed = useMemo(
     // Without visible chips there must be no invisible lens: a stored session
     // persona must never silently reorder a report that can't show the row.
@@ -886,6 +893,28 @@ export function ReportDisplay({
               onSelect={handlePersonaSelect}
               report={report}
             />
+          )}
+
+          {/* Shared-link recipient experience (spec v2 deliverable 7): a
+              framed link opened in the sender's chosen lens — say so, and
+              offer the one-tap escape to the unfiltered view. */}
+          {showPersonaLens && !compact && isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
+            <div
+              data-testid="framed-persona-notice"
+              className="px-5 sm:px-12 md:px-16 py-2.5 border-b border-[#0C1B33]/8 bg-[#EFF3FB] text-[11px] text-[#0C1B33]/70 flex items-center gap-2 print:hidden"
+            >
+              <span>
+                Viewing as <strong className="font-semibold">{personaLabel(persona)}</strong> — the
+                lens this link was shared with.
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePersonaSelect(DEFAULT_PERSONA)}
+                className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#2563EB] hover:underline cursor-pointer"
+              >
+                Switch to All for everything
+              </button>
+            </div>
           )}
 
           {/* ── Metadata Row ── */}

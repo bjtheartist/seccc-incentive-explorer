@@ -15,7 +15,7 @@ import {
   type ReportEmailIdentity,
 } from "@/lib/report-email";
 import type { GeneratedReport } from "@/lib/report-engine";
-import { selectedProjectGoals } from "@/lib/report-wizard-config";
+import { projectGoalsAreComplete, selectedProjectGoals } from "@/lib/report-wizard-config";
 import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
 import { PERSONA_CHIPS, storePersona, type PersonaId } from "@/lib/personas";
 import { inferPersonaFromIntake } from "@/lib/persona-inference";
@@ -73,9 +73,7 @@ export function ReportEmailGate({
 
   const isBusy = status !== "idle";
   const isPdfBusy = pdfStatus !== "idle";
-  const goalsAreComplete =
-    projectGoals.length > 0 &&
-    (!projectGoals.includes("other") || Boolean(customGoal.trim()));
+  const goalsAreComplete = projectGoalsAreComplete({ projectGoals, customGoal });
   const canSubmit = Boolean(goalsAreComplete && email.trim().includes("@") && !isBusy);
 
   useEffect(() => {

@@ -39,6 +39,7 @@ import {
   SUPPORT_NEEDED_OPTIONS,
   BUDGET_RANGE_OPTIONS,
   optionLabel,
+  projectGoalsAreComplete,
   selectedProjectGoalLabels,
   selectedProjectGoals,
 } from "@/lib/report-wizard-config";
@@ -128,6 +129,8 @@ import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens } from "@/lib/report-personas";
 import {
   DEFAULT_PERSONA,
+  personaFromSearch,
+  personaLabel,
   personaShareParam,
   resolveInitialPersona,
   storePersona,
@@ -1940,9 +1943,16 @@ function ReportWizardPage() {
   if (report) {
     // The first-visit tour promises "does not ask for an email", so its
     // sample report renders ungated; organic reports keep the gate.
+    // Shared-link recipient fix (spec v2 deliverable 7): a framed link's
+    // decoded wizard state (`pg=`) can already carry a complete goal
+    // selection — the sender already answered the gate's own question. Every
+    // real recipient of a shared site-incentives link was previously
+    // re-blocked by the same gate the sender had already cleared.
+    const shareLinkGoalsComplete = isShareMode && projectGoalsAreComplete(wizardState);
     const showEmailGate = reportRequiresEmailGate(report)
       && revealedReportKey !== reportEmailGateKey(report)
-      && reportSource !== "welcome_tour";
+      && reportSource !== "welcome_tour"
+      && !shareLinkGoalsComplete;
     // Cross-links only make sense once results for a resolved address are
     // actually on screen: not behind the email gate, and not on a corridor
     // report that has no address to be "near".
@@ -3646,6 +3656,14 @@ function ReportDisplay({
     setPersona(next);
     storePersona(next);
   }, []);
+  // Shared-link recipient experience (spec v2 deliverable 7): a framed link
+  // opens in the sender's chosen lens. Derived at render time (not its own
+  // state — avoids adding a useState slot, which would desync the
+  // ordinal-seeded test harness; see report-page-live-renderer.test.tsx's
+  // maintenance warning) from the same URL the persona-resolution effect
+  // above already reads.
+  const isFramedPersonaLink =
+    typeof window !== "undefined" && personaFromSearch(window.location.search) !== DEFAULT_PERSONA;
   const lensed = useMemo(
     // Without visible chips there must be no invisible lens: a stored session
     // persona must never silently reorder a report that can't show the row.
@@ -4427,6 +4445,28 @@ function ReportDisplay({
               onSelect={handlePersonaSelect}
               report={report}
             />
+          )}
+
+          {/* Shared-link recipient experience (spec v2 deliverable 7): a
+              framed link opened in the sender's chosen lens — say so, and
+              offer the one-tap escape to the unfiltered view. */}
+          {showPersonaLens && !compact && isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
+            <div
+              data-testid="framed-persona-notice"
+              className="px-5 sm:px-12 md:px-16 py-2.5 border-b border-[#0C1B33]/8 bg-[#EFF3FB] text-[11px] text-[#0C1B33]/70 flex items-center gap-2 print:hidden"
+            >
+              <span>
+                Viewing as <strong className="font-semibold">{personaLabel(persona)}</strong> — the
+                lens this link was shared with.
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePersonaSelect(DEFAULT_PERSONA)}
+                className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#2563EB] hover:underline cursor-pointer"
+              >
+                Switch to All for everything
+              </button>
+            </div>
           )}
 
           {/* ── Metadata Row ── */}
