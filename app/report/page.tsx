@@ -129,6 +129,7 @@ import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
 import { ContactSheet } from "@/components/report/ContactSheet";
 import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
+import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -5182,6 +5183,7 @@ function ReportDisplay({
                                     {item.lastVerifiedAt && (
                                       <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
                                     )}
+                                    <ProgramCardExtras item={item} />
                                   </AccordionContent>
                                 </AccordionItem>
                               </Accordion>

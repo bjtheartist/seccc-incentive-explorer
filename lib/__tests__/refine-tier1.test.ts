@@ -271,4 +271,11 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       );
     }
   });
+
+  it("both forks render the shared ProgramCardExtras (Can combine with / What to expect / Verify at the source) on every program card", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ProgramCardExtras }");
+      expect(fork).toContain("<ProgramCardExtras item={item} />");
+    }
+  });
 });

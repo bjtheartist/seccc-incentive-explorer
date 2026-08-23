@@ -223,6 +223,18 @@ export interface ReportItem {
   availabilityNote?: string;
   /** Qualitative cost/effort signal for preparing this document or step. */
   preparationCost?: DocumentPreparationCostSignal;
+  /**
+   * Program-card content fields (persona spec v2 amendment). Every one is
+   * DERIVED from data the program catalog already carries (published
+   * benefit text, the committed stacking-rules dataset, existing source/
+   * contact URLs) — never hand-authored prose. A program whose real data
+   * doesn't support a field simply doesn't carry it (honest omission, no
+   * placeholder) — see buildWorksWith/buildVerifySources/buildExpectations
+   * in this file.
+   */
+  worksWith?: { label: string; detail: string }[];
+  verifySources?: { label: string; url: string; dated?: string | null }[];
+  expectations?: string;
 }
 
 export interface DataSourceCitation {
@@ -1437,6 +1449,110 @@ function publicEvidenceForProgram(
   };
 }
 
+// ─── Program-card content fields (persona spec v2 amendment) ────────────
+// Every field below is DERIVED from data the program catalog already
+// carries — the committed public/data/stacking-rules.json dataset, and
+// each program's own published benefits/sourceUrl/contacts/lastVerifiedAt
+// — never hand-authored per-program prose. A program without the
+// underlying real data for a field simply doesn't carry it.
+
+let programNameLookupCache: Record<string, string> | null = null;
+
+/** id -> name from the PUBLIC program export (never the internal catalog —
+ *  report-engine.ts is reachable from client bundles via ReportDisplay's
+ *  normalizePublicReportForDisplay, so this must stay public-safe the same
+ *  way loadTifFinancials/loadSbifRollout already are). */
+function loadProgramNameLookup(): Record<string, string> {
+  if (programNameLookupCache) return programNameLookupCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/programs-public.json") as {
+      programs?: { id: string; name: string }[];
+    };
+    programNameLookupCache = Object.fromEntries(
+      (raw.programs ?? []).map((p) => [p.id, p.name]),
+    );
+  } catch {
+    programNameLookupCache = {};
+  }
+  return programNameLookupCache;
+}
+
+let stackingRulesDataCache: StackingRule[] | null = null;
+
+function loadStackingRulesData(): StackingRule[] {
+  if (stackingRulesDataCache) return stackingRulesDataCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    stackingRulesDataCache = require("../public/data/stacking-rules.json") as StackingRule[];
+  } catch {
+    stackingRulesDataCache = [];
+  }
+  return stackingRulesDataCache;
+}
+
+/** "Can combine with" — only the `can` relationship, deduped, named via the
+ *  public program list. Returns undefined (no block) rather than []. */
+export function buildWorksWith(programId: string): ReportItem["worksWith"] {
+  const rules = loadStackingRulesData().filter(
+    (rule) =>
+      (rule.programId === programId || rule.otherProgramId === programId) &&
+      rule.relationship === "can",
+  );
+  if (rules.length === 0) return undefined;
+
+  const names = loadProgramNameLookup();
+  const seen = new Set<string>();
+  const items = rules.flatMap((rule) => {
+    const otherId = rule.programId === programId ? rule.otherProgramId : rule.programId;
+    if (seen.has(otherId)) return [];
+    seen.add(otherId);
+    return [{ label: names[otherId] || otherId, detail: rule.reason }];
+  });
+  return items.length > 0 ? items : undefined;
+}
+
+/** "Verify at the source" — every link the program record already
+ *  publishes, deduped, dated with the program's own lastVerifiedAt. */
+export function buildVerifySources(program: Program): ReportItem["verifySources"] {
+  const sources: { label: string; url: string; dated?: string | null }[] = [];
+  if (program.sourceUrl) {
+    sources.push({ label: "Official program page", url: program.sourceUrl, dated: program.lastVerifiedAt });
+  }
+  if (program.url && program.url !== program.sourceUrl) {
+    sources.push({ label: "Program administrator", url: program.url, dated: program.lastVerifiedAt });
+  }
+  for (const contact of program.contacts ?? []) {
+    if (contact.url && !sources.some((s) => s.url === contact.url)) {
+      sources.push({ label: contact.agency, url: contact.url, dated: program.lastVerifiedAt });
+    }
+  }
+  return sources.length > 0 ? sources.slice(0, 3) : undefined;
+}
+
+/** "What to expect" — intake cadence + reimbursement structure, read
+ *  straight off intakeStatus/recurring and a keyword scan of the program's
+ *  OWN published benefit text (never a claim this module invents). */
+export function buildExpectations(program: Program): string | undefined {
+  const parts: string[] = [];
+  if (program.intakeStatus === "rolling" || (program.recurring && program.intakeStatus !== "closed")) {
+    parts.push("Rolling intake — no fixed application window published");
+  } else if (program.intakeStatus === "open") {
+    parts.push("Competitive review during the published intake window");
+  } else if (program.intakeStatus === "lapsed") {
+    parts.push("Intake authority is currently lapsed — confirm current status before relying on this program");
+  } else if (program.intakeStatus === "pending") {
+    parts.push("Intake has not yet opened for the published window");
+  }
+
+  const benefitText = (program.benefits ?? []).join(" ").toLowerCase();
+  if (benefitText.includes("reimburs")) {
+    parts.push("costs are reimbursed after work is completed and verified, per the published benefit terms");
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
@@ -1475,6 +1591,9 @@ function programReportItem(
     applicationPortals: program.applicationPortals,
     verificationSteps: program.verificationSteps,
     status: program.status,
+    worksWith: buildWorksWith(program.id),
+    verifySources: buildVerifySources(program),
+    expectations: buildExpectations(program),
   };
 }
 
