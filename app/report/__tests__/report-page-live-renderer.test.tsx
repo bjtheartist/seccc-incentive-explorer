@@ -1078,7 +1078,7 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
         title: "Site Incentive Analysis",
         subtitle: "Location-based analysis",
         reportType: "site-incentives",
-        generatedAt: "2026-08-01T00:00:00.000Z",
+        generatedAt: "2026-08-15T12:00:00.000Z",
         summary: "Mapped incentive zones were found at this address.",
         sections: [
           {
@@ -1193,7 +1193,7 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).not.toContain('id="data-sources"');
       expect(html).toContain('data-testid="persona-report-footer"');
       expect(html).toContain("City of Chicago &amp; Illinois DCEO");
-      expect(html).toContain("verified Jul 2026");
+      expect(html).toContain("verified Aug 2026");
       expect(html).toContain("chicagoincentiveexplorer.com");
     });
 
