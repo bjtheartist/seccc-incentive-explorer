@@ -69,6 +69,21 @@ export interface ProgramNextWindow {
   note: string | null;
 }
 
+/**
+ * Closed vocabulary for the program-card "Cost signals" block (gate finding
+ * 4). Each tag maps to one fixed display label + severity in
+ * lib/report-engine.ts `COST_SIGNAL_COPY` — never free text, so a new signal
+ * requires a deliberate vocabulary addition, not a typo-prone string.
+ */
+export type CostSignalTag =
+  | "free_to_apply"
+  | "application_fee_required"
+  | "reimbursement_after_spend"
+  | "upfront_funds_no_reimbursement_wait"
+  | "drawings_required"
+  | "permit_fees_apply"
+  | "matching_funds_required";
+
 /* ── Machine-readable eligibility rule ── */
 
 export interface EligibilityRule {
@@ -204,6 +219,19 @@ export interface Program {
   benefitTermsStatus?: BenefitTermsStatus;
   locationRelation?: LocationRelation;
   nextWindow?: ProgramNextWindow;
+  /**
+   * Closed-vocabulary cost-structure facts (gate finding 4 — program-card
+   * "Cost signals" block). Deliberately NOT free text and never derived
+   * from `benefits[]`/`requiredDocs[]` prose at render time — that
+   * derivation was tried and removed elsewhere on this same card (see
+   * `buildExpectations`'s history) because a keyword match on published
+   * prose can silently misfire for a program it wasn't written against.
+   * Set this field directly on a catalog record only after confirming the
+   * fact against that program's actual published fee/reimbursement terms.
+   * Absent (or empty) means "not yet confirmed," not "no cost" — the
+   * rendering block omits itself rather than implying zero cost signals.
+   */
+  costSignals?: CostSignalTag[];
 }
 
 /* ── Phase 1: Check result types ── */

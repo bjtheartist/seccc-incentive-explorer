@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { buildExpectations, buildVerifySources, buildWorksWith } from "@/lib/report-engine";
-import type { Program } from "@/lib/types";
+import { buildCostSignals, buildExpectations, buildVerifySources, buildWorksWith } from "@/lib/report-engine";
+import type { CostSignalTag, Program } from "@/lib/types";
 
 // ─── Program-card content fields (spec v2 amendment) ─────────────────────
 // Every field is derived from data the catalog already carries — real
@@ -97,5 +97,54 @@ describe("buildExpectations", () => {
   it("returns undefined (renders nothing) when intakeStatus carries no signal — never a fallback guess", () => {
     expect(buildExpectations({ intakeStatus: "unknown" } as unknown as Program)).toBeUndefined();
     expect(buildExpectations({ id: "x", name: "X", level: "City", zoneKey: "x" } as unknown as Program)).toBeUndefined();
+  });
+});
+
+describe("buildCostSignals (gate finding 4)", () => {
+  it("returns undefined (renders nothing) for the real SBIF record — the catalog carries no confirmed cost-signal tags yet", () => {
+    // This is the honest-omission case the parity doc documents: the R5
+    // board's SBIF pills are not yet backed by real structured catalog
+    // data, so the block must not render anything for SBIF today.
+    const sbif = realProgram("sbif");
+    expect(sbif.costSignals).toBeUndefined();
+    expect(buildCostSignals(sbif)).toBeUndefined();
+  });
+
+  it("maps each confirmed structured tag to its fixed label/severity — never invents copy", () => {
+    const program = { ...realProgram("sbif"), costSignals: ["free_to_apply", "permit_fees_apply"] as CostSignalTag[] };
+    const signals = buildCostSignals(program);
+    expect(signals).toEqual([
+      { label: "Free to apply", severity: "info" },
+      { label: "Permit fees apply", severity: "amber" },
+    ]);
+  });
+
+  it("covers every CostSignalTag value with a defined label/severity — exhaustiveness", () => {
+    const allTags: CostSignalTag[] = [
+      "free_to_apply",
+      "application_fee_required",
+      "reimbursement_after_spend",
+      "upfront_funds_no_reimbursement_wait",
+      "drawings_required",
+      "permit_fees_apply",
+      "matching_funds_required",
+    ];
+    const program = { ...realProgram("sbif"), costSignals: allTags };
+    const signals = buildCostSignals(program);
+    expect(signals).toHaveLength(allTags.length);
+    expect(signals?.every((s) => typeof s.label === "string" && s.label.length > 0)).toBe(true);
+    expect(signals?.every((s) => s.severity === "info" || s.severity === "amber")).toBe(true);
+  });
+
+  it("returns undefined for an empty costSignals array — never an empty-but-truthy block", () => {
+    const program = { ...realProgram("sbif"), costSignals: [] as CostSignalTag[] };
+    expect(buildCostSignals(program)).toBeUndefined();
+  });
+
+  it("never derives a signal from benefits[]/requiredDocs[] text even when it contains matching keywords — SBIF's real prose says 'reimbursement' and lists 'Building permits', but that must not leak into signals absent the structured field", () => {
+    const sbif = realProgram("sbif");
+    expect(sbif.benefits?.join(" ")).toMatch(/reimburs/i); // sanity: prose is real
+    expect(sbif.requiredDocs?.join(" ")).toMatch(/permit/i); // sanity: prose is real
+    expect(buildCostSignals(sbif)).toBeUndefined(); // but neither leaks through
   });
 });

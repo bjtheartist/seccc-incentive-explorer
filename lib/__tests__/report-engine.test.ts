@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCorridorInvestmentContext,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
@@ -2095,5 +2096,29 @@ describe("generateReportData — zoning copy never names a generic City without 
         "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the Chicago Zoning Board of Appeals (ZBA).",
       ),
     ).toBe(false);
+  });
+});
+
+describe("buildCorridorInvestmentContext (gate finding 5)", () => {
+  // Real, committed data/private/capital-context.json — not a hand-built
+  // fixture. Albany Park is one of the 77 community areas the file actually
+  // carries a craByCommunityArea series for.
+  it("returns the REAL FFIEC CRA series for a community area the file covers, with the real citation text", () => {
+    const ctx = buildCorridorInvestmentContext("Albany Park");
+    expect(ctx).not.toBeNull();
+    expect(ctx?.communityArea).toBe("Albany Park");
+    expect(ctx?.series.length).toBeGreaterThan(0);
+    expect(ctx?.series.every((row: { smallBusinessLoanDollars: number }) => typeof row.smallBusinessLoanDollars === "number")).toBe(true);
+    expect(ctx?.source).toMatch(/FFIEC/);
+  });
+
+  it("returns null (chart renders nothing) for a community area with no committed CRA series", () => {
+    expect(buildCorridorInvestmentContext("Nonexistent Place")).toBeNull();
+  });
+
+  it("returns null when there is no community area to key on — never guesses one", () => {
+    expect(buildCorridorInvestmentContext(undefined)).toBeNull();
+    expect(buildCorridorInvestmentContext(null)).toBeNull();
+    expect(buildCorridorInvestmentContext("")).toBeNull();
   });
 });

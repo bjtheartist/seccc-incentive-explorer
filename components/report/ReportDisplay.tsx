@@ -74,6 +74,7 @@ import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
 import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import { FundingWindowChart } from "@/components/report/FundingWindowChart";
 import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
+import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -1591,14 +1592,19 @@ export function ReportDisplay({
             {/* Charts (spec v2 item 4): real committed data only, render
                 nothing when the address has none. Owner (starting/growing)
                 gets the SBIF funding-window chart; developer gets the
-                incentive-horizon chart. Supporter's corridor-investment
-                chart and "all"'s program-mix chart are not built this pass
-                — see docs/persona-report-parity.md. */}
+                incentive-horizon chart; supporter gets the corridor
+                small-business-lending chart (gate finding 5, wired from the
+                FFIEC CRA series the engine resolves at generation time).
+                "all"'s program-mix chart is not built this pass — see
+                docs/persona-report-parity.md. */}
             {showPersonaLens && (persona === "starting" || persona === "growing") && (
               <FundingWindowChart report={lensed} />
             )}
             {showPersonaLens && persona === "developer" && (
               <IncentiveHorizonChart report={lensed} />
+            )}
+            {showPersonaLens && persona === "supporter" && (
+              <CorridorInvestmentChart report={lensed} />
             )}
 
             {/* Documents to Gather (spec v2 item 3, owner + supporter only):

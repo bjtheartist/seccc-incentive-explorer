@@ -64,6 +64,32 @@ export function buildFundingWindowChartData(report: GeneratedReport): FundingWin
   return rows.length > 0 ? rows : null;
 }
 
+export interface CorridorInvestmentChartData {
+  communityArea: string;
+  source: string;
+  rows: { year: number; dollars: number }[];
+}
+
+/**
+ * Supporter persona — corridor small-business lending by year (gate finding
+ * 5). Reads the REAL FFIEC CRA series the engine already resolved at
+ * generation time (report.corridorInvestment, built server-side in
+ * lib/report-engine.ts via loadCapitalContextForArea) — no client-side fs
+ * access, no fetch, no derived estimate. Returns null when the address's
+ * community area has no committed series.
+ */
+export function buildCorridorInvestmentChartData(report: GeneratedReport): CorridorInvestmentChartData | null {
+  const ctx = report.corridorInvestment;
+  if (!ctx || !ctx.series || ctx.series.length === 0) return null;
+  return {
+    communityArea: ctx.communityArea,
+    source: ctx.source,
+    rows: ctx.series
+      .map((row) => ({ year: row.year, dollars: row.smallBusinessLoanDollars }))
+      .sort((a, b) => a.year - b.year),
+  };
+}
+
 export interface IncentiveHorizonRow {
   label: string;
   endDate: string;

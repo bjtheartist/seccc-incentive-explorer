@@ -48,6 +48,40 @@ describe("ProgramCardExtras", () => {
     expect(html).toMatch(/every figure above traces to a public record/i);
   });
 
+  it("renders worksWith detail VISIBLY, not only in a hover title= attribute (gate finding 21)", () => {
+    const html = renderToStaticMarkup(
+      <ProgramCardExtras
+        item={baseItem({ worksWith: [{ label: "TIF Districts", detail: "Funded through TIF dollars." }] })}
+      />,
+    );
+    // The detail text itself must be in the rendered markup body, not only
+    // reachable via a title="" attribute a touch/print reader never sees.
+    expect(html).toContain("Funded through TIF dollars.");
+  });
+
+  it("renders cost-signal pills with the non-suppressible caption (gate finding 4)", () => {
+    const html = renderToStaticMarkup(
+      <ProgramCardExtras
+        item={baseItem({
+          costSignals: [
+            { label: "Free to apply", severity: "info" },
+            { label: "Permit fees apply", severity: "amber" },
+          ],
+        })}
+      />,
+    );
+    expect(html).toContain("Cost signals");
+    expect(html).toContain("Free to apply");
+    expect(html).toContain("Permit fees apply");
+    expect(html).toMatch(/Signals, not estimates/);
+  });
+
+  it("omits the cost-signals block entirely when the item carries no confirmed tags", () => {
+    const html = renderToStaticMarkup(<ProgramCardExtras item={baseItem({ expectations: "Rolling" })} />);
+    expect(html).not.toContain("Cost signals");
+    expect(html).not.toMatch(/Signals, not estimates/);
+  });
+
   it("never renders a timeline/process diagram (owner ruling — timeline treatment REJECTED)", () => {
     const html = renderToStaticMarkup(
       <ProgramCardExtras

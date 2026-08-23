@@ -10,6 +10,7 @@ import type {
   ChicagoZbaLookupResponse,
   ZoningLookupResponse,
   ZoningSourceMetadata,
+  CostSignalTag,
 } from "./types";
 import {
   inferSupportLanes,
@@ -87,6 +88,7 @@ import {
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
 import { authorityReferenceLine } from "./authority-routing";
 import { policeDistrictLabel } from "./police-districts";
+import { loadCapitalContextForArea, type CraYearRow } from "./investment-analysis";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -235,6 +237,13 @@ export interface ReportItem {
   worksWith?: { label: string; detail: string }[];
   verifySources?: { label: string; url: string; dated?: string | null }[];
   expectations?: string;
+  /**
+   * "Cost signals" pills (gate finding 4). Built by buildCostSignals from
+   * the program's own `costSignals` catalog field ONLY — never derived
+   * from benefits[]/requiredDocs[] text. Absent when the catalog record
+   * carries no confirmed cost-signal tags.
+   */
+  costSignals?: { label: string; severity: "info" | "amber" }[];
   /**
    * Raw ISO date (YYYY-MM-DD) for an "Upcoming Deadlines" item — the same
    * `item.date` lib/deadlines.ts already resolves correctly per-address
@@ -492,6 +501,18 @@ export interface GeneratedReport {
     selectionBasis?: "community-area-match" | "asset-directory";
     narrative: string;
   };
+  /**
+   * Supporter persona — corridor-investment-by-year chart source (gate
+   * finding 5). The FFIEC CRA small-business loan-origination series for
+   * this report's community area, read server-side at generation time from
+   * data/private/capital-context.json via loadCapitalContextForArea
+   * (lib/investment-analysis.ts). Canonical, not lens-time: this is real
+   * committed data the engine already resolves the community area for, only
+   * reorganized into a chart-ready shape. Null when the address resolved no
+   * community area, or the file carries no CRA series for it — never a
+   * fabricated or zero-filled series.
+   */
+  corridorInvestment?: { communityArea: string; series: CraYearRow[]; source: string } | null;
   capitalPartnerHandoff?: CapitalMatchResult;
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   locationContext?: PublicReportLocationContext;
@@ -1575,6 +1596,42 @@ export function buildExpectations(program: Program): string | undefined {
   }
 }
 
+/**
+ * Fixed display copy for each closed-vocabulary cost-signal tag (gate
+ * finding 4). One entry per `CostSignalTag` value, enforced by the
+ * exhaustiveness test in program-card-content-fields.test.ts — a new tag
+ * added to the type without a matching entry here is a type error.
+ */
+const COST_SIGNAL_COPY: Record<CostSignalTag, { label: string; severity: "info" | "amber" }> = {
+  free_to_apply: { label: "Free to apply", severity: "info" },
+  application_fee_required: { label: "Application fee required", severity: "amber" },
+  reimbursement_after_spend: { label: "You front costs until reimbursed", severity: "amber" },
+  upfront_funds_no_reimbursement_wait: { label: "Funds provided upfront", severity: "info" },
+  drawings_required: { label: "Drawings required", severity: "amber" },
+  permit_fees_apply: { label: "Permit fees apply", severity: "amber" },
+  matching_funds_required: { label: "Matching funds required", severity: "amber" },
+};
+
+/**
+ * "Cost signals" pills (gate finding 4 — R5 board's owner-card block).
+ * Reads ONLY `program.costSignals` — the closed-vocabulary catalog field —
+ * and maps each tag to its fixed label/severity. Deliberately does NOT
+ * scan `benefits[]`/`requiredDocs[]` text for cost-related keywords: that
+ * exact pattern (deriving a claim from published prose instead of a
+ * structured field) is the bug gate finding 2+3 removed from
+ * `buildExpectations` on this same card, and a true-today keyword match
+ * is not proof it stays true for every program under the same rule.
+ * Returns undefined (block renders nothing) when the catalog carries no
+ * confirmed tags for this program.
+ */
+export function buildCostSignals(
+  program: Program,
+): { label: string; severity: "info" | "amber" }[] | undefined {
+  const tags = program.costSignals;
+  if (!tags || tags.length === 0) return undefined;
+  return tags.map((tag) => COST_SIGNAL_COPY[tag]);
+}
+
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
@@ -1616,6 +1673,7 @@ function programReportItem(
     worksWith: buildWorksWith(program.id),
     verifySources: buildVerifySources(program),
     expectations: buildExpectations(program),
+    costSignals: buildCostSignals(program),
   };
 }
 
@@ -3339,8 +3397,28 @@ function generateLocationIncentives(
     marketContext,
     stackingAnalysis,
     communityAssets: communityAssetsData,
+    corridorInvestment: buildCorridorInvestmentContext(communityAssetsData?.communityArea),
     dataSources,
   };
+}
+
+/**
+ * Gate finding 5: supporter corridor-investment chart source. Reads the
+ * REAL FFIEC CRA series already committed for this community area — never
+ * fetched, never derived from unrelated program data. Returns null (chart
+ * renders nothing) when there is no community area to key on, or the file
+ * has no series for it. `source` is read from the file's own sources[]
+ * list by matching "FFIEC" — never hardcoded to an array index, so if the
+ * citation text changes upstream this does not silently go stale.
+ */
+export function buildCorridorInvestmentContext(
+  communityArea: string | null | undefined,
+): { communityArea: string; series: CraYearRow[]; source: string } | null {
+  if (!communityArea) return null;
+  const ctx = loadCapitalContextForArea(communityArea);
+  if (!ctx.cra || ctx.cra.length === 0) return null;
+  const source = ctx.sources.find((s) => s.includes("FFIEC")) ?? ctx.sources[0] ?? "FFIEC CRA small-business lending data";
+  return { communityArea, series: ctx.cra, source };
 }
 
 function buildZoningReportItem(

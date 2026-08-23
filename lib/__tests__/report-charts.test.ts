@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildFundingWindowChartData, buildIncentiveHorizonChartData } from "@/lib/report-charts";
+import {
+  buildCorridorInvestmentChartData,
+  buildFundingWindowChartData,
+  buildIncentiveHorizonChartData,
+} from "@/lib/report-charts";
 import type { GeneratedReport } from "@/lib/report-engine";
 
 function reportWithDeadlines(items: GeneratedReport["sections"][number]["items"]): GeneratedReport {
@@ -94,6 +98,44 @@ describe("buildFundingWindowChartData", () => {
       },
     ]);
     expect(buildFundingWindowChartData(report)![0].amber).toBe(false);
+  });
+});
+
+describe("buildCorridorInvestmentChartData (gate finding 5)", () => {
+  function reportWithCorridorInvestment(
+    corridorInvestment: GeneratedReport["corridorInvestment"],
+  ): GeneratedReport {
+    return { ...reportWithDeadlines([]), corridorInvestment };
+  }
+
+  it("returns null when the report carries no corridorInvestment context", () => {
+    expect(buildCorridorInvestmentChartData(reportWithCorridorInvestment(undefined))).toBeNull();
+    expect(buildCorridorInvestmentChartData(reportWithCorridorInvestment(null))).toBeNull();
+  });
+
+  it("returns null when the context carries an empty series — never a zero-filled chart", () => {
+    const report = reportWithCorridorInvestment({ communityArea: "Chatham", series: [], source: "FFIEC" });
+    expect(buildCorridorInvestmentChartData(report)).toBeNull();
+  });
+
+  it("maps the REAL resolved series to year/dollars rows, sorted ascending, carrying the real source citation", () => {
+    const report = reportWithCorridorInvestment({
+      communityArea: "Chatham",
+      source: "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
+      series: [
+        { year: 2024, smallBusinessLoanCount: 40, smallBusinessLoanDollars: 9_000_000 },
+        { year: 2022, smallBusinessLoanCount: 30, smallBusinessLoanDollars: 5_000_000 },
+        { year: 2023, smallBusinessLoanCount: 35, smallBusinessLoanDollars: 7_000_000 },
+      ],
+    });
+    const data = buildCorridorInvestmentChartData(report);
+    expect(data?.communityArea).toBe("Chatham");
+    expect(data?.source).toMatch(/FFIEC/);
+    expect(data?.rows).toEqual([
+      { year: 2022, dollars: 5_000_000 },
+      { year: 2023, dollars: 7_000_000 },
+      { year: 2024, dollars: 9_000_000 },
+    ]);
   });
 });
 
