@@ -212,6 +212,14 @@ async function renderReportRouteForSearch(search: string) {
     useSearchParams: () => new URLSearchParams(search),
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   }));
+  // Gate review follow-up round 1, MAJOR-1: `resolveInitialPersona`/
+  // `personaFromSearch` (lib/personas.ts) read the REAL `window.location.search`
+  // directly, never `useSearchParams()` — both the gate (ReportEmailGate.tsx)
+  // and the live view's framed-link notice (app/report/page.tsx) need it to
+  // actually see a `?persona=` param. Kept in sync with the mocked router's
+  // search string so both surfaces agree, the same way they do in production
+  // (one real URL feeds both).
+  window.history.pushState({}, "", `/report?${search}`);
   const fetchMock = installFetchMock();
   const { default: ReportPageWrapper } = await import("../page");
   const view = render(<ReportPageWrapper />);
@@ -366,5 +374,146 @@ describe("gate persona propagates to the live report view (gate review follow-up
     expect(growingChip.getAttribute("aria-pressed")).toBe("true");
     const allChipAfter = screen.getByRole("button", { name: "All" });
     expect(allChipAfter.getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+describe("gate persona seeds from a sender-framed ?persona= link (gate review follow-up round 1, MAJOR-1)", () => {
+  it("a framed ?persona=developer link left UNTOUCHED in the gate propagates Developer, not the intake inference — live view + notice both stay Developer", async () => {
+    const { calls } = await renderReportRouteForSearch(
+      "instant=true&addr=100+E+Test+St&lat=41.75&lon=-87.6&persona=developer",
+    );
+
+    const gate = await screen.findByTestId("report-email-gate", {}, { timeout: 15_000 });
+    expect(gate).toBeTruthy();
+
+    // The gate's OWN persona row (GATE_PERSONA_CHIPS — a different label
+    // set than the live view's PERSONA_CHIPS) must already show the
+    // sender's framed lens pre-selected, before the visitor touches
+    // anything — this is the actual MAJOR-1 fix (ReportEmailGate.tsx's
+    // `persona` seed), not just its downstream effect.
+    const gateDeveloperChip = await screen.findByRole(
+      "button",
+      { name: "Developer" },
+      { timeout: 15_000 },
+    );
+    expect(gateDeveloperChip.getAttribute("aria-pressed")).toBe("true");
+
+    // Left untouched: pick a goal, click View. Never tap a persona chip.
+    const expandChip = await screen.findByRole(
+      "button",
+      { name: "Expand or buy equipment" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(expandChip);
+    const viewButton = await screen.findByTestId(
+      "report-email-gate-view",
+      {},
+      { timeout: 15_000 },
+    );
+    fireEvent.click(viewButton);
+
+    await waitFor(
+      () => {
+        const generateCalls = calls.filter(
+          (call) => call.method === "POST" && call.url.includes("/api/report/generate"),
+        );
+        expect(generateCalls.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 15_000 },
+    );
+
+    // Live view: "Developer or investor" (PERSONA_CHIPS' label for the
+    // SAME "developer" PersonaId) must be pressed — not whatever
+    // `inferPersonaFromIntake` would have inferred from this signal-free
+    // report ("growing", per lib/persona-inference.ts's final fallback).
+    // Before the MAJOR-1 fix this was exactly the false-claim bug: the
+    // gate silently overwrote the sender's framed lens with its own
+    // inference the moment an untouched row propagated.
+    const developerChip = await screen.findByRole(
+      "button",
+      { name: "Developer or investor" },
+      { timeout: 15_000 },
+    );
+    expect(developerChip.getAttribute("aria-pressed")).toBe("true");
+    const growingChipAfter = screen.getByRole("button", { name: "Growing / property owner" });
+    expect(growingChipAfter.getAttribute("aria-pressed")).toBe("false");
+
+    // The framed-link notice's claim is now true again: the visitor IS
+    // viewing the lens the link was shared with.
+    const notice = await screen.findByTestId("framed-persona-notice", {}, { timeout: 15_000 });
+    expect(notice.textContent).toContain("Viewing as");
+    expect(notice.textContent).toContain("Developer or investor");
+    expect(notice.textContent).toContain("the lens this link was shared with");
+  });
+
+  it("a framed ?persona=developer link where the visitor taps a DIFFERENT gate chip propagates the visitor's choice, and the notice keeps main's existing (no-divergence-check) semantics", async () => {
+    const { calls } = await renderReportRouteForSearch(
+      "instant=true&addr=100+E+Test+St&lat=41.75&lon=-87.6&persona=developer",
+    );
+
+    const gate = await screen.findByTestId("report-email-gate", {}, { timeout: 15_000 });
+    expect(gate).toBeTruthy();
+
+    // Confirm the framed pre-selection first (same as the untouched test),
+    // then actively correct it.
+    const gateDeveloperChip = await screen.findByRole(
+      "button",
+      { name: "Developer" },
+      { timeout: 15_000 },
+    );
+    expect(gateDeveloperChip.getAttribute("aria-pressed")).toBe("true");
+    const gateSupportingChip = await screen.findByRole(
+      "button",
+      { name: "Supporting businesses" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(gateSupportingChip);
+    expect(gateSupportingChip.getAttribute("aria-pressed")).toBe("true");
+
+    const expandChip = await screen.findByRole(
+      "button",
+      { name: "Expand or buy equipment" },
+      { timeout: 15_000 },
+    );
+    fireEvent.click(expandChip);
+    const viewButton = await screen.findByTestId(
+      "report-email-gate-view",
+      {},
+      { timeout: 15_000 },
+    );
+    fireEvent.click(viewButton);
+
+    await waitFor(
+      () => {
+        const generateCalls = calls.filter(
+          (call) => call.method === "POST" && call.url.includes("/api/report/generate"),
+        );
+        expect(generateCalls.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 15_000 },
+    );
+
+    // The visitor's ACTUAL choice propagates — "Supporting local
+    // businesses" pressed, not the framed "Developer or investor".
+    const supportingChip = await screen.findByRole(
+      "button",
+      { name: "Supporting local businesses" },
+      { timeout: 15_000 },
+    );
+    expect(supportingChip.getAttribute("aria-pressed")).toBe("true");
+    const developerChipAfter = screen.getByRole("button", { name: "Developer or investor" });
+    expect(developerChipAfter.getAttribute("aria-pressed")).toBe("false");
+
+    // The notice's condition on main (verified via
+    // lib/__tests__/shared-link-recipient.test.ts's fork-parity source
+    // check: `isFramedPersonaLink && persona !== DEFAULT_PERSONA`, with NO
+    // check that `persona` still equals the framed value) has no
+    // divergence handling at all — ruling: match that, invent nothing. The
+    // notice still renders here, now describing the visitor's OWN choice
+    // rather than hiding or rewording itself, exactly as it already does
+    // on main whenever a reader changes the lens on an ordinary framed
+    // link (e.g. the ungated Workspace fork).
+    const notice = await screen.findByTestId("framed-persona-notice", {}, { timeout: 15_000 });
+    expect(notice.textContent).toContain("Supporting local businesses");
   });
 });
