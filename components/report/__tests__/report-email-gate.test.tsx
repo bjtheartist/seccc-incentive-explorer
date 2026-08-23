@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { GATE_GOAL_CHIPS } from "@/lib/gate-goal-groups";
 import type { GeneratedReport } from "@/lib/report-engine";
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ status: "unauthenticated", data: null }),
+}));
 
 const report: GeneratedReport = {
   title: "Site Incentive Analysis",
@@ -39,115 +44,140 @@ function openTagFor(html: string, testId: string): string | null {
   return match?.[0].replace(/\sclass="[^"]*"/g, "") ?? null;
 }
 
-describe("ReportEmailGate", () => {
-  it("makes email optional while keeping the project goals checkpoint", () => {
+/**
+ * The full outer HTML of the <div data-testid="testId">...</div> the gate
+ * renders — found by depth-counting div opens/closes from the opening tag,
+ * since renderToStaticMarkup emits no whitespace a fixed-offset slice could
+ * rely on.
+ */
+function divFor(html: string, testId: string): string {
+  const openMatch = html.match(new RegExp(`<div[^>]*data-testid="${testId}"[^>]*>`));
+  if (!openMatch || openMatch.index == null) {
+    throw new Error(`No <div data-testid="${testId}"> found`);
+  }
+  const start = openMatch.index;
+  const tagRe = /<div\b[^>]*>|<\/div>/g;
+  tagRe.lastIndex = start + openMatch[0].length;
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = tagRe.exec(html))) {
+    if (match[0] === "</div>") {
+      depth -= 1;
+      if (depth === 0) {
+        return html.slice(start, tagRe.lastIndex);
+      }
+    } else {
+      depth += 1;
+    }
+  }
+  throw new Error(`Unbalanced <div data-testid="${testId}">`);
+}
+
+describe("ReportEmailGate (email-gate redesign)", () => {
+  it("renders the fixed anatomy: header, persona row, goal row, primary action, support box, save row, footer", () => {
     const html = renderGate();
 
     expect(html).toContain("<dialog");
     expect(html).toContain('data-testid="report-email-gate"');
     expect(html).toContain("Your report is ready");
-    expect(html).toContain("Project goals");
-    expect(html).toContain("0/3");
-    expect(html).toContain("Hire or retain employees");
-    expect(html).toContain("Email Address (Optional)");
-    expect(html).toContain("Email and View Report");
-    expect(html).toContain("Continue Without Email");
-    expect(html).toContain("Chamber follow-up happens only when you request it");
+    expect(html).toContain("Which best describes you?");
+    expect(html).toContain("What brings you here? (Pick up to 2 — or just looking)");
+    expect(html).toContain('data-testid="report-email-gate-view"');
+    expect(html).toContain("View my report");
+    expect(html).toContain("Want a hand? (Optional)");
+    expect(html).toContain(
+      "I’d like 1-on-1 support working through this report",
+    );
+    expect(html).toContain(
+      "A real person from the Southeast Chicago Chamber of Commerce will follow up within 48 hours.",
+    );
+    expect(html).toContain("Come back anytime");
+    expect(html).toContain('data-testid="report-email-gate-save"');
+    expect(html).toContain("Save my report");
+    expect(html).toContain(
+      "PDF, email &amp; window reminders live inside the report",
+    );
   });
 
-  it("offers an instant PDF download alongside the email option", () => {
+  it("removes email-delivery-of-report and PDF download from the gate", () => {
     const html = renderGate();
-
-    expect(html).toContain('data-testid="report-pdf-download"');
-    expect(html).toContain("Download PDF");
-    // The email path is an alternative, never replaced by the download.
-    expect(html).toContain("Email and View Report");
+    expect(html).not.toContain("Email and View Report");
+    expect(html).not.toContain("Continue Without Email");
+    expect(html).not.toContain('data-testid="report-pdf-download"');
+    expect(html).not.toContain("Download PDF");
+    // No newsletter language anywhere on the gate.
+    expect(html.toLowerCase()).not.toContain("newsletter");
   });
 
-  it("keeps the PDF download reachable without an email address", () => {
-    // Nothing has been typed in this render: no email, no name, no goal. The
-    // email submit is correctly disabled in that state — the PDF button must
-    // NOT be, or the 110 gate-skippers still have no way to a file (WP2).
+  it("renders all 8 grouped goal chips in board order, with 'Just looking around' dashed and distinct", () => {
     const html = renderGate();
+    const row = divFor(html, "report-email-gate-goal-row");
 
-    const pdfTag = openTagFor(html, "report-pdf-download");
-    expect(pdfTag).not.toBeNull();
-    expect(pdfTag).not.toContain("disabled");
+    const htmlEscaped = (value: string) => value.replace(/&/g, "&amp;");
+    for (const chip of GATE_GOAL_CHIPS) {
+      expect(row, chip.label).toContain(htmlEscaped(chip.label));
+    }
+    // Order matches the board.
+    const positions = GATE_GOAL_CHIPS.map((chip) => row.indexOf(htmlEscaped(chip.label)));
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i], `${GATE_GOAL_CHIPS[i].label} should come after ${GATE_GOAL_CHIPS[i - 1].label}`).toBeGreaterThan(positions[i - 1]);
+    }
 
-    // Control: the email-gated submit *is* disabled in the same markup, so the
-    // assertion above is proving reachability rather than that this render
-    // simply never emits `disabled`.
-    expect(html).toContain("disabled=\"\"");
+    const lookingTag = row.match(/<button[^>]*>Just looking around<\/button>/)?.[0];
+    expect(lookingTag).toBeTruthy();
+    expect(lookingTag).toContain("border-dashed");
   });
 
-  // ─── Persona intake (owner ruling A1, spec v2 deliverable 6) ──────────
-  describe("persona intake chip row", () => {
-    it("renders as an optional row, not a blocking question", () => {
+  it("VIEW MY REPORT and Save my report are disabled until a goal chip is picked, with the exact helper copy", () => {
+    const html = renderGate();
+    const viewTag = openTagFor(html, "report-email-gate-view");
+    const saveTag = openTagFor(html, "report-email-gate-save");
+    expect(viewTag).toContain("disabled=\"\"");
+    expect(saveTag).toContain("disabled=\"\"");
+    expect(html).toContain('data-testid="report-email-gate-helper"');
+    expect(html).toContain("Pick what brings you here to continue");
+  });
+
+  describe("persona intake chip row (4 merged board chips)", () => {
+    it("renders exactly the 4 board persona chips", () => {
       const html = renderGate();
-      expect(html).toContain('data-testid="report-email-gate-persona-row"');
-      expect(html).toContain("Which best describes you? (Optional)");
-      // Still reachable: the row never disables the PDF/continue paths.
-      const pdfTag = openTagFor(html, "report-pdf-download");
-      expect(pdfTag).not.toContain("disabled");
+      const row = divFor(html, "report-email-gate-persona-row");
+      for (const label of ["Just looking", "Business owner", "Supporting businesses", "Developer"]) {
+        expect(row, label).toContain(label);
+      }
+      // Exactly one chip pre-selected.
+      expect((row.match(/aria-pressed="true"/g) || []).length).toBe(1);
     });
 
-    it("pre-selects the inferred lens from industry/goal (developer signal)", () => {
+    it("pre-selects the inferred lens from industry/goal (developer signal) under the merged chip", () => {
       const developerSignal: GeneratedReport = {
         ...report,
         metadata: { ...report.metadata, industry: "realEstate" },
       };
       const html = renderGate(developerSignal);
-      // Exactly one chip in the persona row carries aria-pressed="true".
-      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
-      const rowEnd = html.indexOf("</form>", rowStart);
-      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
-      expect((row.match(/aria-pressed="true"/g) || []).length).toBe(1);
-      // The pressed chip is the developer one specifically.
+      const row = divFor(html, "report-email-gate-persona-row");
       const developerButtonMatch = row.match(
-        /<button[^>]*aria-pressed="(true|false)"[^>]*>Developer or investor<\/button>/,
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Developer<\/button>/,
       );
       expect(developerButtonMatch?.[1]).toBe("true");
     });
 
-    it("pre-selects growing (the default) when no strong signal is present", () => {
+    it("pre-selects Business owner (the growing/starting default) when no strong signal is present", () => {
       const html = renderGate();
-      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
-      const rowEnd = html.indexOf("</form>", rowStart);
-      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
-      const growingButtonMatch = row.match(
-        /<button[^>]*aria-pressed="(true|false)"[^>]*>Growing \/ property owner<\/button>/,
+      const row = divFor(html, "report-email-gate-persona-row");
+      const businessOwnerMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Business owner<\/button>/,
       );
-      expect(growingButtonMatch?.[1]).toBe("true");
-      // Gate round 2, MAJOR 25 + RULING: this same "no strong signal"
-      // input is exactly the shape that would trip the inference
-      // function's own "looking" branch in isolation — but the real
-      // report here still carries a real reportType ("site-incentives"),
-      // so in production this pre-selects "growing", never "looking".
-      // See lib/persona-inference.ts's updated doc comment and
-      // lib/__tests__/persona-inference.test.ts's "never infers looking
-      // for any input shape the real call site can actually produce" test
-      // for the same claim proven at the pure-function level.
-      const lookingButtonMatch = row.match(
+      expect(businessOwnerMatch?.[1]).toBe("true");
+      const lookingMatch = row.match(
         /<button[^>]*aria-pressed="(true|false)"[^>]*>Just looking<\/button>/,
       );
-      expect(lookingButtonMatch?.[1]).toBe("false");
+      expect(lookingMatch?.[1]).toBe("false");
     });
 
-    // Gate round 2, MAJOR 25 + RULING: "Just looking" must be a VISIBLE,
-    // directly tappable option in this row — the real, reachable path to
-    // the "looking" persona for an actual visitor, since the inference
-    // branch that could otherwise produce it is dead in production (see
-    // the test above and lib/persona-inference.ts). PERSONA_CHIPS.map
-    // renders every chip generically with no persona-specific filter, so
-    // this is really just confirming that generic rendering reaches
-    // "looking" too — but the earlier round's gap was exactly this class
-    // of unstated assumption, so it gets its own explicit assertion.
-    it("renders 'Just looking' as a real, enabled, tappable chip in the row — not merely inferable", () => {
+    it("renders 'Just looking' as a real, enabled, tappable chip", () => {
       const html = renderGate();
-      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
-      const rowEnd = html.indexOf("</form>", rowStart);
-      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
-      expect(row).toContain("Just looking");
+      const row = divFor(html, "report-email-gate-persona-row");
       const lookingTag = row.match(/<button[^>]*>Just looking<\/button>/)?.[0];
       expect(lookingTag).toBeTruthy();
       expect(lookingTag).not.toMatch(/\sdisabled(=|\/|>)/);

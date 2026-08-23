@@ -2045,6 +2045,7 @@ function ReportWizardPage() {
           <ReportEmailGate
             report={report}
             source={reportSource}
+            wizardState={wizardState}
             onPrepareReport={handlePrepareGatedReport}
             onReportReady={handleGatedReportReady}
           />

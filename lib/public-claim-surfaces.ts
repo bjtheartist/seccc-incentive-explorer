@@ -133,6 +133,41 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     contracts: ["PublicProgramView", "ZoneEvidence"],
     files: ["app/api/saved-reports"],
   },
+  {
+    // Email-gate redesign: registered out of the report-component gaps
+    // baseline as part of this rewrite (new copy — the 48-hour support
+    // promise, the mandatory persona+goal helper line, the footer — all
+    // reviewed against the goal-independent PDF/email/save mechanisms it
+    // actually wires to). See lib/__tests__/report-email-gate.test.tsx for
+    // the dedicated rendered-output check.
+    id: "report-email-gate",
+    description: "The mandatory persona+goal report gate: 8 grouped goal chips, optional 1-on-1 support opt-in, and the save-report affordance.",
+    contracts: ["reviewed-copy"],
+    files: ["components/report/ReportEmailGate.tsx"],
+  },
+  {
+    // Email-gate redesign, spec §D: the optional support opt-in's lead
+    // capture + chamber-inbox notification, reusing report-email's own
+    // createReportLead/Resend mechanism without also emailing the visitor
+    // a PDF (the support box promises a follow-up, never report delivery).
+    id: "support-request-api",
+    description: "Optional 1-on-1 support opt-in lead capture and chamber-inbox notification (gate's 'Want a hand?' box).",
+    contracts: ["reviewed-copy"],
+    files: ["app/api/support-request/route.ts", "lib/support-lead.ts"],
+  },
+  {
+    // Email-gate redesign, spec §C: registered out of the report-component
+    // gaps baseline for the same reason as report-email-gate above — new
+    // copy (the inline funding-window email offer), reviewed against the
+    // real send mechanism it actually uses (no fabricated future-reminder
+    // promise — see the component's own doc comment and
+    // lib/__tests__/goal-coverage.test.ts's sibling test file,
+    // components/report/__tests__/funding-window-email-offer.test.tsx).
+    id: "funding-window-email-offer",
+    description: "Inline, dismissible email offer beside the SBIF funding-window chart — sends the report immediately via the existing report-email mechanism.",
+    contracts: ["reviewed-copy"],
+    files: ["components/report/FundingWindowChart.tsx"],
+  },
 
   // ── Vacancy / owner-file / handoff PDFs ──────────────────────────────
   {
