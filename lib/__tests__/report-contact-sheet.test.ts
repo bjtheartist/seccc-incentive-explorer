@@ -81,7 +81,7 @@ describe("buildContactSheetRows", () => {
     expect(program?.whyLine).not.toMatch(/qualify|eligible/i);
   });
 
-  it("includes only support-org contacts with a derivable lane-match why-line — never generic filler", () => {
+  it("keeps each organization in one resource category and excludes support-org rows without a derivable why-line", () => {
     // "developer"'s lane preference (property_community_development,
     // capital_readiness, small_business_capital) does NOT include
     // business_navigation — the fallback lane `inferSupportLanes` assigns
@@ -91,7 +91,11 @@ describe("buildContactSheetRows", () => {
     // THIS persona and must not produce a why-line.
     const rows = buildContactSheetRows(reportFixture(), "developer");
     const orgNames = rows.filter((r) => r.kind === "organization").map((r) => r.name);
-    expect(orgNames).toContain("Greenwood Archer Capital");
+    // Greenwood Archer is already the selected financial resource, so it is
+    // not duplicated into the community-resource group.
+    expect(orgNames).not.toContain("Greenwood Archer Capital");
+    expect(rows.filter((row) => row.name === "Greenwood Archer Capital")).toHaveLength(1);
+    expect(rows.find((row) => row.name === "Greenwood Archer Capital")?.kind).toBe("financing");
     expect(orgNames).not.toContain("Mystery Org With No Type Signal");
     expect(orgNames).not.toContain("Local Support in South Chicago"); // the summary head, not a contact
   });

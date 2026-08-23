@@ -343,16 +343,69 @@ function sectionBucketKey(section: ReportSection): SectionBucketKey {
  *  bucket — see sectionBucketKey), so the collapsed line never drifts away
  *  from the list it collapsed. */
 const PERSONA_SECTION_ORDER: Record<Exclude<PersonaId, "all">, SectionBucketKey[]> = {
-  // Owner ruling: Site facts FIRST in part 01, zoning LAST in part 01.
-  starting: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "documentReadiness", "financing", "organizations", "rest"],
-  growing: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "documentReadiness", "financing", "organizations", "rest"],
-  supporter: ["neighborhoodContext", "civicRepresentation", "zoning", "programs", "financing", "organizations", "siteFacts", "logisticsAccess", "rest"],
-  developer: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations", "neighborhoodContext", "rest"],
-  // Gate finding 9/10: R5LookingFinal's PART 01 leads with civic context
-  // (Location snapshot + Civic representation) ahead of the raw site-facts
-  // detail — mirrors "supporter"'s context-forward ordering.
-  looking: ["civicRepresentation", "siteFacts", "logisticsAccess", "zoning", "programs", "financing", "organizations", "neighborhoodContext", "rest"],
+  // Round-2 render-truth audit: these are closed inventories copied from the
+  // R5 Final boards, not preference weights over a kitchen-sink section list.
+  // Bespoke board sections (executive summary, charts, document readiness,
+  // contact sheet, and the looking overview) mount in the shared UI
+  // components; this list covers only canonical ReportSection buckets.
+  starting: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
+  growing: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
+  supporter: ["neighborhoodContext", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
+  developer: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "neighborhoodContext", "programs", "financing", "organizations"],
+  looking: ["civicRepresentation"],
 };
+
+/**
+ * Board-law allowlist for canonical engine sections. Anything outside this
+ * inventory is still present in the canonical All report, but cannot leak
+ * through a persona lens as a late "rest" bucket. This closes the audit's
+ * project-intake/deadline/document/zone-interaction leak at its source.
+ */
+function sectionBelongsOnPersonaBoard(
+  section: ReportSection,
+  persona: Exclude<PersonaId, "all">,
+): boolean {
+  return PERSONA_SECTION_ORDER[persona].includes(sectionBucketKey(section));
+}
+
+/**
+ * SSA/CCSA rows are civic facts on the boards, not additional program cards.
+ * The canonical engine keeps their programId for the All-view cross-links;
+ * persona views remove that program identity so generic program walkers can
+ * never mistake a civic fact for a hard-filtered visible program.
+ */
+function asPersonaBoardFacts(section: ReportSection): ReportSection {
+  const bucket = sectionBucketKey(section);
+  if (bucket === "siteFacts") {
+    return {
+      ...section,
+      // The canonical Site Facts section also carries narrative rollups for
+      // civic representation, transportation, and nearby site signals. Each
+      // has its own blessed board section (or no board slot), so retaining
+      // those rollups here duplicates content and breaks the compact tile grid.
+      items: section.items.filter(
+        (item) => !/civic representation|transportation & site access|site signals/i.test(item.label),
+      ),
+    };
+  }
+  if (bucket === "zoning") {
+    return {
+      ...section,
+      // The board's zoning section is the mapped classification plus the
+      // shared zoning handoff/caveat, not the canonical ZBA-source diagnostic.
+      items: section.items.filter((item) =>
+        /city zoning classification|zoning classification/i.test(item.label),
+      ),
+    };
+  }
+  if (bucket !== "civicRepresentation") return section;
+  return {
+    ...section,
+    items: section.items.map((item) =>
+      item.programId ? { ...item, programId: undefined } : item,
+    ),
+  };
+}
 
 /**
  * Gate round 2, BLOCKER 23 (regression, real bug this fixes): the
@@ -575,10 +628,18 @@ export function applyPersonaLens(
   const matchedIds = new Set<string>();
   const nextSections: ReportSection[] = [];
   const alsoItems: ReportItem[] = [];
+  let personaProgramSection: ReportSection | null = null;
+  const personaProgramItems: ReportItem[] = [];
+  let confirmedProgramTierHadItems = false;
+  const boardPersona = persona as Exclude<PersonaId, "all">;
 
   for (const section of report.sections ?? []) {
     if (isSupportOrganizationSectionTitle(section.title)) {
-      nextSections.push(reorderSupportNetwork(section, persona));
+      // Owner/supporter/developer boards consume this data through the ONE
+      // Contact Sheet surface. Looking has no contact sheet at all.
+      if (sectionBelongsOnPersonaBoard(section, boardPersona)) {
+        nextSections.push(reorderSupportNetwork(section, persona));
+      }
       continue;
     }
 
@@ -586,11 +647,14 @@ export function applyPersonaLens(
     const isConfirmedTier = !isFullyDemoted && CONFIRMED_SECTION_TITLES.has(section.title);
 
     if (!isConfirmedTier && !isFullyDemoted) {
-      nextSections.push(section);
+      if (sectionBelongsOnPersonaBoard(section, boardPersona)) {
+        nextSections.push(asPersonaBoardFacts(section));
+      }
       continue;
     }
 
     const items = section.items ?? [];
+    if (isConfirmedTier && items.length > 0) confirmedProgramTierHadItems = true;
     const primary: ReportItem[] = [];
     const secondary: ReportItem[] = [];
 
@@ -601,16 +665,16 @@ export function applyPersonaLens(
         // survive here under a persona lens.
         ? isProgramItem(item) && isPinnedOverlayItem(item)
         // Confirmed / goal-matched tier: goal-matched (by which section
-        // this is) ∩ persona-tagged, plus pinned overlays. Non-program
-        // items (lead notes) stay with the primary group, as before.
+        // this is) ∩ persona-tagged, plus pinned overlays. Canonical lead
+        // notes are not program cards and appear on no persona board.
         : !isProgramItem(item)
-          ? true
+          ? false
           : isPinnedOverlayItem(item) || programMatchesPersona(item.programId, persona, lookup);
 
       if (visible) {
         primary.push(item);
         if (item.programId) matchedIds.add(item.programId);
-      } else {
+      } else if (isProgramItem(item)) {
         secondary.push(item);
       }
     }
@@ -622,16 +686,51 @@ export function applyPersonaLens(
     // with zero pinned survivors simply disappears — there was never a
     // "primary story" here to leave a placeholder for, and its content
     // still lives on in full inside the disclosure below.
-    if (primary.length > 0) {
-      nextSections.push({ ...section, items: primary });
-    } else if (isConfirmedTier && items.length > 0) {
-      nextSections.push({ ...section, items: [], description: personaEmptyProgramsDescription(persona) });
+    const programsBelongOnBoard = sectionBelongsOnPersonaBoard(section, boardPersona);
+    if (programsBelongOnBoard) {
+      if (!personaProgramSection || (isConfirmedTier && isFullyDemotedTier(personaProgramSection))) {
+        personaProgramSection = section;
+      }
+      for (const item of primary) {
+        if (
+          !item.programId ||
+          !personaProgramItems.some((candidate) => candidate.programId === item.programId)
+        ) {
+          personaProgramItems.push(item);
+        }
+      }
     }
-    alsoItems.push(...secondary);
+    if (programsBelongOnBoard) alsoItems.push(...secondary);
+  }
+
+  // Every R5 board has exactly one program section. Canonical reports can
+  // split programs across goal-matched, confirmed, and fully-demoted tiers;
+  // merge the visible items into one board section so tier artifacts cannot
+  // create duplicate section headings or repeated PART bands.
+  if (personaProgramSection) {
+    const allowedProgramLabels = new Set(personaProgramItems.map((item) => item.label));
+    const hardFilteredProgramItems = personaProgramItems.map((item) => {
+      if (!item.worksWith?.length) return item;
+      const worksWith = item.worksWith.filter((entry) =>
+        allowedProgramLabels.has(entry.label),
+      );
+      return {
+        ...item,
+        worksWith: worksWith.length > 0 ? worksWith : undefined,
+      };
+    });
+    nextSections.push({
+      ...personaProgramSection,
+      items: hardFilteredProgramItems,
+      ...(personaProgramItems.length === 0 && confirmedProgramTierHadItems
+        ? { description: personaEmptyProgramsDescription(persona) }
+        : {}),
+    });
   }
 
   if (alsoItems.length > 0) {
     nextSections.push({
+      id: "persona-also-at-this-address",
       title: ALSO_AT_ADDRESS_TITLE,
       description: `${alsoItems.length} other program${alsoItems.length === 1 ? "" : "s"} tied to this address — outside the ${personaDescriptor(
         persona,
@@ -676,6 +775,38 @@ export function visiblePersonaProgramNames(
   lensed: GeneratedReport,
 ): { programId: string; label: string }[] {
   return visiblePersonaProgramItems(lensed).map(({ programId, label }) => ({ programId, label }));
+}
+
+/**
+ * Owner ruling 2026-08-23 (persona-parity punch-list Q1): the executive
+ * summary fills to three program names even when the strict persona card set
+ * contains fewer than three. Strict visible matches always lead; the remaining
+ * slots come, in lens order, from the one collapsed "Also at this address"
+ * section. This reads only the already-lensed report — never the canonical
+ * report — and does not promote the fill programs into the visible card set.
+ */
+export function personaSummaryProgramNames(
+  lensed: GeneratedReport,
+): { programId: string; label: string }[] {
+  const results = visiblePersonaProgramNames(lensed);
+  const seen = new Set(results.map(({ programId }) => programId));
+
+  for (const section of lensed.sections ?? []) {
+    // `collapsedByPersona` is itself the typed contract for the one
+    // program-only disclosure produced by applyPersonaLens. Do not
+    // re-classify it by id/title here: saved or normalized report shapes can
+    // legitimately alter those display fields, while the marker is the
+    // authoritative signal the renderers also use.
+    if (!section.collapsedByPersona) continue;
+    for (const item of section.items ?? []) {
+      if (!item.programId || seen.has(item.programId)) continue;
+      seen.add(item.programId);
+      results.push({ programId: item.programId, label: item.label });
+      if (results.length === 3) return results;
+    }
+  }
+
+  return results.slice(0, 3);
 }
 
 /**

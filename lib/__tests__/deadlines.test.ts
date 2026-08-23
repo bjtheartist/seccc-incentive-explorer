@@ -150,6 +150,20 @@ describe("deadlinesForAddress", () => {
     expect(result.sbifWindow!.note).toMatch(/open through/i);
   });
 
+  it("resolves a canonical T-NNN id through tifFinancials before matching the name-keyed rollout", () => {
+    const result = deadlinesForAddress({
+      matchedPrograms: [],
+      tifDistrict: "T-141",
+      tifFinancials,
+      sbifRollout,
+      today: TODAY,
+    });
+    expect(result.sbifWindow).toMatchObject({
+      kind: "sbif_window",
+      label: "SBIF application window — Commercial Avenue TIF",
+    });
+  });
+
   it("returns null sbifWindow when district does not match rollout", () => {
     const result = deadlinesForAddress({
       matchedPrograms: [],

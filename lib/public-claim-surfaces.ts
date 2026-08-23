@@ -115,6 +115,18 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["components/report/LookingOverview.tsx"],
   },
   {
+    id: "persona-report-chrome",
+    description: "Persona-board header, lensed executive summary, guidepost bands, compact Also line, and public-record footer shared by both report forks.",
+    contracts: ["PublicProgramView", "ZoneEvidence", "reviewed-copy"],
+    files: ["components/report/PersonaReportChrome.tsx"],
+  },
+  {
+    id: "persona-report-supplements",
+    description: "Board-positioned persona charts and document-readiness sections, sourced from the canonical report and filtered to the visible lens.",
+    contracts: ["PublicProgramView", "reviewed-copy"],
+    files: ["components/report/PersonaSectionSupplements.tsx"],
+  },
+  {
     id: "the-brief",
     description: "The Brief — the one-page shareable summary and its two-question ask, built from the same lensed report the online view shows.",
     contracts: ["PublicProgramView", "reviewed-copy"],

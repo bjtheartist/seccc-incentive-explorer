@@ -148,6 +148,10 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     join(root, "components/report/ReportDisplay.tsx"),
     "utf8",
   );
+  const supplementRenderer = readFileSync(
+    join(root, "components/report/PersonaSectionSupplements.tsx"),
+    "utf8",
+  );
 
   it("both forks render RefineValuePanel", () => {
     expect(liveFork).toContain("RefineValuePanel");
@@ -179,10 +183,14 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   // prop were unreachable in practice (visible behind the modal backdrop,
   // gone after the gate). The chips must gate on a dedicated showPersonaLens
   // prop fed from page-level (URL-derived) instant mode / the saved-report
-  // wizard shape. RefineValuePanel keeps the diminished prop by design.
-  it("chips gate on showPersonaLens (never the diminished isInstantMode) in both forks", () => {
-    expect(liveFork).toContain("{showPersonaLens && !compact && (");
-    expect(workspaceFork).toContain("{showPersonaLens && !compact && (");
+  // wizard shape. On a real persona board the board header owns the switch-
+  // to-All affordance, so the old chip row is intentionally hidden there.
+  // RefineValuePanel keeps the diminished prop by design.
+  it("chips gate on showPersonaLens and stay out of the board chrome in both forks", () => {
+    expect(liveFork).toContain("{showPersonaLens && !showPersonaView && !compact && (");
+    expect(workspaceFork).toContain("{showPersonaLens && !showPersonaView && !compact && (");
+    expect(liveFork).toContain("{showPersonaLens && showPersonaView && !compact && (");
+    expect(workspaceFork).toContain("{showPersonaLens && showPersonaView && !compact && (");
     expect(liveFork).not.toContain("{isInstantMode && !compact && (");
     expect(workspaceFork).not.toContain("{isInstantMode && !compact && (");
   });
@@ -252,57 +260,58 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   it("both forks render the shared ContactSheet component, gated to a real persona lens (never on 'all')", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { ContactSheet }");
-      expect(fork).toContain("showPersonaLens && persona !== DEFAULT_PERSONA && (");
-      expect(fork).toContain("<ContactSheet report={lensed} persona={persona} />");
+      expect(fork).toContain('boardPersona && boardPersona !== "looking" && (');
+      expect(fork).toContain("sectionNumber={personaContactSectionNumber(boardPersona)}");
     }
   });
 
-  it("both forks feed ProgramsMatchedHere the SAME lensed report the program cards render — panel and body read one source, can never disagree", () => {
+  it("both forks feed the shared executive-summary panel the lensed report (strict cards first, disclosure fill handled by the shared panel)", () => {
     for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("import { ProgramsMatchedHere }");
-      expect(fork).toContain("<ProgramsMatchedHere\n                    report={lensed}");
+      expect(fork).toContain("PersonaExecutiveSummary");
+      expect(fork).toContain('report={boardPersona === "looking" ? report : lensed}');
     }
   });
 
-  it("Part-03 correction: both forks suppress the raw support-organizations section on a real persona lens — Contact Sheet is Part 03's only section", () => {
+  it("both forks feed the shared Also disclosure the collapsed lensed items, not a dead count-only line", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("<PersonaAlsoAtAddress items={personaAlsoSection.items} />");
+      expect(fork).not.toContain("<PersonaAlsoAtAddress count=");
+    }
+  });
+
+  it("Part-03 correction: both forks suppress raw support sections, and the live fork also suppresses both elevated support bands", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toMatch(
-        /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaLens &&\s*persona !== DEFAULT_PERSONA\s*\) \{\s*return \[\];/,
+        /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaView\s*\) \{\s*return \[\];/,
       );
     }
+    expect(liveFork).toContain("{!showPersonaView && supportItems.length > 0 && !compact && (");
+    expect(liveFork).toContain("{!showPersonaView && supportSection && supportItems.length > 0 && (");
   });
 
-  it("both forks render the shared ProgramCardExtras (Can combine with / What to expect / Verify at the source) on every program card", () => {
+  it("both forks render shared ProgramCardExtras on the one expanded persona card", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { ProgramCardExtras }");
       expect(fork).toContain("<ProgramCardExtras item={item} />");
     }
   });
 
-  it("both forks render Documents to Gather scoped to owner + supporter only (never developer, never all)", () => {
+  it("both forks mount the shared board supplement renderer for owner/supporter documents", () => {
     for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("import { DocumentsToGather }");
-      expect(fork).toContain(
-        '(persona === "starting" || persona === "growing" || persona === "supporter") && (',
-      );
-      expect(fork).toContain("<DocumentsToGather report={lensed} />");
+      expect(fork).toContain("PersonaProgramSupplements");
+      expect(fork).toContain("lensedReport={lensed}");
     }
+    expect(supplementRenderer.match(/<DocumentsToGather report=\{lensedReport\}/g)).toHaveLength(2);
+    expect(supplementRenderer).not.toContain("<DocumentsToGather report={report}");
   });
 
-  it("both forks render the FundingWindowChart (owner), IncentiveHorizonChart (developer), and CorridorInvestmentChart (supporter), each reading real committed data", () => {
-    // Gate round 2, MAJOR 24: CorridorInvestmentChart was registered as a
-    // public-claim surface (BLOCKER 12) but had NO fork-parity assertion
-    // here at all — the same class of gap gate finding 8 closed for The
-    // Brief. Both app/report/page.tsx and components/report/
-    // ReportDisplay.tsx were confirmed byte-identical for this block
-    // before writing this assertion.
+  it("both forks mount charts only through the shared supplements at their blessed board positions", () => {
     for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("import { FundingWindowChart }");
-      expect(fork).toContain("import { IncentiveHorizonChart }");
-      expect(fork).toContain("import { CorridorInvestmentChart }");
-      expect(fork).toContain('(persona === "starting" || persona === "growing") && (\n              <FundingWindowChart report={lensed} />');
-      expect(fork).toContain('persona === "developer" && (\n              <IncentiveHorizonChart report={lensed} />');
-      expect(fork).toContain('persona === "supporter" && (\n              <CorridorInvestmentChart report={lensed} />');
+      expect(fork).toContain("PersonaNeighborhoodSupplement");
+      expect(fork).toContain("PersonaProgramSupplements");
+      expect(fork).not.toContain("<FundingWindowChart");
+      expect(fork).not.toContain("<IncentiveHorizonChart");
+      expect(fork).not.toContain("<CorridorInvestmentChart");
     }
   });
 
@@ -360,7 +369,7 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       // The accordion's gate no longer includes item.eligibilityRules —
       // that content moved to ProgramCardFace's "Commonly required".
       expect(fork).toContain(
-        '{!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (',
+        '{!showPersonaView && !isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (',
       );
       expect(fork).not.toContain("item.matchExplanation || item.eligibilityRules || item.url");
       // ProgramCardExtras must NOT appear inside the accordion's own
@@ -374,16 +383,14 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  // Gate finding 9/10: the additive `looking` persona's R5LookingFinal
-  // board panels (Location snapshot, What's notable, Explore by interest
-  // + the full-picture line), both forks.
-  it("both forks render the 'looking' persona's overview panels, gated to persona === \"looking\" only", () => {
+  it("both forks render the looking board in its exact three-part sequence with no contact sheet", () => {
     for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("import {\n  LocationSnapshotPanel,\n  WhatsNotablePanel,\n  ExploreByInterestPanel,\n} from \"@/components/report/LookingOverview\"");
-      expect(fork).toContain('showPersonaLens && persona === "looking" && (');
-      expect(fork).toContain("<LocationSnapshotPanel report={lensed} />");
-      expect(fork).toContain("<WhatsNotablePanel report={lensed} />");
-      expect(fork).toContain("<ExploreByInterestPanel report={lensed} />");
+      expect(fork).toContain('boardPersona === "looking" && renderGuidepostBand(1)');
+      expect(fork).toContain('boardPersona === "looking" && (');
+      expect(fork).toContain('<WhatsNotablePanel report={report} sectionNumber="03" />');
+      expect(fork).toContain('sectionNumber="04"');
+      expect(fork).toContain('fullPictureSectionNumber="05"');
+      expect(fork).toContain('boardPersona && boardPersona !== "looking" && (');
     }
   });
 });

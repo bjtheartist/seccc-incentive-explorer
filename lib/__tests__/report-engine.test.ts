@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildCorridorInvestmentContext,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
@@ -11,6 +11,8 @@ import {
 import { loadCapitalContextForArea } from "../investment-analysis";
 import type { GeneratedReport } from "../report-engine";
 import type { Program } from "../types";
+import catalogPrograms from "../../data/programs-internal.json";
+import { buildFundingWindowChartData } from "../report-charts";
 import citywideSupportData from "@/data/curated/citywide_business_support_resources.json";
 import supportData from "@/data/exports/chicago-neighborhood-economics/local_business_support_by_community_area.json";
 import {
@@ -976,6 +978,54 @@ describe("generateReportData", () => {
     expect(item?.availability).toBe("window-closed");
     expect(item?.availabilityNote).toBe(suspensionNote);
     expect(item?.detail).toContain(suspensionNote);
+  });
+
+  it("maps a real T-NNN district id through the committed financials into the real SBIF rollout and funding chart", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-20T12:00:00-06:00"));
+    try {
+      const report = generateReportData(
+        makeState({ projectGoals: ["rehab"] }),
+        catalogPrograms as Program[],
+        {
+          zones: { tif: true },
+          zoneNames: { tif: "87th/Cottage Grove" },
+          neighborhoodEconomics: {
+            tifFinance: {
+              districtId: "T-127",
+              districtName: "87th/Cottage Grove",
+            },
+          },
+        },
+      );
+
+      const sbifItem = report.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.programId === "sbif");
+      expect(sbifItem?.availability).toBe("window-closed");
+      expect(sbifItem?.availabilityNote).toContain(
+        "87th/Cottage Grove TIF district; next window opens 2026-03-01",
+      );
+
+      const windowItem = report.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.deadlineKind === "sbif_window");
+      expect(windowItem).toMatchObject({
+        deadlineDate: "2026-03-01",
+        deadlineWindowEnd: "2026-03-30",
+      });
+      expect(windowItem?.label).toContain("87th/Cottage Grove");
+      expect(buildFundingWindowChartData(report)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            startDate: "2026-03-01",
+            endDate: "2026-03-30",
+          }),
+        ]),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("organizes programs across three goals and preserves custom context without scoring it", () => {

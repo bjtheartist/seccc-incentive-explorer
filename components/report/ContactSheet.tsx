@@ -12,68 +12,83 @@ import { trackEvent } from "@/lib/analytics-events";
 import { buildContactSheetRows } from "@/lib/report-contact-sheet";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { PersonaId } from "@/lib/personas";
+import { PersonaReportSection } from "@/components/report/PersonaReportChrome";
+
+const CONTACT_GROUPS = [
+  { kind: "financing", title: "Financial resources" },
+  { kind: "program", title: "Program resources" },
+  { kind: "organization", title: "Community resources" },
+] as const;
 
 export function ContactSheet({
   report: lensed,
   persona,
+  sectionNumber = "",
 }: {
   /** The already-lensed report (persona reorder + hard filter applied). */
   report: GeneratedReport;
   persona: PersonaId;
+  sectionNumber?: string;
 }) {
   const rows = buildContactSheetRows(lensed, persona);
-  if (rows.length === 0) return null;
 
   return (
-    <section
-      data-testid="contact-sheet"
-      aria-labelledby="contact-sheet-title"
-      className="border border-[#0C1B33]/10 bg-white"
+    <PersonaReportSection
+      number={sectionNumber}
+      title="Contact sheet"
+      testId="contact-sheet"
     >
-      <div className="border-b border-[#0C1B33]/10 px-4 py-3 sm:px-5">
-        <h3
-          id="contact-sheet-title"
-          className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-[#0C1B33]/70"
-        >
-          Contact Sheet
-        </h3>
-        <p className="mt-1 text-[11px] text-[#0C1B33]/50 leading-relaxed">
-          Who to reach out to next, drawn from the programs, organizations, and financing
-          partners on this view.
+      {rows.length === 0 ? (
+        <p className="text-[12.5px] leading-relaxed text-[#5A6478]">
+          No direct contact was published in this report. Switch to All for the full public record and source links.
         </p>
-      </div>
-      <ul className="divide-y divide-[#0C1B33]/8">
-        {rows.map((row, index) => (
-          <li key={`${row.kind}-${row.name}-${index}`} className="px-4 py-3 sm:px-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <span className="text-[13px] font-medium text-[#0C1B33]">{row.name}</span>
-              {row.detail && (
-                <span className="font-mono-bureau text-[11px] text-[#0C1B33]/55">{row.detail}</span>
-              )}
-            </div>
-            <p className="mt-0.5 text-[11px] text-[#0C1B33]/55 leading-relaxed">{row.whyLine}</p>
-            {row.url && (
-              <a
-                href={row.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() =>
-                  trackEvent("support_resource_clicked", {
-                    reportType: lensed.reportType,
-                    source: "contact_sheet",
-                    address: lensed.metadata?.address || null,
-                    metadata: { contactName: row.name, contactKind: row.kind, persona },
-                  })
-                }
-                className="mt-1 inline-flex items-center gap-1 text-[10px] text-[#2563EB] hover:underline print-url"
-              >
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                {row.url}
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+      ) : (
+        <div className="space-y-5">
+          {CONTACT_GROUPS.map((group) => {
+            const groupRows = rows.filter((row) => row.kind === group.kind);
+            if (groupRows.length === 0) return null;
+            return (
+              <section key={group.kind} data-testid={`contact-sheet-${group.kind}`}>
+                <h3 className="border-b border-[#0C1B33] pb-1.5 font-mono-bureau text-[9px] tracking-[0.14em] uppercase text-[#0C1B33]">
+                  {group.title}
+                </h3>
+                <ul className="divide-y divide-[#0C1B33]/8">
+                  {groupRows.map((row, index) => (
+                    <li key={`${row.kind}-${row.name}-${index}`} className="py-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <span className="text-[13px] font-medium text-[#0C1B33]">{row.name}</span>
+                        {row.detail && (
+                          <span className="font-mono-bureau text-[11px] text-[#0C1B33]/55">{row.detail}</span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-[#0C1B33]/55 leading-relaxed">{row.whyLine}</p>
+                      {row.url && (
+                        <a
+                          href={row.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            trackEvent("support_resource_clicked", {
+                              reportType: lensed.reportType,
+                              source: "contact_sheet",
+                              address: lensed.metadata?.address || null,
+                              metadata: { contactName: row.name, contactKind: row.kind, persona },
+                            })
+                          }
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] text-[#2563EB] hover:underline print-url"
+                        >
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          {row.url}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </PersonaReportSection>
   );
 }

@@ -89,13 +89,21 @@ export function buildContactSheetRows(
   persona: PersonaId,
 ): ContactSheetRow[] {
   const rows: ContactSheetRow[] = [];
+  const seenNames = new Set<string>();
+  const addRow = (row: ContactSheetRow): boolean => {
+    const key = row.name.trim().toLowerCase();
+    if (!key || seenNames.has(key)) return false;
+    seenNames.add(key);
+    rows.push(row);
+    return true;
+  };
 
   // Financing — the capital-partner handoff's own `reason` is always
   // present (required field), so this row is always derivable when a
   // primary match exists.
   const capitalPrimary = lensed.capitalPartnerHandoff?.primary;
   if (capitalPrimary) {
-    rows.push({
+    addRow({
       name: capitalPrimary.name,
       detail: capitalPrimary.phone || capitalPrimary.contactEmail || undefined,
       url: capitalPrimary.intakeUrl || capitalPrimary.website,
@@ -118,14 +126,14 @@ export function buildContactSheetRows(
       if (!item.programId || programCount >= MAX_PROGRAM_CONTACTS) continue;
       const contact = itemContactDetail(item);
       if (!contact && !item.url) continue; // nothing to actually contact
-      rows.push({
+      const added = addRow({
         name: item.label,
         detail: contact,
         url: item.url,
         whyLine: `Administers ${item.label}.`,
         kind: "program",
       });
-      programCount += 1;
+      if (added) programCount += 1;
     }
     if (programCount >= MAX_PROGRAM_CONTACTS) break;
   }
@@ -145,14 +153,14 @@ export function buildContactSheetRows(
       if (orgCount >= MAX_ORG_CONTACTS) break;
       const whyLine = organizationWhyLine(item, persona);
       if (!whyLine) continue;
-      rows.push({
+      const added = addRow({
         name: item.label,
         detail: itemContactDetail(item),
         url: item.url || item.sourceUrl,
         whyLine,
         kind: "organization",
       });
-      orgCount += 1;
+      if (added) orgCount += 1;
     }
   }
 

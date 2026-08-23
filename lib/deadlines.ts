@@ -259,7 +259,12 @@ export function deadlinesForAddress(
   // ── SBIF window for the address's TIF district ────────────────────────────
   let sbifWindow: DeadlineItem | null = null;
   if (tifDistrict && sbifRollout && sbifRollout.length > 0) {
-    const match = findSbifWindow(sbifRollout, tifDistrict);
+    // The spatial engine emits canonical ids (for example T-127), while the
+    // public SBIF rollout is keyed by district name. Resolve the id through
+    // the financials map before matching so production addresses can reach
+    // their real rollout window.
+    const rolloutDistrict = tifFinancials?.[tifDistrict]?.tifName || tifDistrict;
+    const match = findSbifWindow(sbifRollout, rolloutDistrict);
 
     if (match) {
       const startDate = parseDate(match.windowStart);

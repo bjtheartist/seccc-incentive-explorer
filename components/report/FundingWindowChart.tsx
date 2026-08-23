@@ -43,7 +43,14 @@ function formatShortDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function FundingWindowChart({ report }: { report: GeneratedReport }) {
+export function FundingWindowChart({
+  report,
+  showEmailOffer = true,
+}: {
+  report: GeneratedReport;
+  /** Persona boards contain only the chart/source line, not an email form. */
+  showEmailOffer?: boolean;
+}) {
   const rows = buildFundingWindowChartData(report);
   if (!rows) return null;
 
@@ -109,7 +116,7 @@ export function FundingWindowChart({ report }: { report: GeneratedReport }) {
       <p className="mt-1 text-[9px] text-[#0C1B33]/40">
         Source: City of Chicago SBIF rollout calendar — hover a bar for details.
       </p>
-      <FundingWindowEmailOffer report={report} />
+      {showEmailOffer && <FundingWindowEmailOffer report={report} />}
     </div>
   );
 }

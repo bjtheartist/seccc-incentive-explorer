@@ -5,6 +5,7 @@ import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
   guidepostPartForSection,
+  personaSummaryProgramNames,
   personaEmptyProgramsDescription,
   personaSelectionEvent,
   programMatchesPersona,
@@ -118,7 +119,65 @@ describe("applyPersonaLens", () => {
     expect(report).toEqual(snapshot);
   });
 
-  it("hard filter: visible = persona-tagged ∪ pinned overlays; the rest collapses — never hides them", () => {
+  it("hard-filters program names nested inside a visible card's stacking references", () => {
+    const report = reportFixture();
+    const confirmed = report.sections.find(
+      (section) => section.id === CONFIRMED_PROGRAMS_SECTION_ID,
+    )!;
+    confirmed.items[0] = {
+      ...confirmed.items[0],
+      worksWith: [
+        { label: "TIF", detail: "Excluded from the starting lens." },
+        { label: "High Unemployment", detail: "Pinned and still visible." },
+      ],
+    };
+
+    const lensed = applyPersonaLens(report, "starting").report;
+    const sbif = lensed.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.programId === "sbif");
+    expect(sbif?.worksWith).toEqual([
+      { label: "High Unemployment", detail: "Pinned and still visible." },
+    ]);
+  });
+
+  it("keeps persona fact grids concise by removing duplicated canonical rollups and the ZBA diagnostic", () => {
+    const report: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          id: SECTION_IDS.siteFacts,
+          title: "Site Facts",
+          description: "",
+          items: [
+            { label: "Property PIN", value: "20-01" },
+            { label: "Transportation & Site Access", value: "Long rollup" },
+            { label: "Civic Representation", value: "Long rollup" },
+            { label: "Site Signals", value: "Long rollup" },
+          ],
+        },
+        {
+          id: SECTION_IDS.zoningUseStartingPoint,
+          title: "Zoning & Use Starting Point",
+          description: "",
+          items: [
+            { label: "City Zoning Classification", value: "B3-2" },
+            { label: "City ZBA Case Source", value: "No intersecting record" },
+          ],
+        },
+        ...reportFixture().sections,
+      ],
+    };
+
+    const lensed = applyPersonaLens(report, "starting").report;
+    expect(lensed.sections.find((section) => section.id === SECTION_IDS.siteFacts)?.items)
+      .toEqual([{ label: "Property PIN", value: "20-01" }]);
+    expect(
+      lensed.sections.find((section) => section.id === SECTION_IDS.zoningUseStartingPoint)?.items,
+    ).toEqual([{ label: "City Zoning Classification", value: "B3-2" }]);
+  });
+
+  it("hard filter: visible = persona-tagged ∪ pinned overlays; canonical lead notes never become persona blocks", () => {
     const report = reportFixture();
     const { report: lensed, matchedBefore, matchedAfter } = applyPersonaLens(
       report,
@@ -134,12 +193,12 @@ describe("applyPersonaLens", () => {
     const also = lensed.sections.find((s) => s.title === ALSO_AT_ADDRESS_TITLE)!;
 
     // Matched (tif, federalOZ) + the PINNED overlay (highUnemployment — context,
-    // not a program, always visible) + the non-program lead note stay primary.
+    // not a program, always visible) stay primary. The canonical lead note is
+    // absent because no persona board contains that extra block.
     expect(confirmed.items.map((i) => i.programId)).toEqual([
       "tif",
       "federalOZ",
       "highUnemployment",
-      undefined,
     ]);
     // Only the persona-mismatched program (sbif) collapses under a
     // disclosure — present, not dropped.
@@ -171,7 +230,8 @@ describe("applyPersonaLens", () => {
     };
     const { report: lensed, matchedAfter } = applyPersonaLens(report, "developer");
     expect(lensed.sections.some((s) => s.title === ALSO_AT_ADDRESS_TITLE)).toBe(false);
-    expect(lensed.sections[0].items).toHaveLength(2);
+    expect(lensed.sections[0].items).toHaveLength(1);
+    expect(lensed.sections[0].items[0].programId).toBe("highUnemployment");
     expect(matchedAfter).toBe(1);
   });
 
@@ -242,26 +302,22 @@ describe("applyPersonaLens", () => {
     const titles = lensed.sections.map((s) => s.title);
     // Exactly one combined disclosure.
     expect(titles.filter((t) => t === ALSO_AT_ADDRESS_TITLE)).toHaveLength(1);
-    // Gate finding 19: the goal-matched tier and Neighborhood Economic
-    // Context both get developer's board titles ("Capital-relevant
-    // programs," "Neighborhood context") — the FIRST "programs"-bucket
-    // section only (applyPersonaSectionTitles applies each bucket's
-    // override once); the fully-demoted "Other Programs Mapped" tier is
-    // the SECOND programs-bucket section here, so it keeps its own real
-    // title rather than being renamed to the same string twice.
+    // Round-2 board law: neighborhood precedes programs in PART 01 and all
+    // canonical program tiers merge into the board's single program section.
     expect(titles).toEqual([
-      "Capital-relevant programs",
-      OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
-      ALSO_AT_ADDRESS_TITLE,
       "Neighborhood context",
+      "Capital-relevant programs",
+      ALSO_AT_ADDRESS_TITLE,
     ]);
 
     // Goal-matched tier: persona-tag filtered as before (federalOZ matches
     // developer, sbif does not).
-    expect(lensed.sections[0].items.map((i) => i.programId)).toEqual(["federalOZ"]);
-    // Fully-demoted tier: TIF is not goal-matched, so it is NOT rescued by
-    // matching "developer" — only the pinned overlay survives here.
-    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["highUnemployment"]);
+    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual([
+      "federalOZ",
+      "highUnemployment",
+    ]);
+    // Fully-demoted TIF is not goal-matched, so it is NOT rescued by
+    // matching "developer" and joins SBIF behind the one Also-line.
     const also = lensed.sections[2];
     expect(also.collapsedByPersona).toBe(true);
     expect(also.items.map((i) => i.programId)).toEqual(["sbif", "tif"]);
@@ -274,12 +330,54 @@ describe("applyPersonaLens", () => {
     expect(matchedAfter).toBe(2);
   });
 
-  it("visiblePersonaProgramNames reads off the SAME lensed section list the cards render, in order — the executive-summary panel and the body can never disagree", () => {
+  it("visiblePersonaProgramNames remains the strict card set, in rendered order", () => {
     const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
     expect(visiblePersonaProgramNames(lensed)).toEqual([
       { programId: "tif", label: "TIF" },
       { programId: "federalOZ", label: "Federal OZ" },
       { programId: "highUnemployment", label: "High Unemployment" },
+    ]);
+  });
+
+  it("fills the executive summary to three from the lensed disclosure after strict matches, without promoting those programs into the card set", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "starting");
+    expect(visiblePersonaProgramNames(lensed)).toEqual([
+      { programId: "sbif", label: "SBIF" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+    ]);
+    expect(personaSummaryProgramNames(lensed)).toEqual([
+      { programId: "sbif", label: "SBIF" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+      { programId: "tif", label: "TIF" },
+    ]);
+    expect(
+      lensed.sections.find((section) => section.collapsedByPersona)?.items.map(
+        (item) => item.programId,
+      ),
+    ).toContain("tif");
+  });
+
+  it("fills from a collapsed-only lensed report even when a legacy disclosure title cannot be bucket-classified", () => {
+    const collapsedOnly: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          id: "legacy-persona-disclosure",
+          title: "More mapped programs",
+          items: [
+            { label: "Program A", value: "", programId: "a" },
+            { label: "Program B", value: "", programId: "b" },
+            { label: "Program C", value: "", programId: "c" },
+          ],
+          collapsedByPersona: true,
+        },
+      ],
+    };
+    expect(visiblePersonaProgramNames(collapsedOnly)).toEqual([]);
+    expect(personaSummaryProgramNames(collapsedOnly)).toEqual([
+      { programId: "a", label: "Program A" },
+      { programId: "b", label: "Program B" },
+      { programId: "c", label: "Program C" },
     ]);
   });
 
@@ -513,7 +611,7 @@ describe("Gate finding 19: per-persona section titles", () => {
     expect(ownerSite.id).toBe(devSite.id);
   });
 
-  it("never renames the SAME bucket twice when two distinct program-tier sections both survive — title override applies to the first section per bucket only", () => {
+  it("merges multiple canonical program tiers into the board's one titled program section", () => {
     // OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE is always a "fully demoted"
     // tier (isFullyDemotedTier) — a persona-tagged item never rescues it on
     // its own, only a PINNED OVERLAY item does. highUnemployment is the
@@ -530,10 +628,12 @@ describe("Gate finding 19: per-persona section titles", () => {
     const { report: lensed } = applyPersonaLens(twoProgramTiers, "developer");
     const titles = lensed.sections.map((s) => s.title);
     expect(titles).toContain("Capital-relevant programs");
-    // The second programs-bucket section keeps its own real title — never
-    // duplicated to the same override string.
-    expect(titles).toContain(OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE);
+    expect(titles).not.toContain(OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE);
     expect(titles.filter((t) => t === "Capital-relevant programs")).toHaveLength(1);
+    expect(lensed.sections[0].items.map((item) => item.programId)).toEqual([
+      "tif",
+      "highUnemployment",
+    ]);
   });
 
   it("per-persona title snapshot — exact strings from the four R5 board files (re-read in full for this finding)", () => {
@@ -554,7 +654,7 @@ describe("Gate finding 19: per-persona section titles", () => {
       expect(titleById(lensed, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
       expect(titleById(lensed, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
       expect(titleById(lensed, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for your goal");
-      expect(titleById(lensed, SECTION_IDS.documentReadinessChecklist)).toBe("Document readiness");
+      expect(titleById(lensed, SECTION_IDS.documentReadinessChecklist)).toBeUndefined();
       expect(titleById(lensed, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
     }
 
@@ -572,7 +672,7 @@ describe("Gate finding 19: per-persona section titles", () => {
     expect(titleById(supporter, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
     expect(titleById(supporter, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
     expect(titleById(supporter, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for the goal");
-    expect(titleById(supporter, SECTION_IDS.documentReadinessChecklist)).toBe("Document readiness");
+    expect(titleById(supporter, SECTION_IDS.documentReadinessChecklist)).toBeUndefined();
     expect(titleById(supporter, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
 
     // R5LookingFinal — only Civic Representation is a generic section on
@@ -583,7 +683,7 @@ describe("Gate finding 19: per-persona section titles", () => {
     // Confirms the deliberate non-coverage: looking has no override for
     // siteFacts (the board doesn't render a generic "Site Facts" section
     // for it at all — Location snapshot replaces it).
-    expect(titleById(looking, SECTION_IDS.siteFacts)).toBe("Site Facts");
+    expect(titleById(looking, SECTION_IDS.siteFacts)).toBeUndefined();
   });
 
   // Gate round 2, BLOCKER 23 (regression, real bug this fixes): a LEGACY
@@ -606,31 +706,24 @@ describe("Gate finding 19: per-persona section titles", () => {
       { title: "Logistics Access", description: "logistics-marker", items: [] },
     ];
     const legacyReport: GeneratedReport = { ...reportFixture(), sections: legacySections };
-    // Only starting/growing/developer actually override these two buckets'
-    // titles (R5SupporterFinal's board doesn't render a generic Site
-    // Facts/Logistics Access section at all — see PERSONA_SECTION_TITLE_
-    // OVERRIDES.supporter, which carries no siteFacts/logisticsAccess
-    // entry) — supporter is included below ONLY for the PART-placement
-    // assertion, not the title-changed one.
-    const personasWithOverride = new Set(["starting", "growing", "developer"]);
-
-    for (const persona of ["starting", "growing", "developer", "supporter"] as const) {
+    for (const persona of ["starting", "growing", "developer"] as const) {
       const { report: lensed } = applyPersonaLens(legacyReport, persona);
       const siteFacts = lensed.sections.find((s) => s.description === "site-facts-marker")!;
       const logistics = lensed.sections.find((s) => s.description === "logistics-marker")!;
       expect(siteFacts.id, `${persona} site facts id`).toBeUndefined(); // genuinely legacy — no id
       expect(logistics.id, `${persona} logistics id`).toBeUndefined();
-      if (personasWithOverride.has(persona)) {
-        // Titles really did get renamed (proves the override actually ran
-        // against this id-less fixture, not a no-op).
-        expect(siteFacts.title, `${persona} site facts title`).not.toBe("Site Facts");
-        expect(logistics.title, `${persona} logistics title`).not.toBe("Logistics Access");
-      }
+      // Titles really did get renamed (proves the override actually ran
+      // against this id-less fixture, not a no-op).
+      expect(siteFacts.title, `${persona} site facts title`).not.toBe("Site Facts");
+      expect(logistics.title, `${persona} logistics title`).not.toBe("Logistics Access");
       // ...but PART 01 placement survives regardless (the actual claim
       // this finding is about), whether or not this persona's board
       // happens to rename these two sections.
       expect(guidepostPartForSection(siteFacts, persona), `${persona} site facts PART`).toBe(1);
       expect(guidepostPartForSection(logistics, persona), `${persona} logistics PART`).toBe(1);
     }
+
+    const supporter = applyPersonaLens(legacyReport, "supporter").report;
+    expect(supporter.sections).toHaveLength(0);
   });
 });
