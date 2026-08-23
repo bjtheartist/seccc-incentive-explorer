@@ -123,4 +123,11 @@ describe("program card face — real render-level board order (gate round 3, BLO
     const afterVerify = html.slice(verifyIdx);
     expect(afterVerify).toMatch(/Every figure above traces to a public record\./);
   });
+
+  it("the traces-to-public-record line is ABSENT when there is no Verify block (negative half of the pairing)", () => {
+    const item = fullyPopulatedItem();
+    const html = renderFullCard({ ...item, verifySources: [] });
+    expect(html).not.toContain("Verify at the source");
+    expect(html).not.toContain("Every figure above traces to a public record.");
+  });
 });

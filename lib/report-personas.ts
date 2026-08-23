@@ -511,7 +511,7 @@ export function guidepostPartForSection(
   persona: PersonaId,
 ): GuidepostPart | null {
   if (persona === DEFAULT_PERSONA) return null;
-  const bucket = (section.guidepostBucket as SectionBucketKey | undefined) ?? sectionBucketKey(section);
+  const bucket = section.guidepostBucket ?? sectionBucketKey(section);
   return BUCKET_PART[bucket];
 }
 

@@ -27,10 +27,10 @@ Escape hatch (spec v2, amended): parity is complete when every unresolved
 row is PASS, class (a)-(d), or a strictly-defined PARTIAL as above.
 **Correction (gate round 2 tail item 3): this build does NOT reach that
 state, and the sentence that used to claim it did was contradicted by
-this doc's own row 94.** The true terminal state, named explicitly: every
+this doc's own the program-mix chart row.** The true terminal state, named explicitly: every
 row is closed (PASS or INTENTIONAL-DIFF(a-d)) except two genuinely open
 items — `costSignals[]` population (PARTIAL, gate finding 4 — mechanism
-built, data-entry follow-up named) and row 94's "All"/just-looking
+built, data-entry follow-up named) and the program-mix chart row's "All"/just-looking
 program-mix bar chart (NOT CLOSED — genuinely unbuilt, claimed under none
 of PASS/INTENTIONAL-DIFF/PARTIAL). See "Remainder" below for both.
 
@@ -166,7 +166,7 @@ in its own row and in the "Remainder" note below.
 
 Corrected gate round 2 tail item 4: this section previously said "the one
 item not built" — there are two. `costSignals[]` is PARTIAL (mechanism
-built, data-entry follow-up named); row 94's program-mix chart is
+built, data-entry follow-up named); the program-mix chart row's program-mix chart is
 genuinely unbuilt and claimed under no closed status at all. Both are
 listed below.
 
@@ -216,7 +216,7 @@ published fee/reimbursement terms against its source, then set
 `costSignals` directly on the catalog record — not a code change.
 
 **Chart: "All"/just-looking program-mix bars — the second genuine
-remainder, NOT CLOSED (row 94 above).** Genuinely not built this pass —
+remainder, NOT CLOSED (the program-mix chart row above).** Genuinely not built this pass —
 no mechanism, no test, no partial coverage. Location snapshot's stat
 tiles + What's notable (both real, built, render-tested) cover the same
 "quick overview" need with real data, which is why this was not
