@@ -17,33 +17,17 @@ import {
 } from "@/lib/report-brief";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { PersonaId } from "@/lib/personas";
+import { SITE_URL } from "@/lib/seo";
 
-/** Decorative only — not a scanning-safe QR encoding. A hand-rolled
- *  Reed-Solomon QR encoder was judged disproportionate scope for this
- *  pass; the link itself is rendered prominently right next to it (and is
- *  the only thing that actually needs to work) — see
- *  docs/persona-report-parity.md for the explicit deferral. */
-function QrPlaceholderGlyph() {
-  return (
-    <svg width="44" height="44" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="52" height="52" fill="#0C1B33" />
-      <g fill="#FFFFFF">
-        <rect x="4" y="4" width="14" height="14" />
-        <rect x="34" y="4" width="14" height="14" />
-        <rect x="4" y="34" width="14" height="14" />
-        <rect x="7" y="7" width="8" height="8" fill="#0C1B33" />
-        <rect x="37" y="7" width="8" height="8" fill="#0C1B33" />
-        <rect x="7" y="37" width="8" height="8" fill="#0C1B33" />
-        <rect x="22" y="8" width="4" height="4" />
-        <rect x="26" y="14" width="4" height="4" />
-        <rect x="22" y="22" width="8" height="4" />
-        <rect x="34" y="24" width="4" height="8" />
-        <rect x="24" y="34" width="4" height="6" />
-        <rect x="30" y="40" width="8" height="4" />
-      </g>
-    </svg>
-  );
-}
+/**
+ * Gate finding 17 RULING: the decoy QR glyph (a decorative SVG shaped like
+ * a QR code but not a real scanning-safe encoding) is removed entirely —
+ * no glyph that resembles a QR ships unless it's backed by a real,
+ * spec-correct, decode-verified encoder, which this pass does not build.
+ * In its place: the real domain, printed large enough to retype by hand,
+ * plus the full share URL for anyone reading a digital copy.
+ */
+const DOMAIN = SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 export function BriefPage({
   report: lensed,
@@ -164,16 +148,17 @@ export function BriefPage({
               <p className="mt-0.5 text-[10.5px] text-[#0C1B33]/55 leading-relaxed">{contact.detail}</p>
             </div>
           ))}
-          <div className="mt-3 flex items-center gap-2.5">
-            <QrPlaceholderGlyph />
-            <div>
-              <p className="font-mono-bureau text-[8.5px] tracking-[0.12em] uppercase text-[#0C1B33]/50">
-                The full living report
-              </p>
-              <a href={reportUrl} className="font-mono-bureau text-[10px] text-[#2563EB] hover:underline break-all">
-                {reportUrl.replace(/^https?:\/\//, "")}
-              </a>
-            </div>
+          <div className="mt-3 border border-[#0C1B33]/15 bg-[#FAF9F6] px-3 py-2.5">
+            <p className="font-mono-bureau text-[8.5px] tracking-[0.12em] uppercase text-[#0C1B33]/50">
+              The full living report
+            </p>
+            <p className="mt-1 font-editorial text-[15px] font-semibold">{DOMAIN}</p>
+            <p className="mt-0.5 text-[10px] text-[#0C1B33]/55 leading-relaxed">
+              Visit {DOMAIN} and search this address, or use the direct link below.
+            </p>
+            <a href={reportUrl} className="mt-1 block font-mono-bureau text-[10px] text-[#2563EB] hover:underline break-all">
+              {reportUrl.replace(/^https?:\/\//, "")}
+            </a>
           </div>
         </div>
       </div>

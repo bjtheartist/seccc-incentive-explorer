@@ -68,7 +68,7 @@ describe("BriefPage", () => {
     expect(html).not.toContain("Track in Business File");
   });
 
-  it("renders the full-report link prominently (the QR is decorative only)", () => {
+  it("renders the full-report link prominently, alongside the domain and a retypable instruction line", () => {
     const html = renderToStaticMarkup(
       <BriefPage
         report={reportFixture()}
@@ -79,5 +79,25 @@ describe("BriefPage", () => {
       />,
     );
     expect(html).toContain('href="https://example.com/r/abc"');
+    expect(html).toMatch(/visit .+ and search this address/i);
+  });
+
+  // Gate finding 17 RULING: no glyph that resembles a QR code ships unless
+  // it's backed by a real, decode-verified encoder — this pass doesn't
+  // build one, so no such glyph should render at all, decorative or not.
+  it("never renders a QR-shaped glyph (finding 17 — decoy QR removed, no fake substitute)", () => {
+    const html = renderToStaticMarkup(
+      <BriefPage
+        report={reportFixture()}
+        persona="growing"
+        stage="launch-ready"
+        priority="renovation"
+        reportUrl="https://example.com/r/abc"
+      />,
+    );
+    expect(html).not.toMatch(/qr/i);
+    // The old glyph was a 52x52 finder-pattern SVG — assert no SVG at all
+    // ships in its place (the domain/link box is plain text/markup).
+    expect(html).not.toContain("<svg");
   });
 });
