@@ -14,7 +14,10 @@ import { reportEmailGateKey } from "@/lib/report-email";
 import { DEFAULT_PERSONA } from "@/lib/personas";
 import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
+import { CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { ALSO_AT_ADDRESS_TITLE, personaEmptyProgramsDescription } from "@/lib/report-personas";
+import { encodeWizardState } from "@/lib/url-state";
 
 /**
  * Characterization coverage for the LIVE report route's own renderer —
@@ -773,6 +776,216 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       const overlayHtml = html.slice(overlayStart);
       expect(overlayHtml).not.toContain("Documents to Gather");
       expect(overlayHtml).not.toContain("Track in Business File");
+    });
+  });
+
+  // Gate finding 16: a REAL DOM-level floor suite (render-level assertions
+  // against renderToStaticMarkup output, not source-code greps). Uses REAL
+  // catalog program ids (sbif/tif/federalOZ/highUnemployment) so the hard
+  // relevance filter (lib/report-personas.ts applyPersonaLens) actually
+  // engages — sbif matches starting/growing only, tif+federalOZ match
+  // developer, highUnemployment is a PINNED overlay (context, not a
+  // program — always visible regardless of persona match).
+  describe("Floor suite (gate finding 16): hard-filter disclosure, sources footer, reason pills, overlay pinning, empty state", () => {
+    function multiProgramReport(): GeneratedReport {
+      return {
+        title: "Site Incentive Analysis",
+        subtitle: "Location-based analysis",
+        reportType: "site-incentives",
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        summary: "Mapped incentive zones were found at this address.",
+        sections: [
+          {
+            title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+            description: "Programs mapped at this address.",
+            items: [
+              {
+                label: "SBIF Facade Grant",
+                value: "Review published terms",
+                programId: "sbif",
+                matchExplanation: {
+                  whyItAppears: ["Address falls inside an SBIF-eligible TIF district"],
+                  knownFromPublicData: [],
+                  basedOnUserAnswers: [],
+                  stillToConfirm: [],
+                  currentDocumentsToGather: [],
+                  confirmWith: [],
+                },
+              },
+              {
+                label: "TIF District Program",
+                value: "Review published terms",
+                programId: "tif",
+                matchExplanation: {
+                  whyItAppears: ["Address falls inside a TIF district"],
+                  knownFromPublicData: [],
+                  basedOnUserAnswers: [],
+                  stillToConfirm: [],
+                  currentDocumentsToGather: [],
+                  confirmWith: [],
+                },
+              },
+              {
+                label: "Federal Opportunity Zone",
+                value: "Review published terms",
+                programId: "federalOZ",
+              },
+              {
+                label: "High Unemployment Area",
+                value: "Context signal",
+                programId: "highUnemployment",
+              },
+            ],
+          },
+        ],
+        recommendedActions: [],
+        metadata: { address: "100 E Test St" },
+        dataSources: [
+          {
+            id: "zones",
+            label: "City of Chicago & Illinois DCEO",
+            description: "Incentive zone boundaries.",
+            url: "https://data.cityofchicago.org",
+          },
+        ],
+      } as unknown as GeneratedReport;
+    }
+
+    function emptyMatchReport(): GeneratedReport {
+      return {
+        ...multiProgramReport(),
+        sections: [
+          {
+            title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+            description: "Programs mapped at this address.",
+            items: [{ label: "SBIF Facade Grant", value: "Review published terms", programId: "sbif" }],
+          },
+        ],
+      };
+    }
+
+    /** Slices out one section's own HTML fragment by its anchor, up to (not
+     *  including) the next `<div id="` boundary — good enough to isolate
+     *  "does X appear inside/outside this specific section" without a real
+     *  DOM parser. */
+    function sectionFragment(html: string, anchor: string): string {
+      const start = html.indexOf(`id="${anchor}"`);
+      expect(start, `section anchor #${anchor} present in output`).toBeGreaterThanOrEqual(0);
+      const nextDivIdx = html.indexOf('<div id="', start + 1);
+      return html.slice(start, nextDivIdx === -1 ? undefined : nextDivIdx);
+    }
+
+    it("(a) a collapsed program's title never appears outside the 'Also at this address' disclosure", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+      const alsoFragment = sectionFragment(html, sectionAnchor(ALSO_AT_ADDRESS_TITLE));
+      // sbif does NOT match "developer" — it must have collapsed OUT of the
+      // primary confirmed-tier fragment...
+      expect(confirmedFragment).not.toContain("SBIF Facade Grant");
+      // ...and INTO the disclosure, not dropped.
+      expect(alsoFragment).toContain("SBIF Facade Grant");
+    });
+
+    it("(b) the disclosure sentence itself renders, naming the real count and persona", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain("1 other program tied to this address");
+      expect(html).toContain("Nothing is removed; switch to All to see everything together.");
+    });
+
+    it("(c) the sources footer and the generated-date vintage line both render", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain('id="data-sources"');
+      // React HTML-escapes "&" to "&amp;" on render — assert the escaped form.
+      expect(html).toContain("City of Chicago &amp; Illinois DCEO");
+      expect(html).toMatch(/This report was generated on/);
+    });
+
+    it("(d) reason pills (ReasonChips) render on the card face for a matched program with a real match reason", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain('data-testid="reason-chips"');
+      expect(html).toContain("Address falls inside a TIF district");
+    });
+
+    it("(e) the pinned overlay (highUnemployment) stays visible on EVERY persona, even developer/starting/growing/supporter where it isn't itself persona-tagged", async () => {
+      for (const persona of ["starting", "growing", "developer", "supporter"] as const) {
+        const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona });
+        const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+        expect(confirmedFragment, `persona=${persona}`).toContain("High Unemployment Area");
+      }
+    });
+
+    it("(e) explicit empty-state copy renders (never a blank page, never the unfiltered list) when a persona matches zero programs", async () => {
+      // emptyMatchReport carries only sbif (starting/growing-tagged) with NO
+      // pinned overlay — under "developer" the confirmed tier has zero
+      // visible items, so the engine's own empty-state sentence must render.
+      const html = await renderReportRoute(emptyMatchReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      // React HTML-escapes the quotes around "Also at this address" inside
+      // this sentence (-> &quot;) — assert the unambiguous, quote-free lead
+      // clause of the real engine-produced sentence instead of the raw
+      // string, which would never literally appear in rendered HTML.
+      const expectedLead = personaEmptyProgramsDescription("developer").split(' See "')[0];
+      expect(html).toContain(expectedLead);
+      // Non-tautological: confirm this ISN'T just always-present boilerplate
+      // by proving it's ABSENT for a persona that DOES match (starting).
+      const startingHtml = await renderReportRoute(emptyMatchReport(), BASE_WIZARD_STATE, { persona: "starting" });
+      expect(startingHtml).not.toContain("No programs at this address matched");
+    });
+
+    // (f) Gate finding 16(f): shared-link-recipient.test.ts's fork-parity
+    // checks are source-code greps (readFileSync + toContain against the
+    // raw .tsx text) — they prove the RIGHT LINE OF CODE EXISTS, not that
+    // it actually does anything at render time. This is the real render-
+    // level proof: a recipient who opens a shared link whose decoded
+    // wizard state (`pg=`) already carries a complete goal selection must
+    // NOT see the email gate — the sender already cleared it. Mirrors
+    // renderReportRoute's own vi.doMock/vi.doUnmock technique, applied to
+    // next/navigation's useSearchParams (globally stubbed to an EMPTY
+    // URLSearchParams for every other test in this file) so THIS one test
+    // can simulate a real `?<encoded wizard state>` share URL.
+    it("(f) a shared-link recipient with a complete decoded goal set is NOT re-blocked by the email gate (render-level, not a source grep)", async () => {
+      const sharedWizardState: WizardState = {
+        ...INITIAL_WIZARD_STATE,
+        reportType: "site-incentives",
+        address: "100 E Test St",
+        lat: 41.8,
+        lon: -87.6,
+        projectGoals: ["hiring"],
+      };
+      const encoded = encodeWizardState(sharedWizardState);
+
+      vi.resetModules();
+      vi.doMock("next/navigation", () => ({
+        useSearchParams: () => new URLSearchParams(encoded),
+        useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+      }));
+      let html: string;
+      try {
+        html = await renderReportRoute(multiProgramReport(), sharedWizardState, {
+          persona: "all",
+        });
+      } finally {
+        // Re-doMock back to the file's own top-level next/navigation stub
+        // (line ~108) rather than vi.doUnmock — a bare doUnmock left the
+        // NEXT test in this file rendering a stale "Loading..." state
+        // (confirmed: the control test below passes alone, fails after
+        // this one runs first — real cross-test pollution, not a flake).
+        // Re-establishing the exact original mock shape is unambiguous.
+        vi.doMock("next/navigation", () => ({
+          useSearchParams: () => new URLSearchParams(),
+          useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+        }));
+        vi.resetModules();
+      }
+
+      expect(html).not.toContain('data-testid="stub-report-email-gate"');
+    });
+
+    it("(f) CONTROL: the same report/state WITHOUT a resolved share link (empty searchParams, the harness default) DOES show the gate — proves the assertion above isn't vacuous", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+        persona: "all",
+        revealedReportKey: "",
+      });
+      expect(html).toContain('data-testid="stub-report-email-gate"');
     });
   });
 });

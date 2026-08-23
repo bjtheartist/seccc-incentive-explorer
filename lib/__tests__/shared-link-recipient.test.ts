@@ -38,12 +38,21 @@ describe("shared-link recipient — fork parity", () => {
     "utf8",
   );
 
-  it("the live route skips the email gate for a share-mode link with a complete decoded goal set", () => {
-    expect(liveFork).toContain(
-      "const shareLinkGoalsComplete = isShareMode && projectGoalsAreComplete(wizardState);",
-    );
-    expect(liveFork).toContain("&& !shareLinkGoalsComplete;");
-  });
+  // Gate finding 16(f): the source-grep this test used to be here — reading
+  // app/report/page.tsx's raw text and asserting the shareLinkGoalsComplete
+  // line exists — proved the right LINE OF CODE was present, never that it
+  // actually did anything at render time. Replaced by a real render-level
+  // test: app/report/__tests__/report-page-live-renderer.test.tsx's
+  // "Floor suite (gate finding 16)" describe block, test "(f) a shared-
+  // link recipient with a complete decoded goal set is NOT re-blocked by
+  // the email gate" — it simulates a real `?<encoded wizard state>` share
+  // URL (via a scoped next/navigation mock) and asserts the ACTUAL
+  // rendered output never shows the email-gate stub, with a CONTROL test
+  // proving the same assertion fails without a resolved share link (so the
+  // positive assertion isn't vacuous). This file keeps the remaining
+  // fork-parity source-greps below — they check something a single-fork
+  // render test can't (that BOTH forks carry the same wiring), which is a
+  // legitimate use of a source check, not a substitute for a real render.
 
   it("both forks render the framed-persona-link notice with a one-tap escape to 'All'", () => {
     for (const fork of [liveFork, workspaceFork]) {
