@@ -824,6 +824,52 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/workspace/reports/[id]/page.tsx",
 ] as const;
 
+// ═══════════════════════════════════════════════════════════════════════
+// Gate round 2, BLOCKER 12 — the discovery check above only ever walked
+// app/**/page.tsx and app/**/route.ts. But components/report/** is where
+// most of the actual persona-lensed claim rendering lives (the report
+// route and its saved-fork are thin wrappers around these components),
+// so a genuinely unregistered claim-bearing component there was
+// literally invisible to the discovery check. Registered this round:
+// ProgramCardFace, ReasonChips, CorridorInvestmentChart, LookingOverview,
+// BriefPage, BriefStageAsk (see the new PUBLIC_CLAIM_SURFACES entries).
+//
+// The remaining files below are the rest of components/report/*.tsx as
+// of this finding (2026-08-23) — not yet individually audited for
+// claim-surface completeness by this review pass. Same fail-closed
+// baselining discipline as PUBLIC_CLAIM_SURFACES_KNOWN_GAPS above: a
+// documented, reasoned pass-through for TODAY's known gaps, so the newly
+// widened walk (app/** + components/report/**) passes now while any
+// FUTURE unregistered component/report file — new or renamed — fails the
+// check. Closing this list to zero is real, separate follow-up work,
+// tracked here, not silently deferred.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS: readonly string[] = [
+  "components/report/ActionRoadmapSection.tsx",
+  "components/report/AdminOwnershipPanel.tsx",
+  "components/report/CapitalPartnerHandoff.tsx",
+  "components/report/ContactSheet.tsx",
+  "components/report/CrossLinkBanner.tsx",
+  "components/report/DocumentsToGather.tsx",
+  "components/report/ExecutiveSummarySection.tsx",
+  "components/report/FundingWindowChart.tsx",
+  "components/report/GroupedReportDetail.tsx",
+  "components/report/IncentiveHorizonChart.tsx",
+  "components/report/NeighborhoodEconomics.tsx",
+  "components/report/PersonaChips.tsx",
+  "components/report/PreparationCostBadge.tsx",
+  "components/report/ProgramsMatchedHere.tsx",
+  "components/report/ProjectFitNote.tsx",
+  "components/report/ProjectGoalSelector.tsx",
+  "components/report/RefineValuePanel.tsx",
+  "components/report/ReportEmailGate.tsx",
+  "components/report/ReportNavigationLinks.tsx",
+  "components/report/ReportZoningMap.tsx",
+  "components/report/SiteActivityCard.tsx",
+  "components/report/StartHereCard.tsx",
+] as const;
+
 export interface DiscoveryViolation {
   filePath: string;
   reason: string;

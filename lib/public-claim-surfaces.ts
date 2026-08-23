@@ -88,6 +88,39 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["components/report/ProgramCardExtras.tsx"],
   },
   {
+    // Gate round 2, BLOCKER 12: registered alongside program-card-extras
+    // for the same reason — a PublicProgramView-shaped card-face surface
+    // that was never added to this registry when introduced.
+    id: "program-card-face",
+    description: "Program-card face content — administrator, status/window pills, glance row, \"Commonly required,\" next-step/contact — shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/ProgramCardFace.tsx"],
+  },
+  {
+    id: "reason-chips",
+    description: "Program-card \"Why this is shown\" reason pills, shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/ReasonChips.tsx"],
+  },
+  {
+    id: "corridor-investment-chart",
+    description: "Supporter persona's corridor small-business-lending-by-year chart (real FFIEC CRA series), shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/CorridorInvestmentChart.tsx"],
+  },
+  {
+    id: "looking-overview",
+    description: "\"Just looking\" persona's Location snapshot / What's notable / Explore by interest panels, shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/LookingOverview.tsx"],
+  },
+  {
+    id: "the-brief",
+    description: "The Brief — the one-page shareable summary and its two-question ask, built from the same lensed report the online view shows.",
+    contracts: ["PublicProgramView", "reviewed-copy"],
+    files: ["components/report/BriefPage.tsx", "components/report/BriefStageAsk.tsx"],
+  },
+  {
     id: "report-email",
     description: "Report-summary email routes and the shared email-content helpers (program count, sections).",
     contracts: ["PublicProgramView", "reviewed-copy"],
