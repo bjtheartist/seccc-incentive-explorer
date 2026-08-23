@@ -357,6 +357,30 @@ describe("applyPersonaLens", () => {
     ).toContain("tif");
   });
 
+  it("fills from a collapsed-only lensed report even when a legacy disclosure title cannot be bucket-classified", () => {
+    const collapsedOnly: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          id: "legacy-persona-disclosure",
+          title: "More mapped programs",
+          items: [
+            { label: "Program A", value: "", programId: "a" },
+            { label: "Program B", value: "", programId: "b" },
+            { label: "Program C", value: "", programId: "c" },
+          ],
+          collapsedByPersona: true,
+        },
+      ],
+    };
+    expect(visiblePersonaProgramNames(collapsedOnly)).toEqual([]);
+    expect(personaSummaryProgramNames(collapsedOnly)).toEqual([
+      { programId: "a", label: "Program A" },
+      { programId: "b", label: "Program B" },
+      { programId: "c", label: "Program C" },
+    ]);
+  });
+
   // Gate finding 1 (regression, real bug this fixes): Civic Representation
   // rows for SSA/CCSA carry `programId` (so their copy can program-link),
   // which used to make them fall through the old un-gated scan and appear

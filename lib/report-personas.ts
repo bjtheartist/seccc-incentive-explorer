@@ -792,7 +792,12 @@ export function personaSummaryProgramNames(
   const seen = new Set(results.map(({ programId }) => programId));
 
   for (const section of lensed.sections ?? []) {
-    if (!section.collapsedByPersona || sectionBucketKey(section) !== "programs") continue;
+    // `collapsedByPersona` is itself the typed contract for the one
+    // program-only disclosure produced by applyPersonaLens. Do not
+    // re-classify it by id/title here: saved or normalized report shapes can
+    // legitimately alter those display fields, while the marker is the
+    // authoritative signal the renderers also use.
+    if (!section.collapsedByPersona) continue;
     for (const item of section.items ?? []) {
       if (!item.programId || seen.has(item.programId)) continue;
       seen.add(item.programId);

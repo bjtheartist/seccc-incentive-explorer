@@ -1196,6 +1196,11 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       // string, which would never literally appear in rendered HTML.
       const expectedLead = personaEmptyProgramsDescription("developer").split(' See "')[0];
       expect(html).toContain(expectedLead);
+      // Owner ruling Q1 still applies at the zero-strict-match edge: the
+      // summary fills from the already-lensed disclosure while the visible
+      // card section remains empty.
+      expect(html).toContain('data-testid="persona-summary-programs"');
+      expect(html).toContain("SBIF Facade Grant");
       // Non-tautological: confirm this ISN'T just always-present boilerplate
       // by proving it's ABSENT for a persona that DOES match (starting).
       const startingHtml = await renderReportRoute(emptyMatchReport(), BASE_WIZARD_STATE, { persona: "starting" });
