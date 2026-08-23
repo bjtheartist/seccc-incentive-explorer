@@ -12,6 +12,7 @@ import { INITIAL_WIZARD_STATE } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { reportEmailGateKey } from "@/lib/report-email";
 import { DEFAULT_PERSONA } from "@/lib/personas";
+import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
 import type { GeneratedReport } from "@/lib/report-engine";
 
@@ -290,6 +291,11 @@ const REPORT_DISPLAY_STATE_ORDER = [
   "persona",
   "expandedSections",
   "downloadGateOpen",
+  // spec v2 item 5 (The Brief): a single new useState slot, added
+  // immediately after downloadGateOpen in the source — see the
+  // maintenance warning above for why this array must move in the SAME
+  // commit as the source addition.
+  "briefState",
   "adminOwnershipStatus",
   "adminOwnershipMatch",
   "adminOwnershipTopClusters",
@@ -372,6 +378,7 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     // which is the behavior under test.
     expandedSections: {},
     downloadGateOpen: false,
+    briefState: DEFAULT_BRIEF_UI_STATE,
     adminOwnershipStatus: "idle",
     adminOwnershipMatch: null,
     adminOwnershipTopClusters: [],
@@ -735,6 +742,37 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
 
       expect(html).not.toContain('data-testid="documents-to-gather"');
+    });
+  });
+
+  describe("The Brief (spec v2 item 5)", () => {
+    it("offers 'Build My Brief' on a real persona lens", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "growing" });
+      expect(html).toContain("Build My Brief");
+    });
+
+    it("does not offer 'Build My Brief' on 'all'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+      expect(html).not.toContain("Build My Brief");
+    });
+
+    it("renders the open Brief overlay (seeded via briefState) with the non-suppressible footer and no documents block", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, {
+        persona: "growing",
+        briefState: { askOpen: false, open: true, stage: "launch-ready", priority: "renovation" },
+      });
+      expect(html).toContain('data-testid="brief-page"');
+      expect(html).toContain("SCREENING FROM PUBLIC RECORDS");
+      // The underlying report (growing persona) legitimately has its own
+      // Documents to Gather block — scope the "Brief carries no documents
+      // block" assertion to the brief-overlay fragment specifically.
+      const overlayStart = html.indexOf('id="brief-overlay"');
+      const overlayHtml = html.slice(overlayStart);
+      expect(overlayHtml).not.toContain("Documents to Gather");
+      expect(overlayHtml).not.toContain("Track in Business File");
     });
   });
 });

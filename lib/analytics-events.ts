@@ -40,6 +40,9 @@ export const ANALYTICS_EVENT_TYPES = [
   // fired when a reader clicks through from the report's foundation-task
   // list into the real Business File workspace route.
   "documents_to_gather_tracked",
+  // The Brief (persona spec v2, item 5): fired once the two-question ask
+  // (stage, then priority) completes and the one-page brief renders.
+  "brief_generated",
   "wizard_step_viewed",
   "refine_cta_shown",
   "refine_clicked",
