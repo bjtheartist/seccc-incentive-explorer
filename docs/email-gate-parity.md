@@ -18,12 +18,22 @@ proof; round 2 found the BLOCKER-2 seeding fix had introduced 3 new
 MAJORs (silently ADDING ids, stranding seeded chips above the 2-chip cap,
 and relocating BLOCKER-1's truncation one screen downstream), the
 BLOCKER-1 truncation site itself was still unexecuted by any test, and the
-parity doc cited 3 tests that did not exist. Every finding's fix and
-current status is tracked in the "Gate review round 1" and "Gate review
-round 2" sections near the bottom of this document. All rows in the tables
-below reflect the POST-round-2-fix state and have been corrected in place
-rather than left standing next to a rebuttal — the reviewer explicitly
-re-audits every row in each round's own list.
+parity doc cited 3 tests that did not exist.
+**Gate review round 3 verdict: FIX-FIRST, converging** — 8 of round 2's 10
+items VERIFIED-FIXED with red injections (NEW-1, NEW-2 residual noted,
+NEW-4, NEW-5, NEW-6, NEW-7, NEW-8, NEW-9); rows 6/7/9/167 accepted as
+honest. Round 3 found the engine's own `MAX_ENGINE_GOALS` cap (4) was
+itself too low for what the gate can legitimately emit (R3-1), the
+call-site pin was STILL executing a mock rather than the real handler for
+a third round running (R3-A), a user-visible copy bug in the wizard's own
+goal selector ("4/3 selected") that this PR made newly reachable (R3-2),
+and a genuine data-loss bug in "Just looking around" un-tapping (R3-5).
+Every finding's fix and current status is tracked in the "Gate review
+round 1," "round 2," and "round 3" sections near the bottom of this
+document. All rows in the tables below reflect the POST-round-3-fix state
+and have been corrected in place rather than left standing next to a
+rebuttal — the reviewer explicitly re-audits every row in each round's own
+list.
 
 ## Gate anatomy (R6GateBlessed.dc.html)
 
@@ -72,7 +82,7 @@ re-audits every row in each round's own list.
 | Item | Locus | Verification | Status |
 |---|---|---|---|
 | 8 UI chips map to existing goal ids, ids never re-keyed | `lib/gate-goal-groups.ts` | `goal-coverage.test.ts` (a); `project-fit.test.ts` unaffected (goal ids unchanged) | PASS |
-| Grouped chip feeds its FULL goal-id set into the existing multi-goal path — no truncation, no invention | `ReportEmailGate.tsx`'s `projectGoalIds()`: pre-toggle emits `originalGoalIds` verbatim; post-toggle emits `gateGoalChipsToGoalIds(selectedGoalChips)` + `passthroughGoalIds`, via `dedupeGoalIds` (uncapped) → `onPrepareReport(goalIds, customGoal)` → `resolveGatePrepareGoals` (`lib/gate-goal-groups.ts`) → `projectGoalsFit` (no inherent limit) | **Corrected per gate review round 2, NEW-1/ruling #2 — this row was FALSE as originally written.** Round 1's claim that the reviewer's 4-id test was "end-to-end on the args `handlePrepareGatedReport` receives" was untrue: `onPrepareReport` is a `vi.fn()` in every `ReportEmailGate` test, so the real handler never executed (round 2 finding "R1-BLOCKER-1 carryover"). Now genuinely end-to-end via `resolveGatePrepareGoals` — the exact, extracted function `handlePrepareGatedReport` calls — unit-tested directly in `lib/__tests__/gate-goal-groups.test.ts`'s "resolveGatePrepareGoals — the R1-BLOCKER-1 pin" describe block, including a 5-id probe (an existing pass-through goal plus a fresh 2-chip pick) that a reversion to the wizard's capped `selectedProjectGoals()` would truncate to 4 — confirmed by re-injecting that exact reversion and reverting. Separately, `report-email-gate.test.tsx`'s "2 grouped chips (4 ids) all reach onPrepareReport" pins the chip-toggle path at the component boundary, and the NEW-1 describe block pins that an UNTOUCHED seed never adds an id the visitor didn't choose. | PASS |
+| Grouped chip feeds its FULL goal-id set into the existing multi-goal path — no truncation, no invention, all the way to the engine — AND the real call site is genuinely covered | `ReportEmailGate.tsx`'s `projectGoalIds()`: pre-toggle emits `originalGoalIds` verbatim; post-toggle emits `gateGoalChipsToGoalIds(selectedGoalChips)` + `passthroughGoalIds`, via `dedupeGoalIds` (uncapped) → `onPrepareReport(goalIds, customGoal)` → `app/report/page.tsx`'s `handlePrepareGatedReport` → `resolveGatePrepareGoals` (`lib/gate-goal-groups.ts`) → `WizardState.projectGoals` → `selectedProjectGoals()` (`MAX_ENGINE_GOALS = 5`, the provable ceiling) → `lib/report-engine.ts` | **Gate review round 3, MAJOR findings R3-1 and R3-A — round 2's version of this row was STILL false on two counts, both now genuinely fixed.** (1) R3-1: `MAX_ENGINE_GOALS` was 4, but an ordinary 3-goal wizard seed plus one further chip tap emits 5 real ids (the reviewer's reproduction: `["expansion","mixed-use","rehab"]` seeds 3 chips; any toggle switches ALL of them to chip-derived emission = 2+2+1 = 5) — `lib/report-engine.ts`'s two `selectedProjectGoals()` call sites silently dropped the 5th. Raised to 5, the PROVABLE ceiling (`lib/__tests__/gate-goal-groups.test.ts`'s "provable ceiling" describe block computes this number FROM `GATE_GOAL_CHIPS`' actual shape, not a hardcoded copy — a future chip regrouping that raises the true worst case breaks that test). Survival is now pinned all the way through `selectedProjectGoals()` itself, not just the gate's own combiner. (2) R3-A (the THIRD round on this exact gap): `onPrepareReport` really is a `vi.fn()` in every `ReportEmailGate` test, so `handlePrepareGatedReport` genuinely never executed anywhere in this repo before this round — the reviewer proved it by swapping the real call for an inline, capped reimplementation and watching 3822 tests stay green. Two independent fixes now close this: `app/report/__tests__/gate-prepare-engine-integration.test.tsx` renders the REAL `ReportPageWrapper` with `ReportEmailGate` deliberately left UNSTUBBED, clicks through a real gate interaction, and inspects the real outgoing `POST /api/report/generate` body; `app/report/__tests__/gate-prepare-call-site-fence.test.ts` parses the real `app/report/page.tsx` source with `ts-morph` (AST, not a string heuristic) and asserts `handlePrepareGatedReport`'s body calls `resolveGatePrepareGoals` and never `selectedProjectGoals` or a raw `JSON.stringify` reimplementation. Both re-confirmed against the reviewer's exact injection (swap the call, add the inline compare): the fence catches it directly; the integration test does NOT discriminate this specific mutant by value (once `MAX_ENGINE_GOALS` is the true ceiling, a reachable 4-id scenario no longer diverges from the capped reader by construction — see the round 3 finding table for why), so the fence is the operative pin for that exact regression and is documented as such rather than overclaimed. | PASS |
 | "Just looking around" carries zero goal ids (no filter, pairs with `looking` persona lens) | `GATE_LOOKING_CHIP_ID` → `goalIds: []` | `goal-coverage.test.ts`; existing `report-personas` "looking" lens tests (untouched) | PASS |
 
 **Root cause of BLOCKER 1 (fixed):** `lib/report-wizard-config.ts`'s
@@ -212,7 +222,7 @@ silently deferred.
 | Item | Locus | Verification | Status |
 |---|---|---|---|
 | Optional support opt-in produces a real signal | `app/api/support-request/route.ts`, `lib/support-lead.ts` | **Now genuinely exercised at BOTH boundaries.** Client boundary: `report-email-gate.test.tsx`'s "the support path is genuinely exercised end to end" describe block asserts the real payload `submitSupportRequest` is called with (gate review round 1, MAJOR finding 7/F7). Route boundary (gate review round 2, NEW-9/row 167 fix — the reviewer's exact point was that only the mocked `submitSupportRequest` client function was ever exercised, never the route itself): new `app/api/support-request/route.test.ts` (8 tests) calls the route's real `POST` handler directly — validation (400 on an invalid email), the honeypot branch (neutral success, no lead write), a real `createReportLead` call with `wantsHelp: true` and the right fields, the 503/502 error paths, and the env-conditional Resend branch both with and without `RESEND_API_KEY`/`INCENTIVE_HELP_INBOX` set | PASS |
-| Chamber-inbox notification | Same route, `Resend` + `process.env.INCENTIVE_HELP_INBOX` | Same conditional pattern already live in `/api/email-report`'s `wantsHelp` branch — not a new mechanism, but genuinely env-conditional and silent when unset. `route.test.ts`'s env-conditional tests now prove BOTH branches behave as documented (no key → `notified: false`, Resend never constructed; both keys → a real `Resend.emails.send` call to the configured inbox) | **PARTIAL** — per gate review round 1's binding ruling on finding 12, unchanged by round 2. Named follow-up: **verify `RESEND_API_KEY` + `INCENTIVE_HELP_INBOX` are configured on the Vercel production project** — a ship-ritual checklist item, not a code change (this is what remains unverifiable from inside the repo — the CODE'S behavior in both configurations is now fully tested). The lead is captured (and surfaced in the admin queue below) regardless of whether these are set; only the live email notification depends on them. |
+| Chamber-inbox notification | Same route, `Resend` + `process.env.INCENTIVE_HELP_INBOX` | Same conditional pattern already live in `/api/email-report`'s `wantsHelp` branch — not a new mechanism, genuinely env-conditional. `route.test.ts`'s env-conditional tests prove BOTH branches behave as documented (no key → `notified: false`, Resend never constructed; both keys → a real `Resend.emails.send` call to the configured inbox). Production configuration independently verified 2026-08-23 via `vercel env ls production`: both `RESEND_API_KEY` and `INCENTIVE_HELP_INBOX` exist, Encrypted, on the Production environment. | **PASS** — upgraded from PARTIAL in gate review round 3: the code's behavior in both configurations is tested, and the one thing that was previously unverifiable from inside the repo (whether the two env vars are actually set on Vercel prod) has now been verified externally and dated. Nothing about this row remains untested or unverified. |
 | Admin/export surface | `lib/analytics-dashboard.ts`'s existing `report_leads` follow-up queue (`wants_incentive_help` ordering) — untouched, already reads this table | pre-existing, unmodified; `route.test.ts`'s "writes a real lead with wantsHelp: true" test now directly proves `createReportLead` is called with that flag (gate review round 2, NEW-9 fix — previously only reviewer-confirmed by inspection, not by a test in this repo) | PASS |
 
 Investigated before building (per spec instruction): `/api/email-report`
@@ -266,16 +276,58 @@ confirmed FIXED with red-on-injection proof and are NOT reworked here.
 
 | # | Finding | Fix | Test(s) that now pin it |
 |---|---|---|---|
-| R1-BLOCKER-1 carryover | The truncation site itself was unpinned — `onPrepareReport` is a `vi.fn()` in every test, so the real `handlePrepareGatedReport` never executed | Extracted the exact dedupe-and-noop-detect logic into `resolveGatePrepareGoals` (`lib/gate-goal-groups.ts`); `handlePrepareGatedReport` is now a thin wrapper around it | `lib/__tests__/gate-goal-groups.test.ts`'s "resolveGatePrepareGoals — the R1-BLOCKER-1 pin" describe block, including a 5-id divergence probe against `selectedProjectGoals()`'s cap; confirmed by re-injecting a `.slice(0, 4)`-style reversion — 1 test fails; reverted, all pass |
+| R1-BLOCKER-1 carryover | The truncation site itself was unpinned — `onPrepareReport` is a `vi.fn()` in every test, so the real `handlePrepareGatedReport` never executed | Extracted the exact dedupe-and-noop-detect logic into `resolveGatePrepareGoals` (`lib/gate-goal-groups.ts`); `handlePrepareGatedReport` is now a thin wrapper around it | **This round's fix was INSUFFICIENT** — the reviewer proved it in gate review round 3, MAJOR finding R3-A: unit-testing `resolveGatePrepareGoals` in isolation never verified the CALL SITE actually calls it. Swapping the call at `app/report/page.tsx`'s line ~1803 for an inline, capped reimplementation left all 3822 tests green, because nothing here executed the real handler. **See the round 3 table below for the actual fix** (a real integration test that renders the unstubbed gate + an AST fence test) — this row is corrected in place rather than left standing next to the disproven claim. |
 | NEW-1 | Seeding silently ADDS goal ids the visitor never picked (`["expansion"]` → chip pre-press → emits `["expansion","equipment"]`), forcing a needless regeneration | `ReportEmailGate.tsx` keeps `originalGoalIds` as separate frozen state, emitted verbatim pre-toggle; chip seeding (`goalIdsToGateChipIds`) is DISPLAY-only now, never emission | `report-email-gate.test.tsx`'s "gate review round 2, NEW-1" describe block (3 tests: single-id no-add, `mixed-use` no-add, a real toggle legitimately switching to the full chip mapping); confirmed by re-injecting always-chip-derived emission — 3 tests fail; reverted, all pass |
-| NEW-2 | Seeding bypasses `MAX_GATE_GOAL_CHIPS`; a seeded chip above the cap, once deselected, could never be re-added (stranded) | `toggleGateGoalChip` takes an explicit `cap` parameter; `ReportEmailGate.tsx` computes `goalChipCap = Math.max(MAX_GATE_GOAL_CHIPS, <seeded count>)` once at mount | `lib/__tests__/gate-goal-groups.test.ts`'s "explicit cap parameter" describe block + `report-email-gate.test.tsx`'s "gate review round 2, NEW-2" describe block (the reviewer's exact reproduction: seed 3, deselect "Energy & building upgrades," reselect it); confirmed by re-injecting a fixed `goalChipCap = MAX_GATE_GOAL_CHIPS` — 1 test fails; reverted, all pass |
-| NEW-3 | The 4th goal died one screen later — `ProjectGoalSelector`'s display slice and `selectedProjectGoals()` both truncated a gate-produced 4-goal report to 3 the instant either rendered | New named constant `MAX_ENGINE_GOALS = 4` (`lib/report-wizard-config.ts`) replaces `MAX_PROJECT_GOALS` in `selectedProjectGoals()`'s slice and `ProjectGoalSelector`'s display-read slice; `MAX_PROJECT_GOALS`/`atLimit` (the wizard's own "pick up to 3" fresh-growth limit) are untouched | Covered indirectly by `resolveGatePrepareGoals`'s 5-id test (proves the gate's own path never routes through the capped function); no dedicated `ProjectGoalSelector` render test was added — the fix is a 2-line constant swap in an already-simple read, and the invariant that matters (the gate's own emission) is pinned at the source |
+| NEW-2 | Seeding bypasses `MAX_GATE_GOAL_CHIPS`; a seeded chip above the cap, once deselected, could never be re-added (stranded) | `toggleGateGoalChip` takes an explicit `cap` parameter; `ReportEmailGate.tsx` computes `goalChipCap = Math.max(MAX_GATE_GOAL_CHIPS, <seeded count>)` once at mount | **VERIFIED-FIXED with a residual, disclosed honestly** (see the ship-with-disclosure list below): `lib/__tests__/gate-goal-groups.test.ts`'s "explicit cap parameter" describe block + `report-email-gate.test.tsx`'s "gate review round 2, NEW-2" describe block (the reviewer's exact reproduction: seed 3, deselect "Energy & building upgrades," reselect it); confirmed by re-injecting a fixed `goalChipCap = MAX_GATE_GOAL_CHIPS` — 1 test fails; reverted, all pass. The residual: `goalChipCap` is a session-wide number with no per-chip memory, so if a freed seeded slot gets spent on a DIFFERENT new chip instead of the same one, the originally-deselected seeded chip is stranded for the rest of the session — recovering "any seeded chip" was never literally true, only "the seeded COUNT stays available." |
+| NEW-3 | The 4th goal died one screen later — `ProjectGoalSelector`'s display slice and `selectedProjectGoals()` both truncated a gate-produced 4-goal report to 3 the instant either rendered | New named constant `MAX_ENGINE_GOALS` (`lib/report-wizard-config.ts`, raised again to 5 in round 3 — see R3-1 below) replaces `MAX_PROJECT_GOALS` in `selectedProjectGoals()`'s slice and `ProjectGoalSelector`'s display-read slice; `MAX_PROJECT_GOALS`/`atLimit` (the wizard's own "pick up to 3" fresh-growth limit) are untouched | Round 2 covered this only indirectly and admitted no dedicated `ProjectGoalSelector` render test existed. **Round 3, R3-6 closed that gap**: `components/report/__tests__/project-goal-selector.test.tsx` renders the real component with a 4-5 goal `goals` prop and asserts every one renders checked; confirmed by re-injecting the reviewer's exact `.slice(0, 3)` mutant at the exact site — 5/7 tests fail; reverted, all pass |
 | NEW-5 | Order-sensitive `JSON.stringify` equality + chip-definition-order re-derivation flipped a stored `["hiring","rehab"]` to `["rehab","hiring"]` on an untouched gate, regenerating the report and changing `metadata.projectType` | Fixed by the SAME mechanism as NEW-1 — verbatim pre-toggle emission preserves both ids AND order, so the comparison in `resolveGatePrepareGoals` matches and short-circuits to a no-op | `report-email-gate.test.tsx`'s "gate review round 2, NEW-5" describe block: `["hiring","rehab"]` in, `["hiring","rehab"]` out (order asserted, not just set-equality); confirmed by re-injecting always-chip-derived emission (same mutant as NEW-1) — fails; reverted, passes |
 | NEW-4 | Parity doc rows 6/7/9 cited test names that did not exist anywhere in the repo | Wrote the real tests rather than rewriting the rows down, per the ruling's explicit preference | `report-email-gate.test.tsx`'s new "persona pre-selection" describe block (3 tests, real `aria-pressed` assertions) |
 | NEW-6 | `dedupeGoalIds` dropped the `.filter(Boolean)` `selectedProjectGoals()` has always had — an empty-string goal id could reach the engine unfiltered | Restored the filter | `lib/__tests__/gate-goal-groups.test.ts` "filters falsy entries" |
 | NEW-7 | The `showModal()` jsdom fallback (plain `open` attribute, no backdrop/focus trap) would be a bypassable, non-modal gate if it ever ran in production | Guarded to `process.env.NODE_ENV !== "production"`; a real production browser missing `showModal()` gets a closed, non-interactive dialog + a logged error instead of a silently-downgraded one | Environment-guarded by construction; existing 38 `report-email-gate.test.tsx` tests continue to pass under the test-env branch (vitest sets `NODE_ENV=test`) |
 | NEW-8 | `report-email-gate.test.tsx` redefined `window.location` via `Object.defineProperty` twice with no restore, leaking the mock into later tests in the file | Original `window.location` descriptor captured once at module load, restored in a shared `afterEach` regardless of whether a given test touched it | Structural fix — all 38 tests in the file continue to pass in file order |
 | NEW-9 | §D row 167 verification was "pre-existing, unmodified" — not a test; nothing exercised `app/api/support-request/route.ts` itself, only the mocked client boundary | New `app/api/support-request/route.test.ts` (8 tests) calls the route's real `POST` handler | See §D table above |
+
+## Gate review round 3 — finding-by-finding status
+
+Round 2 items NEW-1, NEW-4, NEW-5, NEW-6, NEW-7, NEW-8, NEW-9 were reviewer-
+confirmed VERIFIED-FIXED with red-on-injection proof and are NOT reworked
+here. NEW-2 was also confirmed, with a residual disclosed above and in the
+ship-with-disclosure list below. Rows 6/7/9/167 were accepted as honest.
+
+| # | Finding | Fix | Test(s) that now pin it |
+|---|---|---|---|
+| R3-1 | The gate can emit 5-6 goal ids; `lib/report-engine.ts`'s two `selectedProjectGoals()` call sites capped at `MAX_ENGINE_GOALS = 4` and silently dropped the extras — the reviewer's reproduction: an ordinary 3-goal wizard run `["expansion","mixed-use","rehab"]`, one further chip tap, 5 ids emitted, `affordable-housing` (and the programs behind it) dropped at the engine boundary | `MAX_ENGINE_GOALS` raised to 5 — the PROVABLE ceiling, derived from `GATE_GOAL_CHIPS`' actual shape (2 two-id chips + up to `MAX_PROJECT_GOALS` seed slots), not guessed | `lib/__tests__/gate-goal-groups.test.ts`'s "provable ceiling" describe block computes the worst case FROM the chip definitions and asserts `MAX_ENGINE_GOALS >=` it (breaks on future regrouping, not on visitors' reports); the 5-id `resolveGatePrepareGoals` test now also asserts survival THROUGH `selectedProjectGoals()` itself; a new test reproduces the reviewer's exact 3-goal-seed-plus-one-tap scenario end to end |
+| R3-A | (Third round on this item.) The call site itself was still unexecuted — the reviewer swapped the real `resolveGatePrepareGoals` call at `app/report/page.tsx`'s line ~1803 for an inline, capped `selectedProjectGoals` + `JSON.stringify` reimplementation and watched 3822 tests stay green | Two independent fixes, per the ruling's stated preference order: (1) PRIMARY — `app/report/__tests__/gate-prepare-engine-integration.test.tsx` renders the real `ReportPageWrapper` with `ReportEmailGate` deliberately left unstubbed (every other heavy child component still stubbed, same list as the established sibling harness) and clicks through a real gate interaction; (2) FALLBACK/defense-in-depth — `app/report/__tests__/gate-prepare-call-site-fence.test.ts` parses the real source with `ts-morph` | Integration test: confirmed by re-injecting the reviewer's exact mutant — the test still PASSES on that specific mutant (see note below), so the fence is the operative pin. Fence test: re-injected the same mutant — 3/4 tests fail; reverted, all pass. **Note on the integration test's limits**: once `MAX_ENGINE_GOALS` is the true reachable ceiling (R3-1), NO reachable UI scenario can produce more ids than the capped reader also keeps — capped-vs-uncapped divergence and "reachable via the UI" are mutually exclusive by construction once the cap is set correctly. The integration test therefore proves real EXECUTION of the correct path with correct results, not value-divergence from the wrong one; the AST fence is what catches the wrong-function regression directly. Documented here rather than overclaiming what the integration test alone demonstrates. |
+| R3-2 | User-visible copy bug, newly reachable because of this PR: `ProjectGoalSelector`'s counter showed "4/3 selected" and the at-limit message said "Three goals selected." while 4 were checked — the old `.slice(0, 3)` made this unreachable before round 2 raised the display cap | Counter and at-limit copy now derive from `displayCap = Math.max(MAX_PROJECT_GOALS, selectedGoals.length)` — shows "4/4"/"4 goals selected." instead of the nonsensical "4/3"/"Three goals selected." `atLimit`'s BLOCKING behavior (still `MAX_PROJECT_GOALS`-based, governing the wizard's own growth limit) is unchanged | `components/report/__tests__/project-goal-selector.test.tsx`'s "counter and at-limit copy" describe block (6 tests: normal 3-goal case unchanged, 4- and 5-goal cases show the honest count, sub-3 case shows no message at all) |
+| R3-5 | "Just looking around" permanently destroyed pass-through goals — tapping it cleared `passthroughGoalIds` with no restoration on un-tap. Reviewer's reproduction: seed `["other"]` + custom text, tap looking, untap — disabled button, unrecoverable without a reload | `originalPassthroughGoalIds` (frozen at mount) is the source of truth `toggleGoalChip` restores FROM whenever looking transitions from selected to deselected — whether by re-tapping it directly, or implicitly, by picking a substantive chip that clears looking as a side effect | `report-email-gate.test.tsx`'s "gate review round 3, R3-5" describe block (2 tests: the reviewer's exact probe, plus the implicit-clear-via-substantive-pick path); confirmed by re-injecting the original one-way clear (no restore branch) — 2/2 fail; reverted, both pass |
+| R3-6 | No test pinned `ProjectGoalSelector.tsx`'s display-read slice (`.slice(0, MAX_ENGINE_GOALS)`) — the exact site NEW-3 was supposedly fixed at; injecting `.slice(0, 3)` there passed 0 red | New `components/report/__tests__/project-goal-selector.test.tsx` render-tests the real component directly | 2 tests assert a 4-5 goal `goals` prop renders every one checked; confirmed by re-injecting the reviewer's exact `.slice(0, 3)` mutant — 5/7 tests in the file fail; reverted, all 7 pass |
+
+## Ship-with-disclosure (no further code change required — disclosed honestly, not silently accepted)
+
+- **Toggle-then-untoggle residual** (round 2 ruling #1, not literally
+  absolute): seeding `["expansion"]` alone, then toggling the pre-pressed
+  chip off and back on, emits `["expansion","equipment"]` — chip-derived
+  emission applies to the WHOLE selection once any real toggle happens,
+  per round 2's own ruling, even for the specific chip that was already
+  seeded. This is intentional and matches `report-email-gate.test.tsx`'s
+  "an ACTUAL toggle switches emission to the chip-derived mapping" test —
+  named here so "no code path may add ids" is understood as "not before
+  any real interaction," not as an unconditional absolute for all time.
+- **The 4th+ goal is one-way in `ProjectGoalSelector`'s own growth path**
+  (already disclosed as judgment call 7): `atLimit` still gates NEW
+  additions at `MAX_PROJECT_GOALS` (3), unchanged per the round 2 ruling.
+  A gate-seeded report with 4-5 goals displays all of them and can freely
+  DESELECT any, but once back down to 3 selected, re-adding a 4th through
+  this component's own UI is blocked the same way it always was for a
+  fresh wizard run.
+- **NEW-2's residual / the R3-4 scenario** (see the NEW-2 row above): a
+  freed seeded slot spent on a genuinely NEW chip strands the
+  deselected seeded chip for the rest of the session — `goalChipCap` is a
+  session-wide count with no per-chip memory. Recovering "the seeded
+  COUNT stays selectable" is guaranteed; recovering "this SPECIFIC
+  originally-seeded chip, no matter what else gets picked in between" is
+  not. This is the actual, disclosed boundary of NEW-2's recoverability
+  fix, not the unconditional claim judgment call 6 previously made.
 
 ## Judgment calls
 
@@ -306,15 +358,22 @@ confirmed FIXED with red-on-injection proof and are NOT reworked here.
    path is genuinely down, while still surfacing the failure at least once
    rather than swallowing it (the original bug this whole finding was
    about).
-6. **`goalChipCap` generosity (new, round 2):** a legacy 3-seeded session's
-   cap is raised to 3 for its ENTIRE lifetime, not just for re-adding the
-   specific chips that were originally seeded — the toggle function has no
-   per-chip "was this one seeded" memory, so it cannot distinguish "the
-   visitor recovered a stranded seeded chip" from "the visitor picked one
-   genuinely new 3rd chip." Accepted as the smallest change that
-   guarantees NEW-2's actual requirement (no seeded chip is ever
-   strandable) without adding chip-identity tracking the ruling didn't ask
-   for.
+6. **`goalChipCap` generosity — CORRECTED in gate review round 3 (finding
+   R3-4/NEW-2 residual):** this judgment call previously claimed the fix
+   guaranteed "no seeded chip is ever strandable." That was false, and the
+   reviewer disproved it: seed `["rehab","hiring","energy"]` (3 chips,
+   cap=3), deselect "Energy & building upgrades" (down to 2), then select
+   "Build new" instead of reselecting Energy (back to 3, cap reached) —
+   Energy is now stranded for the rest of the session; the freed slot went
+   to a different chip. What the fix actually guarantees, precisely: the
+   seeded COUNT stays selectable (the cap never drops below however many
+   chips were originally seeded), not that any SPECIFIC originally-seeded
+   chip survives whatever else gets picked in between. `goalChipCap` has
+   no per-chip "was this one seeded" memory — it is a single session-wide
+   number, the smallest change that satisfies the count guarantee, and
+   chip-identity tracking beyond that was never requested. See the
+   ship-with-disclosure list above for this same boundary stated as its
+   own item.
 7. **`MAX_ENGINE_GOALS` left `ProjectGoalSelector`'s `atLimit` untouched
    (new, round 2):** a gate-produced 4-goal report now displays all 4
    goals as checked in the wizard's project-intake screen, but `atLimit`
@@ -331,7 +390,10 @@ confirmed FIXED with red-on-injection proof and are NOT reworked here.
 
 - The §C inline offer remains PARTIAL (spec explicitly allows this: "PARTIAL
   allowed only for C/D backend sends per above").
-- The §D chamber-inbox notification row is now ALSO PARTIAL, per gate
-  review round 1's binding ruling on finding 12 — env-var configuration
-  verification is a ship-ritual checklist item, not something this branch's
-  code can prove from inside the repo.
+- The §D chamber-inbox notification row was PARTIAL through gate review
+  rounds 1-2 (env-var configuration verification was a ship-ritual
+  checklist item this branch's code could not prove from inside the
+  repo). Upgraded to PASS in round 3 once that verification was actually
+  done (2026-08-23, `vercel env ls production` — both `RESEND_API_KEY` and
+  `INCENTIVE_HELP_INBOX` confirmed Encrypted/Production) — no longer a
+  deviation, since the row now claims only what is verified.
