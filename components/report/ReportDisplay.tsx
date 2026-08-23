@@ -75,6 +75,14 @@ import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import { FundingWindowChart } from "@/components/report/FundingWindowChart";
 import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
 import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
+import { BriefStageAsk } from "@/components/report/BriefStageAsk";
+import { BriefPage } from "@/components/report/BriefPage";
+import {
+  DEFAULT_BRIEF_UI_STATE,
+  isBriefPriority,
+  isBriefStage,
+  type BriefUiState,
+} from "@/lib/report-brief";
 import {
   DEFAULT_PERSONA,
   personaFromSearch,
@@ -305,6 +313,26 @@ export function ReportDisplay({
   }, [lensed]);
 
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
+  // The Brief (gate finding 8 — workspace-fork parity, spec v2 item 5): one
+  // state slot for the two-question ask + open/closed, matching
+  // app/report/page.tsx's own briefState exactly (no ordinal-useState
+  // harness constrains this file — only app/report/page.tsx's private
+  // inline ReportDisplay function is seeded by REPORT_DISPLAY_STATE_ORDER
+  // in report-page-live-renderer.test.tsx; this exported component has no
+  // such harness).
+  const [briefState, setBriefState] = useState<BriefUiState>(DEFAULT_BRIEF_UI_STATE);
+  // sm_ params (additive, spec v2 item 5): a link carrying sm_stage/
+  // sm_priority opens straight into the brief, skipping the ask — mirrors
+  // app/report/page.tsx's own effect exactly.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const stageParam = params.get("sm_stage");
+    const priorityParam = params.get("sm_priority");
+    if (isBriefStage(stageParam) && isBriefPriority(priorityParam)) {
+      setBriefState({ askOpen: false, open: true, stage: stageParam, priority: priorityParam });
+    }
+  }, []);
 
   const handlePrint = () => {
     setDownloadGateOpen(true);
@@ -328,6 +356,42 @@ export function ReportDisplay({
       setTimeout(() => setLinkCopied(false), 2500);
     });
   }, [persona, reportWizardState]);
+
+  // The Brief (gate finding 8). The backlink reuses the exact same
+  // share-URL construction as handleShareReport (round-trips the persona
+  // lens); `src=brief` attributes a reader arriving at the full report
+  // from a forwarded Brief. Matches app/report/page.tsx's briefReportUrl.
+  const briefReportUrl = useMemo(() => {
+    if (typeof window === "undefined" || !reportWizardState) return "";
+    const encoded = encodeWizardState(reportWizardState);
+    const personaParam = personaShareParam(persona);
+    return `${window.location.origin}/report?${encoded}${
+      personaParam ? `&persona=${personaParam}` : ""
+    }&src=brief`;
+  }, [persona, reportWizardState]);
+
+  const handleBriefComplete = useCallback(
+    (stage: BriefUiState["stage"], priority: BriefUiState["priority"]) => {
+      setBriefState({ askOpen: false, open: true, stage, priority });
+      trackEvent(
+        "brief_generated",
+        reportAnalyticsPayload(report, "report_brief", { stage, priority }),
+      );
+      if (typeof window !== "undefined" && stage && priority) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("sm_stage", stage);
+        url.searchParams.set("sm_priority", priority);
+        window.history.replaceState(null, "", url.toString());
+      }
+    },
+    [report],
+  );
+
+  const handleBriefPrint = () => {
+    document.body.classList.add("printing-brief");
+    window.print();
+    window.setTimeout(() => document.body.classList.remove("printing-brief"), 500);
+  };
 
   const handleSaveReport = useCallback(() => {
     trackEvent(
@@ -1897,6 +1961,18 @@ export function ReportDisplay({
                 )}
               </button>
             )}
+            {/* The Brief (gate finding 8, spec v2 item 5): a one-page,
+                forwardable summary — only offered on a real persona lens.
+                Matches app/report/page.tsx's own button exactly. */}
+            {showPersonaLens && persona !== DEFAULT_PERSONA && reportWizardState && (
+              <button
+                onClick={() => setBriefState((prev) => ({ ...prev, askOpen: true }))}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Build My Brief
+              </button>
+            )}
             {!compact && onCompare && !compareMode && (
               <button
                 onClick={onCompare}
@@ -1987,6 +2063,66 @@ export function ReportDisplay({
           wizardState={reportWizardState}
           onClose={() => setSaveModalOpen(false)}
         />
+      )}
+      {/* The Brief (gate finding 8, spec v2 item 5): the two-question ask,
+          then the one-page shareable itself. Both read the SAME lensed
+          report — no second generation path. Matches app/report/page.tsx's
+          own block exactly — the workspace/saved-report fork previously
+          had NO Brief at all, a documented gap now closed. */}
+      {briefState.askOpen && (
+        <BriefStageAsk
+          onComplete={handleBriefComplete}
+          onCancel={() => setBriefState((prev) => ({ ...prev, askOpen: false }))}
+        />
+      )}
+      {briefState.open && briefState.stage && briefState.priority && (
+        <div id="brief-overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4">
+          <div className="mx-auto flex max-w-[860px] flex-col gap-3 py-6">
+            <div className="flex items-center justify-between gap-3 print:hidden">
+              <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white">
+                The Brief
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBriefPrint}
+                  className="inline-flex items-center gap-2 bg-[#2563EB] px-4 py-2.5 font-mono-bureau text-[9.5px] tracking-[0.1em] uppercase text-white"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print (2-up)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBriefState((prev) => ({ ...prev, open: false }))}
+                  className="inline-flex items-center gap-2 border border-white/30 px-4 py-2.5 font-mono-bureau text-[9.5px] tracking-[0.1em] uppercase text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div id="brief-print-2up" className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-[0.3in]">
+              <BriefPage
+                report={lensed}
+                persona={persona}
+                stage={briefState.stage}
+                priority={briefState.priority}
+                reportUrl={briefReportUrl}
+              />
+              {/* Second copy — screen-hidden, print-only. Two-up print CSS
+                  (spec v2 item 5): the same brief twice on one landscape
+                  sheet, for handing to two people or filing + carrying. */}
+              <div className="hidden print:block">
+                <BriefPage
+                  report={lensed}
+                  persona={persona}
+                  stage={briefState.stage}
+                  priority={briefState.priority}
+                  reportUrl={briefReportUrl}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   );

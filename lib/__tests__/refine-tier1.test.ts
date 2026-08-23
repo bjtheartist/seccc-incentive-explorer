@@ -297,4 +297,28 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain('persona === "developer" && (\n              <IncentiveHorizonChart report={lensed} />');
     }
   });
+
+  // Gate finding 8 (major, regression): The Brief used to mount ONLY in
+  // app/report/page.tsx — zero references anywhere in
+  // components/report/ReportDisplay.tsx, the one shared component in this
+  // list that had NO fork-parity assertion at all. Closed: the workspace/
+  // saved-report fork now mounts the identical Brief (button, ask,
+  // overlay, print-2up) off the same lensed report + persona.
+  it("both forks render The Brief — the 'Build My Brief' trigger, the two-question ask, and the open overlay with BriefPage", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { BriefStageAsk }");
+      expect(fork).toContain("import { BriefPage }");
+      expect(fork).toContain(
+        'showPersonaLens && persona !== DEFAULT_PERSONA && reportWizardState && (',
+      );
+      expect(fork).toContain("Build My Brief");
+      expect(fork).toContain("briefState.askOpen && (");
+      expect(fork).toContain("<BriefStageAsk\n");
+      expect(fork).toContain("onComplete={handleBriefComplete}");
+      expect(fork).toContain('briefState.open && briefState.stage && briefState.priority && (');
+      expect(fork).toContain('id="brief-overlay"');
+      expect(fork).toContain("<BriefPage\n                report={lensed}");
+      expect(fork).toContain('id="brief-print-2up"');
+    }
+  });
 });
