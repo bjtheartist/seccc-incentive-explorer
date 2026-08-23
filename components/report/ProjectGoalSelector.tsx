@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import {
+  MAX_ENGINE_GOALS,
   MAX_PROJECT_GOALS,
   SITE_PROJECT_TYPE_OPTIONS,
 } from "@/lib/report-wizard-config";
@@ -27,7 +28,14 @@ export function ProjectGoalSelector({
   required = false,
   compact = false,
 }: ProjectGoalSelectorProps) {
-  const selectedGoals = Array.from(new Set(goals)).slice(0, MAX_PROJECT_GOALS);
+  // Gate review round 2, NEW-3/ruling #4: read against MAX_ENGINE_GOALS (4),
+  // not MAX_PROJECT_GOALS (3) — a gate-produced report can legitimately
+  // carry 4 real goal ids (2 grouped chips), and this display read used to
+  // silently truncate that 4th id the instant this component rendered,
+  // before the visitor touched anything. `atLimit` (below) intentionally
+  // STAYS at MAX_PROJECT_GOALS — that's the wizard's own "pick up to 3"
+  // fresh-selection growth limit, untouched by this fix.
+  const selectedGoals = Array.from(new Set(goals)).slice(0, MAX_ENGINE_GOALS);
   const atLimit = selectedGoals.length >= MAX_PROJECT_GOALS;
 
   const toggleGoal = (goalId: string) => {

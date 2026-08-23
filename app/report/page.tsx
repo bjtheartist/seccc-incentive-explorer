@@ -48,7 +48,7 @@ import type {
   WizardState,
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
-import { dedupeGoalIds } from "@/lib/gate-goal-groups";
+import { resolveGatePrepareGoals } from "@/lib/gate-goal-groups";
 import {
   CONFIRMED_PROGRAMS_SECTION_ID,
   normalizePublicReportForDisplay,
@@ -1788,30 +1788,25 @@ function ReportWizardPage() {
 
   const handlePrepareGatedReport = useCallback(
     async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
-      // Gate review round 1, BLOCKER 1: `selectedProjectGoals()` slices to
-      // MAX_PROJECT_GOALS = 3, a real constraint for the OLD "pick up to 3"
-      // wizard selector but wrong here — the gate's own grouped chips can
-      // carry up to 4 real goal ids from 2 selections, and nothing
-      // downstream (GOAL_RULES, projectGoalsFit) has a 3-goal limit. Dedupe
-      // without capping so every id the visitor actually selected survives.
-      const normalizedGoals = dedupeGoalIds(projectGoals);
-      // Read the existing report's goals the same uncapped way — a
-      // previously gate-prepared report can itself already carry 4 ids,
-      // and comparing an uncapped write against a capped read would
-      // spuriously report "changed" (and needlessly regenerate) even when
-      // nothing actually changed.
+      // Gate review round 1, BLOCKER 1 / round 2, ruling #6: the
+      // truncation-vs-noop decision lives in `resolveGatePrepareGoals`
+      // (lib/gate-goal-groups.ts) — the exact function this line calls,
+      // unit-tested directly (including a 5-id probe: a passthrough id
+      // plus a fresh 2-chip pick, which `selectedProjectGoals()`'s
+      // MAX_ENGINE_GOALS=4 cap would truncate but this must not) so a
+      // regression here is caught without mounting the whole report page.
       const existingProjectGoals = report?.metadata?.projectGoals?.length
         ? report.metadata.projectGoals
         : report?.metadata?.projectType
           ? [report.metadata.projectType]
           : [];
-      const reportGoals = dedupeGoalIds(existingProjectGoals);
-      if (
-        JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
-        (report?.metadata?.customGoal || "") === customGoal.trim()
-      ) {
-        return report;
-      }
+      const { isNoop, normalizedGoals } = resolveGatePrepareGoals({
+        incomingGoalIds: projectGoals,
+        incomingCustomGoal: customGoal,
+        existingProjectGoals,
+        existingCustomGoal: report?.metadata?.customGoal || "",
+      });
+      if (isNoop) return report;
 
       const preparedState: WizardState = {
         ...wizardState,
