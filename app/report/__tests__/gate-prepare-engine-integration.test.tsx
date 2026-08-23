@@ -88,7 +88,6 @@ vi.mock("@/components/report/ReportZoningMap", () => ({ default: () => <div /> }
 vi.mock("@/components/report/SiteActivityCard", () => ({ SiteActivityCard: () => <div /> }));
 vi.mock("@/components/report/CrossLinkBanner", () => ({
   InlineCrossLinkBanner: () => <div />,
-  StickyCrossLinkBanner: () => <div />,
 }));
 vi.mock("@/components/concierge/SiteConciergeProvider", () => ({
   ConciergePageContextBridge: () => <div data-testid="stub-concierge-bridge" />,

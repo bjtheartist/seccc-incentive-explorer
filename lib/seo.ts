@@ -50,7 +50,12 @@ export const PUBLIC_SEO_ROUTES: PublicSeoRoute[] = [
   { path: "/report", label: "Generate Report", changeFrequency: "weekly", priority: 0.95 },
   { path: "/map", label: "Explorer Map", changeFrequency: "weekly", priority: 0.9 },
   { path: "/programs", label: "Incentive Programs", changeFrequency: "weekly", priority: 0.9 },
-  { path: "/qualify", label: "Program Review", changeFrequency: "monthly", priority: 0.75 },
+  // /qualify was sunset (owner's ruling: discovery, not compliance) and now
+  // permanently redirects to "/" (next.config.ts) — removed from the
+  // sitemap so it isn't advertised as a crawlable destination, matching how
+  // the earlier /corridors sunset was handled here (never added to this
+  // list, though its route-label mapping stayed in
+  // components/concierge/SiteConciergeProvider.tsx for defensive coverage).
   { path: "/locate", label: "Find Location by Sector", changeFrequency: "monthly", priority: 0.75 },
   { path: "/faq", label: "FAQ", changeFrequency: "monthly", priority: 0.7 },
   { path: "/quiz", label: "Chicago Incentive Quiz", changeFrequency: "monthly", priority: 0.6 },

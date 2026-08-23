@@ -171,10 +171,7 @@ import {
   parseDocumentCostLine,
 } from "@/components/report/PreparationCostBadge";
 import { SiteActivityCard } from "@/components/report/SiteActivityCard";
-import {
-  InlineCrossLinkBanner,
-  StickyCrossLinkBanner,
-} from "@/components/report/CrossLinkBanner";
+import { InlineCrossLinkBanner } from "@/components/report/CrossLinkBanner";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import {
@@ -703,34 +700,6 @@ function ReportWizardPage() {
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
   const [revealedReportKey, setRevealedReportKey] = useState<string | null>(null);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
-  // Sticky cross-link dismissal lives here, not in the banner: the page has to
-  // drop its matching bottom padding in the same render or the document keeps
-  // reserving space for a bar that is gone.
-  const [crossLinkDismissed, setCrossLinkDismissed] = useState(false);
-  // The sticky bar auto-hides while the inline banner (same links) or the global
-  // footer is on screen — otherwise at max scroll it permanently covers the
-  // footer's last block, including the Partner & Admin Sign In link. Bottom
-  // padding stays reserved while the bar is merely auto-hidden (not dismissed),
-  // so hiding never shifts layout and re-triggers the observer.
-  const inlineCrossLinkRef = useRef<HTMLDivElement | null>(null);
-  const [bottomZoneInView, setBottomZoneInView] = useState(false);
-  useEffect(() => {
-    if (!report || crossLinkDismissed) return;
-    const targets = [inlineCrossLinkRef.current, document.querySelector("footer")].filter(
-      (t): t is HTMLElement => t != null,
-    );
-    if (targets.length === 0) return;
-    const visible = new Set<Element>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) visible.add(entry.target);
-        else visible.delete(entry.target);
-      }
-      setBottomZoneInView(visible.size > 0);
-    });
-    for (const target of targets) observer.observe(target);
-    return () => observer.disconnect();
-  }, [report, crossLinkDismissed]);
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -2003,10 +1972,8 @@ function ReportWizardPage() {
       (report.metadata?.lat ?? wizardState.lat) != null &&
       (report.metadata?.lon ?? wizardState.lon) != null;
     const showCrossLinks = hasResolvedAddress && !showEmailGate;
-    const stickyCandidate = showCrossLinks && !crossLinkDismissed;
-    const showStickyCrossLink = stickyCandidate && !bottomZoneInView;
     return (
-      <div className={`min-h-screen${stickyCandidate ? " pb-40 sm:pb-32" : ""}`}>
+      <div className="min-h-screen">
         <ReportDisplay
           report={report}
           onStartOver={handleStartOver}
@@ -2040,17 +2007,7 @@ function ReportWizardPage() {
             zoningDescription={cityZoning?.zoneType ?? null}
           />
         )}
-        {showCrossLinks && (
-          <div ref={inlineCrossLinkRef}>
-            <InlineCrossLinkBanner zip={reportZip} />
-          </div>
-        )}
-        {showStickyCrossLink && (
-          <StickyCrossLinkBanner
-            zip={reportZip}
-            onDismiss={() => setCrossLinkDismissed(true)}
-          />
-        )}
+        {showCrossLinks && <InlineCrossLinkBanner />}
         {showEmailGate && (
           <ReportEmailGate
             report={report}

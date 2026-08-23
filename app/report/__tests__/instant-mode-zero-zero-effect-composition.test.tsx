@@ -92,7 +92,6 @@ vi.mock("@/components/report/ReportZoningMap", () => ({ default: () => <div /> }
 vi.mock("@/components/report/SiteActivityCard", () => ({ SiteActivityCard: () => <div /> }));
 vi.mock("@/components/report/CrossLinkBanner", () => ({
   InlineCrossLinkBanner: () => <div />,
-  StickyCrossLinkBanner: () => <div />,
 }));
 vi.mock("@/components/report/ReportEmailGate", () => ({ ReportEmailGate: () => <div /> }));
 // review8 S23 (MEDIUM): the stub now RENDERS the lat/lon (and address)
