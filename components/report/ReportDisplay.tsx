@@ -61,6 +61,7 @@ import {
   visibleSectionItems,
 } from "@/components/report/NeighborhoodEconomics";
 import { ZoningReviewQuestions } from "@/components/zoning/ZoningReviewQuestions";
+import { ZoningStarterHandoff } from "@/components/zoning/ZoningStarterHandoff";
 import {
   PreparationCostBadge,
   parseDocumentCostLine,
@@ -1467,14 +1468,29 @@ export function ReportDisplay({
                       </div>
                     )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
-                      <div className="mt-8 print:hidden">
-                        <ZoningReviewQuestions
+                      <>
+                        {/* Owner ruling A2: every view — the kitchen sink AND
+                            every persona lens — gets the district family +
+                            authority line next to the published code. zoneClass
+                            never renders without this detail. */}
+                        <ZoningStarterHandoff
                           zoneClass={report.metadata.zoneClass}
                           siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
-                          address={report.metadata.address}
-                          businessType={report.metadata.industry ?? report.metadata.proposedUse}
                         />
-                      </div>
+                        {/* Owner ruling A3 (amended): the activity questionnaire
+                            — and its one-pager handoff button — is excluded
+                            from every persona lens, present only on "all". */}
+                        {(!showPersonaLens || persona === DEFAULT_PERSONA) && (
+                          <div className="mt-8 print:hidden">
+                            <ZoningReviewQuestions
+                              zoneClass={report.metadata.zoneClass}
+                              siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                              address={report.metadata.address}
+                              businessType={report.metadata.industry ?? report.metadata.proposedUse}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </Wrapper>
                 );
