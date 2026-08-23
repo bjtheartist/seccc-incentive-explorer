@@ -7,7 +7,7 @@
 // claims. Pure data assembly lives here; rendering lives in
 // components/report/BriefPage.tsx and the /report/brief route.
 
-import { visiblePersonaProgramNames } from "@/lib/report-personas";
+import { visiblePersonaProgramItems } from "@/lib/report-personas";
 import { buildContactSheetRows } from "@/lib/report-contact-sheet";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { PersonaId } from "@/lib/personas";
@@ -52,6 +52,20 @@ const MAX_BRIEF_CONTACTS = 3;
 export interface BriefProgramRow {
   programId: string;
   name: string;
+  /**
+   * Gate finding 7: left-block/right-stack card fields, all read from the
+   * SAME lensed ReportItem the online program card renders — never
+   * re-derived or invented for the Brief specifically. `whyLine` is the
+   * first published match reason (item.matchExplanation.whyItAppears[0]);
+   * `amount` is the program's own benefitRange; `window` is its own
+   * nextWindow, preferring the published note (already full prose) and
+   * falling back to the bare expected date. Any of the three may be
+   * absent — a program the engine hasn't resolved a reason/amount/window
+   * for simply doesn't carry that field, never a placeholder.
+   */
+  whyLine: string | null;
+  amount: string | null;
+  window: string | null;
 }
 
 /** Local UI state for the Brief's two-question ask + open/closed state —
@@ -107,10 +121,13 @@ export function buildBriefData(
   stage: BriefStage,
   priority: BriefPriority,
 ): BriefData {
-  const programNames = visiblePersonaProgramNames(lensed);
-  const programs = programNames.slice(0, MAX_BRIEF_PROGRAMS).map((p) => ({
+  const programNames = visiblePersonaProgramItems(lensed);
+  const programs: BriefProgramRow[] = programNames.slice(0, MAX_BRIEF_PROGRAMS).map((p) => ({
     programId: p.programId,
     name: p.label,
+    whyLine: p.item.matchExplanation?.whyItAppears?.[0] ?? null,
+    amount: p.item.benefitRange ?? null,
+    window: p.item.nextWindow?.note ?? (p.item.nextWindow?.expected ? `Expected ${p.item.nextWindow.expected}` : null),
   }));
 
   const contactRows = buildContactSheetRows(lensed, persona).slice(0, MAX_BRIEF_CONTACTS);

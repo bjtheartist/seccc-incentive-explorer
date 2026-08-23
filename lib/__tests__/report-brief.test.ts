@@ -83,6 +83,51 @@ describe("buildBriefData", () => {
     expect(brief.programs.map((p) => p.programId)).toEqual(["sbif", "tif", "federalOZ"]);
   });
 
+  // Gate finding 7: BriefProgramRow must read whyLine/amount/window off the
+  // SAME lensed item the program card renders, not re-derive them.
+  it("carries whyLine/amount/window from the SAME lensed ReportItem the card would render", () => {
+    const withCardFields: GeneratedReport = {
+      ...reportFixture(),
+      sections: reportFixture().sections.map((s) =>
+        s.title === CONFIRMED_PROGRAMS_SECTION_TITLE
+          ? {
+              ...s,
+              items: s.items.map((item) =>
+                item.programId === "sbif"
+                  ? {
+                      ...item,
+                      matchExplanation: {
+                        whyItAppears: ["Address falls inside an SBIF-eligible TIF district"],
+                        knownFromPublicData: [],
+                        basedOnUserAnswers: [],
+                        stillToConfirm: [],
+                        currentDocumentsToGather: [],
+                        confirmWith: [],
+                      },
+                      benefitRange: "$75K–$250K cap",
+                      nextWindow: { expected: "2026-08-30", note: "August 2026 window open through 2026-08-30" },
+                    }
+                  : item,
+              ),
+            }
+          : s,
+      ),
+    };
+    const brief = buildBriefData(withCardFields, "starting", "launch-ready", "renovation");
+    const sbifRow = brief.programs.find((p) => p.programId === "sbif");
+    expect(sbifRow?.whyLine).toBe("Address falls inside an SBIF-eligible TIF district");
+    expect(sbifRow?.amount).toBe("$75K–$250K cap");
+    expect(sbifRow?.window).toBe("August 2026 window open through 2026-08-30");
+  });
+
+  it("leaves whyLine/amount/window null (never a placeholder) when the underlying item carries none of them", () => {
+    const brief = buildBriefData(reportFixture(), "starting", "launch-ready", "renovation");
+    const tifRow = brief.programs.find((p) => p.programId === "tif");
+    expect(tifRow?.whyLine).toBeNull();
+    expect(tifRow?.amount).toBeNull();
+    expect(tifRow?.window).toBeNull();
+  });
+
   it("caps contacts at 3, reusing the SAME lane-ranked contact-sheet builder — no separate relevance logic", () => {
     const brief = buildBriefData(reportFixture(), "supporter", "operating", "financing");
     expect(brief.contacts.length).toBeLessThanOrEqual(3);

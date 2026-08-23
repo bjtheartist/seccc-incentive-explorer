@@ -127,8 +127,26 @@ export function BriefPage({
         <div className="border-b border-[#D8DDE6] px-5 py-4 sm:border-b-0 sm:border-r sm:px-6">
           <p className="font-mono-bureau text-[9px] tracking-[0.14em] uppercase text-[#2563EB]">Capital &amp; programs matched</p>
           {brief.programs.map((program) => (
-            <div key={program.programId} className="flex items-baseline justify-between gap-3 border-b border-[#E4ECF7] py-2.5">
-              <span className="font-editorial text-[14px] font-semibold">{program.name}</span>
+            <div key={program.programId} className="flex items-start justify-between gap-3 border-b border-[#E4ECF7] py-2.5">
+              {/* Left block: name + why it matched (gate finding 7). */}
+              <div className="min-w-0">
+                <span className="font-editorial text-[14px] font-semibold block">{program.name}</span>
+                {program.whyLine && (
+                  <span className="mt-0.5 block text-[10.5px] text-[#0C1B33]/50 leading-snug">{program.whyLine}</span>
+                )}
+              </div>
+              {/* Right stack: amount over window, both from the SAME
+                  catalog fields the program's own card would read. */}
+              {(program.amount || program.window) && (
+                <div className="flex-shrink-0 text-right">
+                  {program.amount && (
+                    <span className="block font-mono-bureau text-[11px] font-semibold whitespace-nowrap">{program.amount}</span>
+                  )}
+                  {program.window && (
+                    <span className="mt-0.5 block text-[9.5px] text-[#0C1B33]/45 leading-snug max-w-[140px]">{program.window}</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {brief.overflowCount > 0 && (

@@ -505,18 +505,31 @@ export function applyPersonaLens(
 export function visiblePersonaProgramNames(
   lensed: GeneratedReport,
 ): { programId: string; label: string }[] {
+  return visiblePersonaProgramItems(lensed).map(({ programId, label }) => ({ programId, label }));
+}
+
+/**
+ * Same visible-program resolution as visiblePersonaProgramNames (gate
+ * finding 1's "programs" bucket gate applies here too), but also carries
+ * the full ReportItem each name came from. Gate finding 7 needs this: the
+ * Brief's BriefProgramRow must read whyLine/amount/window off the SAME
+ * lensed item the program card itself renders, not a re-derived summary.
+ */
+export function visiblePersonaProgramItems(
+  lensed: GeneratedReport,
+): { programId: string; label: string; item: ReportItem }[] {
   const seen = new Set<string>();
-  const names: { programId: string; label: string }[] = [];
+  const results: { programId: string; label: string; item: ReportItem }[] = [];
   for (const section of lensed.sections ?? []) {
     if (section.collapsedByPersona) continue;
     if (sectionBucketKey(section) !== "programs") continue;
     for (const item of section.items ?? []) {
       if (!item.programId || seen.has(item.programId)) continue;
       seen.add(item.programId);
-      names.push({ programId: item.programId, label: item.label });
+      results.push({ programId: item.programId, label: item.label, item });
     }
   }
-  return names;
+  return results;
 }
 
 /** Stable reorder so persona-relevant program actions lead (all kept, expanded).
