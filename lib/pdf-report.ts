@@ -1051,6 +1051,33 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     ].filter((line): line is string => Boolean(line));
   };
 
+  /**
+   * Gate finding 13: the web card's worksWith/expectations/verifySources/
+   * costSignals (components/report/ProgramCardExtras.tsx) previously had
+   * no PDF counterpart at all — the canonical PDF export silently dropped
+   * this content. Same fields, same "honest omission" rule (a program
+   * without real data for a field just doesn't contribute a line) — no
+   * new derivation happens here, this only prints what report-engine.ts
+   * already computed. drawOpportunityCard's card height is already
+   * computed FROM extraLines.length, so appending more lines here is
+   * safe — the box grows to fit, nothing gets clipped.
+   */
+  const programCardExtraLines = (item: ReportRow): string[] => {
+    const lines = matchExplanationLines(item);
+    if (item.expectations) lines.push(`What to expect: ${item.expectations}`);
+    if (item.worksWith?.length) {
+      lines.push(`Can combine with: ${item.worksWith.map((w) => w.label).join(", ")}`);
+    }
+    if (item.costSignals?.length) {
+      lines.push(`Cost signals: ${item.costSignals.map((s) => s.label).join(", ")} — signals, not estimates`);
+    }
+    if (item.verifySources?.length) {
+      const primary = item.verifySources[0];
+      lines.push(`Verify at: ${primary.label}${primary.dated ? ` (${primary.dated})` : ""}`);
+    }
+    return lines;
+  };
+
   /* ── Small drawn glyphs (spec: square/circle chips with centered numbers, not tall rectangles) ── */
 
   const drawPersonGlyph = (cx: number, cy: number, radius: number) => {
@@ -1733,7 +1760,7 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     (item, rowY) => drawOpportunityCard(item, rowY, {
       detailMaxLines: 2,
       showSource: true,
-      extraLines: matchExplanationLines(item),
+      extraLines: programCardExtraLines(item),
     }),
     "No address-linked opportunity was found. Continue with the discovery leads below.",
   );

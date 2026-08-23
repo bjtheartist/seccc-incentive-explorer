@@ -499,3 +499,57 @@ describe("sanitizeForPdf", () => {
     );
   });
 });
+
+// Gate finding 13: the canonical PDF used to carry none of worksWith/
+// expectations/verifySources/costSignals — the web card's ProgramCardExtras
+// content had no PDF counterpart at all, so a downloaded PDF silently
+// omitted content the online report showed. Fixed via
+// programCardExtraLines() in lib/pdf-report.ts, appended to the same
+// extraLines the Address-Linked Opportunities card already prints.
+describe("PDF program-card content parity (gate finding 13)", () => {
+  function reportWithConfirmedItem(item: Partial<GeneratedReport["sections"][number]["items"][number]>): GeneratedReport {
+    return {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          id: CONFIRMED_PROGRAMS_SECTION_ID,
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          items: [{ label: "SBIF", value: "Review published terms", programId: "sbif", ...item }],
+        },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL" },
+    };
+  }
+
+  it("prints expectations, worksWith, costSignals, and verifySources on the PDF's opportunity card", async () => {
+    const report = reportWithConfirmedItem({
+      expectations: "Applications are being accepted under the published intake window.",
+      worksWith: [{ label: "TIF Districts", detail: "Can stack with TIF-funded incentives." }],
+      costSignals: [{ label: "Free to apply", severity: "info" }],
+      verifySources: [{ label: "Official program page", url: "https://example.com/sbif", dated: "2026-07-10" }],
+    });
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    const text = extracted.text;
+    expect(text).toContain("Applications are being accepted");
+    expect(text).toContain("TIF Districts");
+    expect(text).toContain("Free to apply");
+    expect(text).toContain("Official program page");
+  });
+
+  it("omits each line honestly when the underlying field is absent — never a placeholder", async () => {
+    const report = reportWithConfirmedItem({});
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).not.toMatch(/What to expect:|Can combine with:|Cost signals:|Verify at:/);
+  });
+});
