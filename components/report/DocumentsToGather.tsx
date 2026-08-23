@@ -10,31 +10,27 @@ import { ArrowRight } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import { buildDocumentsToGather, documentOwnerLabel } from "@/lib/report-documents-to-gather";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { PersonaReportSection } from "@/components/report/PersonaReportChrome";
 
-export function DocumentsToGather({ report }: { report: GeneratedReport }) {
+export function DocumentsToGather({
+  report,
+  sectionNumber = "",
+}: {
+  report: GeneratedReport;
+  sectionNumber?: string;
+}) {
   const rows = buildDocumentsToGather();
   if (rows.length === 0) return null;
 
   return (
-    <section
-      data-testid="documents-to-gather"
-      aria-labelledby="documents-to-gather-title"
-      className="border border-[#0C1B33]/10 bg-white mt-8"
+    <PersonaReportSection
+      number={sectionNumber}
+      title="Document readiness"
+      testId="documents-to-gather"
     >
-      <div className="border-b border-[#0C1B33]/10 px-4 py-3 sm:px-5">
-        <h3
-          id="documents-to-gather-title"
-          className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-[#0C1B33]/70"
-        >
-          Documents to Gather
-        </h3>
-        <p className="mt-1 text-[11px] text-[#0C1B33]/50 leading-relaxed">
-          Program-agnostic groundwork most applications ask for, regardless of which program you pursue.
-        </p>
-      </div>
       <ul className="divide-y divide-[#0C1B33]/8">
         {rows.map((row) => (
-          <li key={row.id} className="px-4 py-3 sm:px-5">
+          <li key={row.id} className="py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <span className="text-[13px] font-medium text-[#0C1B33]">{row.title}</span>
               <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
@@ -45,7 +41,10 @@ export function DocumentsToGather({ report }: { report: GeneratedReport }) {
           </li>
         ))}
       </ul>
-      <div className="border-t border-[#0C1B33]/10 px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#0C1B33]/10 pt-3">
+        <p className="text-[11px] leading-relaxed text-[#5A6478]">
+          Gathered once, these serve most programs on this report.
+        </p>
         <a
           href="/workspace/business-file"
           onClick={() =>
@@ -61,6 +60,6 @@ export function DocumentsToGather({ report }: { report: GeneratedReport }) {
           <ArrowRight className="h-3 w-3" aria-hidden="true" />
         </a>
       </div>
-    </section>
+    </PersonaReportSection>
   );
 }

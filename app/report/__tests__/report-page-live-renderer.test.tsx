@@ -14,10 +14,25 @@ import { reportEmailGateKey } from "@/lib/report-email";
 import { DEFAULT_PERSONA } from "@/lib/personas";
 import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
-import { CONFIRMED_PROGRAMS_SECTION_ID, CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
+import {
+  CONFIRMED_PROGRAMS_SECTION_ID,
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
+  generateReportData,
+  SECTION_IDS,
+} from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
-import { ALSO_AT_ADDRESS_TITLE, personaEmptyProgramsDescription } from "@/lib/report-personas";
+import type { Program } from "@/lib/types";
+import catalogPrograms from "@/data/programs-internal.json";
+import {
+  applyPersonaLens,
+  personaEmptyProgramsDescription,
+  visiblePersonaProgramNames,
+} from "@/lib/report-personas";
 import { encodeWizardState } from "@/lib/url-state";
+import {
+  CAPITAL_PARTNER_SECTION_ID,
+  CAPITAL_PARTNER_SECTION_TITLE,
+} from "@/lib/capital-partner-report";
 
 /**
  * Characterization coverage for the LIVE report route's own renderer —
@@ -577,6 +592,58 @@ function buildReport(
   } as unknown as GeneratedReport;
 }
 
+function boardParityReport(): GeneratedReport {
+  const report = buildReport({ zoneClass: "B3-2", withStartHere: true });
+  return {
+    ...report,
+    executiveSummary: {
+      zoneCount: 3,
+      topPrograms: [],
+      topActions: [],
+      whyTheseMatter: "Canonical executive-summary copy that persona boards must replace.",
+    },
+    sections: [
+      { id: SECTION_IDS.projectIntake, title: "Project Intake", description: "Extra", items: [{ label: "Project goal", value: "Rehab" }] },
+      { id: SECTION_IDS.siteFacts, title: "Site Facts", description: "", items: [{ label: "Parcel", value: "20-01-100-001" }] },
+      { id: SECTION_IDS.logisticsAccess, title: "Logistics Access", description: "", items: [{ label: "Nearest 'L'", value: "79th · 1.2 mi" }] },
+      { id: SECTION_IDS.civicRepresentation, title: "Civic Representation", description: "", items: [{ label: "Ward", value: "6 · Ald. Hall" }] },
+      { id: SECTION_IDS.zoningUseStartingPoint, title: "Zoning & Use Starting Point", description: "", items: [{ label: "City Zoning Classification", value: "B3-2" }] },
+      { id: SECTION_IDS.neighborhoodEconomicContext, title: "Neighborhood Economic Context", description: "", items: [{ label: "Median income", value: "$50,000" }] },
+      {
+        id: CONFIRMED_PROGRAMS_SECTION_ID,
+        title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+        description: "",
+        items: [
+          { label: "SBIF Facade Grant", value: "Review published terms", programId: "sbif", detail: "Funds permanent building improvements.", matchExplanation: { whyItAppears: ["Matches the rehabilitation goal"], knownFromPublicData: [], basedOnUserAnswers: [], stillToConfirm: [], currentDocumentsToGather: [], confirmWith: [] } },
+          { label: "TIF District Program", value: "Review published terms", programId: "tif", detail: "Negotiated capital support.", matchExplanation: { whyItAppears: ["Mapped TIF district"], knownFromPublicData: [], basedOnUserAnswers: [], stillToConfirm: [], currentDocumentsToGather: [], confirmWith: [] } },
+          { label: "SSA Rebate", value: "Review published terms", programId: "ssa", detail: "Corridor rebate.", matchExplanation: { whyItAppears: ["Mapped SSA"], knownFromPublicData: [], basedOnUserAnswers: [], stillToConfirm: [], currentDocumentsToGather: [], confirmWith: [] } },
+        ],
+      },
+      { id: SECTION_IDS.documentReadinessChecklist, title: "Document Readiness Checklist", description: "Duplicate engine surface", items: [{ label: "Old duplicate", value: "" }] },
+      { id: CAPITAL_PARTNER_SECTION_ID, title: CAPITAL_PARTNER_SECTION_TITLE, description: "", items: [{ label: "Greenwood Archer Capital", value: "CDFI" }] },
+      { id: SECTION_IDS.incentiveZoneCoverage, title: "Incentive Zone Coverage & Program Interactions", description: "Extra", items: [{ label: "Zone interaction", value: "" }] },
+      { id: SECTION_IDS.requiredDocuments, title: "Required Documents", description: "Extra", items: [{ label: "Old document block", value: "" }] },
+      {
+        id: SECTION_IDS.upcomingDeadlines,
+        title: "Upcoming Deadlines Near This Address",
+        description: "Extra",
+        items: [
+          { label: "SBIF application window — South Chicago", value: "2026-10-01", deadlineKind: "sbif_window", deadlineDate: "2026-10-01", deadlineWindowEnd: "2026-10-30" },
+          { label: "South Chicago TIF expiration", value: "2027-12-31", deadlineKind: "tif_expiration", deadlineDate: "2027-12-31" },
+          { label: "Leaked Program Deadline", value: "2026-12-15", programId: "sba7a", deadlineKind: "program_deadline", deadlineDate: "2026-12-15" },
+        ],
+      },
+      ...baseSections("B3-2").filter((section) => section.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE),
+    ],
+    dataSources: [{ id: "city", label: "City of Chicago", description: "Public records" }],
+    corridorInvestment: {
+      communityArea: "Chatham",
+      source: "FFIEC CRA Aggregate Table A1-1",
+      series: [{ year: 2024, smallBusinessLoanCount: 40, smallBusinessLoanDollars: 9_000_000 }],
+    },
+  } as GeneratedReport;
+}
+
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
 
@@ -720,6 +787,8 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
 
       // The raw support-org section wrapper is gone...
       expect(html).not.toContain('id="your-support-network"');
+      expect(html).not.toContain("Local support organizations");
+      expect(html).not.toContain("Local support to explore");
       // ...but its content still reaches the reader via the Contact Sheet
       // (lane-ranked, why-lined), not silently dropped.
       expect(html).toContain('data-testid="contact-sheet"');
@@ -731,6 +800,136 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
 
       expect(html).toContain('id="your-support-network"');
       expect(html).not.toContain('data-testid="contact-sheet"');
+    });
+  });
+
+  describe("persona parity round 2 — closed board inventories", () => {
+    const count = (html: string, needle: string) => html.split(needle).length - 1;
+    const textHeadings = (html: string) =>
+      [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map((match) =>
+        match[1].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&[a-z]+;/g, ""),
+      );
+
+    it.each([
+      ["starting", ["Site facts", "Logistics access", "Civic representation", "Zoning", "Programs for your goal", "Funding windows", "Document readiness", "Financing resources", "Contact sheet"]],
+      ["supporter", ["Neighborhood context", "Civic representation", "Zoning", "Programs for the goal", "Document readiness", "Financing resources", "Contact sheet"]],
+      ["developer", ["Site facts & county records", "Logistics access", "Civic representation", "Zoning & district family", "Neighborhood context", "Capital-relevant programs", "Incentive horizon", "Financing resources", "Contact sheet"]],
+      ["looking", ["Location snapshot", "Civic representation", "What’s notable", "Explore by interest", "The full picture"]],
+    ] as const)("renders exactly the %s board section inventory, in order", async (persona, expected) => {
+      const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+      expect(textHeadings(html)).toEqual(expected);
+
+      expect(count(html, 'data-testid="guidepost-part-1"')).toBe(1);
+      expect(count(html, 'data-testid="guidepost-part-2"')).toBe(1);
+      expect(count(html, 'data-testid="guidepost-part-3"')).toBe(1);
+      expect(html.indexOf('data-testid="guidepost-part-1"')).toBeLessThan(
+        html.indexOf('data-testid="guidepost-part-2"'),
+      );
+      expect(html.indexOf('data-testid="guidepost-part-2"')).toBeLessThan(
+        html.indexOf('data-testid="guidepost-part-3"'),
+      );
+    });
+
+    it.each(["starting", "supporter", "developer", "looking"] as const)(
+      "removes every audited unapproved block and program-detail accordion for %s",
+      async (persona) => {
+        const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+        for (const forbidden of [
+          'id="start-here"',
+          'id="verdict"',
+          'id="executive-summary"',
+          'id="action-roadmap"',
+          'id="recommended-actions"',
+          'id="data-sources"',
+          'id="project-intake"',
+          'id="incentive-zone-coverage-program-interactions"',
+          'id="required-documents"',
+          'id="upcoming-deadlines-near-this-address"',
+          "Program review details",
+          "Leaked Program Deadline",
+          "Old duplicate",
+        ]) {
+          expect(html, `persona=${persona}; forbidden=${forbidden}`).not.toContain(forbidden);
+        }
+      },
+    );
+
+    it.each(["starting", "supporter", "developer", "looking"] as const)(
+      "uses the board header, lensed summary, exact disclosure, and one-line footer for %s",
+      async (persona) => {
+        const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+        expect(html).toContain('data-testid="persona-report-header"');
+        expect(html).toContain('data-testid="persona-executive-summary"');
+        expect(html).toContain("Screening report from public records — not an eligibility determination. Full record one line below. Confirm zoning with the Zoning Board of Appeals.");
+        expect(html).toContain('data-testid="persona-report-footer"');
+        expect(html).not.toContain("Canonical executive-summary copy that persona boards must replace.");
+      },
+    );
+
+    it("renders one expanded program face, compact siblings, the one Also-line, and no excluded owner names", async () => {
+      const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona: "starting" });
+      expect(count(html, 'data-testid="program-card-face"')).toBe(1);
+      expect(html).toContain("SBIF Facade Grant");
+      expect(html).toContain('data-testid="persona-also-at-address"');
+      expect(html).not.toContain("TIF District Program");
+      expect(html).not.toContain("SSA Rebate");
+      expect(html).not.toContain("Leaked Program Deadline");
+    });
+
+    it("hard-filters every catalog program name through the real engine and real route for all four boards", async () => {
+      const state: WizardState = {
+        ...BASE_WIZARD_STATE,
+        projectGoals: ["rehab", "hire"],
+      };
+      const realReport = generateReportData(
+        state,
+        catalogPrograms as Program[],
+        {
+          zones: { tif: true, ssa: true, federalOZ: true, highUnemployment: true },
+          zoneNames: {
+            tif: "87th/Cottage Grove",
+            ssa: "SSA #42",
+            federalOZ: "Opportunity Zone",
+            highUnemployment: "High-Unemployment Area",
+          },
+          neighborhoodEconomics: {
+            tifFinance: {
+              districtId: "T-127",
+              districtName: "87th/Cottage Grove",
+            },
+          },
+        },
+      );
+
+      for (const persona of ["starting", "supporter", "developer", "looking"] as const) {
+        const html = await renderReportRoute(realReport, state, { persona });
+        const allowed = new Set(
+          (persona === "looking"
+            ? visiblePersonaProgramNames(realReport).slice(0, 3)
+            : visiblePersonaProgramNames(applyPersonaLens(realReport, persona).report)
+          ).map(({ label }) => label),
+        );
+        for (const program of catalogPrograms as Program[]) {
+          if (!allowed.has(program.name)) {
+            expect(
+              html,
+              `persona=${persona}; excluded catalog program leaked: ${program.name}`,
+            ).not.toContain(program.name);
+          }
+        }
+      }
+    });
+
+    it("keeps the full kitchen-sink All view intact", async () => {
+      const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona: "all" });
+      expect(html).toContain('id="start-here"');
+      expect(html).toContain('id="verdict"');
+      expect(html).toContain('id="executive-summary"');
+      expect(html).toContain('id="action-roadmap"');
+      expect(html).toContain('id="recommended-actions"');
+      expect(html).toContain('id="data-sources"');
+      expect(html).toContain('id="upcoming-deadlines-near-this-address"');
+      expect(html).not.toContain('data-testid="persona-report-header"');
     });
   });
 
@@ -906,30 +1105,27 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
     // disclosure fragment itself, then assert the title is absent from
     // everything that remains — genuinely "never appears outside," not
     // "doesn't appear in this one place I checked."
-    it("(a) a collapsed program's title never appears outside the 'Also at this address' disclosure", async () => {
+    it("(a) an excluded program name is absent from the entire persona DOM and represented only by the one Also count", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
-      const alsoFragment = sectionFragment(html, sectionAnchor(ALSO_AT_ADDRESS_TITLE));
-      // sbif does NOT match "developer" — it must have collapsed INTO the
-      // disclosure, not dropped.
-      expect(alsoFragment).toContain("SBIF Facade Grant");
-      // ...and it must be ABSENT everywhere else in the rendered document —
-      // not merely absent from the confirmed-programs fragment specifically.
-      const remainder = html.replace(alsoFragment, "");
-      expect(remainder).not.toContain("SBIF Facade Grant");
+      expect(html).toContain('data-testid="persona-also-at-address"');
+      expect(html).toContain("Also at this address (1)");
+      expect(html).not.toContain("SBIF Facade Grant");
     });
 
-    it("(b) the disclosure sentence itself renders, naming the real count and persona", async () => {
+    it("(b) the disclosure renders only the board's compact real-count line", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
-      expect(html).toContain("1 other program tied to this address");
-      expect(html).toContain("Nothing is removed; switch to All to see everything together.");
+      expect(html).toContain("Also at this address (1)");
+      expect(html).not.toContain("other program tied to this address");
+      expect(html).not.toContain("Nothing is removed");
     });
 
-    it("(c) the sources footer and the generated-date vintage line both render", async () => {
+    it("(c) the board's one-line sources, vintage, and site footer replaces the full Data Sources section", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
-      expect(html).toContain('id="data-sources"');
-      // React HTML-escapes "&" to "&amp;" on render — assert the escaped form.
+      expect(html).not.toContain('id="data-sources"');
+      expect(html).toContain('data-testid="persona-report-footer"');
       expect(html).toContain("City of Chicago &amp; Illinois DCEO");
-      expect(html).toMatch(/This report was generated on/);
+      expect(html).toContain("verified Jul 2026");
+      expect(html).toContain("chicagoincentiveexplorer.com");
     });
 
     it("(d) reason pills (ReasonChips) render on the card face for a matched program with a real match reason", async () => {
@@ -1037,13 +1233,14 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).toContain('data-testid="full-picture-line"');
     });
 
-    it("does NOT collapse any program into 'Also at this address' for persona=looking — it is a screening-overview lens, not a filtered one", async () => {
+    it("renders no program-card section or Also-line for looking; the snapshot alone carries up to three names", async () => {
       const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "looking" });
-      expect(html).not.toContain('id="also-at-this-address"');
-      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
-      // sbif does not match ANY of the four filtering personas' tags, but
-      // "looking" filters nothing — it must still be present on the face.
-      expect(confirmedFragment).toContain("SBIF Facade Grant");
+      expect(html).not.toContain('data-testid="persona-also-at-address"');
+      expect(html).not.toContain('id="programs-mapped-at-this-address"');
+      expect(html).toContain("SBIF Facade Grant");
+      expect(html).toContain("TIF District Program");
+      expect(html).toContain("Federal Opportunity Zone");
+      expect(html).not.toContain("High Unemployment Area");
     });
 
     it("none of the looking-only panels render for any OTHER persona, including 'all'", async () => {

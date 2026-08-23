@@ -3137,7 +3137,9 @@ function generateLocationIncentives(
   const tifDistrictId = enrichTifFinancialContext(ctx, tifFinancials);
   const gatingOpts: ResolveAvailabilityOpts = {
     sbifRollout,
-    tifDistrict: tifDistrictId,
+    tifDistrict:
+      (tifDistrictId && tifFinancials?.[tifDistrictId]?.tifName) ||
+      tifDistrictId,
   };
 
   // ── Builder outputs ──

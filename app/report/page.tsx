@@ -129,19 +129,27 @@ import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
 import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
 import { ContactSheet } from "@/components/report/ContactSheet";
-import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
 import { ReasonChips } from "@/components/report/ReasonChips";
 import { ProgramCardFace } from "@/components/report/ProgramCardFace";
-import { DocumentsToGather } from "@/components/report/DocumentsToGather";
-import { FundingWindowChart } from "@/components/report/FundingWindowChart";
-import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
-import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
 import {
-  LocationSnapshotPanel,
   WhatsNotablePanel,
   ExploreByInterestPanel,
 } from "@/components/report/LookingOverview";
+import {
+  isRealPersona,
+  PersonaAlsoAtAddress,
+  PersonaExecutiveSummary,
+  PersonaGuidepostBand,
+  PersonaReportFooter,
+  PersonaReportHeader,
+} from "@/components/report/PersonaReportChrome";
+import {
+  PersonaNeighborhoodSupplement,
+  PersonaProgramSupplements,
+  personaContactSectionNumber,
+  personaProgramSupplementCount,
+} from "@/components/report/PersonaSectionSupplements";
 import { BriefStageAsk } from "@/components/report/BriefStageAsk";
 import { BriefPage } from "@/components/report/BriefPage";
 import {
@@ -290,14 +298,6 @@ function reportAnalyticsPayload(
     },
   };
 }
-
-/** Fixed 3-part guidepost anatomy (spec v2 visual law) — same order always;
- *  personas change what fills each part, never the parts themselves. */
-const GUIDEPOST_PART_LABELS: Record<GuidepostPart, string> = {
-  1: "Site & Standing",
-  2: "Capital & Programs",
-  3: "Partners & Next Steps",
-};
 
 const ALLOWED_REPORT_SOURCES = new Set([
   "homepage",
@@ -3708,13 +3708,15 @@ function ReportDisplay({
     () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
     [report, persona, showPersonaLens],
   );
+  const boardPersona = showPersonaLens && isRealPersona(persona) ? persona : null;
+  const showPersonaView = boardPersona !== null;
   // Tracks the last guidepost PART band emitted by the section-render loop
   // below, so the Contact Sheet mount (Part 03's ONLY section on a persona
   // view — see the Part-03 correction) can emit its own band when nothing
   // in the loop already opened Part 03. Plain mutable render-scoped
   // variable, not state — recomputed fresh every render, same pattern as
   // `isFramedPersonaLink` above.
-  let guidepostBandTracker: GuidepostPart | null = null;
+  let guidepostBandTracker: GuidepostPart | null = boardPersona === "looking" ? 1 : null;
 
   // ── TOC ──
   // Gate finding 19 (regression, real bug this fixes): this used to slug
@@ -3747,6 +3749,16 @@ function ReportDisplay({
    * "state identity" vs. "the rendered anchor" stay self-documenting.
    */
   const sectionStateKey = (section: ReportSection) => sectionToAnchor(section);
+  const personaProgramsAnchor =
+    lensed.sections?.find(
+      (section) => !section.collapsedByPersona && section.guidepostBucket === "programs",
+    )
+      ? sectionToAnchor(
+          lensed.sections.find(
+            (section) => !section.collapsedByPersona && section.guidepostBucket === "programs",
+          )!,
+        )
+      : "";
 
   // TOC derives from the LENSED report (spec v2 build order item 3): a
   // persona-reordered body with a canonical-order TOC pointed readers at the
@@ -3784,13 +3796,7 @@ function ReportDisplay({
   // just notices when the part number changes as we walk the list and
   // drops a band in front of the section that starts the next part.
   const renderGuidepostBand = (part: GuidepostPart) => (
-    <div key={`guidepost-part-${part}`} className="mt-10 mb-6 flex items-center gap-3 print:hidden">
-      <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-white bg-[#0C1B33] px-2.5 py-1">
-        {`PART ${String(part).padStart(2, "0")}`}
-      </span>
-      <span className="font-editorial text-xl sm:text-2xl text-[#0C1B33]">{GUIDEPOST_PART_LABELS[part]}</span>
-      <span className="h-[2px] flex-grow bg-[#0C1B33]" />
-    </div>
+    <PersonaGuidepostBand key={`guidepost-part-${part}`} part={part} />
   );
   // Keyed by sectionStateKey (section.id, falling back to the title
   // anchor) — NOT array index. The persona lens reorders `lensed.sections`
@@ -4525,6 +4531,14 @@ function ReportDisplay({
         {/* ── Document ── */}
         <div className={`mx-auto ${compact ? "max-w-none" : "max-w-[850px]"} bg-white shadow-xl print:shadow-none`}>
           {/* ── Cover / Header Bar ── */}
+          {boardPersona ? (
+            <PersonaReportHeader
+              report={report}
+              persona={boardPersona}
+              onSwitchToAll={() => handlePersonaSelect(DEFAULT_PERSONA)}
+              compact={compact}
+            />
+          ) : (
           <div className={`report-cover bg-[#0C1B33] ${compact ? "px-4 pt-6 pb-5" : "px-5 sm:px-12 md:px-16 pt-12 pb-10"}`}>
             {isInstantMode && (
               <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/50 mb-2">
@@ -4546,6 +4560,7 @@ function ReportDisplay({
             )}
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
+          )}
 
           {/* Refine value preview (audit RF6/WU5/BM1): explain what
               refining unlocks — goal-based organization, action plan, and gap checklist —
@@ -4554,7 +4569,7 @@ function ReportDisplay({
               through handleRefineClick so PR #49's refine_clicked keeps
               firing (location: banner) alongside the panel's own
               refine_value_preview_shown exposure event. */}
-          {isInstantMode && (
+          {isInstantMode && !showPersonaView && (
             <RefineValuePanel
               report={report}
               context={refineContext ?? "instant"}
@@ -4568,7 +4583,7 @@ function ReportDisplay({
           {/* ── Persona lens chips (Tier 1b, BM4). Gated on showPersonaLens
               (page-level instant mode), NOT the diminished isInstantMode prop,
               so the lens survives the email gate's goal-refined report. ── */}
-          {showPersonaLens && !compact && (
+          {showPersonaLens && !showPersonaView && !compact && (
             <PersonaChips
               persona={persona}
               onSelect={handlePersonaSelect}
@@ -4579,7 +4594,7 @@ function ReportDisplay({
           {/* Shared-link recipient experience (spec v2 deliverable 7): a
               framed link opened in the sender's chosen lens — say so, and
               offer the one-tap escape to the unfiltered view. */}
-          {showPersonaLens && !compact && isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
+          {showPersonaLens && !showPersonaView && !compact && isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
             <div
               data-testid="framed-persona-notice"
               className="px-5 sm:px-12 md:px-16 py-2.5 border-b border-[#0C1B33]/8 bg-[#EFF3FB] text-[11px] text-[#0C1B33]/70 flex items-center gap-2 print:hidden"
@@ -4599,6 +4614,7 @@ function ReportDisplay({
           )}
 
           {/* ── Metadata Row ── */}
+          {!showPersonaView && (
           <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
             <div>
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
@@ -4678,8 +4694,9 @@ function ReportDisplay({
               </div>
             )}
           </div>
+          )}
 
-          {!compact && (
+          {!showPersonaView && !compact && (
             <AdminOwnershipPanel
               status={adminOwnershipStatus}
               zip={reportZip}
@@ -4688,13 +4705,15 @@ function ReportDisplay({
             />
           )}
 
-          <CapitalPartnerHandoff
-            report={report}
-            source={analyticsSource}
-            compact={compact}
-          />
+          {!showPersonaView && (
+            <CapitalPartnerHandoff
+              report={report}
+              source={analyticsSource}
+              compact={compact}
+            />
+          )}
 
-          {supportItems.length > 0 && !compact && (
+          {!showPersonaView && supportItems.length > 0 && !compact && (
             <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 bg-[#FAF9F6]">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
@@ -4741,7 +4760,7 @@ function ReportDisplay({
           )}
 
           {/* ── Table of Contents ── */}
-          {tocEntries.length > 0 && (
+          {!showPersonaView && tocEntries.length > 0 && (
             <nav className="px-5 sm:px-12 md:px-16 pt-8 pb-2">
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/25 block mb-3">
                 Contents
@@ -4766,7 +4785,7 @@ function ReportDisplay({
           )}
 
           {/* ── Zoning Map ── */}
-          {report.metadata?.lat != null && report.metadata?.lon != null && (
+          {!showPersonaView && report.metadata?.lat != null && report.metadata?.lon != null && (
             <div className="px-5 sm:px-12 md:px-16 pt-8">
               <ReportZoningMap
                 lat={report.metadata.lat}
@@ -4778,15 +4797,25 @@ function ReportDisplay({
 
           {/* ── Report Body ── */}
           <div className={`report-body ${compact ? "px-4 py-8" : "px-5 sm:px-12 md:px-16 py-14"}`}>
+            {showPersonaView && boardPersona && (
+              <>
+                {boardPersona === "looking" && renderGuidepostBand(1)}
+                <PersonaExecutiveSummary
+                  report={boardPersona === "looking" ? report : lensed}
+                  programsAnchor={personaProgramsAnchor}
+                  sectionNumber={boardPersona === "looking" ? "01" : undefined}
+                />
+              </>
+            )}
             {/* ── Start Here (Phase B of the startHere consolidation): the
                 canonical one-action card, first content block in the body.
                 Absent on reports without report.startHere (older saved
                 reports, or report types outside the executive-summary
                 gate) — the rest of the body renders unchanged either way. ── */}
-            <StartHereCard report={report} source={analyticsSource} />
+            {!showPersonaView && <StartHereCard report={report} source={analyticsSource} />}
 
             {/* ── Overview text ── */}
-            {report.summary && (
+            {!showPersonaView && report.summary && (
               <div className="mb-12">
                 <p className="text-[#0C1B33]/60 text-[15px] leading-[1.8] max-w-prose">
                   {report.summary}
@@ -4794,7 +4823,7 @@ function ReportDisplay({
               </div>
             )}
 
-            {vacancySpreadsheetLocale && (
+            {!showPersonaView && vacancySpreadsheetLocale && (
               <div className="mb-12 border border-[#0C1B33]/8 bg-[#FAF9F6] p-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
                   <div className="min-w-0">
@@ -4849,26 +4878,14 @@ function ReportDisplay({
             )}
 
             {/* ── Verdict Card ── */}
-            {report.verdict && (
+            {!showPersonaView && report.verdict && (
               <div id="verdict">
                 <VerdictCard verdict={report.verdict} />
-                {showPersonaLens && (
-                  <ProgramsMatchedHere
-                    report={lensed}
-                    persona={persona}
-                    programsAnchor={(() => {
-                      const programsSection = lensed.sections?.find(
-                        (s) => !s.collapsedByPersona && s.items?.some((item) => item.programId),
-                      );
-                      return programsSection ? sectionToAnchor(programsSection) : "";
-                    })()}
-                  />
-                )}
               </div>
             )}
 
             {/* ── Who can help — support network elevated to the top ── */}
-            {supportSection && supportItems.length > 0 && (
+            {!showPersonaView && supportSection && supportItems.length > 0 && (
               <VerdictPartnerStrip
                 items={supportItems}
                 onPartnerClick={(item) =>
@@ -4878,7 +4895,7 @@ function ReportDisplay({
             )}
 
             {/* ── Executive Summary from Confidence Engine ── */}
-            {report.executiveSummary && (
+            {!showPersonaView && report.executiveSummary && (
               <div id="executive-summary">
                 <ExecutiveSummarySection
                   summary={report.executiveSummary}
@@ -4892,7 +4909,7 @@ function ReportDisplay({
             )}
 
             {/* Action-first hierarchy: orient the user before detailed evidence. */}
-            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
+            {!showPersonaView && lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
               <div id="action-roadmap">
                 <ActionRoadmapSection
                   items={lensed.actionRoadmap}
@@ -4914,6 +4931,8 @@ function ReportDisplay({
 
             {/* ── Content Sections ── */}
             {(() => {
+              let personaSectionCounter = boardPersona === "looking" ? 1 : 0;
+              const personaAlsoSection = lensed.sections?.find((section) => section.collapsedByPersona);
               return lensed.sections?.flatMap((section, sectionIdx) => {
                 // Part-03 correction (late owner amendment, binding — supersedes
                 // the earlier "additive" ContactSheet build): on a real persona
@@ -4924,15 +4943,19 @@ function ReportDisplay({
                 // switching to it always shows the full, un-consolidated list.
                 if (
                   isSupportOrganizationSectionTitle(section.title) &&
-                  showPersonaLens &&
-                  persona !== DEFAULT_PERSONA
+                  showPersonaView
                 ) {
                   return [];
                 }
+                if (showPersonaView && section.collapsedByPersona) return [];
 
-                const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
+                const sectionNumber = showPersonaView
+                  ? String(++personaSectionCounter).padStart(2, "0")
+                  : String(sectionIdx + sectionOffset + 1).padStart(2, "0");
                 const sectionKey = sectionStateKey(section);
-                const guidepostPart = guidepostPartForSection(section, persona);
+                const guidepostPart = showPersonaView
+                  ? guidepostPartForSection(section, persona)
+                  : null;
                 const band =
                   guidepostPart !== null && guidepostPart !== guidepostBandTracker
                     ? renderGuidepostBand(guidepostPart)
@@ -4942,19 +4965,35 @@ function ReportDisplay({
                 // Persona lens: the "Also at this address" group defaults to
                 // collapsed (still user-expandable, still in the DOM for print/
                 // anchors — collapse, never hide).
-                const sectionOpen = section.collapsedByPersona
+                const sectionOpen = showPersonaView
+                  ? true
+                  : section.collapsedByPersona
                   ? (expandedSections[sectionKey] ?? false)
                   : isSectionOpen(sectionKey, sectionIdx, section.title);
+                const isPersonaProgramSection =
+                  showPersonaView && section.guidepostBucket === "programs";
+                const isPersonaFactSection =
+                  showPersonaView &&
+                  ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning"].includes(
+                    section.guidepostBucket ?? "",
+                  );
 
                 const sectionElement = (
                   <div
                     key={sectionKey}
                     id={sectionToAnchor(section)}
-                    className={`report-section ${sectionOpen ? "mb-14" : "report-section-collapsed mb-6"}`}
+                    className={`report-section ${
+                      showPersonaView
+                        ? "mb-0 border-b border-[#D8DDE6] py-4"
+                        : sectionOpen
+                          ? "mb-14"
+                          : "report-section-collapsed mb-6"
+                    }`}
                   >
                     <button
                       type="button"
                       onClick={() => {
+                        if (showPersonaView) return;
                         setExpandedSections((prev) => ({
                           ...prev,
                           [sectionKey]: !sectionOpen,
@@ -4971,26 +5010,33 @@ function ReportDisplay({
                         });
                       }}
                       aria-expanded={sectionOpen}
-                      className="section-head group flex w-full items-baseline gap-4 mb-4 text-left cursor-pointer print:cursor-auto"
+                      className={`section-head group mb-4 flex w-full items-baseline text-left ${showPersonaView ? "gap-2.5 cursor-default" : "gap-4 cursor-pointer print:cursor-auto"}`}
                     >
-                      <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
+                      <span className={showPersonaView ? "font-mono-bureau text-[10px] text-[#2563EB]" : "font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8"}>
                         {sectionNumber}
                       </span>
-                      <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
+                      <h2 className={showPersonaView ? "font-editorial text-[15.5px] font-semibold normal-case tracking-normal text-[#0C1B33]" : "font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]"}>
                         {section.title}
                       </h2>
-                      <span className="ml-auto font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 group-hover:text-[#2563EB] transition-colors print:hidden">
+                      {!showPersonaView && <span className="ml-auto font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 group-hover:text-[#2563EB] transition-colors print:hidden">
                         {sectionOpen
                           ? "Collapse"
                           : `Expand${section.items?.length ? ` · ${section.items.length}` : ""}`}
-                      </span>
+                      </span>}
                     </button>
-                    <hr className="border-[#0C1B33]/8 mb-5" />
-	                    {section.description && (
+	                    {!showPersonaView && section.description && (
 	                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
 	                        {section.description}
 	                      </p>
 	                    )}
+                    {showPersonaView &&
+                      isPersonaProgramSection &&
+                      visibleSectionItems(section).length === 0 &&
+                      section.description && (
+                        <p className="mb-4 max-w-prose text-[12.5px] leading-relaxed text-[#5A6478]">
+                          {section.description}
+                        </p>
+                      )}
 
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.ownerOperatorMap, "Owner & Operator Map") && section.table && (
                       <div className="mb-5">
@@ -5085,6 +5131,15 @@ function ReportDisplay({
                       <EconomicSignalCards economics={report.neighborhoodEconomics} />
                     )}
 
+                    {showPersonaView &&
+                      boardPersona &&
+                      section.guidepostBucket === "neighborhoodContext" && (
+                        <PersonaNeighborhoodSupplement
+                          report={report}
+                          persona={boardPersona}
+                        />
+                      )}
+
                     {/* Local Impact Anchors — dedicated section, card layout */}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.localImpactAnchors, "Local Impact Anchors") && report.neighborhoodEconomics?.anchors && (
                       <AnchorCards anchors={report.neighborhoodEconomics.anchors} />
@@ -5144,7 +5199,7 @@ function ReportDisplay({
                     )}
 
                     {visibleSectionItems(section).length > 0 && (
-                      <div className="space-y-0 divide-y divide-[#0C1B33]/5">
+                      <div className={isPersonaFactSection ? "grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3" : "space-y-0 divide-y divide-[#0C1B33]/5"}>
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
@@ -5160,6 +5215,8 @@ function ReportDisplay({
                           // card. `programId` is set on every ReportItem
                           // programReportItem() builds, regardless of section.
                           const isProgramCardItem = Boolean(item.programId);
+                          const isPersonaProgramSibling =
+                            isPersonaProgramSection && itemIdx > 0;
                           // review6 S11 (CRITICAL, S1 reopened): the `itemProgram`
                           // fallback (a client-side `Program` lookup) is gone —
                           // `reportItem.*` alone, which programReportItem()
@@ -5174,12 +5231,16 @@ function ReportDisplay({
                           return (
                             <div
                               key={itemIdx}
-                              className="report-item py-5 first:pt-0 sm:py-6"
+                              className={`report-item ${isPersonaFactSection ? "py-1" : "py-5 first:pt-0 sm:py-6"} ${
+                                isPersonaProgramSection && itemIdx === 0
+                                  ? "my-3 border-2 border-[#2563EB] bg-white px-4 sm:px-5"
+                                  : ""
+                              }`}
                             >
-                            <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
+                            <div className={`grid grid-cols-1 ${isPersonaFactSection ? "gap-1" : "gap-3"} ${hasSideValue && !isPersonaFactSection ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
-                                <span className="flex flex-wrap items-center gap-2 text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold">
+                                <span className={isPersonaFactSection ? "flex flex-wrap items-center gap-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#5A6478]" : "flex flex-wrap items-center gap-2 text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold"}>
                                   {supportWebsiteUrl ? (
                                     <a
                                       href={supportWebsiteUrl}
@@ -5200,7 +5261,7 @@ function ReportDisplay({
                                   )}
                                   {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
-                                {!isProgramCardItem && !hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
+                                {!isPersonaFactSection && !isProgramCardItem && !hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const { documentName, programs, cost } = parseDocumentCostLine(line);
@@ -5218,7 +5279,7 @@ function ReportDisplay({
                                       );
                                     })}
                                   </ul>
-                                ) : !isProgramCardItem && !hasGroupedDetail && item.detail ? (
+                                ) : !isPersonaFactSection && !isProgramCardItem && !hasGroupedDetail && item.detail ? (
                                   <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || sectionMatchesIdOrTitle(section, CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE) ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
@@ -5227,13 +5288,13 @@ function ReportDisplay({
 
                               {/* Right: value */}
                               {hasSideValue && (
-                                <span className="min-w-0 break-words font-mono-bureau text-[11px] leading-[1.7] text-[#0C1B33]/50 sm:text-[12px]">
+                                <span className={isPersonaFactSection ? "min-w-0 break-words text-[12.5px] leading-[1.45] text-[#0C1B33]" : "min-w-0 break-words font-mono-bureau text-[11px] leading-[1.7] text-[#0C1B33]/50 sm:text-[12px]"}>
                                   {item.value}
                                 </span>
                               )}
                             </div>
 
-                            {hasGroupedDetail && item.detailGroups && (
+                            {!isPersonaFactSection && hasGroupedDetail && item.detailGroups && (
                               <GroupedReportDetail
                                 summary={item.value}
                                 groups={item.detailGroups}
@@ -5258,19 +5319,22 @@ function ReportDisplay({
                                 full board-order rationale, and
                                 lib/__tests__/refine-tier1.test.ts's real render-order
                                 test for the enforcing proof. */}
-                            {!isSupportNetworkItem && (
+                            {!isSupportNetworkItem && !isPersonaProgramSibling && (
                               <>
                                 <ProgramCardFace item={item} />
                                 <ReasonChips explanation={item.matchExplanation} />
                                 <ProgramCardExtras item={item} />
                               </>
                             )}
+                            {isPersonaProgramSibling && (
+                              <ReasonChips explanation={item.matchExplanation} />
+                            )}
 
                             {/* Genuinely supplementary detail only — the deeper
                                 match-explanation facts (public data, your answers,
                                 still to confirm, documents to gather, confirm-with)
                                 and official navigation. */}
-                            {!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (
+                            {!showPersonaView && !isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -5303,6 +5367,9 @@ function ReportDisplay({
                         })}
                       </div>
                     )}
+                    {isPersonaProgramSection && personaAlsoSection && (
+                      <PersonaAlsoAtAddress count={personaAlsoSection.items.length} />
+                    )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
                       <>
                         {/* Owner ruling A2: every view — the kitchen sink AND
@@ -5330,68 +5397,47 @@ function ReportDisplay({
                     )}
                   </div>
                 );
-                return band ? [band, sectionElement] : sectionElement;
+                const supplements =
+                  isPersonaProgramSection && boardPersona
+                    ? (
+                        <PersonaProgramSupplements
+                          key={`${sectionKey}-supplements`}
+                          report={report}
+                          lensedReport={lensed}
+                          persona={boardPersona}
+                          firstSectionNumber={personaSectionCounter + 1}
+                        />
+                      )
+                    : null;
+                if (isPersonaProgramSection && boardPersona) {
+                  personaSectionCounter += personaProgramSupplementCount(boardPersona);
+                }
+                return [band, sectionElement, supplements].filter(Boolean);
               });
             })()}
 
-            {/* Charts (spec v2 item 4): real committed data only, render
-                nothing when the address has none. Owner (starting/growing)
-                gets the SBIF funding-window chart; developer gets the
-                incentive-horizon chart; supporter gets the corridor
-                small-business-lending chart (gate finding 5, wired from the
-                FFIEC CRA series the engine resolves at generation time).
-                "all"'s program-mix chart is not built this pass — see
-                docs/persona-report-parity.md. */}
-            {showPersonaLens && (persona === "starting" || persona === "growing") && (
-              <FundingWindowChart report={lensed} />
-            )}
-            {showPersonaLens && persona === "developer" && (
-              <IncentiveHorizonChart report={lensed} />
-            )}
-            {showPersonaLens && persona === "supporter" && (
-              <CorridorInvestmentChart report={lensed} />
-            )}
-
-            {/* "Just looking" overview (gate finding 9/10, R5LookingFinal
-                board): Location snapshot stat row + What's notable — both
-                additive, both persona="looking" only. */}
-            {showPersonaLens && persona === "looking" && (
+            {boardPersona === "looking" && (
               <>
-                <LocationSnapshotPanel report={lensed} />
-                <WhatsNotablePanel report={lensed} />
+                {renderGuidepostBand(2)}
+                <WhatsNotablePanel report={report} sectionNumber="03" />
+                {renderGuidepostBand(3)}
+                <ExploreByInterestPanel
+                  report={report}
+                  sectionNumber="04"
+                  fullPictureSectionNumber="05"
+                />
               </>
             )}
 
-            {/* Documents to Gather (spec v2 item 3, owner + supporter only):
-                real Business File foundation-task content, lands at the
-                end of Part 02 (Capital & Programs) — right before the
-                Part 03 band opens below. */}
-            {showPersonaLens && (persona === "starting" || persona === "growing" || persona === "supporter") && (
-              <DocumentsToGather report={lensed} />
-            )}
-
-            {/* Contact Sheet (spec v2 deliverable 8, Part-03 correction):
-                Part 03's ONE section on a real persona lens — the raw
-                support-organizations section was suppressed above; its
-                orgs surface here instead, lane-ranked and why-lined.
-                "All" is untouched (no ContactSheet, no guidepost at all). */}
-            {showPersonaLens && persona !== DEFAULT_PERSONA && (
+            {boardPersona && boardPersona !== "looking" && (
               <>
-                {guidepostBandTracker !== 3 && renderGuidepostBand(3)}
-                <div className="mt-8">
-                  <ContactSheet report={lensed} persona={persona} />
-                </div>
+                {renderGuidepostBand(3)}
+                <ContactSheet
+                  report={lensed}
+                  persona={boardPersona}
+                  sectionNumber={personaContactSectionNumber(boardPersona)}
+                />
               </>
-            )}
-
-            {/* "Explore by interest" + the full-picture line (gate finding
-                9/10, R5LookingFinal board PART 03) — persona="looking" only,
-                moves someone off this screening lens once they know what
-                they're looking for. */}
-            {showPersonaLens && persona === "looking" && (
-              <div className="mt-8">
-                <ExploreByInterestPanel report={lensed} />
-              </div>
             )}
 
             {/* ── Recommended Actions ──
@@ -5401,7 +5447,7 @@ function ReportDisplay({
                 action, unchanged content) collapses instead of competing
                 with it. Absent report.startHere, this renders exactly as
                 before. */}
-            {report.recommendedActions &&
+            {!showPersonaView && report.recommendedActions &&
               report.recommendedActions.length > 0 && (() => {
                 const sectionNumber = String(
                   (report.sections?.length || 0) + sectionOffset + 1
@@ -5475,7 +5521,7 @@ function ReportDisplay({
               })()}
 
             {/* ── Data Sources ── */}
-            {report.dataSources && report.dataSources.length > 0 && (
+            {!showPersonaView && report.dataSources && report.dataSources.length > 0 && (
               <div id="data-sources" className="mb-12">
                 <div className="flex items-baseline gap-4 mb-4">
                   <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
@@ -5514,7 +5560,7 @@ function ReportDisplay({
             )}
 
             {/* ── Government Resources ── */}
-            <div className="mt-16 pt-8 border-t border-[#0C1B33]/8">
+            {!showPersonaView && <div className="mt-16 pt-8 border-t border-[#0C1B33]/8">
               <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-5">
                 Government Resources
               </span>
@@ -5574,9 +5620,12 @@ function ReportDisplay({
                   </a>
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* ── Footer ── */}
+            {showPersonaView ? (
+              <PersonaReportFooter report={report} />
+            ) : (
             <div className="report-footer mt-8 pt-6 border-t border-dashed border-[#0C1B33]/15">
               <p className="text-[#0C1B33]/35 text-[12px] leading-relaxed mb-2">
                 This report was generated on {formattedDate} by Chicago
@@ -5588,8 +5637,40 @@ function ReportDisplay({
                 with program administrators.
               </p>
             </div>
+            )}
           </div>
         </div>
+
+        {/* Persona switching remains a live control after the gate (PR #210),
+            but sits outside the report paper so the paper itself keeps the
+            closed R5 board inventory. */}
+        {showPersonaLens && showPersonaView && !compact && (
+          <div className="mx-auto mt-4 max-w-[850px] overflow-hidden bg-white shadow-sm print:hidden">
+            <PersonaChips
+              persona={persona}
+              onSelect={handlePersonaSelect}
+              report={report}
+            />
+            {isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
+              <div
+                data-testid="framed-persona-notice"
+                className="flex items-center gap-2 border-t border-[#0C1B33]/8 bg-[#EFF3FB] px-5 py-2.5 text-[11px] text-[#0C1B33]/70 sm:px-12 md:px-16"
+              >
+                <span>
+                  Viewing as <strong className="font-semibold">{personaLabel(persona)}</strong> — the
+                  lens this link was shared with.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handlePersonaSelect(DEFAULT_PERSONA)}
+                  className="cursor-pointer font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
+                >
+                  Switch to All for everything
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Action Buttons (outside the document) ── */}
         <div className={`report-actions mx-auto max-w-[850px] print:hidden mt-8 ${compact ? "hidden" : ""}`}>
@@ -5818,4 +5899,3 @@ function ReportDisplay({
     </motion.div>
   );
 }
-
