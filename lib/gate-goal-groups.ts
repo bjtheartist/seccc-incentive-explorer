@@ -51,14 +51,26 @@ function chipById(id: string): GateGoalChip | undefined {
 }
 
 /**
- * Toggling rules (spec §A): up to 2 substantive chips may be selected
- * together; "Just looking around" is exclusive of the other 7 — selecting
- * it clears any substantive picks, and selecting a substantive chip while
+ * Toggling rules (spec §A): up to `cap` substantive chips may be selected
+ * together (defaults to `MAX_GATE_GOAL_CHIPS`, the board's own "pick up to
+ * 2"); "Just looking around" is exclusive of the other 7 — selecting it
+ * clears any substantive picks, and selecting a substantive chip while
  * "looking" is active clears "looking" first.
+ *
+ * Gate review round 2, NEW-2/ruling #3: `cap` is an explicit parameter,
+ * not always the hardcoded constant, so a component seeded with MORE than
+ * 2 pre-pressed chips (a legacy 3-goal wizard run) can pass its own seeded
+ * count as the cap for this session — letting the visitor freely
+ * deselect/reselect any of those chips without a re-add getting silently
+ * and permanently blocked. A fresh visitor (no seed) still gets the
+ * default 2. This never lets an entirely NEW, never-seeded chip exceed
+ * the seeded count either, since the caller passes the SAME cap for every
+ * call in a given render.
  */
 export function toggleGateGoalChip(
   selected: readonly string[],
   chipId: string,
+  cap: number = MAX_GATE_GOAL_CHIPS,
 ): string[] {
   const chip = chipById(chipId);
   if (!chip) return [...selected];
@@ -71,7 +83,7 @@ export function toggleGateGoalChip(
   if (withoutLooking.includes(chipId)) {
     return withoutLooking.filter((id) => id !== chipId);
   }
-  if (withoutLooking.length >= MAX_GATE_GOAL_CHIPS) {
+  if (withoutLooking.length >= cap) {
     return withoutLooking;
   }
   return [...withoutLooking, chipId];
@@ -106,22 +118,32 @@ export function gateGoalSelectionIsComplete(selected: readonly string[]): boolea
  * every id reachable from the visitor's actual selections must survive.
  */
 export function dedupeGoalIds(ids: readonly string[]): string[] {
-  return Array.from(new Set(ids));
+  // Gate review round 2, MINOR NEW-6/ruling #5: `selectedProjectGoals()`
+  // (lib/report-wizard-config.ts) has always filtered falsy entries before
+  // deduping; this combiner dropped that filter, letting an empty-string
+  // goal id reach the engine unfiltered. Restored.
+  return Array.from(new Set(ids.filter(Boolean)));
 }
 
 /**
- * Reverse mapping for seeding the gate from a report that already has
- * project goals (a completed wizard run, a refined report, a shared link)
- * — spec guardrail: "keep goal ids stable everywhere else... anything
- * else that renders goal labels must keep working" plus gate review round
- * 1, BLOCKER 2 ("never lose typed context"). Chip grouping is coarser
- * than the raw goal ids (one chip can represent two ids), so seeding a
- * chip whenever ANY of its ids is present is the closest honest
- * representation — consistent with spec §A's own grouped-chip contract
- * ("a grouped chip selecting multiple ids feeds the existing multi-goal
- * path"). Ids with no chip at all (`vacant-acquisition`, `other`) are
- * returned separately by `unmatchedGoalIds` below and must be preserved
- * untouched, never dropped for lack of a chip to show them on.
+ * Reverse mapping for PRE-PRESSING the gate's chips for DISPLAY when a
+ * report already has project goals (a completed wizard run, a refined
+ * report, a shared link) — spec guardrail: "keep goal ids stable
+ * everywhere else... anything else that renders goal labels must keep
+ * working" plus gate review round 1, BLOCKER 2 ("never lose typed
+ * context").
+ *
+ * Gate review round 2, NEW-1/ruling #2 — display only, never emission:
+ * this function is coarser than the raw goal ids (one chip can represent
+ * two ids), so using its OUTPUT to compute what gets sent to the engine
+ * silently ADDS an id the visitor never chose (`["expansion"]` seeds the
+ * `expand-equip` chip, whose `goalIds` is `["expansion","equipment"]` —
+ * `equipment` was never real). The fix: `ReportEmailGate.tsx` uses this
+ * function ONLY to decide which chips render pressed; it keeps the
+ * ORIGINAL goal-id array as separate state and emits that array VERBATIM
+ * (order included — no dedup, no re-derivation) to `onPrepareReport`
+ * until the visitor makes a real chip toggle. Only after a toggle does
+ * emission switch to the chip-derived mapping (`gateGoalChipsToGoalIds`).
  */
 export function goalIdsToGateChipIds(existingGoalIds: readonly string[]): string[] {
   const existing = new Set(existingGoalIds);
@@ -137,4 +159,50 @@ export function goalIdsToGateChipIds(existingGoalIds: readonly string[]): string
 export function unmatchedGoalIds(existingGoalIds: readonly string[]): string[] {
   const allChipGoalIds = new Set(GATE_GOAL_CHIPS.flatMap((chip) => chip.goalIds));
   return existingGoalIds.filter((id) => !allChipGoalIds.has(id));
+}
+
+export interface GatePrepareGoalsInput {
+  /** The ids `ReportEmailGate.tsx` is asking to prepare with — its own
+   *  `projectGoalIds()` output (verbatim original pre-toggle, or
+   *  chip-derived + passthrough post-toggle). */
+  incomingGoalIds: readonly string[];
+  incomingCustomGoal: string;
+  /** The report's raw existing goal ids (already resolved from
+   *  `metadata.projectGoals`, falling back to `[metadata.projectType]`,
+   *  by the caller — this function only dedupes/compares). */
+  existingProjectGoals: readonly string[];
+  existingCustomGoal: string;
+}
+
+export interface GatePrepareGoalsResult {
+  /** True when nothing actually changed relative to the existing report —
+   *  the caller should return the existing report as-is, no regeneration. */
+  isNoop: boolean;
+  /** The full, uncapped, deduped goal-id set to write into
+   *  `WizardState.projectGoals` / send to the report engine. */
+  normalizedGoals: string[];
+}
+
+/**
+ * `app/report/page.tsx`'s `handlePrepareGatedReport` calls this directly —
+ * extracted (gate review round 2, R1-BLOCKER-1 carryover/ruling #6) so the
+ * exact goal-truncation decision that function makes is unit-testable
+ * without mounting the whole report page. Deliberately uses `dedupeGoalIds`
+ * (truly uncapped), NOT `selectedProjectGoals()` (capped at
+ * `MAX_ENGINE_GOALS = 4` in lib/report-wizard-config.ts): the gate's own
+ * emission can exceed 4 when pass-through ids (goals with no chip
+ * representation) ride alongside a fresh 2-chip pick — e.g. an existing
+ * `vacant-acquisition` goal plus two freshly toggled chips is 5 real ids.
+ * `lib/__tests__/gate-goal-groups.test.ts` pins this with a 5-id probe
+ * that a reversion to the capped wizard function would fail.
+ */
+export function resolveGatePrepareGoals(
+  input: GatePrepareGoalsInput,
+): GatePrepareGoalsResult {
+  const normalizedGoals = dedupeGoalIds(input.incomingGoalIds);
+  const reportGoals = dedupeGoalIds(input.existingProjectGoals);
+  const isNoop =
+    JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
+    (input.existingCustomGoal || "") === input.incomingCustomGoal.trim();
+  return { isNoop, normalizedGoals };
 }

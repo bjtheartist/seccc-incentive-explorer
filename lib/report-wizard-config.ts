@@ -207,6 +207,25 @@ export const SITE_PROJECT_TYPE_OPTIONS: StepOption[] = [
 
 export const MAX_PROJECT_GOALS = 3;
 
+/**
+ * The maximum goal-id SET the engine itself (GOAL_RULES, projectGoalsFit,
+ * the report generator) is ever asked to carry — gate review round 2,
+ * NEW-3/ruling #4. `MAX_PROJECT_GOALS` above is the WIZARD's own "pick up
+ * to 3" fresh-selection UI limit (unchanged, still governs how many NEW
+ * goals `ProjectGoalSelector` lets a visitor add in one sitting) — it is
+ * NOT an engine constraint. The email gate's 8 grouped chips (spec §A)
+ * let a visitor carry up to 4 real ids from 2 chips ("Expand or buy
+ * equipment" + "Develop housing or mixed-use" = expansion + equipment +
+ * mixed-use + affordable-housing), and nothing downstream has ever had an
+ * actual 3-goal limit — that cap was only ever a wizard-selector UI
+ * artifact. `selectedProjectGoals()` and `ProjectGoalSelector`'s own
+ * display read both slice against THIS constant, not `MAX_PROJECT_GOALS`,
+ * so a gate-produced 4-goal report round-trips through the wizard's
+ * project-intake screen and the inline refine panel intact instead of
+ * being silently truncated back to 3 the first time either is opened.
+ */
+export const MAX_ENGINE_GOALS = 4;
+
 export function selectedProjectGoals(
   state: { projectGoals?: readonly string[]; projectType?: string | null },
 ): string[] {
@@ -216,7 +235,7 @@ export function selectedProjectGoals(
       ? [state.projectType]
       : [];
 
-  return Array.from(new Set(candidates.filter(Boolean))).slice(0, MAX_PROJECT_GOALS);
+  return Array.from(new Set(candidates.filter(Boolean))).slice(0, MAX_ENGINE_GOALS);
 }
 
 export function projectGoalDisplayLabel(

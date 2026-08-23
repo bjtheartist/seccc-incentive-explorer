@@ -6,9 +6,11 @@ import {
   gateGoalSelectionIsComplete,
   goalIdsToGateChipIds,
   MAX_GATE_GOAL_CHIPS,
+  resolveGatePrepareGoals,
   toggleGateGoalChip,
   unmatchedGoalIds,
 } from "../gate-goal-groups";
+import { MAX_ENGINE_GOALS, selectedProjectGoals } from "../report-wizard-config";
 
 // ─── Gate goal grouping — pure-function tests (gate review round 1) ─────
 // The reviewer's falsification pass proved the ORIGINAL suite blind to
@@ -66,6 +68,31 @@ describe("toggleGateGoalChip", () => {
     const selected = ["renovate"];
     expect(toggleGateGoalChip(selected, "not-a-real-chip")).toEqual(["renovate"]);
   });
+
+  describe("explicit cap parameter (gate review round 2, NEW-2 — recoverable seeded state)", () => {
+    it("a 3-chip seed lets the visitor deselect and re-select ANY of the 3 freely, with cap=3", () => {
+      let selected = ["renovate", "hire-train", "energy"];
+      // Reviewer's exact reproduction: deselect "Energy & building
+      // upgrades" then re-click it — must NOT be stranded.
+      selected = toggleGateGoalChip(selected, "energy", 3);
+      expect(selected).toEqual(["renovate", "hire-train"]);
+      selected = toggleGateGoalChip(selected, "energy", 3);
+      expect(selected).toEqual(["renovate", "hire-train", "energy"]);
+    });
+
+    it("a fresh visitor (no seed) still gets the default 2-chip cap even when a cap of 2 is passed explicitly", () => {
+      let selected = toggleGateGoalChip([], "renovate", 2);
+      selected = toggleGateGoalChip(selected, "hire-train", 2);
+      selected = toggleGateGoalChip(selected, "energy", 2);
+      expect(selected).toEqual(["renovate", "hire-train"]);
+    });
+
+    it("omitting cap defaults to MAX_GATE_GOAL_CHIPS (unchanged behavior for every existing caller)", () => {
+      let selected = ["renovate", "hire-train"];
+      selected = toggleGateGoalChip(selected, "energy");
+      expect(selected).toEqual(["renovate", "hire-train"]);
+    });
+  });
 });
 
 describe("gateGoalChipsToGoalIds", () => {
@@ -100,8 +127,23 @@ describe("dedupeGoalIds", () => {
     expect(ids.length).toBe(4);
   });
 
+  it("does not cap at 4 either — a genuinely larger set (chip picks + a passthrough id) survives whole", () => {
+    const ids = dedupeGoalIds([
+      "expansion",
+      "equipment",
+      "mixed-use",
+      "affordable-housing",
+      "vacant-acquisition",
+    ]);
+    expect(ids.length).toBe(5);
+  });
+
   it("dedupes repeats", () => {
     expect(dedupeGoalIds(["rehab", "rehab", "energy"])).toEqual(["rehab", "energy"]);
+  });
+
+  it("filters falsy entries (gate review round 2, NEW-6 — the filter selectedProjectGoals() has always had)", () => {
+    expect(dedupeGoalIds(["rehab", "", "energy"])).toEqual(["rehab", "energy"]);
   });
 });
 
@@ -148,5 +190,76 @@ describe("unmatchedGoalIds (BLOCKER 2 — never lose typed context)", () => {
 
   it("preserves an unmatched id alongside matched ones", () => {
     expect(unmatchedGoalIds(["hiring", "vacant-acquisition"])).toEqual(["vacant-acquisition"]);
+  });
+});
+
+describe("resolveGatePrepareGoals — the R1-BLOCKER-1 pin (gate review round 2, ruling #6)", () => {
+  // Round 1 fixed the truncation but never executed the real handler path
+  // — `onPrepareReport` is a `vi.fn()` in every ReportEmailGate test, so
+  // `app/report/page.tsx`'s `handlePrepareGatedReport` (now a thin wrapper
+  // around this exact function) never actually ran. These tests call the
+  // REAL function `handlePrepareGatedReport` calls.
+
+  it("the reviewer's exact 4-id reproduction: no existing goals, 2 fresh chips worth of ids, all 4 survive", () => {
+    const { isNoop, normalizedGoals } = resolveGatePrepareGoals({
+      incomingGoalIds: ["expansion", "equipment", "mixed-use", "affordable-housing"],
+      incomingCustomGoal: "",
+      existingProjectGoals: [],
+      existingCustomGoal: "",
+    });
+    expect(isNoop).toBe(false);
+    expect(new Set(normalizedGoals)).toEqual(
+      new Set(["expansion", "equipment", "mixed-use", "affordable-housing"]),
+    );
+    expect(normalizedGoals.length).toBe(4);
+  });
+
+  it("a 5-id set (an existing pass-through goal plus a fresh 2-chip pick) survives whole — MAX_ENGINE_GOALS would truncate this to 4", () => {
+    // Sanity: confirm this scenario genuinely exceeds MAX_ENGINE_GOALS —
+    // if the engine's own cap ever changes, this test should fail loudly
+    // rather than silently stop proving anything.
+    expect(MAX_ENGINE_GOALS).toBeLessThan(5);
+
+    const incomingGoalIds = [
+      "expansion",
+      "equipment",
+      "mixed-use",
+      "affordable-housing",
+      "vacant-acquisition",
+    ];
+    const { normalizedGoals } = resolveGatePrepareGoals({
+      incomingGoalIds,
+      incomingCustomGoal: "",
+      existingProjectGoals: ["vacant-acquisition"],
+      existingCustomGoal: "",
+    });
+    expect(normalizedGoals.length).toBe(5);
+    expect(new Set(normalizedGoals)).toEqual(new Set(incomingGoalIds));
+
+    // Proves this is a REAL divergence, not a coincidence of this
+    // particular input: the wizard's own capped reader truncates it.
+    expect(selectedProjectGoals({ projectGoals: incomingGoalIds }).length).toBe(
+      MAX_ENGINE_GOALS,
+    );
+  });
+
+  it("an untouched report (same goals, same order, same customGoal) is a no-op — no regeneration", () => {
+    const { isNoop } = resolveGatePrepareGoals({
+      incomingGoalIds: ["hiring", "rehab"],
+      incomingCustomGoal: "",
+      existingProjectGoals: ["hiring", "rehab"],
+      existingCustomGoal: "",
+    });
+    expect(isNoop).toBe(true);
+  });
+
+  it("customGoal text is part of the no-op comparison", () => {
+    const { isNoop } = resolveGatePrepareGoals({
+      incomingGoalIds: ["other"],
+      incomingCustomGoal: "a different plan",
+      existingProjectGoals: ["other"],
+      existingCustomGoal: "the original plan",
+    });
+    expect(isNoop).toBe(false);
   });
 });
