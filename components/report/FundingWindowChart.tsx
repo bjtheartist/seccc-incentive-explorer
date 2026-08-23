@@ -13,6 +13,14 @@ const CHART_WIDTH = 560;
 const ROW_HEIGHT = 30;
 const LABEL_WIDTH = 140;
 const PLOT_WIDTH = CHART_WIDTH - LABEL_WIDTH - 20;
+// Gate finding 15: this plotting window is intentionally narrower than the
+// 365-day range lib/deadlines.ts resolves deadlines across (a wide plot
+// would flatten every near-term bar to a sliver) — but a window whose real
+// dates fall outside it (e.g. one opening in 300 days) used to render
+// CLAMPED to the same position as one opening at 150 days, with no date
+// text anywhere to tell them apart. Fixed below by printing each bar's
+// real start/end dates and flagging a clamped bar visually, not by
+// widening the plot (which would defeat its own purpose).
 const SPAN_DAYS = 180; // today - 30d .. today + 150d, a fixed 6-month plotting window
 
 function dayOffset(iso: string): number {
@@ -25,6 +33,11 @@ function dayOffset(iso: string): number {
 function xFor(dayOffsetValue: number): number {
   const clamped = Math.max(-30, Math.min(SPAN_DAYS - 30, dayOffsetValue));
   return LABEL_WIDTH + ((clamped + 30) / SPAN_DAYS) * PLOT_WIDTH;
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function FundingWindowChart({ report }: { report: GeneratedReport }) {
@@ -43,9 +56,22 @@ export function FundingWindowChart({ report }: { report: GeneratedReport }) {
         </text>
         {rows.map((row, index) => {
           const y = index * ROW_HEIGHT + 24;
-          const x1 = xFor(dayOffset(row.startDate));
-          const x2 = xFor(dayOffset(row.endDate));
+          const startOffset = dayOffset(row.startDate);
+          const endOffset = dayOffset(row.endDate);
+          const x1 = xFor(startOffset);
+          const x2 = xFor(endOffset);
           const width = Math.max(x2 - x1, 4);
+          // Gate finding 15: a bar whose REAL end falls beyond the plotted
+          // range renders clamped to the same right edge regardless of how
+          // far past it the real date is — the printed date text (below)
+          // is what actually disambiguates a 300-day window from a
+          // 150-day one; this flag also draws a small ›› marker so the
+          // clamp itself is visible, not just inferable from the label.
+          const isClamped = endOffset > SPAN_DAYS - 30;
+          const dateLabel =
+            row.startDate === row.endDate
+              ? formatShortDate(row.startDate)
+              : `${formatShortDate(row.startDate)} – ${formatShortDate(row.endDate)}`;
           return (
             <g key={row.label}>
               <title>{row.tooltip}</title>
@@ -60,9 +86,17 @@ export function FundingWindowChart({ report }: { report: GeneratedReport }) {
                 rx={2}
                 fill={row.amber ? "#A45B00" : "#2563EB"} /* gate finding 22 (minor): #F59E0B failed contrast as a warning color */
               />
+              {isClamped && (
+                <text x={x2 + 3} y={y + 4} fontSize="9" fill="#0C1B33" fillOpacity={0.4}>
+                  ››
+                </text>
+              )}
+              <text x={x1 + width + (isClamped ? 14 : 6)} y={y + 4} fontSize="9" fill="#0C1B33" fillOpacity={0.6}>
+                {dateLabel}
+              </text>
               {row.amber && (
-                <text x={x1 + width + 6} y={y + 4} fontSize="9" fontWeight={600} fill="#0C1B33">
-                  opens within 60 days
+                <text x={x1 + width + (isClamped ? 14 : 6)} y={y + 14} fontSize="8" fontWeight={600} fill="#A45B00">
+                  {startOffset < 0 ? "open now" : "opens within 60 days"}
                 </text>
               )}
             </g>

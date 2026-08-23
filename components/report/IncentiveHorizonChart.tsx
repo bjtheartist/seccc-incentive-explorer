@@ -56,8 +56,18 @@ export function IncentiveHorizonChart({ report }: { report: GeneratedReport }) {
           );
         })}
       </svg>
+      {/* Gate finding 15: named the actual source dataset (City of Chicago
+          TIF Annual Reports — the same DATA_SOURCES.tifFinance label used
+          elsewhere in this report, see lib/report-engine.ts) instead of a
+          vague "published program record." Program-deadline markers trace
+          to each program's own published deadline instead; both are real,
+          neither fabricated, so both are named rather than blurred into
+          one generic phrase. No publication vintage/date is available on
+          the underlying TifFinancialsSlim data to cite honestly — naming
+          the source is the same bar FundingWindowChart's own citation
+          holds itself to. */}
       <p className="mt-1 text-[9px] text-[#0C1B33]/40">
-        Each marker traces to a published program record — hover for the source note.
+        Source: City of Chicago TIF Annual Reports (district expirations) and each program&apos;s own published deadline — hover a marker for details.
       </p>
     </div>
   );
