@@ -47,8 +47,14 @@ export function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport[
 
 export function MatchExplanationDetails({ explanation }: { explanation?: PublicMatchExplanation }) {
   if (!explanation) return null;
+  // Gate finding 11: "Why it appears" moved OUT of this list and onto the
+  // card face as pill-styled reason chips (components/report/
+  // ReasonChips.tsx, rendered by both forks immediately before this
+  // component) — kept here it would duplicate the same reasons twice on
+  // one card. Confirmed both current call sites (app/report/page.tsx,
+  // components/report/ReportDisplay.tsx) already render ReasonChips right
+  // above this component before making this change.
   const groups = [
-    ["Why it appears", explanation.whyItAppears],
     ["Known from public data", explanation.knownFromPublicData],
     ["Based on your answers", explanation.basedOnUserAnswers],
     ["Still to confirm", explanation.stillToConfirm],

@@ -120,7 +120,7 @@ export const ProgramSchema = z.object({
   oneTime: z.boolean().optional(),
   expiresOn: z.string().optional(),
   recurring: z.boolean().optional(),
-  personas: z.array(z.enum(["all", "starting", "growing", "developer"])).optional(),
+  personas: z.array(z.enum(["all", "starting", "growing", "developer", "supporter"])).optional(),
   documentSpecs: z.array(DocumentSpecSchema).optional(),
   // ── Eligibility-claims foundation (2026-08) ──
   intakeStatus: IntakeStatusSchema.optional(),

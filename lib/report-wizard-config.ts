@@ -227,6 +227,23 @@ export function projectGoalDisplayLabel(
   return PROJECT_TYPE_LABELS[goalId] || goalId;
 }
 
+/**
+ * Whether a wizard/report-metadata shape already carries a complete goal
+ * selection — at least one goal, and a written custom goal when "other" is
+ * among them. Single source of truth for the "are goals done" check
+ * (previously duplicated inline in ReportEmailGate); also backs the
+ * shared-link fix (spec v2 deliverable 7): a decoded `pg=` on a framed link
+ * satisfies this the same way a visitor's own selection would, so a
+ * recipient with a complete goal set already on the URL is never re-blocked
+ * by the gate.
+ */
+export function projectGoalsAreComplete(
+  state: { projectGoals?: readonly string[]; projectType?: string | null; customGoal?: string | null },
+): boolean {
+  const goals = selectedProjectGoals(state);
+  return goals.length > 0 && (!goals.includes("other") || Boolean(state.customGoal?.trim()));
+}
+
 export function selectedProjectGoalLabels(
   state: {
     projectGoals?: readonly string[];

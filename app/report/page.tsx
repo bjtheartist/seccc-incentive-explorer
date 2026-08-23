@@ -39,6 +39,7 @@ import {
   SUPPORT_NEEDED_OPTIONS,
   BUDGET_RANGE_OPTIONS,
   optionLabel,
+  projectGoalsAreComplete,
   selectedProjectGoalLabels,
   selectedProjectGoals,
 } from "@/lib/report-wizard-config";
@@ -125,19 +126,45 @@ import {
 } from "@/components/report/NeighborhoodEconomics";
 import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
 import { PersonaChips } from "@/components/report/PersonaChips";
-import { applyPersonaLens } from "@/lib/report-personas";
+import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
+import { ContactSheet } from "@/components/report/ContactSheet";
+import { ProgramsMatchedHere } from "@/components/report/ProgramsMatchedHere";
+import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
+import { ReasonChips } from "@/components/report/ReasonChips";
+import { ProgramCardFace } from "@/components/report/ProgramCardFace";
+import { DocumentsToGather } from "@/components/report/DocumentsToGather";
+import { FundingWindowChart } from "@/components/report/FundingWindowChart";
+import { IncentiveHorizonChart } from "@/components/report/IncentiveHorizonChart";
+import { CorridorInvestmentChart } from "@/components/report/CorridorInvestmentChart";
+import {
+  LocationSnapshotPanel,
+  WhatsNotablePanel,
+  ExploreByInterestPanel,
+} from "@/components/report/LookingOverview";
+import { BriefStageAsk } from "@/components/report/BriefStageAsk";
+import { BriefPage } from "@/components/report/BriefPage";
+import {
+  DEFAULT_BRIEF_UI_STATE,
+  isBriefPriority,
+  isBriefStage,
+  type BriefUiState,
+} from "@/lib/report-brief";
 import {
   DEFAULT_PERSONA,
+  personaFromSearch,
+  personaLabel,
   personaShareParam,
   resolveInitialPersona,
   storePersona,
   type PersonaId,
 } from "@/lib/personas";
+import { derivePersonaLensVisible } from "@/lib/workspace";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
 import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
 import { ZoningReviewQuestions } from "@/components/zoning/ZoningReviewQuestions";
+import { ZoningStarterHandoff } from "@/components/zoning/ZoningStarterHandoff";
 import {
   PreparationCostBadge,
   parseDocumentCostLine,
@@ -266,6 +293,14 @@ function reportAnalyticsPayload(
   };
 }
 
+/** Fixed 3-part guidepost anatomy (spec v2 visual law) — same order always;
+ *  personas change what fills each part, never the parts themselves. */
+const GUIDEPOST_PART_LABELS: Record<GuidepostPart, string> = {
+  1: "Site & Standing",
+  2: "Capital & Programs",
+  3: "Partners & Next Steps",
+};
+
 const ALLOWED_REPORT_SOURCES = new Set([
   "homepage",
   "seo_cta",
@@ -295,6 +330,9 @@ const ALLOWED_REPORT_SOURCES = new Set([
   // no reports at all. Keep in sync with SHORTLIST_SNAPSHOT_SOURCE in
   // lib/site-shortlist.ts.
   "site_shortlist",
+  // The Brief's own "view the full living report" backlink (spec v2 item
+  // 5) — a reader arriving at the full report from a forwarded Brief.
+  "brief",
 ]);
 
 function cleanReportSource(value: string | null): string | null {
@@ -1938,9 +1976,16 @@ function ReportWizardPage() {
   if (report) {
     // The first-visit tour promises "does not ask for an email", so its
     // sample report renders ungated; organic reports keep the gate.
+    // Shared-link recipient fix (spec v2 deliverable 7): a framed link's
+    // decoded wizard state (`pg=`) can already carry a complete goal
+    // selection — the sender already answered the gate's own question. Every
+    // real recipient of a shared site-incentives link was previously
+    // re-blocked by the same gate the sender had already cleared.
+    const shareLinkGoalsComplete = isShareMode && projectGoalsAreComplete(wizardState);
     const showEmailGate = reportRequiresEmailGate(report)
       && revealedReportKey !== reportEmailGateKey(report)
-      && reportSource !== "welcome_tour";
+      && reportSource !== "welcome_tour"
+      && !shareLinkGoalsComplete;
     // Cross-links only make sense once results for a resolved address are
     // actually on screen: not behind the email gate, and not on a corridor
     // report that has no address to be "near".
@@ -1959,7 +2004,14 @@ function ReportWizardPage() {
           onQuickRefine={handleQuickRefine}
           quickRefineBusy={isGenerating}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
-          showPersonaLens={isInstantMode}
+          // BLOCKER fix (adversarial design review #2): the persona lens
+          // must be visible whenever the wizard state is a site-incentives
+          // report — not just on a fresh instant snapshot. `isInstantMode`
+          // gated the chips off on every shared link and every goal-refined
+          // report, so a forwarded `?persona=` was inert on arrival. This
+          // mirrors the (already-correct) workspace fork
+          // (app/workspace/reports/[id]/page.tsx).
+          showPersonaLens={derivePersonaLensVisible(wizardState)}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -3637,33 +3689,77 @@ function ReportDisplay({
     setPersona(next);
     storePersona(next);
   }, []);
+  // Shared-link recipient experience (spec v2 deliverable 7): a framed link
+  // opens in the sender's chosen lens. Derived at render time (not its own
+  // state — avoids adding a useState slot, which would desync the
+  // ordinal-seeded test harness; see report-page-live-renderer.test.tsx's
+  // maintenance warning) from the same URL the persona-resolution effect
+  // above already reads.
+  const isFramedPersonaLink =
+    typeof window !== "undefined" && personaFromSearch(window.location.search) !== DEFAULT_PERSONA;
   const lensed = useMemo(
     // Without visible chips there must be no invisible lens: a stored session
     // persona must never silently reorder a report that can't show the row.
     () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
     [report, persona, showPersonaLens],
   );
+  // Tracks the last guidepost PART band emitted by the section-render loop
+  // below, so the Contact Sheet mount (Part 03's ONLY section on a persona
+  // view — see the Part-03 correction) can emit its own band when nothing
+  // in the loop already opened Part 03. Plain mutable render-scoped
+  // variable, not state — recomputed fresh every render, same pattern as
+  // `isFramedPersonaLink` above.
+  let guidepostBandTracker: GuidepostPart | null = null;
 
   // ── TOC ──
-  const sectionToAnchor = (title: string) =>
-    isSupportOrganizationSectionTitle(title)
+  // Gate finding 19 (regression, real bug this fixes): this used to slug
+  // ONLY the title (`title.toLowerCase().replace(...)`) — the rendered DOM
+  // id, every TOC href, and hash-based deep-link navigation all keyed off
+  // it. Gate finding 19's per-persona section-title overrides
+  // (lib/report-personas.ts PERSONA_SECTION_TITLE_OVERRIDES) change
+  // `section.title` at lens time — a title-only anchor would have silently
+  // changed the rendered anchor id out from under every existing bookmark/
+  // TOC link/deep-link the moment a persona-specific title landed, exactly
+  // what "anchors are unaffected" was supposed to guarantee. Now prefers
+  // the section's own stable `id` (same precedent `sectionStateKey`
+  // already used for expand/collapse state — see its own comment below,
+  // now folded into this one function since both need the identical
+  // id-first fallback).
+  const sectionToAnchor = (section: ReportSection) =>
+    isSupportOrganizationSectionTitle(section.title)
       ? "your-support-network"
-      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      : section.id ?? section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  /**
+   * Stable identity for a section's UI state (expand/collapse, hash-open),
+   * independent of its position in the array. The persona lens reorders
+   * `report.sections` (and the "Also at this address" disclosure isn't in
+   * the canonical array at all), so keying state by array index — the prior
+   * behavior — silently desynced whenever the active persona changed a
+   * section's position (adversarial review finding #9). Now identical to
+   * sectionToAnchor (both are id-first since gate finding 19) — kept as a
+   * separate named function only so call sites that are conceptually about
+   * "state identity" vs. "the rendered anchor" stay self-documenting.
+   */
+  const sectionStateKey = (section: ReportSection) => sectionToAnchor(section);
+
+  // TOC derives from the LENSED report (spec v2 build order item 3): a
+  // persona-reordered body with a canonical-order TOC pointed readers at the
+  // wrong anchor position.
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
-    if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
-    if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
-    if (report.sections) {
-      for (const s of report.sections) {
-        entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
+    if (lensed.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
+    if (lensed.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (lensed.actionRoadmap && lensed.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
+    if (lensed.sections) {
+      for (const s of lensed.sections) {
+        entries.push({ label: s.title, anchor: sectionToAnchor(s) });
       }
     }
-    if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
-    if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
+    if (lensed.recommendedActions && lensed.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
+    if (lensed.dataSources && lensed.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
-  }, [report]);
+  }, [lensed]);
 
   const supportSection = useMemo(
     () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
@@ -3677,26 +3773,47 @@ function ReportDisplay({
     () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
     []
   );
-  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
+  // Guidepost band (spec v2 visual law): every REAL persona view reads in
+  // the same fixed 3-part anatomy, never on "all". `guidepostPartForSection`
+  // is a pure lookup off the already-lensed, already-ordered section — this
+  // just notices when the part number changes as we walk the list and
+  // drops a band in front of the section that starts the next part.
+  const renderGuidepostBand = (part: GuidepostPart) => (
+    <div key={`guidepost-part-${part}`} className="mt-10 mb-6 flex items-center gap-3 print:hidden">
+      <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-white bg-[#0C1B33] px-2.5 py-1">
+        {`PART ${String(part).padStart(2, "0")}`}
+      </span>
+      <span className="font-editorial text-xl sm:text-2xl text-[#0C1B33]">{GUIDEPOST_PART_LABELS[part]}</span>
+      <span className="h-[2px] flex-grow bg-[#0C1B33]" />
+    </div>
+  );
+  // Keyed by sectionStateKey (section.id, falling back to the title
+  // anchor) — NOT array index. The persona lens reorders `lensed.sections`
+  // on every persona switch; an index-keyed map silently reattached a prior
+  // section's open/closed state to whatever different section now sits at
+  // that position (adversarial review finding #9).
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const isSectionOpen = useCallback(
-    (idx: number, title: string) =>
-      expandedSections[idx] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
+    (key: string, idx: number, title: string) =>
+      expandedSections[key] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
     [expandedSections, ALWAYS_OPEN_SECTIONS]
   );
   useEffect(() => {
     // Auto-expand a collapsed section when a TOC/anchor link targets it.
+    // Reads `lensed` (not canonical `report`) so a hash link opens the
+    // section that's actually rendered under the active persona.
     const openFromHash = () => {
       const hash = window.location.hash.replace(/^#/, "");
-      if (!hash || !report.sections) return;
-      const idx = report.sections.findIndex(
-        (s) => sectionToAnchor(s.title) === hash
+      if (!hash || !lensed.sections) return;
+      const target = lensed.sections.find(
+        (s) => sectionToAnchor(s) === hash
       );
-      if (idx >= 0) setExpandedSections((prev) => ({ ...prev, [idx]: true }));
+      if (target) setExpandedSections((prev) => ({ ...prev, [sectionStateKey(target)]: true }));
     };
     openFromHash();
     window.addEventListener("hashchange", openFromHash);
     return () => window.removeEventListener("hashchange", openFromHash);
-  }, [report.sections]);
+  }, [lensed.sections]);
   const supportItems = useMemo(
     () => supportSection?.items.slice(1) ?? [],
     [supportSection]
@@ -3805,6 +3922,23 @@ function ReportDisplay({
   );
 
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
+  // The Brief (spec v2 item 5): one state slot for the two-question ask +
+  // open/closed, so this only adds ONE ordinal useState slot.
+  const [briefState, setBriefState] = useState<BriefUiState>(DEFAULT_BRIEF_UI_STATE);
+  // sm_ params (additive, spec v2 item 5): a link carrying sm_stage/
+  // sm_priority opens straight into the brief, skipping the ask — the
+  // Brief becomes a genuinely shareable URL, not only an in-page action.
+  // Effect (not a render-time read) to stay hydration-safe, matching the
+  // persona-resolution effect's own pattern.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const stageParam = params.get("sm_stage");
+    const priorityParam = params.get("sm_priority");
+    if (isBriefStage(stageParam) && isBriefPriority(priorityParam)) {
+      setBriefState({ askOpen: false, open: true, stage: stageParam, priority: priorityParam });
+    }
+  }, []);
 
   const handlePrint = () => {
     setDownloadGateOpen(true);
@@ -3836,6 +3970,45 @@ function ReportDisplay({
 	      setTimeout(() => setLinkCopied(false), 2500);
 	    });
 	  }, [persona, report, reportWizardState]);
+
+  // The Brief (spec v2 item 5). The backlink reuses the exact same
+  // share-URL construction as handleShareReport (round-trips the persona
+  // lens); `src=brief` (registered in ALLOWED_REPORT_SOURCES) attributes a
+  // reader arriving at the full report from a forwarded Brief.
+  const briefReportUrl = useMemo(() => {
+    if (typeof window === "undefined" || !reportWizardState) return "";
+    const encoded = encodeWizardState(reportWizardState);
+    const personaParam = personaShareParam(persona);
+    return `${window.location.origin}/report?${encoded}${
+      personaParam ? `&persona=${personaParam}` : ""
+    }&src=brief`;
+  }, [persona, reportWizardState]);
+
+  const handleBriefComplete = useCallback(
+    (stage: BriefUiState["stage"], priority: BriefUiState["priority"]) => {
+      setBriefState({ askOpen: false, open: true, stage, priority });
+      trackEvent(
+        "brief_generated",
+        reportAnalyticsPayload(report, "report_brief", { stage, priority }),
+      );
+      // Reflects sm_stage/sm_priority onto the CURRENT URL (replaceState —
+      // no navigation, no history-stack entry) so the address bar itself
+      // becomes a shareable link straight into the open Brief.
+      if (typeof window !== "undefined" && stage && priority) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("sm_stage", stage);
+        url.searchParams.set("sm_priority", priority);
+        window.history.replaceState(null, "", url.toString());
+      }
+    },
+    [report],
+  );
+
+  const handleBriefPrint = () => {
+    document.body.classList.add("printing-brief");
+    window.print();
+    window.setTimeout(() => document.body.classList.remove("printing-brief"), 500);
+  };
 
   const handleSaveReport = useCallback(() => {
     trackEvent(
@@ -4398,6 +4571,28 @@ function ReportDisplay({
             />
           )}
 
+          {/* Shared-link recipient experience (spec v2 deliverable 7): a
+              framed link opened in the sender's chosen lens — say so, and
+              offer the one-tap escape to the unfiltered view. */}
+          {showPersonaLens && !compact && isFramedPersonaLink && persona !== DEFAULT_PERSONA && (
+            <div
+              data-testid="framed-persona-notice"
+              className="px-5 sm:px-12 md:px-16 py-2.5 border-b border-[#0C1B33]/8 bg-[#EFF3FB] text-[11px] text-[#0C1B33]/70 flex items-center gap-2 print:hidden"
+            >
+              <span>
+                Viewing as <strong className="font-semibold">{personaLabel(persona)}</strong> — the
+                lens this link was shared with.
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePersonaSelect(DEFAULT_PERSONA)}
+                className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#2563EB] hover:underline cursor-pointer"
+              >
+                Switch to All for everything
+              </button>
+            </div>
+          )}
+
           {/* ── Metadata Row ── */}
           <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
             <div>
@@ -4652,6 +4847,18 @@ function ReportDisplay({
             {report.verdict && (
               <div id="verdict">
                 <VerdictCard verdict={report.verdict} />
+                {showPersonaLens && (
+                  <ProgramsMatchedHere
+                    report={lensed}
+                    persona={persona}
+                    programsAnchor={(() => {
+                      const programsSection = lensed.sections?.find(
+                        (s) => !s.collapsedByPersona && s.items?.some((item) => item.programId),
+                      );
+                      return programsSection ? sectionToAnchor(programsSection) : "";
+                    })()}
+                  />
+                )}
               </div>
             )}
 
@@ -4701,21 +4908,43 @@ function ReportDisplay({
             )}
 
             {/* ── Content Sections ── */}
-            {lensed.sections &&
-              lensed.sections.map((section, sectionIdx) => {
+            {(() => {
+              return lensed.sections?.flatMap((section, sectionIdx) => {
+                // Part-03 correction (late owner amendment, binding — supersedes
+                // the earlier "additive" ContactSheet build): on a real persona
+                // lens, Part 03 contains EXACTLY ONE section — the Contact
+                // Sheet. The raw support-organizations section is suppressed
+                // here; its orgs still reach the reader, lane-ranked and
+                // why-lined, as ContactSheet rows below. "All" is untouched —
+                // switching to it always shows the full, un-consolidated list.
+                if (
+                  isSupportOrganizationSectionTitle(section.title) &&
+                  showPersonaLens &&
+                  persona !== DEFAULT_PERSONA
+                ) {
+                  return [];
+                }
+
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
+                const sectionKey = sectionStateKey(section);
+                const guidepostPart = guidepostPartForSection(section, persona);
+                const band =
+                  guidepostPart !== null && guidepostPart !== guidepostBandTracker
+                    ? renderGuidepostBand(guidepostPart)
+                    : null;
+                guidepostBandTracker = guidepostPart;
 
                 // Persona lens: the "Also at this address" group defaults to
                 // collapsed (still user-expandable, still in the DOM for print/
                 // anchors — collapse, never hide).
                 const sectionOpen = section.collapsedByPersona
-                  ? (expandedSections[sectionIdx] ?? false)
-                  : isSectionOpen(sectionIdx, section.title);
+                  ? (expandedSections[sectionKey] ?? false)
+                  : isSectionOpen(sectionKey, sectionIdx, section.title);
 
-                return (
+                const sectionElement = (
                   <div
-                    key={sectionIdx}
-                    id={sectionToAnchor(section.title)}
+                    key={sectionKey}
+                    id={sectionToAnchor(section)}
                     className={`report-section ${sectionOpen ? "mb-14" : "report-section-collapsed mb-6"}`}
                   >
                     <button
@@ -4723,13 +4952,13 @@ function ReportDisplay({
                       onClick={() => {
                         setExpandedSections((prev) => ({
                           ...prev,
-                          [sectionIdx]: !sectionOpen,
+                          [sectionKey]: !sectionOpen,
                         }));
                         trackEvent("section_expanded", {
                           reportType: report.reportType,
                           source: "report_section_toggle",
                           metadata: {
-                            sectionId: sectionToAnchor(section.title),
+                            sectionId: sectionToAnchor(section),
                             sectionTitle: section.title,
                             sectionIndex: sectionIdx,
                             state: sectionOpen ? "collapsed" : "expanded",
@@ -4918,6 +5147,14 @@ function ReportDisplay({
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
                           const hasSideValue = Boolean(item.value && !hasGroupedDetail);
+                          // Gate round 3 BLOCKER 11 RULING: real program items'
+                          // `item.detail` (== program.summary) now renders as
+                          // ProgramCardFace's "What it funds" block instead of
+                          // here, matching the board's sequence — suppressed
+                          // below so it never renders in both places on one
+                          // card. `programId` is set on every ReportItem
+                          // programReportItem() builds, regardless of section.
+                          const isProgramCardItem = Boolean(item.programId);
                           // review6 S11 (CRITICAL, S1 reopened): the `itemProgram`
                           // fallback (a client-side `Program` lookup) is gone —
                           // `reportItem.*` alone, which programReportItem()
@@ -4958,7 +5195,7 @@ function ReportDisplay({
                                   )}
                                   {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
-                                {!hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
+                                {!isProgramCardItem && !hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const { documentName, programs, cost } = parseDocumentCostLine(line);
@@ -4976,7 +5213,7 @@ function ReportDisplay({
                                       );
                                     })}
                                   </ul>
-                                ) : !hasGroupedDetail && item.detail ? (
+                                ) : !isProgramCardItem && !hasGroupedDetail && item.detail ? (
                                   <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || sectionMatchesIdOrTitle(section, CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE) ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
@@ -4999,8 +5236,36 @@ function ReportDisplay({
                               />
                             )}
 
-                            {/* Public program evidence and official navigation */}
-                            {!isSupportNetworkItem && (item.matchExplanation || item.eligibilityRules || item.url || hasNavigationLinks) && (
+                            {/* Gate finding 11 + gate round 2 BLOCKER 11 + gate round 3
+                                BLOCKER 11 RULING: ALL "blessed" card content lives on
+                                the FACE, in the BOARD's exact sequence (the board wins
+                                over spec v2 prose per the round-3 ruling) — header
+                                (administrator/status/window pills), glance row, cost
+                                signals, "What it funds," Commonly required (all
+                                ProgramCardFace), then reason chips labeled "Why this
+                                is shown" (ReasonChips), then Can combine with,
+                                next-step+contact, What to expect, Verify at the source
+                                + the traces-to-public-record line (all
+                                ProgramCardExtras — moved OUT of the accordion below
+                                entirely). Same source data throughout — only
+                                where/how it renders changed. See ProgramCardFace.tsx's
+                                and ProgramCardExtras.tsx's own header comments for the
+                                full board-order rationale, and
+                                lib/__tests__/refine-tier1.test.ts's real render-order
+                                test for the enforcing proof. */}
+                            {!isSupportNetworkItem && (
+                              <>
+                                <ProgramCardFace item={item} />
+                                <ReasonChips explanation={item.matchExplanation} />
+                                <ProgramCardExtras item={item} />
+                              </>
+                            )}
+
+                            {/* Genuinely supplementary detail only — the deeper
+                                match-explanation facts (public data, your answers,
+                                still to confirm, documents to gather, confirm-with)
+                                and official navigation. */}
+                            {!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -5008,29 +5273,6 @@ function ReportDisplay({
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
                                     <MatchExplanationDetails explanation={item.matchExplanation} />
-                                    {/* review6 S11 investigation: the raw `item.whoQualifies`
-                                        block that used to render here (labeled "Published
-                                        Applicant Requirements") was removed — it displayed
-                                        unfiltered internal catalog prose verbatim, the exact
-                                        field PublicProgramView deliberately excludes and for
-                                        the same reason. `item.eligibilityRules` below covers
-                                        the same underlying fact through the reviewed,
-                                        structured form. */}
-                                    {item.eligibilityRules && item.eligibilityRules.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
-                                          Requirements
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.eligibilityRules.map((rule, rIdx) => (
-                                            <li key={rIdx} className="flex items-start gap-2 text-[11px] text-[#0C1B33]/40 leading-relaxed">
-                                              <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
-                                              <span>{rule.description}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
                                     {item.url && (
 	                                      <a
 	                                        href={item.url}
@@ -5057,18 +5299,95 @@ function ReportDisplay({
                       </div>
                     )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
-                      <div className="mt-8 print:hidden">
-                        <ZoningReviewQuestions
+                      <>
+                        {/* Owner ruling A2: every view — the kitchen sink AND
+                            every persona lens — gets the district family +
+                            authority line next to the published code. zoneClass
+                            never renders without this detail. */}
+                        <ZoningStarterHandoff
                           zoneClass={report.metadata.zoneClass}
                           siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
-                          address={report.metadata.address}
-                          businessType={report.metadata.industry ?? report.metadata.proposedUse}
                         />
-                      </div>
+                        {/* Owner ruling A3 (amended): the activity questionnaire
+                            — and its one-pager handoff button — is excluded
+                            from every persona lens, present only on "all". */}
+                        {(!showPersonaLens || persona === DEFAULT_PERSONA) && (
+                          <div className="mt-8 print:hidden">
+                            <ZoningReviewQuestions
+                              zoneClass={report.metadata.zoneClass}
+                              siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                              address={report.metadata.address}
+                              businessType={report.metadata.industry ?? report.metadata.proposedUse}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 );
-              })}
+                return band ? [band, sectionElement] : sectionElement;
+              });
+            })()}
+
+            {/* Charts (spec v2 item 4): real committed data only, render
+                nothing when the address has none. Owner (starting/growing)
+                gets the SBIF funding-window chart; developer gets the
+                incentive-horizon chart; supporter gets the corridor
+                small-business-lending chart (gate finding 5, wired from the
+                FFIEC CRA series the engine resolves at generation time).
+                "all"'s program-mix chart is not built this pass — see
+                docs/persona-report-parity.md. */}
+            {showPersonaLens && (persona === "starting" || persona === "growing") && (
+              <FundingWindowChart report={lensed} />
+            )}
+            {showPersonaLens && persona === "developer" && (
+              <IncentiveHorizonChart report={lensed} />
+            )}
+            {showPersonaLens && persona === "supporter" && (
+              <CorridorInvestmentChart report={lensed} />
+            )}
+
+            {/* "Just looking" overview (gate finding 9/10, R5LookingFinal
+                board): Location snapshot stat row + What's notable — both
+                additive, both persona="looking" only. */}
+            {showPersonaLens && persona === "looking" && (
+              <>
+                <LocationSnapshotPanel report={lensed} />
+                <WhatsNotablePanel report={lensed} />
+              </>
+            )}
+
+            {/* Documents to Gather (spec v2 item 3, owner + supporter only):
+                real Business File foundation-task content, lands at the
+                end of Part 02 (Capital & Programs) — right before the
+                Part 03 band opens below. */}
+            {showPersonaLens && (persona === "starting" || persona === "growing" || persona === "supporter") && (
+              <DocumentsToGather report={lensed} />
+            )}
+
+            {/* Contact Sheet (spec v2 deliverable 8, Part-03 correction):
+                Part 03's ONE section on a real persona lens — the raw
+                support-organizations section was suppressed above; its
+                orgs surface here instead, lane-ranked and why-lined.
+                "All" is untouched (no ContactSheet, no guidepost at all). */}
+            {showPersonaLens && persona !== DEFAULT_PERSONA && (
+              <>
+                {guidepostBandTracker !== 3 && renderGuidepostBand(3)}
+                <div className="mt-8">
+                  <ContactSheet report={lensed} persona={persona} />
+                </div>
+              </>
+            )}
+
+            {/* "Explore by interest" + the full-picture line (gate finding
+                9/10, R5LookingFinal board PART 03) — persona="looking" only,
+                moves someone off this screening lens once they know what
+                they're looking for. */}
+            {showPersonaLens && persona === "looking" && (
+              <div className="mt-8">
+                <ExploreByInterestPanel report={lensed} />
+              </div>
+            )}
 
             {/* ── Recommended Actions ──
                 Demoted behind native disclosure when report.startHere is
@@ -5329,6 +5648,18 @@ function ReportDisplay({
                 )}
               </button>
             )}
+            {/* The Brief (spec v2 item 5): a one-page, forwardable summary
+                — only offered on a real persona lens (it reads the lensed
+                programs/contacts the same way Contact Sheet does). */}
+            {showPersonaLens && persona !== DEFAULT_PERSONA && reportWizardState && (
+              <button
+                onClick={() => setBriefState((prev) => ({ ...prev, askOpen: true }))}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Build My Brief
+              </button>
+            )}
             {!compact && onCompare && !compareMode && (
               <button
                 onClick={onCompare}
@@ -5420,6 +5751,64 @@ function ReportDisplay({
           wizardState={reportWizardState}
           onClose={() => setSaveModalOpen(false)}
         />
+      )}
+      {/* The Brief (spec v2 item 5): the two-question ask, then the
+          one-page shareable itself. Both read the SAME lensed report — no
+          second generation path. */}
+      {briefState.askOpen && (
+        <BriefStageAsk
+          onComplete={handleBriefComplete}
+          onCancel={() => setBriefState((prev) => ({ ...prev, askOpen: false }))}
+        />
+      )}
+      {briefState.open && briefState.stage && briefState.priority && (
+        <div id="brief-overlay" className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4">
+          <div className="mx-auto flex max-w-[860px] flex-col gap-3 py-6">
+            <div className="flex items-center justify-between gap-3 print:hidden">
+              <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white">
+                The Brief
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBriefPrint}
+                  className="inline-flex items-center gap-2 bg-[#2563EB] px-4 py-2.5 font-mono-bureau text-[9.5px] tracking-[0.1em] uppercase text-white"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print (2-up)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBriefState((prev) => ({ ...prev, open: false }))}
+                  className="inline-flex items-center gap-2 border border-white/30 px-4 py-2.5 font-mono-bureau text-[9.5px] tracking-[0.1em] uppercase text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div id="brief-print-2up" className="grid grid-cols-1 gap-4 print:grid-cols-2 print:gap-[0.3in]">
+              <BriefPage
+                report={lensed}
+                persona={persona}
+                stage={briefState.stage}
+                priority={briefState.priority}
+                reportUrl={briefReportUrl}
+              />
+              {/* Second copy — screen-hidden, print-only. Two-up print CSS
+                  (spec v2 item 5): the same brief twice on one landscape
+                  sheet, for handing to two people or filing + carrying. */}
+              <div className="hidden print:block">
+                <BriefPage
+                  report={lensed}
+                  persona={persona}
+                  stage={briefState.stage}
+                  priority={briefState.priority}
+                  reportUrl={briefReportUrl}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   );

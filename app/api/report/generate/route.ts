@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateReportData, type ReportContext } from "@/lib/report-engine";
 import { getProgramsSync } from "@/lib/programs-data";
+import { loadCapitalContextForArea } from "@/lib/investment-analysis";
 import type { WizardState } from "@/lib/report-wizard-config";
 import type { Program } from "@/lib/types";
 
@@ -59,6 +60,22 @@ export async function POST(request: NextRequest) {
   const ctx = (isPlainObject(body.ctx) ? body.ctx : {}) as ReportContext;
 
   const programs: Program[] = getProgramsSync();
+
+  // Gate finding 5 — supporter corridor-investment chart. Resolved HERE,
+  // server-side (a Route Handler is never bundled into the client, unlike
+  // lib/report-engine.ts), reading the REAL FFIEC CRA series for the
+  // community area the client already resolved (ctx.localBusinessSupport,
+  // the same source report-engine.ts's buildCommunityAssets uses). Omitted
+  // entirely when there's no community area or the file has no series for
+  // it — generateReportData's buildCorridorInvestmentContext already
+  // treats absence as "render nothing," never a fabricated series.
+  const communityArea = ctx.localBusinessSupport?.communityArea;
+  if (communityArea) {
+    const raw = loadCapitalContextForArea(communityArea);
+    if (raw.cra && raw.cra.length > 0) {
+      ctx.capitalContext = { communityArea, cra: raw.cra, sources: raw.sources };
+    }
+  }
 
   try {
     const report = generateReportData(state, programs, ctx);

@@ -961,6 +961,7 @@
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
     "status": "active",
     "personas": [
+      "supporter",
       "growing"
     ],
     "intakeStatus": "rolling",
@@ -1181,6 +1182,7 @@
     "sourceUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
     "status": "lapsed",
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -1315,6 +1317,7 @@
     "sourceUrl": "https://cookcountysmallbiz.org/",
     "status": "active",
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -1530,6 +1533,7 @@
       }
     ],
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -1762,6 +1766,7 @@
     "fastestConfirmingStep": "Call DPD Historic Preservation at (312) 744-3200",
     "boundaryDisclaimer": "landmark-districts.geojson holds 59 features; current count is 62 (2025 Landmarks Ordinance). Refresh from data.cityofchicago.org.",
     "personas": [
+      "supporter",
       "growing",
       "developer"
     ],
@@ -1913,6 +1918,7 @@
     "boundaryDisclaimer": "Boundary layer is stale and has not been re-sourced. micro-market-recovery.geojson holds 13 legacy MMRP areas; the City now publishes 11 designated CNRP target areas, and the current 11 have not been mapped here. Confirm the target area with DOH before relying on the map.",
     "expirationNote": "Program scope changed: this is now a homeownership program (Department of Housing), not a commercial storefront program. Treat references to corridor activation as historical.",
     "personas": [
+      "supporter",
       "growing",
       "developer"
     ],
@@ -2086,6 +2092,7 @@
       }
     ],
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -3391,6 +3398,7 @@
     "benefitRange": "Up to $75,000 (75% reimbursement)",
     "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing",
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -3480,6 +3488,7 @@
       }
     ],
     "personas": [
+      "supporter",
       "starting"
     ],
     "intakeStatus": "rolling",
@@ -5129,6 +5138,7 @@
       }
     ],
     "personas": [
+      "supporter",
       "growing"
     ],
     "intakeStatus": "open",
@@ -5606,6 +5616,7 @@
     "fastestConfirmingStep": "Visit greenwoodarchercapital.org or contact GAC directly for current product terms and CRE eligibility",
     "deadlines": [],
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],
@@ -5676,6 +5687,7 @@
     "fastestConfirmingStep": "Call A4CB at (312) 275-3000 or visit a4cb.org/services/loans/",
     "deadlines": [],
     "personas": [
+      "supporter",
       "starting",
       "growing"
     ],

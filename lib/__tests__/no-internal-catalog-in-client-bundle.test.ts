@@ -278,6 +278,139 @@ function findPathToInternalCatalogForFixture(project: Project, root: SourceFile)
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Gate round 2, MAJOR 24 — this session already hit and fixed one real
+// instance of the regression class this guard exists for: lib/report-
+// engine.ts statically imported lib/investment-analysis.ts (which pulls
+// in node:fs), and because report-engine.ts is bundled into 'use client'
+// app/report/page.tsx, the production webpack client build broke. The
+// fix (buildCorridorInvestmentContext made pure, fed via
+// ReportContext.capitalContext, with the real fs-backed loader moved
+// into the server-only app/api/report/generate/route.ts) was correct,
+// but nothing stopped a FUTURE static import from reintroducing the same
+// class of break — that class was only ever caught by a slow CI webpack
+// build, not by this fast vitest guard. Parameterizing the existing BFS
+// (same directLocalImports edge-walk as the internal-catalog guard
+// above) over two more targets — the specific file that broke the build,
+// and the general "any node:fs import at all" shape — makes it fail
+// locally in vitest instead.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** BFS from `root` to a specific target file path (not a literal/require
+ *  reference — an actual reachable module in the import graph, the shape
+ *  lib/investment-analysis.ts has: a real .ts file ts-morph resolves
+ *  and adds as a SourceFile, unlike the never-added .json catalog). */
+function findPathToFile(root: SourceFile, targetPath: string): string[] | null {
+  if (root.getFilePath() === targetPath) return [root.getFilePath()];
+  const visited = new Set<string>([root.getFilePath()]);
+  const queue: { file: SourceFile; chain: string[] }[] = [{ file: root, chain: [root.getFilePath()] }];
+  while (queue.length > 0) {
+    const { file, chain } = queue.shift()!;
+    for (const next of directLocalImports(file)) {
+      const p = next.getFilePath();
+      if (p === targetPath) return [...chain, p];
+      if (visited.has(p)) continue;
+      visited.add(p);
+      queue.push({ file: next, chain: [...chain, p] });
+    }
+  }
+  return null;
+}
+
+/** True if `sourceFile` itself has a runtime (non-type-only) import or
+ *  require() of one of `moduleNames` — bare package specifiers (e.g.
+ *  "fs", "node:fs"), which never resolve to a project SourceFile the way
+ *  a local .ts/.tsx/.json path does, so they need their own literal
+ *  check rather than showing up via directLocalImports. */
+function referencesBareModule(sourceFile: SourceFile, moduleNames: readonly string[]): boolean {
+  const names = new Set(moduleNames);
+  for (const imp of sourceFile.getImportDeclarations()) {
+    if (imp.isTypeOnly()) continue;
+    if (names.has(imp.getModuleSpecifierValue())) return true;
+  }
+  let found = false;
+  sourceFile.forEachDescendant((node) => {
+    if (found) return;
+    if (!Node.isCallExpression(node)) return;
+    const expr = node.getExpression();
+    if (!Node.isIdentifier(expr) || expr.getText() !== "require") return;
+    const arg = node.getArguments()[0];
+    if (arg && Node.isStringLiteral(arg) && names.has(arg.getLiteralText())) found = true;
+  });
+  return found;
+}
+
+/** BFS from `root` to any file (itself or transitively reachable) that
+ *  imports one of `moduleNames` at runtime. */
+function findPathToBareModule(root: SourceFile, moduleNames: readonly string[]): string[] | null {
+  const visited = new Set<string>([root.getFilePath()]);
+  const queue: { file: SourceFile; chain: string[] }[] = [{ file: root, chain: [root.getFilePath()] }];
+  while (queue.length > 0) {
+    const { file, chain } = queue.shift()!;
+    if (referencesBareModule(file, moduleNames)) return chain;
+    for (const next of directLocalImports(file)) {
+      const p = next.getFilePath();
+      if (visited.has(p)) continue;
+      visited.add(p);
+      queue.push({ file: next, chain: [...chain, p] });
+    }
+  }
+  return null;
+}
+
+describe("client-transitive import guard — extended targets synthetic self-test (gate round 2, MAJOR 24)", () => {
+  it("catches a client file that transitively reaches a specific named target file", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile("/lib/investment-analysis.ts", `export function x() { return 1; }`);
+    project.createSourceFile(
+      "/lib/report-engine.ts",
+      `export { x } from "./investment-analysis";`,
+    );
+    const clientFile = project.createSourceFile(
+      "/app/report/page.tsx",
+      `"use client";\nimport { x } from "../../lib/report-engine";\nexport default x;`,
+    );
+    const chain = findPathToFile(clientFile, "/lib/investment-analysis.ts");
+    expect(chain).not.toBeNull();
+    expect(chain![chain!.length - 1]).toBe("/lib/investment-analysis.ts");
+  });
+
+  it("does NOT flag a client file whose import graph never reaches the named target", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile("/lib/investment-analysis.ts", `export function x() { return 1; }`);
+    project.createSourceFile("/lib/pure.ts", `export function y() { return 2; }`);
+    const clientFile = project.createSourceFile(
+      "/components/Good.tsx",
+      `"use client";\nimport { y } from "../lib/pure";\nexport default y;`,
+    );
+    expect(findPathToFile(clientFile, "/lib/investment-analysis.ts")).toBeNull();
+  });
+
+  it("catches a client file that transitively imports a bare node:fs module", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/investment-analysis.ts",
+      `import { readFileSync } from "node:fs";\nexport function load() { return readFileSync("x"); }`,
+    );
+    const clientFile = project.createSourceFile(
+      "/app/report/page.tsx",
+      `"use client";\nimport { load } from "../../lib/investment-analysis";\nexport default load;`,
+    );
+    const chain = findPathToBareModule(clientFile, ["fs", "node:fs"]);
+    expect(chain).not.toBeNull();
+  });
+
+  it("does NOT flag a client file with no node:fs in its reachable graph", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile("/lib/pure.ts", `export function y() { return 2; }`);
+    const clientFile = project.createSourceFile(
+      "/components/Good.tsx",
+      `"use client";\nimport { y } from "../lib/pure";\nexport default y;`,
+    );
+    expect(findPathToBareModule(clientFile, ["fs", "node:fs"])).toBeNull();
+  });
+});
+
 describe("client-transitive import guard — real codebase scan", () => {
   const project = buildRealProject();
   const allFiles = project
@@ -307,6 +440,41 @@ describe("client-transitive import guard — real codebase scan", () => {
         `${offenders.length} client component(s) can reach data/programs-internal.json through the static import graph:\n${report}\n` +
           `Fix: route through the sanitized PublicProgramView (public/data/programs-public.json or /api/programs), ` +
           `or split the needed pure logic into a module with zero catalog dependency (see lib/program-slug.ts).`,
+      );
+    }
+    expect(offenders.length).toBe(0);
+  }, 60000);
+
+  it("lib/investment-analysis.ts is NOT reachable from any 'use client' file, directly or transitively (gate round 2, MAJOR 24 — the exact file whose static import broke the production webpack client build earlier this session)", () => {
+    const targetPath = resolve(process.cwd(), "lib/investment-analysis.ts");
+    const offenders: { root: string; chain: string[] }[] = [];
+    for (const root of clientRoots) {
+      const chain = findPathToFile(root, targetPath);
+      if (chain) offenders.push({ root: root.getFilePath(), chain });
+    }
+    if (offenders.length > 0) {
+      const report = offenders.map((o) => `  ${o.root}\n    -> ${o.chain.join("\n    -> ")}`).join("\n");
+      throw new Error(
+        `${offenders.length} client component(s) can statically reach lib/investment-analysis.ts:\n${report}\n` +
+          `Fix: feed the needed data through ReportContext.capitalContext (see buildCorridorInvestmentContext) ` +
+          `instead of a static import — the real fs-backed loader belongs only in a server-only Route Handler.`,
+      );
+    }
+    expect(offenders.length).toBe(0);
+  }, 60000);
+
+  it("no node:fs (or bare 'fs') import is reachable from any 'use client' file, directly or transitively (gate round 2, MAJOR 24)", () => {
+    const offenders: { root: string; chain: string[] }[] = [];
+    for (const root of clientRoots) {
+      const chain = findPathToBareModule(root, ["fs", "node:fs", "fs/promises", "node:fs/promises"]);
+      if (chain) offenders.push({ root: root.getFilePath(), chain });
+    }
+    if (offenders.length > 0) {
+      const report = offenders.map((o) => `  ${o.root}\n    -> ${o.chain.join("\n    -> ")}`).join("\n");
+      throw new Error(
+        `${offenders.length} client component(s) can statically reach a node:fs import:\n${report}\n` +
+          `Fix: move the fs-backed logic into a server-only Route Handler or Server Component and pass the ` +
+          `result down as plain data, the same fix already applied to lib/investment-analysis.ts.`,
       );
     }
     expect(offenders.length).toBe(0);

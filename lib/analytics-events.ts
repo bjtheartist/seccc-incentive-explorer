@@ -31,6 +31,18 @@ export const ANALYTICS_EVENT_TYPES = [
   "demo_address_clicked",
   "map_preview_clicked",
   "persona_chip_selected",
+  // Intake inference (owner ruling A1, spec v2 deliverable 6): the
+  // ReportEmailGate persona chip row is pre-selected from goal/industry/
+  // reportType, never a blocking question. One event per gate submission,
+  // metadata.outcome one of "confirmed" | "corrected" | "skipped".
+  "persona_intake_inferred",
+  // Documents to Gather -> Business File bridge (persona spec v2, item 3):
+  // fired when a reader clicks through from the report's foundation-task
+  // list into the real Business File workspace route.
+  "documents_to_gather_tracked",
+  // The Brief (persona spec v2, item 5): fired once the two-question ask
+  // (stage, then priority) completes and the one-page brief renders.
+  "brief_generated",
   "wizard_step_viewed",
   "refine_cta_shown",
   "refine_clicked",

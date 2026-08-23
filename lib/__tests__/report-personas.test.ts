@@ -4,15 +4,23 @@ import { join } from "path";
 import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
+  guidepostPartForSection,
+  personaEmptyProgramsDescription,
   personaSelectionEvent,
   programMatchesPersona,
   PROGRAM_PERSONA_TAGS,
+  visiblePersonaProgramNames,
 } from "@/lib/report-personas";
 import {
+  CONFIRMED_PROGRAMS_SECTION_ID,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_ID,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  SECTION_IDS,
 } from "@/lib/report-engine";
+import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
 import { PERSONA_CHIPS, type PersonaId } from "@/lib/personas";
@@ -30,6 +38,7 @@ function reportFixture(): GeneratedReport {
     summary: "",
     sections: [
       {
+        id: CONFIRMED_PROGRAMS_SECTION_ID,
         title: CONFIRMED_PROGRAMS_SECTION_TITLE,
         description: "",
         items: [
@@ -59,6 +68,7 @@ function reportFixture(): GeneratedReport {
         ],
       },
       {
+        id: SECTION_IDS.neighborhoodEconomicContext,
         title: "Neighborhood Economic Context",
         description: "",
         items: [{ label: "Median income", value: "$40,000" }],
@@ -108,38 +118,44 @@ describe("applyPersonaLens", () => {
     expect(report).toEqual(snapshot);
   });
 
-  it("ranks matched programs first and collapses the rest — never hides them", () => {
+  it("hard filter: visible = persona-tagged ∪ pinned overlays; the rest collapses — never hides them", () => {
     const report = reportFixture();
     const { report: lensed, matchedBefore, matchedAfter } = applyPersonaLens(
       report,
       "developer",
     );
 
+    // Gate finding 19: found by id, not title — under a real persona lens
+    // this section's title is now overridden (e.g. developer sees
+    // "Capital-relevant programs"), so a post-lens title match would fail.
     const confirmed = lensed.sections.find(
-      (s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE,
+      (s) => s.id === CONFIRMED_PROGRAMS_SECTION_ID,
     )!;
     const also = lensed.sections.find((s) => s.title === ALSO_AT_ADDRESS_TITLE)!;
 
-    // Matched (tif, federalOZ) + the non-program lead note stay primary.
+    // Matched (tif, federalOZ) + the PINNED overlay (highUnemployment — context,
+    // not a program, always visible) + the non-program lead note stay primary.
     expect(confirmed.items.map((i) => i.programId)).toEqual([
       "tif",
       "federalOZ",
+      "highUnemployment",
       undefined,
     ]);
-    // Everything else collapses under a disclosure — present, not dropped.
+    // Only the persona-mismatched program (sbif) collapses under a
+    // disclosure — present, not dropped.
     expect(also).toBeDefined();
     expect(also.collapsedByPersona).toBe(true);
-    expect(also.items.map((i) => i.programId)).toEqual(["sbif", "highUnemployment"]);
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif"]);
 
     // Collapse-not-hide: the full program set is preserved across the split.
     expect(new Set(programIds(lensed))).toEqual(
       new Set(["tif", "federalOZ", "sbif", "highUnemployment"]),
     );
     expect(matchedBefore).toBe(4);
-    expect(matchedAfter).toBe(2);
+    expect(matchedAfter).toBe(3);
   });
 
-  it("leaves a section untouched when the persona matches nothing in it", () => {
+  it("keeps pinned overlay items visible even when nothing persona-tagged survives in the section", () => {
     const report: GeneratedReport = {
       ...reportFixture(),
       sections: [
@@ -156,19 +172,43 @@ describe("applyPersonaLens", () => {
     const { report: lensed, matchedAfter } = applyPersonaLens(report, "developer");
     expect(lensed.sections.some((s) => s.title === ALSO_AT_ADDRESS_TITLE)).toBe(false);
     expect(lensed.sections[0].items).toHaveLength(2);
-    expect(matchedAfter).toBe(0);
+    expect(matchedAfter).toBe(1);
   });
 
-  it("composes with a goal-refined report: both confirmed sections partition into ONE combined disclosure", () => {
+  it("renders explicit empty-state copy (never a blank page, never the unfiltered list) when a confirmed tier has zero visible programs", () => {
+    const report: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          id: CONFIRMED_PROGRAMS_SECTION_ID,
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: [{ label: "SBIF", value: "", programId: "sbif" }],
+        },
+      ],
+    };
+    const { report: lensed } = applyPersonaLens(report, "developer");
+    // Gate finding 19: found by id — under "developer" this section's title
+    // is now overridden to "Capital-relevant programs".
+    const confirmed = lensed.sections.find((s) => s.id === CONFIRMED_PROGRAMS_SECTION_ID)!;
+    expect(confirmed.items).toHaveLength(0);
+    expect(confirmed.description).toBe(personaEmptyProgramsDescription("developer"));
+    const also = lensed.sections.find((s) => s.title === ALSO_AT_ADDRESS_TITLE)!;
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif"]);
+  });
+
+  it("folds a fully-demoted tier (Other Programs Mapped / Additional Programs to Explore) ENTIRELY into the disclosure — goal-matched ∩ persona-tagged never includes it, pinned overlays excepted", () => {
     // The email gate funnels every real instant-flow user into the refined
-    // shape: "Programs to Review for Your Goal" + "Other Programs Tied to This
-    // Address". Persona (audience) and goal (outcome) are orthogonal lenses —
-    // the persona lens must re-rank both sections and pool their out-of-lens
-    // programs into a single "Also at this address" after the last one.
+    // shape: "Programs to Review for Your Goal" + "Other Programs Mapped at
+    // This Address". Persona (audience) and goal (outcome) are orthogonal —
+    // "Other Programs Mapped" is NOT goal-matched by construction, so under a
+    // persona lens it folds into the ONE disclosure in full (its pinned
+    // overlay item excepted — context, not a program).
     const refined: GeneratedReport = {
       ...reportFixture(),
       sections: [
         {
+          id: GOAL_MATCH_PROGRAMS_SECTION_ID,
           title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
           description: "",
           items: [
@@ -177,6 +217,7 @@ describe("applyPersonaLens", () => {
           ],
         },
         {
+          id: OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
           title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
           description: "",
           items: [
@@ -185,6 +226,7 @@ describe("applyPersonaLens", () => {
           ],
         },
         {
+          id: SECTION_IDS.neighborhoodEconomicContext,
           title: "Neighborhood Economic Context",
           description: "",
           items: [{ label: "Median income", value: "$40,000" }],
@@ -198,25 +240,31 @@ describe("applyPersonaLens", () => {
     );
 
     const titles = lensed.sections.map((s) => s.title);
-    // Exactly one combined disclosure, placed right after the last confirmed
-    // section (no duplicate "Also at this address" anchors in the DOM).
+    // Exactly one combined disclosure.
     expect(titles.filter((t) => t === ALSO_AT_ADDRESS_TITLE)).toHaveLength(1);
+    // Gate finding 19: the goal-matched tier and Neighborhood Economic
+    // Context both get developer's board titles ("Capital-relevant
+    // programs," "Neighborhood context") — the FIRST "programs"-bucket
+    // section only (applyPersonaSectionTitles applies each bucket's
+    // override once); the fully-demoted "Other Programs Mapped" tier is
+    // the SECOND programs-bucket section here, so it keeps its own real
+    // title rather than being renamed to the same string twice.
     expect(titles).toEqual([
-      GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+      "Capital-relevant programs",
       OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
       ALSO_AT_ADDRESS_TITLE,
-      "Neighborhood Economic Context",
+      "Neighborhood context",
     ]);
 
-    // Goal-ranked order is preserved inside each lensed section.
+    // Goal-matched tier: persona-tag filtered as before (federalOZ matches
+    // developer, sbif does not).
     expect(lensed.sections[0].items.map((i) => i.programId)).toEqual(["federalOZ"]);
-    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["tif"]);
+    // Fully-demoted tier: TIF is not goal-matched, so it is NOT rescued by
+    // matching "developer" — only the pinned overlay survives here.
+    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["highUnemployment"]);
     const also = lensed.sections[2];
     expect(also.collapsedByPersona).toBe(true);
-    expect(also.items.map((i) => i.programId)).toEqual([
-      "sbif",
-      "highUnemployment",
-    ]);
+    expect(also.items.map((i) => i.programId)).toEqual(["sbif", "tif"]);
 
     // Collapse-not-hide across the refined shape too.
     expect(new Set(programIds(lensed))).toEqual(
@@ -224,6 +272,62 @@ describe("applyPersonaLens", () => {
     );
     expect(matchedBefore).toBe(4);
     expect(matchedAfter).toBe(2);
+  });
+
+  it("visiblePersonaProgramNames reads off the SAME lensed section list the cards render, in order — the executive-summary panel and the body can never disagree", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
+    expect(visiblePersonaProgramNames(lensed)).toEqual([
+      { programId: "tif", label: "TIF" },
+      { programId: "federalOZ", label: "Federal OZ" },
+      { programId: "highUnemployment", label: "High Unemployment" },
+    ]);
+  });
+
+  // Gate finding 1 (regression, real bug this fixes): Civic Representation
+  // rows for SSA/CCSA carry `programId` (so their copy can program-link),
+  // which used to make them fall through the old un-gated scan and appear
+  // in "Programs matched here" — genuinely wrong for a panel about matched
+  // PROGRAMS. A fixture WITH a civic section proves the gate excludes it.
+  it("excludes Civic Representation's SSA/CCSA rows (they carry programId but are not the 'programs' bucket)", () => {
+    const withCivic: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        ...reportFixture().sections,
+        {
+          id: "civic-representation",
+          title: "Civic Representation",
+          description: "",
+          items: [
+            { label: "SSA", value: "SSA #51", programId: "ssa" },
+            { label: "City corridor", value: "Cottage Grove CCSA", programId: "ccsa" },
+          ],
+        },
+      ],
+    };
+    const { report: lensed } = applyPersonaLens(withCivic, "developer");
+    const names = visiblePersonaProgramNames(lensed);
+    expect(names.some((n) => n.programId === "ssa")).toBe(false);
+    expect(names.some((n) => n.programId === "ccsa")).toBe(false);
+  });
+
+  it("guidepostPartForSection assigns the fixed 3-part anatomy and returns null for 'all' (no guidepost)", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
+    // Gate finding 19: found by id, not the (now persona-overridden) title.
+    const confirmed = lensed.sections.find((s) => s.id === CONFIRMED_PROGRAMS_SECTION_ID)!;
+    const support = lensed.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE)!;
+    expect(guidepostPartForSection(confirmed, "developer")).toBe(2);
+    expect(guidepostPartForSection(support, "developer")).toBe(3);
+    expect(guidepostPartForSection(confirmed, "all")).toBeNull();
+  });
+
+  it("reorders sections per the persona's fixed part order (supporter leads with Neighborhood context, never touching the 3-part anatomy)", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "supporter");
+    // Gate finding 19: supporter's board title for this section is
+    // "Neighborhood context" (R5SupporterFinal) — id stays the same
+    // (SECTION_IDS.neighborhoodEconomicContext), only the display title
+    // changes; this section still LEADS the part order either way.
+    expect(lensed.sections[0].id).toBe(SECTION_IDS.neighborhoodEconomicContext);
+    expect(lensed.sections[0].title).toBe("Neighborhood context");
   });
 
   it("reorders the action roadmap so persona-relevant actions lead (all kept)", () => {
@@ -331,7 +435,7 @@ describe("personaSelectionEvent — exactly once per selection", () => {
       persona: "developer",
       reportType: "site-incentives",
       matchedProgramsBefore: 4,
-      matchedProgramsAfter: 2,
+      matchedProgramsAfter: 3,
     });
   });
 });
@@ -359,6 +463,174 @@ describe("persona tags stay in sync with the static dataset", () => {
     for (const [, tags] of Object.entries(PROGRAM_PERSONA_TAGS)) {
       expect(tags.length).toBeGreaterThan(0);
       for (const tag of tags) expect(validPersonas.has(tag)).toBe(true);
+    }
+  });
+});
+
+describe("Gate finding 19: per-persona section titles", () => {
+  function multiSectionReport(): GeneratedReport {
+    return {
+      ...reportFixture(),
+      sections: [
+        { id: SECTION_IDS.siteFacts, title: "Site Facts", description: "", items: [] },
+        { id: SECTION_IDS.logisticsAccess, title: "Logistics Access", description: "", items: [] },
+        { id: SECTION_IDS.civicRepresentation, title: "Civic Representation", description: "", items: [] },
+        { id: SECTION_IDS.zoningUseStartingPoint, title: "Zoning & Use Starting Point", description: "", items: [] },
+        { id: SECTION_IDS.neighborhoodEconomicContext, title: "Neighborhood Economic Context", description: "", items: [] },
+        { id: SECTION_IDS.documentReadinessChecklist, title: "Document Readiness Checklist", description: "", items: [] },
+        { id: CAPITAL_PARTNER_SECTION_ID, title: CAPITAL_PARTNER_SECTION_TITLE, description: "", items: [] },
+        {
+          id: CONFIRMED_PROGRAMS_SECTION_ID,
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: [{ label: "TIF", value: "", programId: "tif" }],
+        },
+      ],
+    };
+  }
+
+  it("id-keyed state (TOC anchors, expand/collapse) survives a title override — the exact ruling this whole finding is built on", () => {
+    // The SAME section, the SAME id, rendered under two personas whose
+    // board titles for it genuinely differ (owner: "Site facts", developer:
+    // "Site facts & county records"). If anchors were still title-derived,
+    // this id would change out from under any bookmark/TOC link/deep-link
+    // the moment the persona (and therefore the title) changed — the exact
+    // regression gate finding 19 surfaced and fixed in sectionToAnchor.
+    const { report: ownerLensed } = applyPersonaLens(multiSectionReport(), "starting");
+    const { report: devLensed } = applyPersonaLens(multiSectionReport(), "developer");
+    const ownerSite = ownerLensed.sections.find((s) => s.id === SECTION_IDS.siteFacts)!;
+    const devSite = devLensed.sections.find((s) => s.id === SECTION_IDS.siteFacts)!;
+
+    // Titles genuinely differ per persona...
+    expect(ownerSite.title).toBe("Site facts");
+    expect(devSite.title).toBe("Site facts & county records");
+    expect(ownerSite.title).not.toBe(devSite.title);
+    // ...but the id — what TOC hrefs, the rendered DOM id, and hash
+    // deep-links all actually key by (app/report/page.tsx sectionToAnchor,
+    // gate finding 19) — stays byte-identical across both.
+    expect(ownerSite.id).toBe(SECTION_IDS.siteFacts);
+    expect(devSite.id).toBe(SECTION_IDS.siteFacts);
+    expect(ownerSite.id).toBe(devSite.id);
+  });
+
+  it("never renames the SAME bucket twice when two distinct program-tier sections both survive — title override applies to the first section per bucket only", () => {
+    // OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE is always a "fully demoted"
+    // tier (isFullyDemotedTier) — a persona-tagged item never rescues it on
+    // its own, only a PINNED OVERLAY item does. highUnemployment is the
+    // real pinned overlay id this file's other fixtures already use, so
+    // this is the genuine, achievable way to get TWO real, non-collapsed
+    // "programs"-bucket sections to coexist for this test.
+    const twoProgramTiers: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        { id: CONFIRMED_PROGRAMS_SECTION_ID, title: CONFIRMED_PROGRAMS_SECTION_TITLE, description: "", items: [{ label: "TIF", value: "", programId: "tif" }] },
+        { id: OTHER_CONFIRMED_PROGRAMS_SECTION_ID, title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE, description: "", items: [{ label: "High Unemployment", value: "", programId: "highUnemployment" }] },
+      ],
+    };
+    const { report: lensed } = applyPersonaLens(twoProgramTiers, "developer");
+    const titles = lensed.sections.map((s) => s.title);
+    expect(titles).toContain("Capital-relevant programs");
+    // The second programs-bucket section keeps its own real title — never
+    // duplicated to the same override string.
+    expect(titles).toContain(OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE);
+    expect(titles.filter((t) => t === "Capital-relevant programs")).toHaveLength(1);
+  });
+
+  it("per-persona title snapshot — exact strings from the four R5 board files (re-read in full for this finding)", () => {
+    const owner = applyPersonaLens(multiSectionReport(), "starting").report;
+    const growing = applyPersonaLens(multiSectionReport(), "growing").report;
+    const developer = applyPersonaLens(multiSectionReport(), "developer").report;
+    const supporter = applyPersonaLens(multiSectionReport(), "supporter").report;
+    const looking = applyPersonaLens(multiSectionReport(), "looking").report;
+
+    const titleById = (report: GeneratedReport, id: string) =>
+      report.sections.find((s) => s.id === id)?.title;
+
+    // R5OwnerFinal (starting AND growing both render this board — the
+    // "Business owner" chip group).
+    for (const lensed of [owner, growing]) {
+      expect(titleById(lensed, SECTION_IDS.siteFacts)).toBe("Site facts");
+      expect(titleById(lensed, SECTION_IDS.logisticsAccess)).toBe("Logistics access");
+      expect(titleById(lensed, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
+      expect(titleById(lensed, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
+      expect(titleById(lensed, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for your goal");
+      expect(titleById(lensed, SECTION_IDS.documentReadinessChecklist)).toBe("Document readiness");
+      expect(titleById(lensed, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
+    }
+
+    // R5DeveloperFinal
+    expect(titleById(developer, SECTION_IDS.siteFacts)).toBe("Site facts & county records");
+    expect(titleById(developer, SECTION_IDS.logisticsAccess)).toBe("Logistics access");
+    expect(titleById(developer, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
+    expect(titleById(developer, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning & district family");
+    expect(titleById(developer, SECTION_IDS.neighborhoodEconomicContext)).toBe("Neighborhood context");
+    expect(titleById(developer, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Capital-relevant programs");
+    expect(titleById(developer, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
+
+    // R5SupporterFinal
+    expect(titleById(supporter, SECTION_IDS.neighborhoodEconomicContext)).toBe("Neighborhood context");
+    expect(titleById(supporter, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
+    expect(titleById(supporter, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
+    expect(titleById(supporter, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for the goal");
+    expect(titleById(supporter, SECTION_IDS.documentReadinessChecklist)).toBe("Document readiness");
+    expect(titleById(supporter, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
+
+    // R5LookingFinal — only Civic Representation is a generic section on
+    // this board; Location snapshot/What's notable/Explore by interest/The
+    // full picture are bespoke panels (components/report/LookingOverview.tsx),
+    // not titled ReportSection objects this map can reach.
+    expect(titleById(looking, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
+    // Confirms the deliberate non-coverage: looking has no override for
+    // siteFacts (the board doesn't render a generic "Site Facts" section
+    // for it at all — Location snapshot replaces it).
+    expect(titleById(looking, SECTION_IDS.siteFacts)).toBe("Site Facts");
+  });
+
+  // Gate round 2, BLOCKER 23 (regression, real bug this fixes): a LEGACY
+  // section with NO `id` (a saved report persisted before that field
+  // existed — see ReportSection.id's own doc comment) is classifiable by
+  // title alone. Once gate finding 19's title override renamed it, a
+  // FRESH re-derivation of the guidepost bucket (the old behavior) would
+  // no longer match the section's own original title check and silently
+  // fall through to "rest" — moving Site Facts/Logistics Access out of
+  // PART 01. Fixed by resolving the bucket once, pre-override, and
+  // carrying it forward (`ReportSection.guidepostBucket`). This fixture
+  // deliberately omits every `id` to exercise exactly that legacy path.
+  it("a legacy section with NO id still lands in the correct guidepost PART after its title is renamed, for every persona whose board overrides that title", () => {
+    // Markers in `description` (never touched by the title override)
+    // identify each section by CONTENT rather than by title — the exact
+    // thing that's unsafe to do post-override, which is the whole point
+    // of this test.
+    const legacySections: GeneratedReport["sections"] = [
+      { title: "Site Facts", description: "site-facts-marker", items: [] },
+      { title: "Logistics Access", description: "logistics-marker", items: [] },
+    ];
+    const legacyReport: GeneratedReport = { ...reportFixture(), sections: legacySections };
+    // Only starting/growing/developer actually override these two buckets'
+    // titles (R5SupporterFinal's board doesn't render a generic Site
+    // Facts/Logistics Access section at all — see PERSONA_SECTION_TITLE_
+    // OVERRIDES.supporter, which carries no siteFacts/logisticsAccess
+    // entry) — supporter is included below ONLY for the PART-placement
+    // assertion, not the title-changed one.
+    const personasWithOverride = new Set(["starting", "growing", "developer"]);
+
+    for (const persona of ["starting", "growing", "developer", "supporter"] as const) {
+      const { report: lensed } = applyPersonaLens(legacyReport, persona);
+      const siteFacts = lensed.sections.find((s) => s.description === "site-facts-marker")!;
+      const logistics = lensed.sections.find((s) => s.description === "logistics-marker")!;
+      expect(siteFacts.id, `${persona} site facts id`).toBeUndefined(); // genuinely legacy — no id
+      expect(logistics.id, `${persona} logistics id`).toBeUndefined();
+      if (personasWithOverride.has(persona)) {
+        // Titles really did get renamed (proves the override actually ran
+        // against this id-less fixture, not a no-op).
+        expect(siteFacts.title, `${persona} site facts title`).not.toBe("Site Facts");
+        expect(logistics.title, `${persona} logistics title`).not.toBe("Logistics Access");
+      }
+      // ...but PART 01 placement survives regardless (the actual claim
+      // this finding is about), whether or not this persona's board
+      // happens to rename these two sections.
+      expect(guidepostPartForSection(siteFacts, persona), `${persona} site facts PART`).toBe(1);
+      expect(guidepostPartForSection(logistics, persona), `${persona} logistics PART`).toBe(1);
     }
   });
 });

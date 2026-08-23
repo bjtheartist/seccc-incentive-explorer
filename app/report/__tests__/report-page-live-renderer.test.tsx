@@ -12,8 +12,12 @@ import { INITIAL_WIZARD_STATE } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { reportEmailGateKey } from "@/lib/report-email";
 import { DEFAULT_PERSONA } from "@/lib/personas";
+import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
+import { CONFIRMED_PROGRAMS_SECTION_ID, CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { ALSO_AT_ADDRESS_TITLE, personaEmptyProgramsDescription } from "@/lib/report-personas";
+import { encodeWizardState } from "@/lib/url-state";
 
 /**
  * Characterization coverage for the LIVE report route's own renderer —
@@ -290,6 +294,11 @@ const REPORT_DISPLAY_STATE_ORDER = [
   "persona",
   "expandedSections",
   "downloadGateOpen",
+  // spec v2 item 5 (The Brief): a single new useState slot, added
+  // immediately after downloadGateOpen in the source — see the
+  // maintenance warning above for why this array must move in the SAME
+  // commit as the source addition.
+  "briefState",
   "adminOwnershipStatus",
   "adminOwnershipMatch",
   "adminOwnershipTopClusters",
@@ -372,6 +381,7 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     // which is the behavior under test.
     expandedSections: {},
     downloadGateOpen: false,
+    briefState: DEFAULT_BRIEF_UI_STATE,
     adminOwnershipStatus: "idle",
     adminOwnershipMatch: null,
     adminOwnershipTopClusters: [],
@@ -388,11 +398,13 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
 async function renderReportRoute(
   report: GeneratedReport,
   wizardState: WizardState,
+  extraOverrides: Partial<Record<StateSlotName, unknown>> = {},
 ): Promise<string> {
   const overrides: Partial<Record<StateSlotName, unknown>> = {
     wizardState,
     report,
     revealedReportKey: reportEmailGateKey(report),
+    ...extraOverrides,
   };
   const values = { ...defaultSlotValues(), ...overrides };
   const seeds = FULL_STATE_ORDER.map((name) => values[name]);
@@ -681,4 +693,417 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
     expect(html).toContain("Claim published program terms");
     expect(html).toContain("High Priority");
   });
+
+  describe("Part-03 correction: Contact Sheet is the ONLY Part 03 section on a real persona lens", () => {
+    it("suppresses the raw support-organizations section and renders the Contact Sheet instead", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "developer" });
+
+      // The raw support-org section wrapper is gone...
+      expect(html).not.toContain('id="your-support-network"');
+      // ...but its content still reaches the reader via the Contact Sheet
+      // (lane-ranked, why-lined), not silently dropped.
+      expect(html).toContain('data-testid="contact-sheet"');
+    });
+
+    it("keeps the raw support-organizations section on 'all' (no Contact Sheet, no guidepost)", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+
+      expect(html).toContain('id="your-support-network"');
+      expect(html).not.toContain('data-testid="contact-sheet"');
+    });
+  });
+
+  describe("Documents to Gather (spec v2 item 3): owner + supporter only, real Business File content", () => {
+    it("renders for 'growing' (owner) with the real foundation-task titles", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "growing" });
+
+      expect(html).toContain('data-testid="documents-to-gather"');
+      expect(html).toContain("Confirm the business identity");
+      expect(html).toContain("Track in Business File");
+      expect(html).toContain('href="/workspace/business-file"');
+    });
+
+    it("renders for 'supporter'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "supporter" });
+
+      expect(html).toContain('data-testid="documents-to-gather"');
+    });
+
+    it("does NOT render for 'developer' (scoped to owner + supporter only)", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "developer" });
+
+      expect(html).not.toContain('data-testid="documents-to-gather"');
+    });
+
+    it("does NOT render on 'all'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+
+      expect(html).not.toContain('data-testid="documents-to-gather"');
+    });
+  });
+
+  describe("The Brief (spec v2 item 5)", () => {
+    it("offers 'Build My Brief' on a real persona lens", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "growing" });
+      expect(html).toContain("Build My Brief");
+    });
+
+    it("does not offer 'Build My Brief' on 'all'", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+      expect(html).not.toContain("Build My Brief");
+    });
+
+    it("renders the open Brief overlay (seeded via briefState) with the non-suppressible footer and no documents block", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, {
+        persona: "growing",
+        briefState: { askOpen: false, open: true, stage: "launch-ready", priority: "renovation" },
+      });
+      expect(html).toContain('data-testid="brief-page"');
+      expect(html).toContain("SCREENING FROM PUBLIC RECORDS");
+      // The underlying report (growing persona) legitimately has its own
+      // Documents to Gather block — scope the "Brief carries no documents
+      // block" assertion to the brief-overlay fragment specifically.
+      const overlayStart = html.indexOf('id="brief-overlay"');
+      const overlayHtml = html.slice(overlayStart);
+      expect(overlayHtml).not.toContain("Documents to Gather");
+      expect(overlayHtml).not.toContain("Track in Business File");
+    });
+  });
+
+  // Gate finding 16: a REAL DOM-level floor suite (render-level assertions
+  // against renderToStaticMarkup output, not source-code greps). Uses REAL
+  // catalog program ids (sbif/tif/federalOZ/highUnemployment) so the hard
+  // relevance filter (lib/report-personas.ts applyPersonaLens) actually
+  // engages — sbif matches starting/growing only, tif+federalOZ match
+  // developer, highUnemployment is a PINNED overlay (context, not a
+  // program — always visible regardless of persona match).
+  describe("Floor suite (gate finding 16): hard-filter disclosure, sources footer, reason pills, overlay pinning, empty state", () => {
+    function multiProgramReport(): GeneratedReport {
+      return {
+        title: "Site Incentive Analysis",
+        subtitle: "Location-based analysis",
+        reportType: "site-incentives",
+        generatedAt: "2026-08-01T00:00:00.000Z",
+        summary: "Mapped incentive zones were found at this address.",
+        sections: [
+          {
+            id: CONFIRMED_PROGRAMS_SECTION_ID,
+            title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+            description: "Programs mapped at this address.",
+            items: [
+              {
+                label: "SBIF Facade Grant",
+                value: "Review published terms",
+                programId: "sbif",
+                matchExplanation: {
+                  whyItAppears: ["Address falls inside an SBIF-eligible TIF district"],
+                  knownFromPublicData: [],
+                  basedOnUserAnswers: [],
+                  stillToConfirm: [],
+                  currentDocumentsToGather: [],
+                  confirmWith: [],
+                },
+              },
+              {
+                label: "TIF District Program",
+                value: "Review published terms",
+                programId: "tif",
+                matchExplanation: {
+                  whyItAppears: ["Address falls inside a TIF district"],
+                  knownFromPublicData: [],
+                  basedOnUserAnswers: [],
+                  stillToConfirm: [],
+                  currentDocumentsToGather: [],
+                  confirmWith: [],
+                },
+              },
+              {
+                label: "Federal Opportunity Zone",
+                value: "Review published terms",
+                programId: "federalOZ",
+              },
+              {
+                label: "High Unemployment Area",
+                value: "Context signal",
+                programId: "highUnemployment",
+              },
+            ],
+          },
+        ],
+        recommendedActions: [],
+        metadata: { address: "100 E Test St" },
+        dataSources: [
+          {
+            id: "zones",
+            label: "City of Chicago & Illinois DCEO",
+            description: "Incentive zone boundaries.",
+            url: "https://data.cityofchicago.org",
+          },
+        ],
+      } as unknown as GeneratedReport;
+    }
+
+    function emptyMatchReport(): GeneratedReport {
+      return {
+        ...multiProgramReport(),
+        sections: [
+          {
+            id: CONFIRMED_PROGRAMS_SECTION_ID,
+            title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+            description: "Programs mapped at this address.",
+            items: [{ label: "SBIF Facade Grant", value: "Review published terms", programId: "sbif" }],
+          },
+        ],
+      };
+    }
+
+    /** Slices out one section's own HTML fragment by its anchor, up to (not
+     *  including) the next `<div id="` boundary — good enough to isolate
+     *  "does X appear inside/outside this specific section" without a real
+     *  DOM parser. */
+    function sectionFragment(html: string, anchor: string): string {
+      const start = html.indexOf(`id="${anchor}"`);
+      expect(start, `section anchor #${anchor} present in output`).toBeGreaterThanOrEqual(0);
+      const nextDivIdx = html.indexOf('<div id="', start + 1);
+      return html.slice(start, nextDivIdx === -1 ? undefined : nextDivIdx);
+    }
+
+    // Gate round 2 tail item 1: the earlier version of this test only
+    // checked absence from the ONE confirmed-programs fragment — true to
+    // "not in that fragment," not to the test's own name ("never appears
+    // outside the disclosure"), since the collapsed title could in
+    // principle leak into some OTHER section (e.g. a debug dump, a
+    // duplicate render, a stray TOC entry) and this test would still have
+    // been green. Strengthened to the full document: slice out the
+    // disclosure fragment itself, then assert the title is absent from
+    // everything that remains — genuinely "never appears outside," not
+    // "doesn't appear in this one place I checked."
+    it("(a) a collapsed program's title never appears outside the 'Also at this address' disclosure", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      const alsoFragment = sectionFragment(html, sectionAnchor(ALSO_AT_ADDRESS_TITLE));
+      // sbif does NOT match "developer" — it must have collapsed INTO the
+      // disclosure, not dropped.
+      expect(alsoFragment).toContain("SBIF Facade Grant");
+      // ...and it must be ABSENT everywhere else in the rendered document —
+      // not merely absent from the confirmed-programs fragment specifically.
+      const remainder = html.replace(alsoFragment, "");
+      expect(remainder).not.toContain("SBIF Facade Grant");
+    });
+
+    it("(b) the disclosure sentence itself renders, naming the real count and persona", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain("1 other program tied to this address");
+      expect(html).toContain("Nothing is removed; switch to All to see everything together.");
+    });
+
+    it("(c) the sources footer and the generated-date vintage line both render", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain('id="data-sources"');
+      // React HTML-escapes "&" to "&amp;" on render — assert the escaped form.
+      expect(html).toContain("City of Chicago &amp; Illinois DCEO");
+      expect(html).toMatch(/This report was generated on/);
+    });
+
+    it("(d) reason pills (ReasonChips) render on the card face for a matched program with a real match reason", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      expect(html).toContain('data-testid="reason-chips"');
+      expect(html).toContain("Address falls inside a TIF district");
+    });
+
+    it("(e) the pinned overlay (highUnemployment) stays visible on EVERY persona, even developer/starting/growing/supporter where it isn't itself persona-tagged", async () => {
+      for (const persona of ["starting", "growing", "developer", "supporter"] as const) {
+        const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona });
+        const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+        expect(confirmedFragment, `persona=${persona}`).toContain("High Unemployment Area");
+      }
+    });
+
+    it("(e) explicit empty-state copy renders (never a blank page, never the unfiltered list) when a persona matches zero programs", async () => {
+      // emptyMatchReport carries only sbif (starting/growing-tagged) with NO
+      // pinned overlay — under "developer" the confirmed tier has zero
+      // visible items, so the engine's own empty-state sentence must render.
+      const html = await renderReportRoute(emptyMatchReport(), BASE_WIZARD_STATE, { persona: "developer" });
+      // React HTML-escapes the quotes around "Also at this address" inside
+      // this sentence (-> &quot;) — assert the unambiguous, quote-free lead
+      // clause of the real engine-produced sentence instead of the raw
+      // string, which would never literally appear in rendered HTML.
+      const expectedLead = personaEmptyProgramsDescription("developer").split(' See "')[0];
+      expect(html).toContain(expectedLead);
+      // Non-tautological: confirm this ISN'T just always-present boilerplate
+      // by proving it's ABSENT for a persona that DOES match (starting).
+      const startingHtml = await renderReportRoute(emptyMatchReport(), BASE_WIZARD_STATE, { persona: "starting" });
+      expect(startingHtml).not.toContain("No programs at this address matched");
+    });
+
+    // (f) Gate finding 16(f): shared-link-recipient.test.ts's fork-parity
+    // checks are source-code greps (readFileSync + toContain against the
+    // raw .tsx text) — they prove the RIGHT LINE OF CODE EXISTS, not that
+    // it actually does anything at render time. This is the real render-
+    // level proof: a recipient who opens a shared link whose decoded
+    // wizard state (`pg=`) already carries a complete goal selection must
+    // NOT see the email gate — the sender already cleared it. Mirrors
+    // renderReportRoute's own vi.doMock/vi.doUnmock technique, applied to
+    // next/navigation's useSearchParams (globally stubbed to an EMPTY
+    // URLSearchParams for every other test in this file) so THIS one test
+    // can simulate a real `?<encoded wizard state>` share URL.
+    it("(f) a shared-link recipient with a complete decoded goal set is NOT re-blocked by the email gate (render-level, not a source grep)", async () => {
+      const sharedWizardState: WizardState = {
+        ...INITIAL_WIZARD_STATE,
+        reportType: "site-incentives",
+        address: "100 E Test St",
+        lat: 41.8,
+        lon: -87.6,
+        projectGoals: ["hiring"],
+      };
+      const encoded = encodeWizardState(sharedWizardState);
+
+      vi.resetModules();
+      vi.doMock("next/navigation", () => ({
+        useSearchParams: () => new URLSearchParams(encoded),
+        useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+      }));
+      let html: string;
+      try {
+        html = await renderReportRoute(multiProgramReport(), sharedWizardState, {
+          persona: "all",
+        });
+      } finally {
+        // Re-doMock back to the file's own top-level next/navigation stub
+        // (line ~108) rather than vi.doUnmock — a bare doUnmock left the
+        // NEXT test in this file rendering a stale "Loading..." state
+        // (confirmed: the control test below passes alone, fails after
+        // this one runs first — real cross-test pollution, not a flake).
+        // Re-establishing the exact original mock shape is unambiguous.
+        vi.doMock("next/navigation", () => ({
+          useSearchParams: () => new URLSearchParams(),
+          useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+        }));
+        vi.resetModules();
+      }
+
+      expect(html).not.toContain('data-testid="stub-report-email-gate"');
+    });
+
+    it("(f) CONTROL: the same report/state WITHOUT a resolved share link (empty searchParams, the harness default) DOES show the gate — proves the assertion above isn't vacuous", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+        persona: "all",
+        revealedReportKey: "",
+      });
+      expect(html).toContain('data-testid="stub-report-email-gate"');
+    });
+
+    // Gate finding 9/10: the additive `looking` persona — render-level
+    // proof its R5LookingFinal board panels actually mount, AND that bare
+    // persona="all" stays byte-equivalent (the ruling's explicit
+    // requirement) despite the new branch existing in the same file.
+    // Nested inside Floor suite (not a sibling) to reuse its
+    // multiProgramReport()/sectionFragment() helpers.
+    describe("The 'looking' persona (gate finding 9/10, R5LookingFinal board)", () => {
+    it("renders Location snapshot, What's notable, and Explore by interest for persona=looking", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "looking" });
+      expect(html).toContain('data-testid="location-snapshot"');
+      expect(html).toContain('data-testid="explore-by-interest"');
+      expect(html).toContain("I own a business");
+      expect(html).toContain("I support businesses");
+      expect(html).toContain("I develop property");
+      expect(html).toContain('data-testid="full-picture-line"');
+    });
+
+    it("does NOT collapse any program into 'Also at this address' for persona=looking — it is a screening-overview lens, not a filtered one", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "looking" });
+      expect(html).not.toContain('id="also-at-this-address"');
+      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+      // sbif does not match ANY of the four filtering personas' tags, but
+      // "looking" filters nothing — it must still be present on the face.
+      expect(confirmedFragment).toContain("SBIF Facade Grant");
+    });
+
+    it("none of the looking-only panels render for any OTHER persona, including 'all'", async () => {
+      for (const persona of ["all", "starting", "growing", "developer", "supporter"] as const) {
+        const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona });
+        expect(html, `persona=${persona}`).not.toContain('data-testid="location-snapshot"');
+        expect(html, `persona=${persona}`).not.toContain('data-testid="explore-by-interest"');
+      }
+    });
+
+    // Gate round 2 tail item 2: this test's name used to claim
+    // "characterization, not just a marker check" — false; the body below
+    // only ever checked a handful of markers (absence of a few ids/strings,
+    // presence of program names in one fragment), never full-markup
+    // equality against anything. Renamed to what it actually is. The real
+    // byte-level characterization now lives in the dedicated test right
+    // after this one.
+    it("bare persona=all shows the flat kitchen sink — no guidepost bands, no disclosure, no looking-only markers (marker check)", async () => {
+      const html = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, { persona: "all" });
+      // "all" renders the flat kitchen sink: no guidepost bands, no
+      // Also-at-this-address disclosure (nothing is collapsed on "all"
+      // either), none of the new looking-only markers, and the confirmed
+      // section carries every program including the persona-mismatched one.
+      expect(html).not.toContain('id="also-at-this-address"');
+      expect(html).not.toContain("PART 01");
+      expect(html).not.toContain("data-testid=\"location-snapshot\"");
+      expect(html).not.toContain("data-testid=\"explore-by-interest\"");
+      const confirmedFragment = sectionFragment(html, sectionAnchor(CONFIRMED_PROGRAMS_SECTION_TITLE));
+      expect(confirmedFragment).toContain("SBIF Facade Grant");
+      expect(confirmedFragment).toContain("TIF District Program");
+      expect(confirmedFragment).toContain("Federal Opportunity Zone");
+      expect(confirmedFragment).toContain("High Unemployment Area");
+    });
+
+    // Gate round 2 tail item 2 — the real byte-level characterization the
+    // coordinator asked for. `applyPersonaLens(report, "all")` returns the
+    // identical report REFERENCE (lib/report-personas.ts's own doc comment
+    // on `PersonaLensResult.report`) — but that's a claim about the lens
+    // FUNCTION, proven directly in lib/__tests__/report-personas.test.ts.
+    // What was missing here is proof that this holds through the WHOLE
+    // render pipeline: that running the real lens for persona="all" at
+    // app/report/page.tsx's one call site (`showPersonaLens ?
+    // applyPersonaLens(report, persona).report : report`) produces
+    // full-document output IDENTICAL to never calling the lens at all.
+    // Proven by mocking `applyPersonaLens` itself out to a bare pass-
+    // through for one render and diffing the FULL markup against a normal
+    // render — genuinely byte-level, not a handful of marker checks.
+    it("persona=all render is full-markup byte-identical whether the real persona lens runs or is bypassed entirely (real characterization)", async () => {
+      const withRealLens = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+        persona: "all",
+      });
+
+      vi.resetModules();
+      vi.doMock("@/lib/report-personas", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@/lib/report-personas")>();
+        return {
+          ...actual,
+          // The one real call site (app/report/page.tsx) only ever reads
+          // `.report` off this return value — see the grep-backed claim in
+          // the comment above; a bare pass-through is a faithful bypass.
+          applyPersonaLens: (report: GeneratedReport) => ({
+            report,
+            matchedBefore: 0,
+            matchedAfter: 0,
+          }),
+        };
+      });
+      let withLensBypassed: string;
+      try {
+        withLensBypassed = await renderReportRoute(multiProgramReport(), BASE_WIZARD_STATE, {
+          persona: "all",
+        });
+      } finally {
+        vi.doUnmock("@/lib/report-personas");
+        vi.resetModules();
+      }
+
+      expect(withLensBypassed).toBe(withRealLens);
+    });
+  });
+});
 });

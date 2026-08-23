@@ -10,6 +10,7 @@ import type {
   ChicagoZbaLookupResponse,
   ZoningLookupResponse,
   ZoningSourceMetadata,
+  CostSignalTag,
 } from "./types";
 import {
   inferSupportLanes,
@@ -17,6 +18,16 @@ import {
   type LocalBusinessSupportOrganization,
   type LocalSupportLane,
 } from "./local-business-support";
+// Gate round 3 nit: `SectionBucketKey` is exported from report-personas.ts
+// specifically so ReportSection.guidepostBucket below can be typed as it
+// directly, killing the consumer-side `as SectionBucketKey | undefined`
+// casts that used to live in report-personas.ts. This is TYPE-ONLY
+// (`import type`), which TypeScript erases entirely at compile time — it
+// never becomes a runtime `require`/`import`, so it creates no actual
+// circular MODULE dependency even though report-personas.ts separately
+// imports real values from this file. A `string`-typed escape hatch was
+// never load-bearing here; only VALUE-level cycles are.
+import type { SectionBucketKey } from "./report-personas";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
 import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
@@ -86,6 +97,21 @@ import {
 } from "./support-organization-copy";
 import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
 import { authorityReferenceLine } from "./authority-routing";
+import { policeDistrictLabel } from "./police-districts";
+// NOTE (build-breaking regression, fixed): do NOT statically import
+// lib/investment-analysis.ts here. This file (report-engine.ts) is bundled
+// into the CLIENT (app/report/page.tsx is 'use client' and imports it
+// directly for types/pure functions) — investment-analysis.ts pulls in
+// node:fs/node:path/node:crypto, and a static top-level import of it broke
+// the webpack client build with "UnhandledSchemeError" (caught by CI, not
+// by local tsc/vitest — neither runs a real client bundle). Only the
+// CraYearRow type is imported here (type-only, erased at compile time,
+// bundle-safe); the actual loadCapitalContextForArea() call now happens
+// server-side in app/api/report/generate/route.ts, which enriches
+// ReportContext.capitalContext before calling generateReportData().
+// buildCorridorInvestmentContext below is a pure reshape of that
+// already-resolved data, never a loader call.
+import type { CraYearRow } from "./investment-analysis";
 
 export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
 export { buildStartHere, selectTopPrograms } from "./start-here";
@@ -155,6 +181,21 @@ export interface ReportSection {
    * canonical report; only the lensed view sets it.
    */
   collapsedByPersona?: boolean;
+  /**
+   * Gate round 2, BLOCKER 23; typed as the real `SectionBucketKey` under
+   * gate round 3's nit sweep (previously a loose `string`, with consumer-
+   * side casts at every read site — see the `import type` note above this
+   * interface for why the real type is safe to reference directly). An
+   * internal marker: the persona lens's guidepost bucket, resolved ONCE
+   * against the pristine section (id-first, title-fallback) before any
+   * per-persona title override runs, and carried forward so a later
+   * guidepost-PART lookup never has to re-derive the bucket from a
+   * (possibly since-renamed) title. Absent on the canonical report and on
+   * "all" lens output — only a real, non-"all" persona lens sets it, and
+   * only for the duration of that single render. Never persisted: lensed
+   * reports are display-time only and are never the thing saved/exported.
+   */
+  guidepostBucket?: SectionBucketKey;
 }
 
 export interface ReportDetailGroup {
@@ -222,6 +263,73 @@ export interface ReportItem {
   availabilityNote?: string;
   /** Qualitative cost/effort signal for preparing this document or step. */
   preparationCost?: DocumentPreparationCostSignal;
+  /**
+   * Program-card content fields (persona spec v2 amendment). Every one is
+   * DERIVED from data the program catalog already carries (published
+   * benefit text, the committed stacking-rules dataset, existing source/
+   * contact URLs) — never hand-authored prose. A program whose real data
+   * doesn't support a field simply doesn't carry it (honest omission, no
+   * placeholder) — see buildWorksWith/buildVerifySources/buildExpectations
+   * in this file.
+   */
+  worksWith?: { label: string; detail: string }[];
+  verifySources?: { label: string; url: string; dated?: string | null }[];
+  expectations?: string;
+  /**
+   * "Cost signals" pills (gate finding 4). Built by buildCostSignals from
+   * the program's own `costSignals` catalog field ONLY — never derived
+   * from benefits[]/requiredDocs[] text. Absent when the catalog record
+   * carries no confirmed cost-signal tags.
+   */
+  costSignals?: { label: string; severity: "info" | "amber" }[];
+  /**
+   * Gate finding 7: the SAME structured window fact the program's own
+   * catalog record already carries — copied through so the Brief's
+   * BriefProgramRow can read the identical source the card itself would
+   * show, never a re-derived or invented value. `benefitRange` was
+   * deliberately NOT added alongside this: lib/__tests__/public-report-
+   * safety.test.ts's PRIVATE_MATCH_FIELDS guard (pre-existing, not part of
+   * this pass) prohibits a `benefitRange` key AND its literal value from
+   * ever reaching the canonical serialized report — it is the same field
+   * name `ProgramCheckResult.benefitRange` (the internal confidence-engine
+   * ranking shape) uses, and the guard does not distinguish the two by
+   * type. Tried it, the safety test caught it, reverted — see the parity
+   * doc's finding-7 row for the honest record. `amount` on
+   * BriefProgramRow stays null until a real, non-blocklisted amount
+   * source exists.
+   */
+  nextWindow?: { expected: string | null; note: string | null };
+  /**
+   * Gate finding 11 — card-face glance row. All derived from structured
+   * catalog fields the engine already reads elsewhere on this same
+   * program (contacts[], howToApply[]) — never invented. `administrator`
+   * is the primary contact's agency name; `decisionBy` joins every
+   * contact's abbreviation (e.g. "SomerCor + DPD") for programs
+   * administered jointly; `nextStep` is the program's own first published
+   * how-to-apply step. Each is undefined when the program carries no
+   * contacts/howToApply — never a fallback guess. "Amount" and "Type"
+   * tiles from the R5 board are deliberately NOT built: no structured,
+   * non-blocklisted amount field exists (see the note above on
+   * `benefitRange`), and no structured program-category field exists in
+   * the catalog at all — both are honest omissions, not oversights.
+   */
+  administrator?: string;
+  decisionBy?: string;
+  nextStep?: string;
+  primaryContact?: { agency: string; phone?: string; email?: string };
+  /**
+   * Raw ISO date (YYYY-MM-DD) for an "Upcoming Deadlines" item — the same
+   * `item.date` lib/deadlines.ts already resolves correctly per-address
+   * (SBIF window start, TIF expiration, program deadline), carried through
+   * unformatted so chart components can plot it. `value` on these items
+   * stays the human "In 5 days — 2026-03-01" display string; this is only
+   * for chart math. Set only on items in the deadlines section.
+   */
+  deadlineDate?: string;
+  /** Which kind of deadline this is — see lib/deadlines.ts DeadlineKind. */
+  deadlineKind?: "program_deadline" | "sbif_window" | "tif_expiration";
+  /** Window close date (ISO) — set only for deadlineKind="sbif_window". */
+  deadlineWindowEnd?: string;
 }
 
 export interface DataSourceCitation {
@@ -466,6 +574,18 @@ export interface GeneratedReport {
     selectionBasis?: "community-area-match" | "asset-directory";
     narrative: string;
   };
+  /**
+   * Supporter persona — corridor-investment-by-year chart source (gate
+   * finding 5). The FFIEC CRA small-business loan-origination series for
+   * this report's community area, read server-side at generation time from
+   * data/private/capital-context.json via loadCapitalContextForArea
+   * (lib/investment-analysis.ts). Canonical, not lens-time: this is real
+   * committed data the engine already resolves the community area for, only
+   * reorganized into a chart-ready shape. Null when the address resolved no
+   * community area, or the file carries no CRA series for it — never a
+   * fabricated or zero-filled series.
+   */
+  corridorInvestment?: { communityArea: string; series: CraYearRow[]; source: string } | null;
   capitalPartnerHandoff?: CapitalMatchResult;
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   locationContext?: PublicReportLocationContext;
@@ -540,6 +660,10 @@ export const SECTION_IDS = {
   siteFacts: "site-facts",
   zoningUseStartingPoint: "zoning-use-starting-point",
   propertyAnalysis: "property-analysis",
+  logisticsAccess: "logistics-access",
+  civicRepresentation: "civic-representation",
+  documentReadiness: "document-readiness",
+  contactSheet: "contact-sheet",
 } as const;
 
 /** Kebab-case id for a `${level}-Level Programs` section, e.g. "city-level-programs". */
@@ -1432,6 +1556,216 @@ function publicEvidenceForProgram(
   };
 }
 
+// ─── Program-card content fields (persona spec v2 amendment) ────────────
+// Every field below is DERIVED from data the program catalog already
+// carries — the committed public/data/stacking-rules.json dataset, and
+// each program's own published benefits/sourceUrl/contacts/lastVerifiedAt
+// — never hand-authored per-program prose. A program without the
+// underlying real data for a field simply doesn't carry it.
+
+let programNameLookupCache: Record<string, string> | null = null;
+
+/** id -> name from the PUBLIC program export (never the internal catalog —
+ *  report-engine.ts is reachable from client bundles via ReportDisplay's
+ *  normalizePublicReportForDisplay, so this must stay public-safe the same
+ *  way loadTifFinancials/loadSbifRollout already are). */
+function loadProgramNameLookup(): Record<string, string> {
+  if (programNameLookupCache) return programNameLookupCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/programs-public.json") as {
+      programs?: { id: string; name: string }[];
+    };
+    programNameLookupCache = Object.fromEntries(
+      (raw.programs ?? []).map((p) => [p.id, p.name]),
+    );
+  } catch {
+    programNameLookupCache = {};
+  }
+  return programNameLookupCache;
+}
+
+let stackingRulesDataCache: StackingRule[] | null = null;
+
+function loadStackingRulesData(): StackingRule[] {
+  if (stackingRulesDataCache) return stackingRulesDataCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    stackingRulesDataCache = require("../public/data/stacking-rules.json") as StackingRule[];
+  } catch {
+    stackingRulesDataCache = [];
+  }
+  return stackingRulesDataCache;
+}
+
+/** "Can combine with" — only the `can` relationship, deduped, named via the
+ *  public program list. Returns undefined (no block) rather than []. */
+export function buildWorksWith(programId: string): ReportItem["worksWith"] {
+  const rules = loadStackingRulesData().filter(
+    (rule) =>
+      (rule.programId === programId || rule.otherProgramId === programId) &&
+      rule.relationship === "can",
+  );
+  if (rules.length === 0) return undefined;
+
+  const names = loadProgramNameLookup();
+  const seen = new Set<string>();
+  const items = rules.flatMap((rule) => {
+    const otherId = rule.programId === programId ? rule.otherProgramId : rule.programId;
+    if (seen.has(otherId)) return [];
+    seen.add(otherId);
+    return [{ label: names[otherId] || otherId, detail: rule.reason }];
+  });
+  return items.length > 0 ? items : undefined;
+}
+
+/** "Verify at the source" — every link the program record already
+ *  publishes, deduped, dated with the program's own lastVerifiedAt. */
+export function buildVerifySources(program: Program): ReportItem["verifySources"] {
+  const sources: { label: string; url: string; dated?: string | null }[] = [];
+  if (program.sourceUrl) {
+    sources.push({ label: "Official program page", url: program.sourceUrl, dated: program.lastVerifiedAt });
+  }
+  if (program.url && program.url !== program.sourceUrl) {
+    sources.push({ label: "Program administrator", url: program.url, dated: program.lastVerifiedAt });
+  }
+  for (const contact of program.contacts ?? []) {
+    if (contact.url && !sources.some((s) => s.url === contact.url)) {
+      sources.push({ label: contact.agency, url: contact.url, dated: program.lastVerifiedAt });
+    }
+  }
+  return sources.length > 0 ? sources.slice(0, 3) : undefined;
+}
+
+/** Compares an ISO YYYY-MM-DD date string against today's date (local
+ *  midnight). Returns true when `dateIso` is strictly before today. Never
+ *  throws on an unparseable date — a bad string simply doesn't count as
+ *  "in the past" (fails closed toward not downgrading a claim it can't
+ *  actually evaluate). */
+function isPastDate(dateIso: string | null | undefined): boolean {
+  if (!dateIso) return false;
+  const parsed = new Date(`${dateIso}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return parsed.getTime() < today.getTime();
+}
+
+/**
+ * "What to expect" — intake cadence read from structured fields only,
+ * never text-mined prose (gate finding 2+3's doctrine, still in force).
+ *
+ * Gate round 2, BLOCKER 2+3: `intakeStatus === "open"` alone used to
+ * produce an unqualified, undated present-tense claim — "Applications are
+ * being accepted under the published intake window." — for EVERY program
+ * marked open, with no check on whether the program's own published
+ * window had already closed. Verified false for three real catalog
+ * programs (ccsa, cdgSmall, cdgMedium): all three carry `intakeStatus:
+ * "open"` but their own `nextWindow.expected` dates (2026-08-21,
+ * 2026-08-14, 2026-08-14) are DAYS IN THE PAST relative to when this
+ * comment was written (2026-08-23) — the catalog's `intakeStatus` field
+ * had gone stale without a corresponding `nextWindow` update, and this
+ * function was repeating the stale claim verbatim as if it were current.
+ *
+ * Fixed using the repo's own established pattern
+ * (lib/program-public.ts's `benefitQualifier`, lines ~98-100): every
+ * claim is date-qualified via `statusAsOf` ("as of {date}"), NEVER a bare
+ * unqualified present-tense fact — and an "open" claim is additionally
+ * checked against `nextWindow.expected`: when that date is in the past,
+ * the claim downgrades to naming the real closed date instead of
+ * asserting the window is still active. `isPastDate` fails closed (an
+ * absent or unparseable window date never triggers a downgrade) so this
+ * can only ever become MORE cautious, never fabricate a close date that
+ * isn't real.
+ */
+export function buildExpectations(program: Program): string | undefined {
+  const statusAsOf = program.statusAsOf;
+  const asOfClause = statusAsOf ? ` as of ${statusAsOf}` : "";
+  switch (program.intakeStatus) {
+    case "open": {
+      const windowClosed = isPastDate(program.nextWindow?.expected);
+      if (windowClosed) {
+        return `Most recent published window closed ${program.nextWindow!.expected} — check for the next round.`;
+      }
+      return `Applications are being accepted under the published intake window${asOfClause}.`;
+    }
+    case "rolling":
+      return `Rolling intake — applications are accepted on an ongoing basis${asOfClause}.`;
+    case "closed":
+      return `Intake is not currently open${asOfClause} — confirm the next window before relying on this program.`;
+    case "lapsed":
+      return `Intake authority is currently lapsed${asOfClause} — confirm current status before relying on this program.`;
+    case "pending":
+      return `Intake has not yet opened for the published window${asOfClause}.`;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Fixed display copy for each closed-vocabulary cost-signal tag (gate
+ * finding 4). One entry per `CostSignalTag` value, enforced by the
+ * exhaustiveness test in program-card-content-fields.test.ts — a new tag
+ * added to the type without a matching entry here is a type error.
+ */
+const COST_SIGNAL_COPY: Record<CostSignalTag, { label: string; severity: "info" | "amber" }> = {
+  free_to_apply: { label: "Free to apply", severity: "info" },
+  application_fee_required: { label: "Application fee required", severity: "amber" },
+  reimbursement_after_spend: { label: "You front costs until reimbursed", severity: "amber" },
+  upfront_funds_no_reimbursement_wait: { label: "Funds provided upfront", severity: "info" },
+  drawings_required: { label: "Drawings required", severity: "amber" },
+  permit_fees_apply: { label: "Permit fees apply", severity: "amber" },
+  matching_funds_required: { label: "Matching funds required", severity: "amber" },
+};
+
+/**
+ * "Cost signals" pills (gate finding 4 — R5 board's owner-card block).
+ * Reads ONLY `program.costSignals` — the closed-vocabulary catalog field —
+ * and maps each tag to its fixed label/severity. Deliberately does NOT
+ * scan `benefits[]`/`requiredDocs[]` text for cost-related keywords: that
+ * exact pattern (deriving a claim from published prose instead of a
+ * structured field) is the bug gate finding 2+3 removed from
+ * `buildExpectations` on this same card, and a true-today keyword match
+ * is not proof it stays true for every program under the same rule.
+ * Returns undefined (block renders nothing) when the catalog carries no
+ * confirmed tags for this program.
+ */
+export function buildCostSignals(
+  program: Program,
+): { label: string; severity: "info" | "amber" }[] | undefined {
+  const tags = program.costSignals;
+  if (!tags || tags.length === 0) return undefined;
+  return tags.map((tag) => COST_SIGNAL_COPY[tag]);
+}
+
+/** Gate finding 11 — card-face glance row. See the ReportItem.administrator doc comment. */
+export function buildAdministrator(program: Program): string | undefined {
+  return program.contacts?.[0]?.agency;
+}
+
+/** Gate finding 11 — joins every listed contact's abbreviation ("SomerCor + DPD"). */
+export function buildDecisionBy(program: Program): string | undefined {
+  const abbreviations = (program.contacts ?? [])
+    .map((c) => c.abbreviation)
+    .filter((a): a is string => Boolean(a));
+  if (abbreviations.length === 0) return undefined;
+  return [...new Set(abbreviations)].join(" + ");
+}
+
+/** Gate finding 11 — the program's own first published how-to-apply step. */
+export function buildNextStep(program: Program): string | undefined {
+  return program.howToApply?.[0];
+}
+
+/** Gate finding 11 — primary administrator contact, for a face-level "call/email" line. */
+export function buildPrimaryContact(
+  program: Program,
+): { agency: string; phone?: string; email?: string } | undefined {
+  const first = program.contacts?.[0];
+  if (!first) return undefined;
+  return { agency: first.agency, phone: first.phone, email: first.email };
+}
+
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
@@ -1470,6 +1804,15 @@ function programReportItem(
     applicationPortals: program.applicationPortals,
     verificationSteps: program.verificationSteps,
     status: program.status,
+    worksWith: buildWorksWith(program.id),
+    verifySources: buildVerifySources(program),
+    expectations: buildExpectations(program),
+    costSignals: buildCostSignals(program),
+    nextWindow: program.nextWindow,
+    administrator: buildAdministrator(program),
+    decisionBy: buildDecisionBy(program),
+    nextStep: buildNextStep(program),
+    primaryContact: buildPrimaryContact(program),
   };
 }
 
@@ -2723,6 +3066,9 @@ function buildDeadlinesSection(
       sourceUrl: program?.sourceUrl,
       applicationPortals: program?.applicationPortals,
       verificationSteps: program?.verificationSteps,
+      deadlineDate: item.date,
+      deadlineKind: item.kind,
+      deadlineWindowEnd: item.windowEnd,
     };
   });
 
@@ -3190,8 +3536,36 @@ function generateLocationIncentives(
     marketContext,
     stackingAnalysis,
     communityAssets: communityAssetsData,
+    corridorInvestment: buildCorridorInvestmentContext(communityAssetsData?.communityArea, ctx.capitalContext),
     dataSources,
   };
+}
+
+/**
+ * Gate finding 5: supporter corridor-investment chart source. Pure reshape
+ * ONLY — the REAL FFIEC CRA series is resolved server-side by the caller
+ * (app/api/report/generate/route.ts, via loadCapitalContextForArea) and
+ * passed in as `capitalContext`; this file never calls that loader itself
+ * (see the import-site note above `CraYearRow` — a static import of
+ * lib/investment-analysis.ts here broke the client webpack build, since
+ * this module is bundled into 'use client' app/report/page.tsx). Returns
+ * null (chart renders nothing) when there is no community area, no
+ * capitalContext was supplied, it's for a different area, or it carries no
+ * series. `source` is read from the caller-supplied sources[] list by
+ * matching "FFIEC" — never hardcoded to an array index.
+ */
+export function buildCorridorInvestmentContext(
+  communityArea: string | null | undefined,
+  capitalContext: { communityArea: string; cra: CraYearRow[] | null; sources: string[] } | null | undefined,
+): { communityArea: string; series: CraYearRow[]; source: string } | null {
+  if (!communityArea) return null;
+  if (!capitalContext || capitalContext.communityArea !== communityArea) return null;
+  if (!capitalContext.cra || capitalContext.cra.length === 0) return null;
+  const source =
+    capitalContext.sources.find((s) => s.includes("FFIEC")) ??
+    capitalContext.sources[0] ??
+    "FFIEC CRA small-business lending data";
+  return { communityArea, series: capitalContext.cra, source };
 }
 
 function buildZoningReportItem(
@@ -4744,6 +5118,88 @@ function buildTransportationSiteAccessItem(mobility: MobilityAccess): ReportItem
   };
 }
 
+/**
+ * Logistics Access section (persona spec v2, "shortlist infra precedent"):
+ * a dedicated, row-per-mode breakdown of the same mobility-access data
+ * `buildTransportationSiteAccessItem` already summarizes into one Site Facts
+ * item. Building this as a genuine canonical section (not a lens-time
+ * fabrication) keeps the "engine emits one canonical section set, persona is
+ * a pure display transform" boundary intact — the persona order map decides
+ * where this sits, it never invents the data. Truck-route access is
+ * deliberately omitted: no committed source backs it.
+ */
+function buildLogisticsAccessSection(
+  mobility: MobilityAccess | null | undefined,
+  transport: TransportAccess | null | undefined,
+): ReportSection | null {
+  const items: ReportItem[] = [];
+
+  if (mobility) {
+    const rail = mobility.ctaRailStations[0];
+    if (rail) {
+      items.push({
+        label: "Nearest 'L'",
+        value: [formatAccessPointName(rail), formatMiles(rail.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(rail) || undefined,
+      });
+    }
+    const bus = mobility.busStops[0];
+    if (bus) {
+      items.push({
+        label: "Bus",
+        value: [formatAccessPointName(bus), formatMiles(bus.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(bus) || undefined,
+      });
+    }
+    const expressway = mobility.expressways[0];
+    if (expressway) {
+      items.push({
+        label: "Expressway",
+        value: `${humanizeTransportationName(expressway.name)} ramp · ${formatMiles(expressway.miles)}`,
+      });
+    }
+    const midway = mobility.airports.find((a) => /midway/i.test(a.name));
+    const ohare = mobility.airports.find((a) => /o'?hare/i.test(a.name));
+    if (midway || ohare) {
+      items.push({
+        label: "Airports",
+        value: [
+          midway ? `Midway ${formatMiles(midway.miles)}` : null,
+          ohare ? `O'Hare ${formatMiles(ohare.miles)}` : null,
+        ].filter(Boolean).join(" · "),
+      });
+    }
+    const metra = mobility.metraStations[0];
+    if (metra) {
+      items.push({
+        label: "Metra",
+        value: [formatAccessPointName(metra), formatMiles(metra.miles)].filter(Boolean).join(" · "),
+        detail: formatAccessPointRoutes(metra) || undefined,
+      });
+    }
+  } else if (transport) {
+    if (transport.rail) {
+      items.push({ label: "Freight rail", value: `${transport.rail.name} · ${formatMiles(transport.rail.miles)}` });
+    }
+    if (transport.expressway) {
+      items.push({ label: "Expressway", value: `${transport.expressway.name} · ${formatMiles(transport.expressway.miles)}` });
+    }
+    items.push({
+      label: "Airports",
+      value: `Midway ${formatMiles(transport.midwayMiles)} · O'Hare ${formatMiles(transport.ohareMiles)}`,
+    });
+  }
+
+  if (items.length === 0) return null;
+
+  return {
+    id: SECTION_IDS.logisticsAccess,
+    title: "Logistics Access",
+    description: "Straight-line distance to transit, expressway, and airport access points. Verify travel time, truck access, and loading before relying on this for a project decision.",
+    items,
+  };
+}
+
 function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
   const lines = [
     siteSignals.nofAwardsNearby > 0
@@ -4827,6 +5283,74 @@ function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null 
 }
 
 /**
+ * Civic Representation section (persona spec v2). Re-presents the SAME
+ * sourced `DistrictData` (ward/alderperson, county commissioner district,
+ * police district — each carrying its own sourceId/sourceLabel/sourceUrl/
+ * refreshedAt provenance where an elected official is attached) plus the
+ * community area and SSA/corridor zone names the engine already computes,
+ * as a dedicated section instead of one folded item. Genuinely canonical,
+ * not lens-time: this only reorganizes data the engine already sourced and
+ * verified — it adds nothing new. Police district comes from
+ * lib/district-lookup.ts's live query against the City's boundary layer
+ * (Socrata `9vmg-9p8p`, the same intersects()-query pattern the ward lookup
+ * already used) — see lib/police-districts.ts for the district-name map.
+ */
+function buildCivicRepresentationSection(
+  districts: DistrictData | null | undefined,
+  zones: Record<string, boolean> | null | undefined,
+  zoneNames: Record<string, string> | null | undefined,
+  communityArea: string | null | undefined,
+): ReportSection | null {
+  const items: ReportItem[] = [];
+
+  if (districts?.ward) {
+    const alder = districts.officials?.alderperson;
+    items.push({
+      label: "Ward",
+      value: alder ? `${districts.ward} · Ald. ${alder.name}` : districts.ward,
+      detail: alder ? `Source: ${alder.sourceLabel}, verified ${alder.refreshedAt}` : undefined,
+      sourceUrl: alder?.sourceUrl,
+    });
+  }
+  if (communityArea) {
+    items.push({ label: "Community area", value: communityArea });
+  }
+  if (districts?.policeDistrict) {
+    items.push({
+      label: "Police district",
+      value: policeDistrictLabel(districts.policeDistrict),
+      sourceLabel: "City of Chicago Boundaries — Police Districts",
+    });
+  }
+  if (districts?.commissionerDistrict) {
+    const commissioner = districts.officials?.commissioner;
+    items.push({
+      label: "County commissioner district",
+      value: commissioner
+        ? `${districts.commissionerDistrict} · Comm. ${commissioner.name}`
+        : districts.commissionerDistrict,
+      detail: commissioner ? `Source: ${commissioner.sourceLabel}, verified ${commissioner.refreshedAt}` : undefined,
+      sourceUrl: commissioner?.sourceUrl,
+    });
+  }
+  if (zones?.ssa && zoneNames?.ssa) {
+    items.push({ label: "SSA", value: zoneNames.ssa, programId: "ssa" });
+  }
+  if (zones?.ccsa && zoneNames?.ccsa) {
+    items.push({ label: "City corridor", value: zoneNames.ccsa, programId: "ccsa" });
+  }
+
+  if (items.length === 0) return null;
+
+  return {
+    id: SECTION_IDS.civicRepresentation,
+    title: "Civic Representation",
+    description: "Elected and appointed representation for this address, from the same sourced district data used elsewhere in this report.",
+    items,
+  };
+}
+
+/**
  * Census data for the report location.
  */
 export interface ReportCensusData {
@@ -4893,6 +5417,18 @@ export interface ReportContext {
   transport?: TransportAccess | null;
   mobilityAccess?: MobilityAccess | null;
   locationContext?: LocationContext;
+  /**
+   * Gate finding 5 — supporter corridor-investment chart. The REAL FFIEC
+   * CRA series for this report's community area, resolved server-side by
+   * the caller (app/api/report/generate/route.ts calls
+   * loadCapitalContextForArea() there, which is safe because Route
+   * Handlers are never bundled into the client) and passed in already
+   * resolved. This module (report-engine.ts) never fetches it itself — a
+   * static import of the fs-backed loader here broke the client webpack
+   * build, since this file is bundled into 'use client' app/report/page.tsx.
+   * Plain, client-safe data shape, matching every other ctx field.
+   */
+  capitalContext?: { communityArea: string; cra: CraYearRow[] | null; sources: string[] } | null;
 }
 
 /**
@@ -5041,6 +5577,20 @@ export function generateReportData(
     }
 
     if (reportType === "site-incentives" || reportType === "location-incentives") {
+      // Logistics Access + Civic Representation are genuine canonical
+      // sections (persona spec v2) — built from data the engine already
+      // computes and sources elsewhere, never dropped, only reordered by
+      // the persona lens. Unshifted first here so they sit after Site
+      // Facts once Site Facts and Zoning are unshifted below them.
+      const civicRepresentationSection = buildCivicRepresentationSection(
+        districts,
+        zones,
+        zoneNames,
+        ctx.localBusinessSupport?.communityArea,
+      );
+      if (civicRepresentationSection) report.sections.unshift(civicRepresentationSection);
+      const logisticsAccessSection = buildLogisticsAccessSection(mobilityAccess, transport);
+      if (logisticsAccessSection) report.sections.unshift(logisticsAccessSection);
       if (contextItems.length > 0) {
         report.sections.unshift({
           id: SECTION_IDS.siteFacts,

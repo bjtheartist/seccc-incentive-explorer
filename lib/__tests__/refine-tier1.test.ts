@@ -16,6 +16,7 @@ import type { GeneratedReport } from "@/lib/report-engine";
 import { isAnalyticsEventType } from "@/lib/analytics-events";
 import { REPORT_GENERATED_EVENTS } from "@/lib/analytics-dashboard";
 import { generatedReportEventType } from "@/lib/report-generated-event";
+import { derivePersonaLensVisible } from "@/lib/workspace";
 
 // ─── Corridor Intelligence is a first-class report type (audit RF7/WU7) ──
 
@@ -186,13 +187,23 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(workspaceFork).not.toContain("{isInstantMode && !compact && (");
   });
 
-  it("the live flow feeds showPersonaLens from page-level instant mode, undiminished by hasRefinedInstantReport", () => {
-    // Post-email-gate state (hasRefinedInstantReport=true) keeps the chips:
-    // the prop must be the raw URL-derived isInstantMode.
-    expect(liveFork).toContain("showPersonaLens={isInstantMode}");
+  it("the live flow feeds showPersonaLens from derivePersonaLensVisible(wizardState) — not isInstantMode, dead on every shared/goal-refined link (BLOCKER #2)", () => {
+    // Fresh-context adversarial review, finding #2: `isInstantMode` gated the
+    // chips off on every shared link (`?persona=` arrived, but no chips, no
+    // lens) and on every goal-refined report (the shape the email gate funnels
+    // every real user into). The prop must derive from wizardState the same
+    // way the (already-correct) workspace fork does.
+    expect(liveFork).toContain("showPersonaLens={derivePersonaLensVisible(wizardState)}");
+    expect(liveFork).not.toContain("showPersonaLens={isInstantMode}");
     expect(liveFork).not.toContain(
       "showPersonaLens={isInstantMode && !hasRefinedInstantReport}",
     );
+  });
+
+  it("share-mode regression: a shared link with a non-default wizardState.reportType shows the lens (derivePersonaLensVisible is reportType-driven, not instant-mode-driven)", () => {
+    expect(derivePersonaLensVisible({ ...INITIAL_WIZARD_STATE, reportType: "site-incentives" })).toBe(true);
+    expect(derivePersonaLensVisible({ ...INITIAL_WIZARD_STATE, reportType: "dev-feasibility" })).toBe(false);
+    expect(derivePersonaLensVisible(undefined)).toBe(false);
   });
 
   it("the saved-report page feeds showPersonaLens from the site-report wizard shape", () => {
@@ -228,5 +239,151 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(workspaceFork).toContain("generateReportPdf(report)");
     expect(liveFork).not.toContain("generateReportPdf(lensed)");
     expect(workspaceFork).not.toContain("generateReportPdf(lensed)");
+  });
+
+  // ─── spec v2: guidepost bands + Contact Sheet, both forks ─────────────
+  it("both forks render the guidepost band via the shared guidepostPartForSection lookup, never a hardcoded persona check", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("guidepostPartForSection(section, persona)");
+      expect(fork).toContain("renderGuidepostBand(guidepostPart)");
+    }
+  });
+
+  it("both forks render the shared ContactSheet component, gated to a real persona lens (never on 'all')", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ContactSheet }");
+      expect(fork).toContain("showPersonaLens && persona !== DEFAULT_PERSONA && (");
+      expect(fork).toContain("<ContactSheet report={lensed} persona={persona} />");
+    }
+  });
+
+  it("both forks feed ProgramsMatchedHere the SAME lensed report the program cards render — panel and body read one source, can never disagree", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ProgramsMatchedHere }");
+      expect(fork).toContain("<ProgramsMatchedHere\n                    report={lensed}");
+    }
+  });
+
+  it("Part-03 correction: both forks suppress the raw support-organizations section on a real persona lens — Contact Sheet is Part 03's only section", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toMatch(
+        /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaLens &&\s*persona !== DEFAULT_PERSONA\s*\) \{\s*return \[\];/,
+      );
+    }
+  });
+
+  it("both forks render the shared ProgramCardExtras (Can combine with / What to expect / Verify at the source) on every program card", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ProgramCardExtras }");
+      expect(fork).toContain("<ProgramCardExtras item={item} />");
+    }
+  });
+
+  it("both forks render Documents to Gather scoped to owner + supporter only (never developer, never all)", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { DocumentsToGather }");
+      expect(fork).toContain(
+        '(persona === "starting" || persona === "growing" || persona === "supporter") && (',
+      );
+      expect(fork).toContain("<DocumentsToGather report={lensed} />");
+    }
+  });
+
+  it("both forks render the FundingWindowChart (owner), IncentiveHorizonChart (developer), and CorridorInvestmentChart (supporter), each reading real committed data", () => {
+    // Gate round 2, MAJOR 24: CorridorInvestmentChart was registered as a
+    // public-claim surface (BLOCKER 12) but had NO fork-parity assertion
+    // here at all — the same class of gap gate finding 8 closed for The
+    // Brief. Both app/report/page.tsx and components/report/
+    // ReportDisplay.tsx were confirmed byte-identical for this block
+    // before writing this assertion.
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { FundingWindowChart }");
+      expect(fork).toContain("import { IncentiveHorizonChart }");
+      expect(fork).toContain("import { CorridorInvestmentChart }");
+      expect(fork).toContain('(persona === "starting" || persona === "growing") && (\n              <FundingWindowChart report={lensed} />');
+      expect(fork).toContain('persona === "developer" && (\n              <IncentiveHorizonChart report={lensed} />');
+      expect(fork).toContain('persona === "supporter" && (\n              <CorridorInvestmentChart report={lensed} />');
+    }
+  });
+
+  // Gate finding 8 (major, regression): The Brief used to mount ONLY in
+  // app/report/page.tsx — zero references anywhere in
+  // components/report/ReportDisplay.tsx, the one shared component in this
+  // list that had NO fork-parity assertion at all. Closed: the workspace/
+  // saved-report fork now mounts the identical Brief (button, ask,
+  // overlay, print-2up) off the same lensed report + persona.
+  it("both forks render The Brief — the 'Build My Brief' trigger, the two-question ask, and the open overlay with BriefPage", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { BriefStageAsk }");
+      expect(fork).toContain("import { BriefPage }");
+      expect(fork).toContain(
+        'showPersonaLens && persona !== DEFAULT_PERSONA && reportWizardState && (',
+      );
+      expect(fork).toContain("Build My Brief");
+      expect(fork).toContain("briefState.askOpen && (");
+      expect(fork).toContain("<BriefStageAsk\n");
+      expect(fork).toContain("onComplete={handleBriefComplete}");
+      expect(fork).toContain('briefState.open && briefState.stage && briefState.priority && (');
+      expect(fork).toContain('id="brief-overlay"');
+      expect(fork).toContain("<BriefPage\n                report={lensed}");
+      expect(fork).toContain('id="brief-print-2up"');
+    }
+  });
+
+  // Gate finding 11 + gate round 2 BLOCKER 11. Demoted, gate round 3
+  // BLOCKER 11 RULING: this is a SOURCE-GREP check — it proves the three
+  // components (ProgramCardFace, ReasonChips, ProgramCardExtras) are
+  // MOUNTED in that order in both forks' source text, and that none of
+  // them appear inside the accordion. It does NOT and cannot prove the
+  // fine-grained board order WITHIN each component (cost signals before
+  // "What it funds" before "Commonly required" inside Face; "Can combine
+  // with" before next-step before "What to expect" before "Verify at the
+  // source" inside Extras) — the earlier title's "in board order" claimed
+  // more than this test actually checks. The real, render-level proof of
+  // full board order lives in
+  // components/report/__tests__/program-card-order.test.tsx.
+  it("both forks MOUNT ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in that order, none inside the accordion (source-grep mount-order check — see program-card-order.test.tsx for the real render-level board-order proof)", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ReasonChips }");
+      expect(fork).toContain("import { ProgramCardFace }");
+      expect(fork).toContain("import { ProgramCardExtras }");
+      // Board order: face, then reason chips, then the extras block —
+      // ReasonChips no longer renders BEFORE ProgramCardFace (round 1).
+      const faceIdx = fork.indexOf("<ProgramCardFace item={item} />");
+      const chipsIdx = fork.indexOf("<ReasonChips explanation={item.matchExplanation} />");
+      const extrasIdx = fork.indexOf("<ProgramCardExtras item={item} />");
+      expect(faceIdx, `${fork === liveFork ? "live" : "workspace"} fork: ProgramCardFace present`).toBeGreaterThan(-1);
+      expect(chipsIdx, "ReasonChips present").toBeGreaterThan(-1);
+      expect(extrasIdx, "ProgramCardExtras present").toBeGreaterThan(-1);
+      expect(faceIdx).toBeLessThan(chipsIdx);
+      expect(chipsIdx).toBeLessThan(extrasIdx);
+      // The accordion's gate no longer includes item.eligibilityRules —
+      // that content moved to ProgramCardFace's "Commonly required".
+      expect(fork).toContain(
+        '{!isSupportNetworkItem && (item.matchExplanation || item.url || hasNavigationLinks) && (',
+      );
+      expect(fork).not.toContain("item.matchExplanation || item.eligibilityRules || item.url");
+      // ProgramCardExtras must NOT appear inside the accordion's own
+      // AccordionContent block — only once, on the face.
+      const accordionContentStart = fork.indexOf("report-eligibility pl-4 border-l");
+      const accordionContentEnd = fork.indexOf("</AccordionContent>", accordionContentStart);
+      const accordionContent = fork.slice(accordionContentStart, accordionContentEnd);
+      expect(accordionContent).not.toContain("<ProgramCardExtras");
+      expect(accordionContent).not.toContain("<ReasonChips");
+      expect(accordionContent).not.toContain("<ProgramCardFace");
+    }
+  });
+
+  // Gate finding 9/10: the additive `looking` persona's R5LookingFinal
+  // board panels (Location snapshot, What's notable, Explore by interest
+  // + the full-picture line), both forks.
+  it("both forks render the 'looking' persona's overview panels, gated to persona === \"looking\" only", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import {\n  LocationSnapshotPanel,\n  WhatsNotablePanel,\n  ExploreByInterestPanel,\n} from \"@/components/report/LookingOverview\"");
+      expect(fork).toContain('showPersonaLens && persona === "looking" && (');
+      expect(fork).toContain("<LocationSnapshotPanel report={lensed} />");
+      expect(fork).toContain("<WhatsNotablePanel report={lensed} />");
+      expect(fork).toContain("<ExploreByInterestPanel report={lensed} />");
+    }
   });
 });

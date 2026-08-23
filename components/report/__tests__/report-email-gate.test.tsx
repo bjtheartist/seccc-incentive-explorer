@@ -16,12 +16,12 @@ const report: GeneratedReport = {
   },
 };
 
-function renderGate() {
+function renderGate(reportOverride: GeneratedReport = report) {
   return renderToStaticMarkup(
     <ReportEmailGate
-      report={report}
+      report={reportOverride}
       source="test"
-      onPrepareReport={async () => report}
+      onPrepareReport={async () => reportOverride}
       onReportReady={() => {}}
     />,
   );
@@ -78,5 +78,80 @@ describe("ReportEmailGate", () => {
     // assertion above is proving reachability rather than that this render
     // simply never emits `disabled`.
     expect(html).toContain("disabled=\"\"");
+  });
+
+  // ─── Persona intake (owner ruling A1, spec v2 deliverable 6) ──────────
+  describe("persona intake chip row", () => {
+    it("renders as an optional row, not a blocking question", () => {
+      const html = renderGate();
+      expect(html).toContain('data-testid="report-email-gate-persona-row"');
+      expect(html).toContain("Which best describes you? (Optional)");
+      // Still reachable: the row never disables the PDF/continue paths.
+      const pdfTag = openTagFor(html, "report-pdf-download");
+      expect(pdfTag).not.toContain("disabled");
+    });
+
+    it("pre-selects the inferred lens from industry/goal (developer signal)", () => {
+      const developerSignal: GeneratedReport = {
+        ...report,
+        metadata: { ...report.metadata, industry: "realEstate" },
+      };
+      const html = renderGate(developerSignal);
+      // Exactly one chip in the persona row carries aria-pressed="true".
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      expect((row.match(/aria-pressed="true"/g) || []).length).toBe(1);
+      // The pressed chip is the developer one specifically.
+      const developerButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Developer or investor<\/button>/,
+      );
+      expect(developerButtonMatch?.[1]).toBe("true");
+    });
+
+    it("pre-selects growing (the default) when no strong signal is present", () => {
+      const html = renderGate();
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      const growingButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Growing \/ property owner<\/button>/,
+      );
+      expect(growingButtonMatch?.[1]).toBe("true");
+      // Gate round 2, MAJOR 25 + RULING: this same "no strong signal"
+      // input is exactly the shape that would trip the inference
+      // function's own "looking" branch in isolation — but the real
+      // report here still carries a real reportType ("site-incentives"),
+      // so in production this pre-selects "growing", never "looking".
+      // See lib/persona-inference.ts's updated doc comment and
+      // lib/__tests__/persona-inference.test.ts's "never infers looking
+      // for any input shape the real call site can actually produce" test
+      // for the same claim proven at the pure-function level.
+      const lookingButtonMatch = row.match(
+        /<button[^>]*aria-pressed="(true|false)"[^>]*>Just looking<\/button>/,
+      );
+      expect(lookingButtonMatch?.[1]).toBe("false");
+    });
+
+    // Gate round 2, MAJOR 25 + RULING: "Just looking" must be a VISIBLE,
+    // directly tappable option in this row — the real, reachable path to
+    // the "looking" persona for an actual visitor, since the inference
+    // branch that could otherwise produce it is dead in production (see
+    // the test above and lib/persona-inference.ts). PERSONA_CHIPS.map
+    // renders every chip generically with no persona-specific filter, so
+    // this is really just confirming that generic rendering reaches
+    // "looking" too — but the earlier round's gap was exactly this class
+    // of unstated assumption, so it gets its own explicit assertion.
+    it("renders 'Just looking' as a real, enabled, tappable chip in the row — not merely inferable", () => {
+      const html = renderGate();
+      const rowStart = html.indexOf('data-testid="report-email-gate-persona-row"');
+      const rowEnd = html.indexOf("</form>", rowStart);
+      const row = html.slice(rowStart, rowEnd === -1 ? undefined : rowEnd);
+      expect(row).toContain("Just looking");
+      const lookingTag = row.match(/<button[^>]*>Just looking<\/button>/)?.[0];
+      expect(lookingTag).toBeTruthy();
+      expect(lookingTag).not.toMatch(/\sdisabled(=|\/|>)/);
+      expect(lookingTag).toContain('type="button"');
+    });
   });
 });

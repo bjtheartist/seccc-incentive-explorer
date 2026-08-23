@@ -488,6 +488,50 @@ body.printing-cheat-sheet #cheat-sheet {
   page: cheat-sheet-page;
 }
 
+/* ── The Brief — 2-up print isolation (persona spec v2, item 5) ──
+   Same isolation idiom as the cheat-sheet above: a body class toggled
+   right before window.print() (components/report/... in app/report/page.tsx),
+   hiding everything under <main> except #brief-overlay, landscape letter
+   page, and the brief rendered twice side by side (grid-cols-2, the
+   second copy screen-hidden via Tailwind's print:block) — two copies on
+   one sheet for handing to two people or filing + carrying. */
+@media print {
+  body.printing-brief :is(nav, header, footer) {
+    display: none !important;
+  }
+  body.printing-brief main *:not(#brief-overlay):not(#brief-overlay *):not(:has(#brief-overlay)) {
+    display: none !important;
+  }
+  body.printing-brief main :has(#brief-overlay),
+  body.printing-brief main {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    border: 0 !important;
+    background: white !important;
+  }
+  body.printing-brief #brief-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: white !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-brief * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+@page brief-page {
+  size: letter landscape;
+  margin: 0.3in;
+}
+body.printing-brief #brief-overlay {
+  page: brief-page;
+}
+
 @media print {
   @page {
     size: A4;

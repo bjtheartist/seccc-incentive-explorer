@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateReportPdfBase64, orderSectionsForPdf, sanitizeForPdf } from "../pdf-report";
 import {
+  buildExpectations,
   CONFIRMED_PROGRAMS_SECTION_ID,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_ID,
@@ -9,6 +10,7 @@ import {
   SECTION_IDS,
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
+import type { Program } from "../types";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "../support-organization-copy";
 import { extractText } from "unpdf";
@@ -497,5 +499,104 @@ describe("sanitizeForPdf", () => {
     expect(sanitizeForPdf("Cook County Class 7a Property Tax Incentive")).toBe(
       "Cook County Class 7a Property Tax Incentive",
     );
+  });
+});
+
+// Gate finding 13: the canonical PDF used to carry none of worksWith/
+// expectations/verifySources/costSignals — the web card's ProgramCardExtras
+// content had no PDF counterpart at all, so a downloaded PDF silently
+// omitted content the online report showed. Fixed via
+// programCardExtraLines() in lib/pdf-report.ts, appended to the same
+// extraLines the Address-Linked Opportunities card already prints.
+describe("PDF program-card content parity (gate finding 13)", () => {
+  function reportWithConfirmedItem(item: Partial<GeneratedReport["sections"][number]["items"][number]>): GeneratedReport {
+    return {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          id: CONFIRMED_PROGRAMS_SECTION_ID,
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          items: [{ label: "SBIF", value: "Review published terms", programId: "sbif", ...item }],
+        },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL" },
+    };
+  }
+
+  it("prints expectations, worksWith, costSignals, and verifySources on the PDF's opportunity card", async () => {
+    // Gate round 2, BLOCKER 2+3: this used to hand-type the literal string
+    // "Applications are being accepted under the published intake window."
+    // as the fixture's `expectations` value — pinning exactly the
+    // unqualified, undated shape of claim that turned out to be FALSE for
+    // three real catalog programs (ccsa/cdgSmall/cdgMedium, whose
+    // intakeStatus="open" but published windows had already closed).
+    // Deriving it from the real buildExpectations() against a program
+    // whose nextWindow is genuinely in the future means this test proves
+    // real PDF plumbing (does the PDF print what the function actually
+    // produces) without holding up a since-corrected phrase as a
+    // permanent example.
+    const futureWindowProgram = {
+      id: "sbif",
+      intakeStatus: "open",
+      statusAsOf: "2026-07-10",
+      nextWindow: { expected: "2099-01-01", note: "Far-future placeholder so this fixture never goes stale." },
+    } as unknown as Program;
+    const expectations = buildExpectations(futureWindowProgram)!;
+    expect(expectations).toMatch(/as of 2026-07-10/); // sanity: real date-qualified, not the old bare claim
+
+    const report = reportWithConfirmedItem({
+      expectations,
+      worksWith: [{ label: "TIF Districts", detail: "Can stack with TIF-funded incentives." }],
+      costSignals: [{ label: "Free to apply", severity: "info" }],
+      verifySources: [{ label: "Official program page", url: "https://example.com/sbif", dated: "2026-07-10" }],
+    });
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    const text = extracted.text;
+    expect(text).toContain("Applications are being accepted");
+    expect(text).toContain("as of 2026-07-10");
+    expect(text).toContain("TIF Districts");
+    expect(text).toContain("Free to apply");
+    expect(text).toContain("Official program page");
+  });
+
+  // Gate round 2, BLOCKER 2+3 (regression, real bug this fixes): a program
+  // marked intakeStatus="open" whose OWN published nextWindow has already
+  // passed must NOT claim applications are currently being accepted — the
+  // exact false shape found in the real catalog (ccsa/cdgSmall/cdgMedium).
+  it("downgrades a stale 'open' claim to the real closed-window date when the PDF's opportunity card carries one", async () => {
+    const staleProgram = {
+      id: "ccsa",
+      intakeStatus: "open",
+      statusAsOf: "2026-08-09",
+      nextWindow: { expected: "2026-08-21", note: "Quarterly round cutoff." },
+    } as unknown as Program;
+    const expectations = buildExpectations(staleProgram)!;
+    expect(expectations).toBe("Most recent published window closed 2026-08-21 — check for the next round.");
+    expect(expectations).not.toMatch(/being accepted/i);
+
+    const report = reportWithConfirmedItem({ expectations });
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).toContain("Most recent published window closed 2026-08-21");
+    expect(extracted.text).not.toMatch(/being accepted/i);
+  });
+
+  it("omits each line honestly when the underlying field is absent — never a placeholder", async () => {
+    const report = reportWithConfirmedItem({});
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).not.toMatch(/What to expect:|Can combine with:|Cost signals:|Verify at:/);
   });
 });

@@ -32,6 +32,7 @@ import {
   verifyNoV1ZoneUsage,
   findUnregisteredPublicSinks,
   PUBLIC_CLAIM_SURFACES_KNOWN_GAPS,
+  PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS,
 } from "../public-claim-surfaces-verify";
 
 const VALID_CONTRACTS: readonly ClaimContract[] = ["PublicProgramView", "ZoneEvidence", "reviewed-copy"];
@@ -233,13 +234,24 @@ describe("public-claim-surfaces-verify — repo-wide checks against the REAL cod
     expect(violations).toEqual([]);
   }, 30000);
 
-  function walkAppFiles(dir: string, base: string, out: string[]): void {
+  // Gate round 2, BLOCKER 12: `matchName` is generalized so this same
+  // walker can be reused both for app/**'s page.tsx/route.ts sinks AND
+  // for components/report/**'s .tsx files — the coordinator's "extend
+  // findUnregisteredPublicSinks to walk components/report/**" directive
+  // (findUnregisteredPublicSinks itself was already generic; the walk
+  // that FED it was the part hardcoded to app/-only page/route files).
+  function walkFiles(
+    dir: string,
+    base: string,
+    out: string[],
+    matchName: (name: string) => boolean,
+  ): void {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.name === "__tests__" || entry.name.includes(".test.")) continue;
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
-        walkAppFiles(full, base, out);
-      } else if (entry.name === "page.tsx" || entry.name === "route.ts") {
+        walkFiles(full, base, out, matchName);
+      } else if (matchName(entry.name)) {
         out.push(full.slice(base.length + 1));
       }
     }
@@ -247,7 +259,7 @@ describe("public-claim-surfaces-verify — repo-wide checks against the REAL cod
 
   it("every real page.tsx/route.ts is either registered or a documented PUBLIC_CLAIM_SURFACES_KNOWN_GAPS entry — no SILENT third option", () => {
     const files: string[] = [];
-    walkAppFiles(join(rootDir, "app"), rootDir, files);
+    walkFiles(join(rootDir, "app"), rootDir, files, (name) => name === "page.tsx" || name === "route.ts");
     expect(files.length).toBeGreaterThan(50);
 
     const violations = findUnregisteredPublicSinks(files, PUBLIC_CLAIM_SURFACES);
@@ -258,6 +270,46 @@ describe("public-claim-surfaces-verify — repo-wide checks against the REAL cod
       );
     }
     expect(violations).toEqual([]);
+  });
+
+  it("every real components/report/*.tsx file is either registered or a documented PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS entry — no SILENT third option (gate round 2, BLOCKER 12)", () => {
+    const files: string[] = [];
+    walkFiles(join(rootDir, "components", "report"), rootDir, files, (name) => name.endsWith(".tsx"));
+    expect(files.length).toBeGreaterThan(20);
+
+    const violations = findUnregisteredPublicSinks(
+      files,
+      PUBLIC_CLAIM_SURFACES,
+      PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS,
+    );
+    if (violations.length > 0) {
+      const report = violations.map((v) => `  ${v.filePath}`).join("\n");
+      throw new Error(
+        `${violations.length} components/report sink(s) neither registered nor in the report-component known-gaps baseline:\n${report}`,
+      );
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("the six BLOCKER 12 components are genuinely REGISTERED (not merely absent from the report-component gaps baseline)", () => {
+    const registeredFiles = new Set(PUBLIC_CLAIM_SURFACES.flatMap((s) => s.files));
+    for (const file of [
+      "components/report/ProgramCardFace.tsx",
+      "components/report/ReasonChips.tsx",
+      "components/report/CorridorInvestmentChart.tsx",
+      "components/report/LookingOverview.tsx",
+      "components/report/BriefPage.tsx",
+      "components/report/BriefStageAsk.tsx",
+    ]) {
+      expect(registeredFiles.has(file), file).toBe(true);
+      expect(PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS, file).not.toContain(file);
+    }
+  });
+
+  it("the report-component gaps baseline and the registry never claim the SAME path (no ambiguous double-coverage)", () => {
+    const registeredFiles = new Set(PUBLIC_CLAIM_SURFACES.flatMap((s) => s.files));
+    const overlap = PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS.filter((g) => registeredFiles.has(g));
+    expect(overlap).toEqual([]);
   });
 
   it("the three review6 S11 routes created this session are genuinely REGISTERED (not merely absent from the known-gaps list)", () => {
