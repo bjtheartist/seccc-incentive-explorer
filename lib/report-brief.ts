@@ -53,15 +53,21 @@ export interface BriefProgramRow {
   programId: string;
   name: string;
   /**
-   * Gate finding 7: left-block/right-stack card fields, all read from the
-   * SAME lensed ReportItem the online program card renders — never
-   * re-derived or invented for the Brief specifically. `whyLine` is the
-   * first published match reason (item.matchExplanation.whyItAppears[0]);
-   * `amount` is the program's own benefitRange; `window` is its own
-   * nextWindow, preferring the published note (already full prose) and
-   * falling back to the bare expected date. Any of the three may be
-   * absent — a program the engine hasn't resolved a reason/amount/window
-   * for simply doesn't carry that field, never a placeholder.
+   * Gate finding 7: left-block/right-stack card fields, read from the SAME
+   * lensed ReportItem the online program card renders — never re-derived
+   * or invented for the Brief specifically. `whyLine` is the first
+   * published match reason (item.matchExplanation.whyItAppears[0]);
+   * `window` is the program's own nextWindow, preferring the published
+   * note (already full prose) and falling back to the bare expected date.
+   * `amount` is ALWAYS null: it was meant to read Program.benefitRange,
+   * but that value (under any key name) is explicitly blocked from ever
+   * reaching the canonical serialized report by the pre-existing
+   * PRIVATE_MATCH_FIELDS guard in lib/__tests__/public-report-safety.
+   * test.ts — it collides with the internal confidence-engine ranking
+   * shape's own `benefitRange` field. Kept as a typed field so a future
+   * real, non-blocklisted amount source can populate it later. Any field
+   * may be absent — a program without a resolved reason/window simply
+   * doesn't carry it, never a placeholder.
    */
   whyLine: string | null;
   amount: string | null;
@@ -126,7 +132,13 @@ export function buildBriefData(
     programId: p.programId,
     name: p.label,
     whyLine: p.item.matchExplanation?.whyItAppears?.[0] ?? null,
-    amount: p.item.benefitRange ?? null,
+    // `amount` stays permanently null: Program.benefitRange cannot flow
+    // onto ReportItem under any key (public-report-safety.test.ts's
+    // PRIVATE_MATCH_FIELDS guard blocks both the key name and its literal
+    // value — see the doc comment on ReportItem.nextWindow). Kept as a
+    // typed field so a future real, non-blocklisted amount source can
+    // populate it without another BriefProgramRow schema change.
+    amount: null,
     window: p.item.nextWindow?.note ?? (p.item.nextWindow?.expected ? `Expected ${p.item.nextWindow.expected}` : null),
   }));
 

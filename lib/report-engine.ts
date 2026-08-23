@@ -245,13 +245,21 @@ export interface ReportItem {
    */
   costSignals?: { label: string; severity: "info" | "amber" }[];
   /**
-   * Gate finding 7: the SAME structured amount/window facts the program's
-   * own catalog record already carries (`benefitRange`, `nextWindow`) —
-   * copied through so the Brief's BriefProgramRow can read the identical
-   * source the card itself would show, never a re-derived or invented
-   * value. Both fields are already populated on every catalog program.
+   * Gate finding 7: the SAME structured window fact the program's own
+   * catalog record already carries — copied through so the Brief's
+   * BriefProgramRow can read the identical source the card itself would
+   * show, never a re-derived or invented value. `benefitRange` was
+   * deliberately NOT added alongside this: lib/__tests__/public-report-
+   * safety.test.ts's PRIVATE_MATCH_FIELDS guard (pre-existing, not part of
+   * this pass) prohibits a `benefitRange` key AND its literal value from
+   * ever reaching the canonical serialized report — it is the same field
+   * name `ProgramCheckResult.benefitRange` (the internal confidence-engine
+   * ranking shape) uses, and the guard does not distinguish the two by
+   * type. Tried it, the safety test caught it, reverted — see the parity
+   * doc's finding-7 row for the honest record. `amount` on
+   * BriefProgramRow stays null until a real, non-blocklisted amount
+   * source exists.
    */
-  benefitRange?: string;
   nextWindow?: { expected: string | null; note: string | null };
   /**
    * Raw ISO date (YYYY-MM-DD) for an "Upcoming Deadlines" item — the same
@@ -1683,7 +1691,6 @@ function programReportItem(
     verifySources: buildVerifySources(program),
     expectations: buildExpectations(program),
     costSignals: buildCostSignals(program),
-    benefitRange: program.benefitRange,
     nextWindow: program.nextWindow,
   };
 }

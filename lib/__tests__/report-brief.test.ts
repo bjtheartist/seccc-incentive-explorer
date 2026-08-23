@@ -83,9 +83,11 @@ describe("buildBriefData", () => {
     expect(brief.programs.map((p) => p.programId)).toEqual(["sbif", "tif", "federalOZ"]);
   });
 
-  // Gate finding 7: BriefProgramRow must read whyLine/amount/window off the
-  // SAME lensed item the program card renders, not re-derive them.
-  it("carries whyLine/amount/window from the SAME lensed ReportItem the card would render", () => {
+  // Gate finding 7: BriefProgramRow must read whyLine/window off the SAME
+  // lensed item the program card renders, not re-derive them. `amount` is
+  // asserted separately below as permanently null — see the regression
+  // test right after this one for why.
+  it("carries whyLine/window from the SAME lensed ReportItem the card would render", () => {
     const withCardFields: GeneratedReport = {
       ...reportFixture(),
       sections: reportFixture().sections.map((s) =>
@@ -104,7 +106,6 @@ describe("buildBriefData", () => {
                         currentDocumentsToGather: [],
                         confirmWith: [],
                       },
-                      benefitRange: "$75K–$250K cap",
                       nextWindow: { expected: "2026-08-30", note: "August 2026 window open through 2026-08-30" },
                     }
                   : item,
@@ -116,8 +117,20 @@ describe("buildBriefData", () => {
     const brief = buildBriefData(withCardFields, "starting", "launch-ready", "renovation");
     const sbifRow = brief.programs.find((p) => p.programId === "sbif");
     expect(sbifRow?.whyLine).toBe("Address falls inside an SBIF-eligible TIF district");
-    expect(sbifRow?.amount).toBe("$75K–$250K cap");
     expect(sbifRow?.window).toBe("August 2026 window open through 2026-08-30");
+  });
+
+  // Regression (caught by the full test suite, not by design): a first
+  // pass wired `amount` from `item.benefitRange`, which is REACHABLE from
+  // ReportItem — but Program.benefitRange's value is explicitly blocked
+  // from the canonical serialized report by public-report-safety.test.ts's
+  // PRIVATE_MATCH_FIELDS guard (it shares a field name with the internal
+  // confidence-engine ranking shape ProgramCheckResult.benefitRange). Fixed
+  // by reverting ReportItem.benefitRange entirely and hardcoding `amount`
+  // to null until a real, non-blocklisted source exists.
+  it("never populates amount — Program.benefitRange cannot legally reach ReportItem (see ReportItem.nextWindow's doc comment)", () => {
+    const brief = buildBriefData(reportFixture(), "starting", "launch-ready", "renovation");
+    expect(brief.programs.every((p) => p.amount === null)).toBe(true);
   });
 
   it("leaves whyLine/amount/window null (never a placeholder) when the underlying item carries none of them", () => {
