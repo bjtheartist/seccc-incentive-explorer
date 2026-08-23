@@ -18,6 +18,16 @@ import {
   type LocalBusinessSupportOrganization,
   type LocalSupportLane,
 } from "./local-business-support";
+// Gate round 3 nit: `SectionBucketKey` is exported from report-personas.ts
+// specifically so ReportSection.guidepostBucket below can be typed as it
+// directly, killing the consumer-side `as SectionBucketKey | undefined`
+// casts that used to live in report-personas.ts. This is TYPE-ONLY
+// (`import type`), which TypeScript erases entirely at compile time — it
+// never becomes a runtime `require`/`import`, so it creates no actual
+// circular MODULE dependency even though report-personas.ts separately
+// imports real values from this file. A `string`-typed escape hatch was
+// never load-bearing here; only VALUE-level cycles are.
+import type { SectionBucketKey } from "./report-personas";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
 import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
@@ -172,11 +182,11 @@ export interface ReportSection {
    */
   collapsedByPersona?: boolean;
   /**
-   * Gate round 2, BLOCKER 23. Opaque internal marker: the persona lens's
-   * guidepost bucket (lib/report-personas.ts's private `SectionBucketKey`
-   * — not re-exported here to avoid a circular import between this file
-   * and report-personas.ts, hence the loose `string` type; only
-   * report-personas.ts itself ever reads or narrows it), resolved ONCE
+   * Gate round 2, BLOCKER 23; typed as the real `SectionBucketKey` under
+   * gate round 3's nit sweep (previously a loose `string`, with consumer-
+   * side casts at every read site — see the `import type` note above this
+   * interface for why the real type is safe to reference directly). An
+   * internal marker: the persona lens's guidepost bucket, resolved ONCE
    * against the pristine section (id-first, title-fallback) before any
    * per-persona title override runs, and carried forward so a later
    * guidepost-PART lookup never has to re-derive the bucket from a
@@ -185,7 +195,7 @@ export interface ReportSection {
    * only for the duration of that single render. Never persisted: lensed
    * reports are display-time only and are never the thing saved/exported.
    */
-  guidepostBucket?: string;
+  guidepostBucket?: SectionBucketKey;
 }
 
 export interface ReportDetailGroup {

@@ -73,18 +73,49 @@ describe("buildExpectations", () => {
   // produced "no fixed application window published" — a false statement
   // that directly contradicted this report's own chart. intakeStatus is
   // now the only signal, checked via a single switch.
-  it("never claims SBIF has 'no fixed application window' — it has real, resolved windows", () => {
+  // Gate round 3, BLOCKER 28 (time-bomb, fixed): this test used to hard-
+  // assert SBIF's un-downgraded "being accepted" string against the REAL
+  // catalog. SBIF's real nextWindow.expected is 2026-08-30 — the moment
+  // that date passes, gate round 2's own isPastDate() downgrade (BLOCKER
+  // 2+3, working exactly as intended) makes this test go red for a
+  // reason that has nothing to do with a regression: it would be
+  // correctly reporting the window as closed. A test that fails when the
+  // code does its job correctly is a bug in the test. Split into two:
+  // the REAL-catalog assertion below is restricted to what's NOT
+  // date-fragile (intakeStatus/recurring shape, and that "no fixed
+  // application window" never appears in EITHER the open or the
+  // downgraded phrasing — true regardless of which branch fires); the
+  // positive "being accepted, un-downgraded" shape moved to a synthetic
+  // far-future (2099) fixture below, the file's own established pattern
+  // (see "never downgrades a program whose nextWindow is genuinely in
+  // the future" further down).
+  it("never claims 'no fixed application window' for SBIF, regardless of whether its real window is currently open or has closed (not date-fragile)", () => {
     const sbif = realProgram("sbif");
     expect(sbif.intakeStatus).toBe("open");
     expect(sbif.recurring).toBe(true); // the exact condition that used to misfire
-    // SBIF's real nextWindow.expected is in the future relative to any
-    // date this test could plausibly run on within this catalog's shelf
-    // life, so the claim stays un-downgraded — date-qualified via
-    // statusAsOf (gate round 2, BLOCKER 2+3), never a bare present-tense
-    // fact.
     const expectations = buildExpectations(sbif);
+    // True in both the un-downgraded ("being accepted...") and the
+    // downgraded ("Most recent published window closed...") phrasing —
+    // neither ever claims "no fixed application window," which is the
+    // actual regression this test protects against.
     expect(expectations).not.toMatch(/no fixed application window/i);
-    expect(expectations).toBe(`Applications are being accepted under the published intake window as of ${sbif.statusAsOf}.`);
+    // Date-qualified either way (gate round 2, BLOCKER 2+3): never a bare
+    // present-tense fact with no date attached at all.
+    expect(expectations).toMatch(new RegExp(sbif.statusAsOf!.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")));
+  });
+
+  it("never claims 'no fixed application window' and stays un-downgraded ('being accepted') for a program whose window is genuinely far in the future — synthetic fixture, not date-fragile against live catalog data", () => {
+    const farFutureSbifShape = {
+      intakeStatus: "open",
+      recurring: true,
+      statusAsOf: "2026-07-10",
+      nextWindow: { expected: "2099-01-01", note: "" },
+    } as unknown as Program;
+    const expectations = buildExpectations(farFutureSbifShape);
+    expect(expectations).not.toMatch(/no fixed application window/i);
+    expect(expectations).toBe(
+      "Applications are being accepted under the published intake window as of 2026-07-10.",
+    );
   });
 
   // Gate round 2, BLOCKER 2+3 (regression, real bug this fixes): three

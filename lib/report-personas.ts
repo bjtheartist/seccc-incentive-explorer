@@ -263,7 +263,12 @@ function reorderSupportNetwork(
 
 export type GuidepostPart = 1 | 2 | 3;
 
-type SectionBucketKey =
+// Gate round 3 nit: exported (was private) so lib/report-engine.ts's
+// ReportSection.guidepostBucket can be typed as this directly via a
+// TYPE-ONLY import (erased at compile time, no runtime cycle — see that
+// file's own import-site comment), killing the `as SectionBucketKey |
+// undefined` casts this file used to need at every guidepostBucket read.
+export type SectionBucketKey =
   | "siteFacts"
   | "logisticsAccess"
   | "civicRepresentation"
@@ -480,7 +485,7 @@ function applyPersonaSectionTitles(sections: ReportSection[], persona: PersonaId
     // in the applyPersonaLens pipeline, so the stamp is always present in
     // production. Falls back to a fresh derivation only for direct/
     // unit-test calls that skip the full pipeline.
-    const bucket = (section.guidepostBucket as SectionBucketKey | undefined) ?? sectionBucketKey(section);
+    const bucket = section.guidepostBucket ?? sectionBucketKey(section);
     const overrideTitle = overrides[bucket];
     if (!overrideTitle || overrideTitle === section.title || appliedBuckets.has(bucket)) return section;
     appliedBuckets.add(bucket);
