@@ -51,21 +51,42 @@ describe("inferPersonaFromIntake", () => {
   // looking inference branch is dead because reportType is always
   // present" is a claim about the REAL call site
   // (components/report/ReportEmailGate.tsx), not about this function in
-  // isolation. This test documents that claim concretely: every shape the
-  // real call site can ever produce carries a real reportType (
-  // GeneratedReport.reportType is a required field in lib/report-engine.ts
-  // — never `null`, never `undefined`), so `inferPersonaFromIntake` never
-  // actually returns "looking" for a real visitor. It only returns
-  // "looking" for inputs (like `{}` above) the real call site can never
-  // construct.
-  it("never infers 'looking' for any input shape the real call site can actually produce (reportType is always a real, non-empty string there)", () => {
-    const realCallSiteShapes = [
-      { industry: undefined, projectGoals: undefined, projectType: undefined, reportType: "site-incentives" },
-      { industry: null, projectGoals: null, projectType: null, reportType: "best-location" },
-      { industry: undefined, projectGoals: [], projectType: undefined, reportType: "developer-analysis" },
+  // isolation. This test documents that claim concretely across a
+  // representative matrix of shapes the real call site can produce —
+  // every real ReportType value crossed with the industry/goal
+  // combinations most likely to reach `looking`'s zero-signal condition
+  // if reportType were ever absent. It is empirical coverage over that
+  // matrix, not a formal proof over the field's full (effectively
+  // unbounded — industry/projectType are loosely-typed strings) domain;
+  // the title is deliberately scoped to "the tested matrix," not "any
+  // input," per gate round 2 finding 27 (test names must not claim a
+  // stronger property than what is actually asserted). The stronger
+  // guarantee — that the real call site's reportType is unconditionally
+  // present — is a static-typing fact, not something this test can prove
+  // by example; that claim is documented in lib/persona-inference.ts's
+  // own updated doc comment, which cites `GeneratedReport.reportType`
+  // being a required, non-optional field as the reason.
+  it("never infers 'looking' across a representative matrix of input shapes the real call site can produce, for every real ReportType", () => {
+    const REAL_REPORT_TYPES = [
+      "site-incentives",
+      "location-incentives",
+      "best-location",
+      "program-explorer",
+      "developer-analysis",
+      "dev-feasibility",
+      "corridor-intelligence",
     ] as const;
-    for (const shape of realCallSiteShapes) {
-      expect(inferPersonaFromIntake(shape), JSON.stringify(shape)).not.toBe("looking");
+    const industryOrGoalVariants: Array<Pick<Parameters<typeof inferPersonaFromIntake>[0], "industry" | "projectGoals" | "projectType">> = [
+      { industry: undefined, projectGoals: undefined, projectType: undefined },
+      { industry: null, projectGoals: null, projectType: null },
+      { industry: undefined, projectGoals: [], projectType: undefined },
+      { industry: "", projectGoals: [], projectType: "" },
+    ];
+    for (const reportType of REAL_REPORT_TYPES) {
+      for (const variant of industryOrGoalVariants) {
+        const shape = { ...variant, reportType };
+        expect(inferPersonaFromIntake(shape), JSON.stringify(shape)).not.toBe("looking");
+      }
     }
   });
 
