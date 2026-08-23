@@ -35,6 +35,12 @@ export async function submitSupportRequest(
   const response = await fetch("/api/support-request", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    // Gate review round 1, BLOCKER 3: the caller awaits this before any
+    // navigation or unmount, but `keepalive` is cheap defense-in-depth
+    // against a browser aborting in-flight requests on page transition —
+    // the payload is small JSON (no PDF), well within the keepalive body
+    // limit.
+    keepalive: true,
     body: JSON.stringify({
       name: input.name?.trim() || undefined,
       email: input.email.trim().toLowerCase(),
