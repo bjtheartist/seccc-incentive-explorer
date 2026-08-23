@@ -388,11 +388,13 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
 async function renderReportRoute(
   report: GeneratedReport,
   wizardState: WizardState,
+  extraOverrides: Partial<Record<StateSlotName, unknown>> = {},
 ): Promise<string> {
   const overrides: Partial<Record<StateSlotName, unknown>> = {
     wizardState,
     report,
     revealedReportKey: reportEmailGateKey(report),
+    ...extraOverrides,
   };
   const values = { ...defaultSlotValues(), ...overrides };
   const seeds = FULL_STATE_ORDER.map((name) => values[name]);
@@ -680,5 +682,26 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
     // content survives that normalization and stays present in the DOM.
     expect(html).toContain("Claim published program terms");
     expect(html).toContain("High Priority");
+  });
+
+  describe("Part-03 correction: Contact Sheet is the ONLY Part 03 section on a real persona lens", () => {
+    it("suppresses the raw support-organizations section and renders the Contact Sheet instead", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "developer" });
+
+      // The raw support-org section wrapper is gone...
+      expect(html).not.toContain('id="your-support-network"');
+      // ...but its content still reaches the reader via the Contact Sheet
+      // (lane-ranked, why-lined), not silently dropped.
+      expect(html).toContain('data-testid="contact-sheet"');
+    });
+
+    it("keeps the raw support-organizations section on 'all' (no Contact Sheet, no guidepost)", async () => {
+      const report = buildReport({ zoneClass: "B3-2" });
+      const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "all" });
+
+      expect(html).toContain('id="your-support-network"');
+      expect(html).not.toContain('data-testid="contact-sheet"');
+    });
   });
 });

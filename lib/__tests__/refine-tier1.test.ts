@@ -263,4 +263,12 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       expect(fork).toContain("<ProgramsMatchedHere\n                    report={lensed}");
     }
   });
+
+  it("Part-03 correction: both forks suppress the raw support-organizations section on a real persona lens — Contact Sheet is Part 03's only section", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toMatch(
+        /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaLens &&\s*persona !== DEFAULT_PERSONA\s*\) \{\s*return \[\];/,
+      );
+    }
+  });
 });

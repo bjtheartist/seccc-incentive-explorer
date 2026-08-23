@@ -253,6 +253,9 @@ export function ReportDisplay({
     () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
     [report, persona, showPersonaLens],
   );
+  // Tracks the last guidepost PART band emitted by the section-render loop
+  // below — see the live fork (app/report/page.tsx) for the full rationale.
+  let guidepostBandTracker: GuidepostPart | null = null;
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
@@ -1175,15 +1178,28 @@ export function ReportDisplay({
 
             {/* ── Content Sections ── */}
             {(() => {
-              let previousGuidepostPart: GuidepostPart | null = null;
               return lensed.sections?.flatMap((section, sectionIdx) => {
+                // Part-03 correction (late owner amendment, binding): on a
+                // real persona lens, Part 03 contains EXACTLY ONE section —
+                // the Contact Sheet. Suppress the raw support-organizations
+                // section here; its orgs still reach the reader, lane-ranked
+                // and why-lined, as ContactSheet rows below. "All" is
+                // untouched.
+                if (
+                  isSupportOrganizationSectionTitle(section.title) &&
+                  showPersonaLens &&
+                  persona !== DEFAULT_PERSONA
+                ) {
+                  return [];
+                }
+
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
                 const guidepostPart = guidepostPartForSection(section, persona);
                 const band =
-                  guidepostPart !== null && guidepostPart !== previousGuidepostPart
+                  guidepostPart !== null && guidepostPart !== guidepostBandTracker
                     ? renderGuidepostBand(guidepostPart)
                     : null;
-                previousGuidepostPart = guidepostPart;
+                guidepostBandTracker = guidepostPart;
                 // Persona lens: the "Also at this address" group collapses (never
                 // hides) into a native disclosure. Print/PDF is generated from the
                 // canonical report, so this only affects the on-screen view.
@@ -1567,15 +1583,18 @@ export function ReportDisplay({
               });
             })()}
 
-            {/* Contact Sheet (spec v2 deliverable 8): the review's
-                highest-value new surface, added to Part 03 alongside
-                (not replacing) the existing support-organizations section.
-                Persona-only — the "all" kitchen sink keeps its
-                un-consolidated section list. */}
+            {/* Contact Sheet (spec v2 deliverable 8, Part-03 correction):
+                Part 03's ONE section on a real persona lens — the raw
+                support-organizations section was suppressed above; its
+                orgs surface here instead, lane-ranked and why-lined.
+                "All" is untouched (no ContactSheet, no guidepost at all). */}
             {showPersonaLens && persona !== DEFAULT_PERSONA && (
-              <div className="mt-8">
-                <ContactSheet report={lensed} persona={persona} />
-              </div>
+              <>
+                {guidepostBandTracker !== 3 && renderGuidepostBand(3)}
+                <div className="mt-8">
+                  <ContactSheet report={lensed} persona={persona} />
+                </div>
+              </>
             )}
 
             {/* ── Recommended Actions ──

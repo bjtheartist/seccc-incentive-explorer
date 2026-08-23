@@ -3680,6 +3680,13 @@ function ReportDisplay({
     () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
     [report, persona, showPersonaLens],
   );
+  // Tracks the last guidepost PART band emitted by the section-render loop
+  // below, so the Contact Sheet mount (Part 03's ONLY section on a persona
+  // view — see the Part-03 correction) can emit its own band when nothing
+  // in the loop already opened Part 03. Plain mutable render-scoped
+  // variable, not state — recomputed fresh every render, same pattern as
+  // `isFramedPersonaLink` above.
+  let guidepostBandTracker: GuidepostPart | null = null;
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
@@ -4808,16 +4815,30 @@ function ReportDisplay({
 
             {/* ── Content Sections ── */}
             {(() => {
-              let previousGuidepostPart: GuidepostPart | null = null;
               return lensed.sections?.flatMap((section, sectionIdx) => {
+                // Part-03 correction (late owner amendment, binding — supersedes
+                // the earlier "additive" ContactSheet build): on a real persona
+                // lens, Part 03 contains EXACTLY ONE section — the Contact
+                // Sheet. The raw support-organizations section is suppressed
+                // here; its orgs still reach the reader, lane-ranked and
+                // why-lined, as ContactSheet rows below. "All" is untouched —
+                // switching to it always shows the full, un-consolidated list.
+                if (
+                  isSupportOrganizationSectionTitle(section.title) &&
+                  showPersonaLens &&
+                  persona !== DEFAULT_PERSONA
+                ) {
+                  return [];
+                }
+
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
                 const sectionKey = sectionStateKey(section);
                 const guidepostPart = guidepostPartForSection(section, persona);
                 const band =
-                  guidepostPart !== null && guidepostPart !== previousGuidepostPart
+                  guidepostPart !== null && guidepostPart !== guidepostBandTracker
                     ? renderGuidepostBand(guidepostPart)
                     : null;
-                previousGuidepostPart = guidepostPart;
+                guidepostBandTracker = guidepostPart;
 
                 // Persona lens: the "Also at this address" group defaults to
                 // collapsed (still user-expandable, still in the DOM for print/
@@ -5201,15 +5222,18 @@ function ReportDisplay({
               });
             })()}
 
-            {/* Contact Sheet (spec v2 deliverable 8): the review's
-                highest-value new surface, added to Part 03 alongside
-                (not replacing) the existing support-organizations section.
-                Persona-only — the "all" kitchen sink keeps its
-                un-consolidated section list. */}
+            {/* Contact Sheet (spec v2 deliverable 8, Part-03 correction):
+                Part 03's ONE section on a real persona lens — the raw
+                support-organizations section was suppressed above; its
+                orgs surface here instead, lane-ranked and why-lined.
+                "All" is untouched (no ContactSheet, no guidepost at all). */}
             {showPersonaLens && persona !== DEFAULT_PERSONA && (
-              <div className="mt-8">
-                <ContactSheet report={lensed} persona={persona} />
-              </div>
+              <>
+                {guidepostBandTracker !== 3 && renderGuidepostBand(3)}
+                <div className="mt-8">
+                  <ContactSheet report={lensed} persona={persona} />
+                </div>
+              </>
             )}
 
             {/* ── Recommended Actions ──
