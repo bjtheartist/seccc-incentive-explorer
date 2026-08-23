@@ -87,12 +87,19 @@ function stageInputDir(tamperFile?: string): string {
   return dir;
 }
 
-/** Run the REAL exported main() with INPUT_DIR pointed at `dir`. Never
+/** Run the REAL exported main() with INPUT_DIR pointed at `dir` and
+ * OUTPUT_DIR pointed at a throwaway temp dir (the exporter's outputs default
+ * to the COMMITTED data/private/ files — without the override, the control
+ * case's successful end-to-end run would rewrite their generatedAt stamps in
+ * place and leave the repo tree dirty after every full test run). Never
  * throws — resolves to a discriminated result so a caller can assert either
  * branch without a try/catch at the call site. */
 async function runExportAgainst(dir: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const originalInputDirEnv = process.env.INPUT_DIR;
+  const originalOutputDirEnv = process.env.OUTPUT_DIR;
+  const outDir = mkdtempSync(join(tmpdir(), "export-tamper-e2e-out-"));
   process.env.INPUT_DIR = dir;
+  process.env.OUTPUT_DIR = outDir;
   vi.resetModules();
   try {
     const { main } = await import("../export-community-investment");
@@ -103,6 +110,9 @@ async function runExportAgainst(dir: string): Promise<{ ok: true } | { ok: false
   } finally {
     if (originalInputDirEnv === undefined) delete process.env.INPUT_DIR;
     else process.env.INPUT_DIR = originalInputDirEnv;
+    if (originalOutputDirEnv === undefined) delete process.env.OUTPUT_DIR;
+    else process.env.OUTPUT_DIR = originalOutputDirEnv;
+    rmSync(outDir, { recursive: true, force: true });
     vi.resetModules();
   }
 }

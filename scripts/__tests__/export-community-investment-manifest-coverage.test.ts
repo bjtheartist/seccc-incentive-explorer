@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,8 +75,20 @@ const EXPECTED_NEVER_READ_IDS = new Set<string>([
 ]);
 
 describe("export-community-investment manifest read-layer coverage (Sol gate finding 1, round 4)", () => {
+  // The exporter's three outputs default to the COMMITTED data/private/ files;
+  // running the real main() without an override rewrites their generatedAt
+  // stamps in place and leaves the repo tree dirty after every full test run.
+  // Inputs deliberately stay the REAL committed investment-inputs/ (that is
+  // the point of this test); only the OUTPUTS are redirected to a throwaway
+  // temp dir via the exporter's OUTPUT_DIR override.
+  let tempOutputDir: string;
+  let originalOutputDirEnv: string | undefined;
+
   beforeEach(() => {
     openedInputFiles.clear();
+    tempOutputDir = mkdtempSync(join(tmpdir(), "export-manifest-coverage-out-"));
+    originalOutputDirEnv = process.env.OUTPUT_DIR;
+    process.env.OUTPUT_DIR = tempOutputDir;
     // Deterministic, synchronous, offline stand-in for the live Census
     // geocoder — always "no match," so any real cache miss resolves via the
     // exporter's own normal held-citywide path without ever reaching a
@@ -90,6 +104,9 @@ describe("export-community-investment manifest read-layer coverage (Sol gate fin
   });
 
   afterEach(() => {
+    if (originalOutputDirEnv === undefined) delete process.env.OUTPUT_DIR;
+    else process.env.OUTPUT_DIR = originalOutputDirEnv;
+    rmSync(tempOutputDir, { recursive: true, force: true });
     vi.unstubAllGlobals();
     vi.resetModules();
   });
