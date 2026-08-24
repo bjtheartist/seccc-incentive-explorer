@@ -43,7 +43,6 @@ import {
   type InvestmentPointFeature,
   type InvestmentPopupLike,
   type InvestmentRecipientRecordStatus,
-  FUNDER_TYPE_ORDER,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 
