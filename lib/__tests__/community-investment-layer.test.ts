@@ -42,6 +42,7 @@ import {
   type InvestmentPointFeature,
   type InvestmentPopupLike,
   type InvestmentRecipientRecordStatus,
+  FUNDER_TYPE_ORDER,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 
@@ -155,7 +156,7 @@ describe("filterInvestmentPointFeatures", () => {
   it("returns every plotted point under the 'all' range with all funder types active", () => {
     const out = filterInvestmentPointFeatures(features, {
       yearRangeId: "all",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
     });
     expect(out.map((f) => f.properties.id)).toEqual(["gov-2019", "phil-2022", "dev-noyear"]);
   });
@@ -163,7 +164,7 @@ describe("filterInvestmentPointFeatures", () => {
   it("filters by year window — a null-year point never satisfies a bounded window", () => {
     const out = filterInvestmentPointFeatures(features, {
       yearRangeId: "2017-2019",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
     });
     expect(out.map((f) => f.properties.id)).toEqual(["gov-2019"]);
   });
@@ -189,7 +190,7 @@ describe("filterInvestmentPointFeatures", () => {
     ])[0];
     const capitalOnly = filterInvestmentPointFeatures([...features, programmatic], {
       yearRangeId: "all",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
       activeGovernmentFundingPurposes: ["capital_project"],
     });
 
@@ -222,7 +223,7 @@ describe("filterInvestmentPointFeatures", () => {
 
     const allOn = filterInvestmentPointFeatures([unknown], {
       yearRangeId: "all",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
     });
     expect(allOn.map((f) => f.properties.id)).toEqual(["unknown-1"]);
 
@@ -252,7 +253,7 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
     // Narrowing to 2017–2019 excludes both citywide records (2021, 2020).
     const scoped = summarizeCitywideEntries(entries, {
       yearRangeId: "2017-2019",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
     });
     expect(scoped).toEqual({ count: 0, totalDollars: 0 });
   });
@@ -269,7 +270,7 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
   it("re-scopes government citywide records by funding purpose without hiding philanthropy", () => {
     const programmaticOnly = summarizeCitywideEntries(entries, {
       yearRangeId: "all",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: [...FUNDER_TYPE_ORDER],
       activeGovernmentFundingPurposes: ["programmatic"],
     });
     expect(programmaticOnly).toEqual({ count: 1, totalDollars: 250_000 });
@@ -277,7 +278,7 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
 });
 
 describe("matchesInvestmentFilter (deliverable 2 — the ONE overlay predicate)", () => {
-  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+  const allFunderTypes: FunderType[] = [...FUNDER_TYPE_ORDER];
 
   it("passes a record inside the year window, active funderType, and active purpose", () => {
     expect(
@@ -331,7 +332,7 @@ describe("matchesInvestmentFilter (deliverable 2 — the ONE overlay predicate)"
 });
 
 describe("investmentPopupOutOfScope (Sol gate blocker 1 — open popup/panel retention)", () => {
-  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+  const allFunderTypes: FunderType[] = [...FUNDER_TYPE_ORDER];
 
   it("an ACTUAL 2021 RRF point popup survives under 'All', then closes on a 2024–2026 selection — the exact reproduction", () => {
     // Mirrors a real sba-rrf point feature's properties (InvestmentPointProps):
@@ -480,7 +481,7 @@ class MockMapboxPopup implements InvestmentPopupLike {
 }
 
 describe("InvestmentPopupTracker (Sol gate round 2, finding 1 — popup-reuse lifecycle)", () => {
-  const allFunderTypes: FunderType[] = ["government", "philanthropic", "private_development"];
+  const allFunderTypes: FunderType[] = [...FUNDER_TYPE_ORDER];
   const ALL_FILTER = { yearRangeId: "all", activeFunderTypes: allFunderTypes };
   const FILTER_2024_2026 = { yearRangeId: "2024-2026", activeFunderTypes: allFunderTypes };
 
@@ -669,7 +670,7 @@ describe("zipAggregateOverlaySourceInScope (deliverable 2 — Cook/BIG/Hospitali
     expect(
       zipAggregateOverlaySourceInScope("cook-source-2023", {
         yearRangeId: "2022-2023",
-        activeFunderTypes: ["government", "philanthropic", "private_development"],
+        activeFunderTypes: [...FUNDER_TYPE_ORDER],
       }),
     ).toBe(true);
   });
@@ -680,7 +681,7 @@ describe("zipAggregateOverlaySourceInScope (deliverable 2 — Cook/BIG/Hospitali
     // every ZIP-aggregate/citywide-only source below (none run in that window).
     const filter2024 = {
       yearRangeId: "2024-2026",
-      activeFunderTypes: ["government", "philanthropic", "private_development"] as const,
+      activeFunderTypes: [...FUNDER_TYPE_ORDER] as const,
     };
     expect(zipAggregateOverlaySourceInScope("cook-source-2023", filter2024)).toBe(false);
     expect(zipAggregateOverlaySourceInScope("illinois-big", filter2024)).toBe(false);
@@ -701,7 +702,7 @@ describe("zipAggregateOverlaySourceInScope (deliverable 2 — Cook/BIG/Hospitali
     expect(
       zipAggregateOverlaySourceInScope("illinois-big", {
         yearRangeId: "all",
-        activeFunderTypes: ["government", "philanthropic", "private_development"],
+        activeFunderTypes: [...FUNDER_TYPE_ORDER],
         activeGovernmentFundingPurposes: ["capital_project"],
       }),
     ).toBe(false);
@@ -720,6 +721,7 @@ describe("presentFunderTypesInOrder", () => {
   it("dedupes and returns in canonical funder order", () => {
     expect(
       presentFunderTypesInOrder(["philanthropic", "government", "government", "private_development", null])
+      // Fixture has no corporate row — expected is the present subset, in canonical order.
     ).toEqual(["government", "philanthropic", "private_development"]);
   });
 });
@@ -754,6 +756,7 @@ describe("fetchCommunityInvestmentLayer", () => {
       "phil-2022",
       "dev-noyear",
     ]);
+    // Fixture has no corporate point — present types are the fixture's own subset.
     expect(result.presentFunderTypes).toEqual(["government", "philanthropic", "private_development"]);
     expect(result.presentGovernmentFundingPurposes).toEqual(["capital_project"]);
     expect(result.citywide).toEqual({ count: 2, totalDollars: 250_000 });
