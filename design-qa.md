@@ -65,6 +65,65 @@ No P3 follow-up is required for this scope.
 
 final result: passed
 
+---
+
+# Strategic Neighborhood Permit MVP — Final QA
+
+## Comparison target
+
+- Approved visual truth: `mockups/screenshots/permit-activity-desktop-1487x1058.png`
+- Current implementation viewport: `output/browser/permit-strategic-mvp-viewport-1487x1058.png`
+- Side-by-side comparison input: `output/browser/permit-strategic-source-vs-mvp-viewport.png` (approved source left, implementation right)
+- Mobile top and ledger captures: `output/browser/permit-strategic-mvp-mobile-390x844.png` and `output/browser/permit-strategic-mvp-mobile-ledger-390x844.png`
+- Route: `/permit-activity/chatham`, with command navigation verified against `/permit-activity/o-hare`.
+
+The local design pass used a temporary, non-committed ready-state response so the complete hierarchy could be inspected without a local database connection. It retained the previously observed real Chatham aggregate totals (5,222 geocoded filings, 2,529 grouped source addresses, August 3, 2026 latest filing, and the reconciled annual/type totals); the new rolling, monthly, address-concentration, and record rows were coherent QA values, not publisher claims. The temporary response was removed before final tests and commit. Production values remain query-derived by the tested permit-area endpoint.
+
+## Findings
+
+No actionable P0, P1, or P2 issue remains.
+
+- The approved Explorer visual language is preserved: Playfair Display report headline, Inter body copy, JetBrains Mono evidence labels, warm paper, navy rules, source blue, square controls, and compact tables.
+- The content is reorganized into the confirmed decision order: neighborhood command, recent pulse, interpretation, 36-month momentum, filing-type drivers, grouped-address concentration, recent records, then methods and caveats.
+- The database timestamp is labeled as the Explorer load time rather than City publisher freshness.
+- Rolling comparisons expose exact inclusive dates and keep valid zero, unavailable, malformed, loading, and truncated-record states distinct.
+- Address counts and shares are described as case- and punctuation-insensitive source-address groups. Repeated filings are not presented as distinct projects.
+- No activity score, reported-cost total, construction-progress claim, occupancy claim, completion claim, or neighborhood-performance ranking appears.
+
+## Comparison and responsive evidence
+
+- Desktop measured `scrollWidth === innerWidth === 1487` at the approved 1487 × 1058 CSS-pixel viewport.
+- Mobile measured `scrollWidth === innerWidth === 390` at 390 × 844 CSS pixels.
+- The desktop comparison confirms the same header/tabs, editorial headline, four-cell evidence strip, ruled analysis panels, source chips, and dense record grammar. The longer page is intentional: the 36-month trend, address concentration, and methods disclosure add decision evidence below the original one-screen board.
+- Mobile retains a two-by-two pulse ledger, full-width neighborhood command, internally scrollable monthly plot, stacked driver panels, labeled record cards, and no horizontal clipping.
+
+## Interaction and state checks
+
+- The selector exposes all 77 canonical community areas; selecting O'Hare routed to `/permit-activity/o-hare`, updated the heading, and retained the canonical `o-hare` value.
+- Selecting a monthly mark updated the live status to its exact month and filing count.
+- Permit-record and official-source dialogs opened, exposed only contract-approved fields/links, and closed correctly.
+- The native “About this analysis” disclosure opened with recorded status, coverage/data quality, zero-versus-unavailable semantics, and interpretive limits.
+- The CSV action enabled only for a valid parsed result; unit coverage confirms rolling windows, monthly counts, grouped addresses, explicit denominators, and the absence of cost fields.
+- Browser console review found no application error. Development-only React/HMR/Analytics notices were informational.
+
+## Comparison history
+
+1. The first 390 px ledger capture showed the table caption constrained to a narrow table-caption column (P2).
+   - Fix: made the responsive caption a full-width block when the record table changes to stacked cards.
+   - Post-fix evidence: `output/browser/permit-strategic-mvp-mobile-ledger-390x844.png`.
+2. Provenance review found the UI calling `MAX(fetched_at)` “Source refreshed,” which could be mistaken for publisher freshness (P2 copy risk).
+   - Fix: relabeled it “Explorer loaded” in the UI and “Explorer load timestamp” in the CSV.
+
+## Verification
+
+- Strategic permit, boundary, map-integration, and public-claim registry suites: 144 tests passed.
+- TypeScript: passed.
+- ESLint: zero errors; nine unrelated pre-existing warnings remain.
+- Next.js production build: passed; 331 static pages generated and `/permit-activity/[area]` emitted as a dynamic route.
+- The full repository run reached 4,812 passing tests and surfaced unrelated baseline failures in existing shortlist dependency, investment-integrity, and timeout-heavy guards; the newly registered permit public surface was fixed and its 54-test registry suite passed independently.
+
+final result: passed
+
 # Real Community Investment Route — Evidence-Brief Parity QA
 
 ## Comparison target
@@ -294,5 +353,22 @@ final result: passed
 # Production Integration — Final QA Closure
 
 The final source/implementation comparison, source-backed Chatham ready state, 390 px mobile capture, Polygon and MultiPolygon boundary coverage, keyboard interactions, state semantics, TypeScript, focused tests, ESLint, and production build are documented in “Production Neighborhood Permit Brief — Integration QA” above. The browser measurements remained overflow-free, and no actionable P0, P1, or P2 issue remains.
+
+final result: passed
+
+---
+
+# Strategic Neighborhood Permit MVP — QA Closure
+
+The current strategic MVP is documented in “Strategic Neighborhood Permit MVP — Final QA” above. Its final paired comparison is `output/browser/permit-strategic-source-vs-mvp-viewport.png`; the responsive evidence is `output/browser/permit-strategic-mvp-mobile-390x844.png` and `output/browser/permit-strategic-mvp-mobile-ledger-390x844.png`.
+
+- Desktop: `scrollWidth === innerWidth === 1487`.
+- Mobile: `scrollWidth === innerWidth === 390`.
+- O'Hare command routing, exact-value monthly marks, record/source dialogs, methods disclosure, and export availability were verified in the in-app browser.
+- The cramped mobile ledger caption found in the first pass was fixed and re-captured at 390 × 844.
+- The temporary local ready-state response was removed; production values remain query-derived.
+- Strategic permit/boundary/map/public-claim verification: 144 tests passed, with TypeScript, ESLint, and the 331-page Next.js production build passing.
+
+No actionable P0, P1, or P2 issue remains.
 
 final result: passed

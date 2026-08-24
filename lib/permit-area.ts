@@ -36,6 +36,37 @@ export interface PermitAreaStatusCount {
   count: number;
 }
 
+export interface PermitAreaRollingPeriod {
+  start: string | null;
+  end: string | null;
+  filings: number;
+  distinctAddresses: number;
+  addressedFilings: number;
+}
+
+export interface PermitAreaRollingPulse {
+  /** Latest filing date in the polygon, used as the rolling-period anchor. */
+  asOf: string | null;
+  current: PermitAreaRollingPeriod;
+  previous: PermitAreaRollingPeriod;
+  /** Current filings minus previous-period filings. */
+  changeCount: number;
+  /** Percentage change in filings; null when the previous period is zero. */
+  changePercent: number | null;
+}
+
+export interface PermitAreaMonthCount {
+  /** Calendar month in YYYY-MM form. */
+  month: string;
+  count: number;
+}
+
+export interface PermitAreaTopAddress {
+  /** A source address representing one punctuation-insensitive address group. */
+  address: string;
+  count: number;
+}
+
 export interface PermitAreaRecord {
   permitId: string;
   permitTypeKey: PermitMapTypeKey | null;
@@ -68,6 +99,9 @@ export interface PermitAreaResult {
     first: string;
     latest: string;
   } | null;
+  rollingPulse: PermitAreaRollingPulse;
+  monthlyBreakdown: PermitAreaMonthCount[];
+  topAddresses: PermitAreaTopAddress[];
   typeBreakdown: PermitAreaTypeCount[];
   yearBreakdown: PermitAreaYearCount[];
   statusBreakdown: PermitAreaStatusCount[];
@@ -106,6 +140,14 @@ function isNullableString(value: unknown): value is string | null {
 
 function isNonnegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isoDateMs(value: unknown): number | null {
@@ -152,6 +194,98 @@ function isPermitAreaStatusCount(value: unknown): value is PermitAreaStatusCount
     isString(value.status) &&
     isNonnegativeInteger(value.count)
   );
+}
+
+function isNullableIsoDate(value: unknown): value is string | null {
+  return value === null || isoDateMs(value) !== null;
+}
+
+function isPermitAreaRollingPeriod(value: unknown): value is PermitAreaRollingPeriod {
+  return (
+    isRecord(value) &&
+    isNullableIsoDate(value.start) &&
+    isNullableIsoDate(value.end) &&
+    isNonnegativeInteger(value.filings) &&
+    isNonnegativeInteger(value.distinctAddresses) &&
+    isNonnegativeInteger(value.addressedFilings)
+  );
+}
+
+function isPermitAreaRollingPulse(value: unknown): value is PermitAreaRollingPulse {
+  return (
+    isRecord(value) &&
+    isNullableIsoDate(value.asOf) &&
+    isPermitAreaRollingPeriod(value.current) &&
+    isPermitAreaRollingPeriod(value.previous) &&
+    isInteger(value.changeCount) &&
+    (value.changePercent === null || isFiniteNumber(value.changePercent))
+  );
+}
+
+function isPermitAreaMonthCount(value: unknown): value is PermitAreaMonthCount {
+  return (
+    isRecord(value) &&
+    isString(value.month) &&
+    /^\d{4}-\d{2}$/.test(value.month) &&
+    isoDateMs(`${value.month}-01`) !== null &&
+    isNonnegativeInteger(value.count)
+  );
+}
+
+function isPermitAreaTopAddress(value: unknown): value is PermitAreaTopAddress {
+  return (
+    isRecord(value) &&
+    isString(value.address) &&
+    value.address.trim() !== "" &&
+    isNonnegativeInteger(value.count) &&
+    value.count > 0
+  );
+}
+
+function addUtcDays(value: string, days: number): string {
+  const timestamp = isoDateMs(value);
+  if (timestamp === null) return value;
+  return new Date(timestamp + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Match PostgreSQL's date - interval 'N years' behavior, including leap days. */
+function subtractCalendarYears(value: string, years: number): string {
+  const timestamp = isoDateMs(value);
+  if (timestamp === null) return value;
+  const date = new Date(timestamp);
+  const targetYear = date.getUTCFullYear() - years;
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const lastDay = new Date(Date.UTC(targetYear, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(targetYear, month, Math.min(day, lastDay)))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function expectedRollingPeriodDates(asOf: string) {
+  const oneYearEarlier = subtractCalendarYears(asOf, 1);
+  return {
+    currentStart: addUtcDays(oneYearEarlier, 1),
+    currentEnd: asOf,
+    previousStart: addUtcDays(subtractCalendarYears(asOf, 2), 1),
+    previousEnd: oneYearEarlier,
+  };
+}
+
+function expectedMonthKeys(asOf: string): string[] {
+  const timestamp = isoDateMs(asOf);
+  if (timestamp === null) return [];
+  const anchor = new Date(timestamp);
+  return Array.from({ length: 36 }, (_, index) => {
+    const month = new Date(
+      Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() - (35 - index), 1),
+    );
+    return month.toISOString().slice(0, 7);
+  });
+}
+
+function normalizedSourceAddress(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function isPermitAreaRecord(value: unknown): value is PermitAreaRecord {
@@ -209,6 +343,11 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     !isNonnegativeInteger(value.totalFilings) ||
     !isNonnegativeInteger(value.distinctAddresses) ||
     !validIssueDateSpan ||
+    !isPermitAreaRollingPulse(value.rollingPulse) ||
+    !Array.isArray(value.monthlyBreakdown) ||
+    !value.monthlyBreakdown.every(isPermitAreaMonthCount) ||
+    !Array.isArray(value.topAddresses) ||
+    !value.topAddresses.every(isPermitAreaTopAddress) ||
     !Array.isArray(value.typeBreakdown) ||
     !value.typeBreakdown.every(isPermitAreaTypeCount) ||
     !Array.isArray(value.yearBreakdown) ||
@@ -237,6 +376,36 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
   const years = result.yearBreakdown.map((item) => item.year);
   const statuses = result.statusBreakdown.map((item) => item.status);
   const permitIds = result.records.map((record) => record.permitId.trim());
+  const monthlyTotal = result.monthlyBreakdown.reduce((sum, item) => sum + item.count, 0);
+  const topAddressTotal = result.topAddresses.reduce((sum, item) => sum + item.count, 0);
+  const normalizedTopAddresses = result.topAddresses.map((item) =>
+    normalizedSourceAddress(item.address),
+  );
+  const { current, previous } = result.rollingPulse;
+  const expectedChangeCount = current.filings - previous.filings;
+  const expectedChangePercent =
+    previous.filings === 0 ? null : (expectedChangeCount / previous.filings) * 100;
+  const changePercentMatches =
+    expectedChangePercent === null
+      ? result.rollingPulse.changePercent === null
+      : result.rollingPulse.changePercent !== null &&
+        Math.abs(result.rollingPulse.changePercent - expectedChangePercent) < 1e-9;
+  const topAddressesSorted = result.topAddresses.every((item, index, addresses) => {
+    if (index === 0) return true;
+    const previousItem = addresses[index - 1];
+    return previousItem.count >= item.count;
+  });
+  const recordsSorted = result.records.every((record, index, records) => {
+    if (index === 0) return true;
+    const previousRecord = records[index - 1];
+    const previousMs = isoDateMs(previousRecord.issueDate);
+    const recordMs = isoDateMs(record.issueDate);
+    if (previousMs === null || recordMs === null) return false;
+    return (
+      previousMs > recordMs ||
+      (previousMs === recordMs && previousRecord.permitId.localeCompare(record.permitId) <= 0)
+    );
+  });
 
   if (
     !refreshIsPaired ||
@@ -244,6 +413,19 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     result.recordsReturned > result.totalFilings ||
     result.recordsReturned > PERMIT_AREA_RECORD_LIMIT ||
     result.recordsTruncated !== (result.recordsReturned < result.totalFilings) ||
+    current.distinctAddresses > current.addressedFilings ||
+    current.addressedFilings > current.filings ||
+    previous.distinctAddresses > previous.addressedFilings ||
+    previous.addressedFilings > previous.filings ||
+    current.filings + previous.filings > result.totalFilings ||
+    result.rollingPulse.changeCount !== expectedChangeCount ||
+    !changePercentMatches ||
+    result.topAddresses.length > 10 ||
+    topAddressTotal > current.addressedFilings ||
+    normalizedTopAddresses.some((address) => address === "") ||
+    new Set(normalizedTopAddresses).size !== normalizedTopAddresses.length ||
+    !topAddressesSorted ||
+    !recordsSorted ||
     typeTotal !== result.totalFilings ||
     yearTotal !== result.totalFilings ||
     statusTotal !== result.totalFilings ||
@@ -266,7 +448,22 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
       result.sourceRefresh.asOfBasis !== null ||
       result.typeBreakdown.length > 0 ||
       result.yearBreakdown.length > 0 ||
-      result.statusBreakdown.length > 0)
+      result.statusBreakdown.length > 0 ||
+      result.rollingPulse.asOf !== null ||
+      result.rollingPulse.current.start !== null ||
+      result.rollingPulse.current.end !== null ||
+      result.rollingPulse.current.filings !== 0 ||
+      result.rollingPulse.current.distinctAddresses !== 0 ||
+      result.rollingPulse.current.addressedFilings !== 0 ||
+      result.rollingPulse.previous.start !== null ||
+      result.rollingPulse.previous.end !== null ||
+      result.rollingPulse.previous.filings !== 0 ||
+      result.rollingPulse.previous.distinctAddresses !== 0 ||
+      result.rollingPulse.previous.addressedFilings !== 0 ||
+      result.rollingPulse.changeCount !== 0 ||
+      result.rollingPulse.changePercent !== null ||
+      result.monthlyBreakdown.length > 0 ||
+      result.topAddresses.length > 0)
   ) {
     return null;
   }
@@ -284,6 +481,25 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     const firstYear = Number(result.issueDateSpan.first.slice(0, 4));
     const latestYear = Number(result.issueDateSpan.latest.slice(0, 4));
     if (Math.min(...years) !== firstYear || Math.max(...years) !== latestYear) {
+      return null;
+    }
+
+    if (result.rollingPulse.asOf !== result.issueDateSpan.latest) return null;
+    const expectedDates = expectedRollingPeriodDates(result.rollingPulse.asOf);
+    if (
+      current.start !== expectedDates.currentStart ||
+      current.end !== expectedDates.currentEnd ||
+      previous.start !== expectedDates.previousStart ||
+      previous.end !== expectedDates.previousEnd ||
+      current.filings === 0 ||
+      result.monthlyBreakdown.length !== 36 ||
+      result.monthlyBreakdown.map((item) => item.month).join("|") !==
+        expectedMonthKeys(result.rollingPulse.asOf).join("|") ||
+      monthlyTotal < current.filings ||
+      monthlyTotal > result.totalFilings ||
+      result.monthlyBreakdown.at(-1)?.count === 0 ||
+      (current.addressedFilings === 0) !== (result.topAddresses.length === 0)
+    ) {
       return null;
     }
 

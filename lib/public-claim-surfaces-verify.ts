@@ -775,7 +775,6 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/api/owner-file/session/route.ts",
   "app/api/parcel/route.ts",
   "app/api/parcel-space/route.ts",
-  "app/api/permit-area/route.ts",
   "app/api/permit-match/route.ts",
   "app/api/permits/route.ts",
   "app/api/projects/[id]/route.ts",

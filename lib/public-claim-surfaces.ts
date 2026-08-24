@@ -330,6 +330,16 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     findings: ["F2", "F14"],
   },
   {
+    id: "neighborhood-permit-analysis",
+    description: "The neighborhood permit-activity evidence brief, its official-boundary data endpoint, and downloadable source-record summary.",
+    contracts: ["reviewed-copy"],
+    files: [
+      "app/permit-activity",
+      "app/api/permit-area/route.ts",
+      "lib/permit-area.ts",
+    ],
+  },
+  {
     id: "shortlist-locate",
     description: "The /locate shortlist tool and its API/export.",
     contracts: ["ZoneEvidence"],

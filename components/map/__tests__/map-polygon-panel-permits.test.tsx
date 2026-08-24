@@ -46,6 +46,30 @@ const PERMITS: PermitAreaResult = {
   totalFilings: 8,
   distinctAddresses: 7,
   issueDateSpan: { first: "2024-01-10", latest: "2026-08-04" },
+  rollingPulse: {
+    asOf: "2026-08-04",
+    current: {
+      start: "2025-08-05",
+      end: "2026-08-04",
+      filings: 5,
+      distinctAddresses: 5,
+      addressedFilings: 5,
+    },
+    previous: {
+      start: "2024-08-05",
+      end: "2025-08-04",
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    changeCount: 5,
+    changePercent: null,
+  },
+  monthlyBreakdown: Array.from({ length: 36 }, (_, index) => {
+    const month = new Date(Date.UTC(2023, 8 + index, 1)).toISOString().slice(0, 7);
+    return { month, count: month === "2024-01" ? 3 : month === "2026-08" ? 5 : 0 };
+  }),
+  topAddresses: [{ address: "123 S STATE ST", count: 1 }],
   typeBreakdown: [
     {
       key: "new_construction",

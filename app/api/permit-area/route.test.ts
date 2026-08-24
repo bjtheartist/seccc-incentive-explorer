@@ -39,6 +39,12 @@ const MULTI_POLYGON: GeoJSON.MultiPolygon = {
   ],
 };
 
+const MONTHLY_BREAKDOWN = Array.from({ length: 36 }, (_, index) => {
+  const month = new Date(Date.UTC(2023, 8 + index, 1)).toISOString().slice(0, 7);
+  const filingCount = month === "2025-08" ? 1 : month === "2026-08" ? 2 : 0;
+  return { month, filing_count: filingCount };
+});
+
 function requestFor(polygon: unknown = POLYGON) {
   const params = new URLSearchParams({ polygon: JSON.stringify(polygon) });
   return new NextRequest(`http://localhost/api/permit-area?${params.toString()}`);
@@ -114,16 +120,28 @@ describe("GET /api/permit-area", () => {
       {
         total_filings: "3",
         distinct_addresses: "2",
-        first_issue_date: "2024-01-10",
+        first_issue_date: "2025-08-04",
         latest_issue_date: "2026-08-04",
         source_as_of: "2026-08-04 18:22:00+00",
+        current_start: "2025-08-05",
+        current_end: "2026-08-04",
+        current_filings: 2,
+        current_distinct_addresses: 1,
+        current_addressed_filings: 2,
+        previous_start: "2024-08-05",
+        previous_end: "2025-08-04",
+        previous_filings: 1,
+        previous_distinct_addresses: 1,
+        previous_addressed_filings: 1,
+        monthly_breakdown: MONTHLY_BREAKDOWN,
+        top_addresses: [{ address: "123 S STATE ST", filing_count: 2 }],
         type_breakdown: [
           { permit_type: "PERMIT - NEW CONSTRUCTION", filing_count: 2 },
           { permit_type: "SOURCE-SPECIFIC TYPE", filing_count: 1 },
         ],
         year_breakdown: [
           { year: 2026, filing_count: 2 },
-          { year: 2024, filing_count: 1 },
+          { year: 2025, filing_count: 1 },
         ],
         status_breakdown: [
           { permit_status: "ACTIVE", filing_count: 2 },
@@ -152,12 +170,35 @@ describe("GET /api/permit-area", () => {
     expect(response.headers.get("cache-control")).toContain("s-maxage=3600");
     expect(body.totalFilings).toBe(3);
     expect(body.distinctAddresses).toBe(2);
-    expect(body.issueDateSpan).toEqual({ first: "2024-01-10", latest: "2026-08-04" });
+    expect(body.issueDateSpan).toEqual({ first: "2025-08-04", latest: "2026-08-04" });
     expect(body.dataWindow).toBe("Since 2015");
     expect(body.sourceRefresh).toEqual({
       asOf: "2026-08-04T18:22:00.000Z",
       asOfBasis: "latest_queried_row_fetched_at",
     });
+    expect(body.rollingPulse).toEqual({
+      asOf: "2026-08-04",
+      current: {
+        start: "2025-08-05",
+        end: "2026-08-04",
+        filings: 2,
+        distinctAddresses: 1,
+        addressedFilings: 2,
+      },
+      previous: {
+        start: "2024-08-05",
+        end: "2025-08-04",
+        filings: 1,
+        distinctAddresses: 1,
+        addressedFilings: 1,
+      },
+      changeCount: 1,
+      changePercent: 100,
+    });
+    expect(body.monthlyBreakdown).toHaveLength(36);
+    expect(body.monthlyBreakdown[0]).toEqual({ month: "2023-09", count: 0 });
+    expect(body.monthlyBreakdown.at(-1)).toEqual({ month: "2026-08", count: 2 });
+    expect(body.topAddresses).toEqual([{ address: "123 S STATE ST", count: 2 }]);
     expect(body.typeBreakdown).toEqual([
       {
         key: "new_construction",
@@ -184,6 +225,13 @@ describe("GET /api/permit-area", () => {
     expect(query).toContain("geom IS NOT NULL");
     expect(query).toContain("COUNT(*)::int");
     expect(query).toContain("MAX(fetched_at)::text");
+    expect(query).toContain(
+      "regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g')",
+    );
+    expect(query).toContain("INTERVAL '1 year'");
+    expect(query).toContain("INTERVAL '2 years'");
+    expect(query).toContain("INTERVAL '35 months'");
+    expect(query).toContain("generate_series");
     expect(query).not.toContain("reported_cost");
     expect(query.toLowerCase()).not.toContain("sum(");
     expect(values).toContain("2015-01-01");
@@ -212,6 +260,27 @@ describe("GET /api/permit-area", () => {
     expect(body.issueDateSpan).toBeNull();
     expect(body.sourceRefresh).toEqual({ asOf: null, asOfBasis: null });
     expect(body.recordsTruncated).toBe(false);
+    expect(body.rollingPulse).toEqual({
+      asOf: null,
+      current: {
+        start: null,
+        end: null,
+        filings: 0,
+        distinctAddresses: 0,
+        addressedFilings: 0,
+      },
+      previous: {
+        start: null,
+        end: null,
+        filings: 0,
+        distinctAddresses: 0,
+        addressedFilings: 0,
+      },
+      changeCount: 0,
+      changePercent: null,
+    });
+    expect(body.monthlyBreakdown).toEqual([]);
+    expect(body.topAddresses).toEqual([]);
   });
 
   it("returns 503 instead of converting query failure into zero activity", async () => {

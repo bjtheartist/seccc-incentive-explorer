@@ -26,6 +26,11 @@ const POLYGON: GeoJSON.Polygon = {
   ],
 };
 
+const MONTHLY_BREAKDOWN = Array.from({ length: 36 }, (_, index) => {
+  const month = new Date(Date.UTC(2023, 8 + index, 1)).toISOString().slice(0, 7);
+  return { month, count: month === "2026-08" ? 1 : 0 };
+});
+
 const RESULT: PermitAreaResult = {
   status: "ready",
   source: {
@@ -42,6 +47,27 @@ const RESULT: PermitAreaResult = {
   totalFilings: 1,
   distinctAddresses: 1,
   issueDateSpan: { first: "2026-08-04", latest: "2026-08-04" },
+  rollingPulse: {
+    asOf: "2026-08-04",
+    current: {
+      start: "2025-08-05",
+      end: "2026-08-04",
+      filings: 1,
+      distinctAddresses: 1,
+      addressedFilings: 1,
+    },
+    previous: {
+      start: "2024-08-05",
+      end: "2025-08-04",
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    changeCount: 1,
+    changePercent: null,
+  },
+  monthlyBreakdown: MONTHLY_BREAKDOWN,
+  topAddresses: [{ address: "123 W TEST ST", count: 1 }],
   typeBreakdown: [
     {
       key: null,
@@ -77,6 +103,27 @@ const ZERO_RESULT: PermitAreaResult = {
   totalFilings: 0,
   distinctAddresses: 0,
   issueDateSpan: null,
+  rollingPulse: {
+    asOf: null,
+    current: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    previous: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    changeCount: 0,
+    changePercent: null,
+  },
+  monthlyBreakdown: [],
+  topAddresses: [],
   typeBreakdown: [],
   yearBreakdown: [],
   statusBreakdown: [],
@@ -114,6 +161,38 @@ describe("permit area client", () => {
     const result = {
       ...RESULT,
       sourceRefresh: { asOf: null, asOfBasis: null },
+    } satisfies PermitAreaResult;
+
+    expect(parsePermitAreaResult(result)).toEqual(result);
+  });
+
+  it("accepts reconciled current and preceding rolling periods", () => {
+    const result = {
+      ...RESULT,
+      totalFilings: 2,
+      issueDateSpan: { first: "2025-08-04", latest: "2026-08-04" },
+      rollingPulse: {
+        ...RESULT.rollingPulse,
+        previous: {
+          start: "2024-08-05",
+          end: "2025-08-04",
+          filings: 1,
+          distinctAddresses: 1,
+          addressedFilings: 1,
+        },
+        changeCount: 0,
+        changePercent: 0,
+      },
+      monthlyBreakdown: MONTHLY_BREAKDOWN.map((item) =>
+        item.month === "2025-08" ? { ...item, count: 1 } : item,
+      ),
+      typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 2 }],
+      yearBreakdown: [
+        { year: 2026, count: 1 },
+        { year: 2025, count: 1 },
+      ],
+      statusBreakdown: [{ status: "Issued", count: 2 }],
+      recordsTruncated: true,
     } satisfies PermitAreaResult;
 
     expect(parsePermitAreaResult(result)).toEqual(result);
@@ -171,6 +250,9 @@ describe("permit area client", () => {
     ["located-only flag", { ...RESULT, locatedRecordsOnly: false }],
     ["numeric summary", { ...RESULT, totalFilings: "1" }],
     ["issue-date span", { ...RESULT, issueDateSpan: { first: "2026-08-04" } }],
+    ["rolling pulse", { ...RESULT, rollingPulse: { ...RESULT.rollingPulse, asOf: 20260804 } }],
+    ["monthly breakdown", { ...RESULT, monthlyBreakdown: [{ month: "August", count: 1 }] }],
+    ["top addresses", { ...RESULT, topAddresses: [{ address: "", count: 1 }] }],
     [
       "type breakdown",
       {
@@ -243,6 +325,81 @@ describe("permit area client", () => {
       { ...RESULT, yearBreakdown: [{ year: 2026, count: 2 }] },
     ],
     ["a status-breakdown sum that differs from the total", { ...RESULT, statusBreakdown: [] }],
+    [
+      "a rolling anchor that differs from the latest filing",
+      { ...RESULT, rollingPulse: { ...RESULT.rollingPulse, asOf: "2026-08-03" } },
+    ],
+    [
+      "an incorrectly ordered rolling period",
+      {
+        ...RESULT,
+        rollingPulse: {
+          ...RESULT.rollingPulse,
+          current: { ...RESULT.rollingPulse.current, start: "2025-08-04" },
+        },
+      },
+    ],
+    [
+      "an unreconciled rolling change",
+      { ...RESULT, rollingPulse: { ...RESULT.rollingPulse, changeCount: 0 } },
+    ],
+    [
+      "a percentage when the prior filing count is zero",
+      { ...RESULT, rollingPulse: { ...RESULT.rollingPulse, changePercent: 100 } },
+    ],
+    [
+      "more rolling distinct addresses than addressed filings",
+      {
+        ...RESULT,
+        rollingPulse: {
+          ...RESULT.rollingPulse,
+          current: {
+            ...RESULT.rollingPulse.current,
+            distinctAddresses: 2,
+          },
+        },
+      },
+    ],
+    [
+      "a top-address count above the addressed-filings denominator",
+      { ...RESULT, topAddresses: [{ address: "123 W TEST ST", count: 2 }] },
+    ],
+    [
+      "duplicate punctuation-insensitive top addresses",
+      {
+        ...RESULT,
+        rollingPulse: {
+          ...RESULT.rollingPulse,
+          current: {
+            ...RESULT.rollingPulse.current,
+            filings: 2,
+            addressedFilings: 2,
+          },
+          changeCount: 2,
+        },
+        totalFilings: 2,
+        distinctAddresses: 1,
+        monthlyBreakdown: MONTHLY_BREAKDOWN.map((item) =>
+          item.month === "2026-08" ? { ...item, count: 2 } : item,
+        ),
+        topAddresses: [
+          { address: "123 W. TEST ST", count: 1 },
+          { address: "123 W TEST ST", count: 1 },
+        ],
+        typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 2 }],
+        yearBreakdown: [{ year: 2026, count: 2 }],
+        statusBreakdown: [{ status: "Issued", count: 2 }],
+        recordsTruncated: true,
+      },
+    ],
+    [
+      "a monthly series that is not oldest to newest",
+      { ...RESULT, monthlyBreakdown: [...MONTHLY_BREAKDOWN].reverse() },
+    ],
+    [
+      "a nonempty pulse attached to a zero result",
+      { ...ZERO_RESULT, rollingPulse: RESULT.rollingPulse },
+    ],
     [
       "duplicate recent permit IDs",
       {

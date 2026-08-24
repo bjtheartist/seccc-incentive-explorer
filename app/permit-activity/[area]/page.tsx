@@ -9,11 +9,30 @@ import { PermitActivityBrief } from "./PermitActivityBrief";
 
 type Params = Promise<{ area: string }>;
 
+interface PermitActivityAreaOption {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+/**
+ * Plain, serializable command options for the client brief. The canonical
+ * community-area collection remains the single source for route coverage.
+ */
+const permitActivityAreas: PermitActivityAreaOption[] =
+  allNeighborhoodSlugs().map((slug) => {
+    const area = findCommunityAreaBySlug(slug);
+    if (!area) {
+      throw new Error(`Missing community area for permit route slug: ${slug}`);
+    }
+    return { id: area.id, name: area.name, slug };
+  });
+
 export const dynamicParams = false;
 export const dynamic = "force-dynamic";
 
 export function generateStaticParams(): Array<{ area: string }> {
-  return allNeighborhoodSlugs().map((area) => ({ area }));
+  return permitActivityAreas.map(({ slug: area }) => ({ area }));
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -52,6 +71,7 @@ export default async function PermitActivityAreaPage({
   return (
     <PermitActivityBrief
       area={{ id: area.id, name: area.name, slug }}
+      areas={permitActivityAreas}
       geometry={geometry}
       reportDate={reportDate}
     />
