@@ -11,6 +11,7 @@ import {
   fetchInvestmentRecipientRecord,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
+  FUNDER_TYPE_ORDER,
   INVESTMENT_STATUS_LABELS,
   investmentRecordsToPointFeatures,
   investmentStatusLabel,
