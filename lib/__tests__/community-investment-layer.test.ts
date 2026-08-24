@@ -11,6 +11,7 @@ import {
   fetchInvestmentRecipientRecord,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
+  FUNDER_TYPE_ORDER,
   INVESTMENT_STATUS_LABELS,
   investmentRecordsToPointFeatures,
   investmentStatusLabel,
@@ -222,7 +223,7 @@ describe("filterInvestmentPointFeatures", () => {
 
     const allOn = filterInvestmentPointFeatures([unknown], {
       yearRangeId: "all",
-      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeFunderTypes: FUNDER_TYPE_ORDER,
     });
     expect(allOn.map((f) => f.properties.id)).toEqual(["unknown-1"]);
 
