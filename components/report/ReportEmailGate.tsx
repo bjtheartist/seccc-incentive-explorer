@@ -19,7 +19,13 @@ import {
   unmatchedGoalIds,
 } from "@/lib/gate-goal-groups";
 import { GATE_PERSONA_CHIPS } from "@/lib/gate-persona-groups";
-import { DEFAULT_PERSONA, resolveInitialPersona, storePersona, type PersonaId } from "@/lib/personas";
+import {
+  DEFAULT_PERSONA,
+  loadStoredPersona,
+  personaFromSearch,
+  storePersona,
+  type PersonaId,
+} from "@/lib/personas";
 import { inferPersonaFromIntake } from "@/lib/persona-inference";
 import { submitSupportRequest } from "@/lib/support-lead";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
@@ -86,7 +92,9 @@ export function ReportEmailGate({
   // never empty. `personaTouched` tracks whether the visitor actually
   // tapped a chip, so analytics can honestly report "inferred" (untouched)
   // vs. "confirmed"/"corrected" (a real tap) instead of always claiming
-  // "confirmed" for a chip nobody touched.
+  // "confirmed" for a chip nobody touched. `personaSeed.source` below keeps
+  // URL/storage-prefilled untouched rows distinguishable from a real
+  // inference acceptance without changing that established outcome vocabulary.
   const [inferredPersona] = useState<PersonaId>(() =>
     inferPersonaFromIntake({
       industry: report.metadata?.industry,
@@ -104,17 +112,25 @@ export function ReportEmailGate({
   // notice, picked a goal, and clicked View without touching the
   // pre-selected row silently got their OWN inferred persona instead —
   // the notice's "the lens this link was shared with" claim became false
-  // the moment the gate closed. Seeding from the SAME `resolveInitialPersona`
-  // call the live view itself uses (app/report/page.tsx's `ReportWizardPage`)
-  // keeps both surfaces in agreement: the gate chip shows the sender's lens,
-  // the visitor can still change it, and an untouched row propagates the
-  // framed lens truthfully instead of overwriting it.
-  const [persona, setPersona] = useState<PersonaId>(() => {
-    const framedPersona = resolveInitialPersona(
+  // the moment the gate closed. Seeding with the SAME URL-then-sessionStorage
+  // precedence used by `resolveInitialPersona` in the live view
+  // (app/report/page.tsx's `ReportWizardPage`) keeps both surfaces in agreement
+  // while retaining the seed's provenance for telemetry: the gate chip shows
+  // the sender's lens, the visitor can still change it, and an untouched row
+  // propagates the framed lens truthfully instead of overwriting it.
+  const [personaSeed] = useState<{
+    persona: PersonaId;
+    source: "url" | "storage" | "inference";
+  }>(() => {
+    const fromUrl = personaFromSearch(
       typeof window !== "undefined" ? window.location.search : null,
     );
-    return framedPersona !== DEFAULT_PERSONA ? framedPersona : inferredPersona;
+    if (fromUrl !== DEFAULT_PERSONA) return { persona: fromUrl, source: "url" };
+    const fromStorage = loadStoredPersona();
+    if (fromStorage !== DEFAULT_PERSONA) return { persona: fromStorage, source: "storage" };
+    return { persona: inferredPersona, source: "inference" };
   });
+  const [persona, setPersona] = useState<PersonaId>(personaSeed.persona);
   const [personaTouched, setPersonaTouched] = useState(false);
 
   // Gate review round 1, BLOCKER 2 + gate review round 2, NEW-1/NEW-2/
@@ -247,6 +263,7 @@ export function ReportEmailGate({
       metadata: {
         inferredPersona,
         selectedPersona: persona,
+        personaSeedSource: personaSeed.source,
         outcome,
       },
     });
@@ -287,7 +304,11 @@ export function ReportEmailGate({
     if (!chip) return;
     setPersonaTouched(true);
     setPersona((current) =>
-      chip.personaIds.includes(current) ? current : chip.defaultPersonaId,
+      chip.personaIds.includes(current)
+        ? current
+        : chip.personaIds.includes(inferredPersona)
+          ? inferredPersona
+          : chip.defaultPersonaId,
     );
   };
 

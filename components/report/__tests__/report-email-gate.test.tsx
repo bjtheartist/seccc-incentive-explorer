@@ -745,6 +745,42 @@ describe("ReportEmailGate — persona analytics honesty (finding 11)", () => {
 
     const call = trackEventMock.mock.calls.find(([type]) => type === "persona_intake_inferred");
     expect(call?.[1]?.metadata?.outcome).toBe("inferred");
+    expect(call?.[1]?.metadata?.personaSeedSource).toBe("inference");
+  });
+
+  it("distinguishes an untouched URL-seeded persona from an accepted inference", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?persona=developer" },
+      writable: true,
+    });
+    const { onReportReady } = renderGate();
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+
+    const call = trackEventMock.mock.calls.find(([type]) => type === "persona_intake_inferred");
+    expect(call?.[1]?.metadata).toMatchObject({
+      inferredPersona: "growing",
+      selectedPersona: "developer",
+      personaSeedSource: "url",
+      outcome: "inferred",
+    });
+  });
+
+  it("labels an untouched sessionStorage seed independently from inference", async () => {
+    window.sessionStorage.setItem("seccc.persona", "supporter");
+    const { onReportReady } = renderGate();
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+
+    const call = trackEventMock.mock.calls.find(([type]) => type === "persona_intake_inferred");
+    expect(call?.[1]?.metadata).toMatchObject({
+      inferredPersona: "growing",
+      selectedPersona: "supporter",
+      personaSeedSource: "storage",
+      outcome: "inferred",
+    });
   });
 
   it("reports outcome 'confirmed' when the visitor taps the already-inferred chip", async () => {
@@ -769,6 +805,21 @@ describe("ReportEmailGate — persona analytics honesty (finding 11)", () => {
     const call = trackEventMock.mock.calls.find(([type]) => type === "persona_intake_inferred");
     expect(call?.[1]?.metadata?.outcome).toBe("corrected");
     expect(call?.[1]?.metadata?.selectedPersona).toBe("developer");
+  });
+
+  it("a developer URL seed followed by Business owner preserves the inferred growing sub-lens", async () => {
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, search: "?persona=developer" },
+      writable: true,
+    });
+    const { onReportReady, onPersonaCommitted } = renderGate();
+    fireEvent.click(screen.getByRole("button", { name: "Business owner" }));
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+
+    expect(onPersonaCommitted).toHaveBeenCalledTimes(1);
+    expect(onPersonaCommitted).toHaveBeenCalledWith("growing");
   });
 
   // Gate review follow-up round 1, MODERATE-1+2: MODERATE-1 (Save-path
