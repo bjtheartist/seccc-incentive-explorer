@@ -408,8 +408,7 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
     <div className={styles.page}>
       <a className={styles.skipLink} href="#permit-analysis">Skip to analysis</a>
       <div id="permit-analysis" className={styles.briefShell}>
-        <nav className={styles.topbar} aria-label="Evidence brief navigation">
-          <Link className={styles.brand} href="/investment">Chicago Incentive Explorer / Evidence Briefs</Link>
+        <nav className={styles.topbar} aria-label="Analysis navigation">
           <div className={styles.tabs} role="list" aria-label="Analysis briefs">
             <Link className={styles.tab} href={`/investment/${encodeURIComponent(area.name)}`}>Public Investment Analysis</Link>
             <Link className={styles.tab} href={`/permit-activity/${area.slug}`} aria-current="page">Permit Activity Analysis</Link>
@@ -418,7 +417,6 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
 
         <header className={styles.pageHeader}>
           <div>
-            <p className={styles.eyebrow}>Community evidence brief · live public data</p>
             <h1>Permit Activity Analysis · {area.name}</h1>
             <p className={styles.metaLine}>Area {area.id} · {area.name} · Report date {reportDate} · Data window {dataWindowLabel}</p>
           </div>

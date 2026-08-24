@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PERMIT_AREA_ACTIVITY_NOTE, type PermitAreaResult } from "@/lib/permit-area";
@@ -175,8 +177,11 @@ describe("PermitActivityBrief", () => {
     expect(screen.getByText("+100.0% vs prior 12 months")).toBeTruthy();
     expect(screen.getByText(/4 geocoded filings were issued during the trailing 12 months/)).toBeTruthy();
 
-    // Eyebrow matches the investment-brief family's copy pattern.
-    expect(screen.getByText("Community evidence brief · live public data")).toBeTruthy();
+    // The site-wide header remains the page's brand layer; the local header
+    // does not repeat the old evidence-brief brand or eyebrow.
+    expect(screen.queryByText("Community evidence brief · live public data")).toBeNull();
+    expect(screen.queryByText("Chicago Incentive Explorer / Evidence Briefs")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Analysis navigation" })).toBeTruthy();
 
     // (a) single meta line carries all four " · " segments, including the
     // report date that used to live only in the command-bar <dl>.
@@ -200,6 +205,16 @@ describe("PermitActivityBrief", () => {
     expect(screen.getAllByRole("option")).toHaveLength(3);
     fireEvent.change(selector, { target: { value: "o-hare" } });
     expect(mockPush).toHaveBeenCalledWith("/permit-activity/o-hare");
+  });
+
+  it("keeps the global site header visible", () => {
+    const stylesheet = readFileSync(
+      join(process.cwd(), "app/permit-activity/[area]/permit-activity.module.css"),
+      "utf8",
+    );
+
+    expect(stylesheet).not.toContain("> :global(header)");
+    expect(stylesheet).toContain(":global(body):has(.page) > :global(footer)");
   });
 
   it("renders keyboard-readable monthly, type, and address marks with the evidence ledger", async () => {
