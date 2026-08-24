@@ -418,28 +418,33 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
 
         <header className={styles.pageHeader}>
           <div>
-            <p className={styles.eyebrow}>Live public data · Official community-area boundary</p>
+            <p className={styles.eyebrow}>Community evidence brief · live public data</p>
             <h1>Permit Activity Analysis · {area.name}</h1>
-            <p className={styles.metaLine}><span>Area {area.id} · {area.name}</span><span>Data window {dataWindowLabel}</span></p>
+            <p className={styles.metaLine}>Area {area.id} · {area.name} · Report date {reportDate} · Data window {dataWindowLabel}</p>
           </div>
-          <div className={styles.commandBar} aria-label="Neighborhood command bar">
-            <label htmlFor="permit-neighborhood">Neighborhood</label>
-            <div className={styles.selectWrap}>
-              <select
-                id="permit-neighborhood"
-                value={area.slug}
-                onChange={(event) => {
-                  if (event.target.value !== area.slug) router.push(`/permit-activity/${event.target.value}`);
-                }}
-              >
-                {areas.map((option) => <option key={option.slug} value={option.slug}>{option.name}</option>)}
-              </select>
-              <ChevronDown aria-hidden="true" />
+          <div className={styles.headerAsideColumn}>
+            <div className={styles.commandBar} aria-label="Neighborhood command bar">
+              <label htmlFor="permit-neighborhood" className={styles.panelLabel}>Neighborhood</label>
+              <div className={styles.selectWrap}>
+                <select
+                  id="permit-neighborhood"
+                  value={area.slug}
+                  onChange={(event) => {
+                    if (event.target.value !== area.slug) router.push(`/permit-activity/${event.target.value}`);
+                  }}
+                >
+                  {areas.map((option) => <option key={option.slug} value={option.slug}>{option.name}</option>)}
+                </select>
+                <ChevronDown aria-hidden="true" />
+              </div>
+              <dl className={styles.commandMeta}>
+                <div><dt>Explorer loaded</dt><dd>{stateMetric(state, (data) => formatPermitAreaDate(data.sourceRefresh.asOf))}</dd></div>
+              </dl>
             </div>
-            <dl className={styles.commandMeta}>
-              <div><dt>Explorer loaded</dt><dd>{stateMetric(state, (data) => formatPermitAreaDate(data.sourceRefresh.asOf))}</dd></div>
-              <div><dt>Report date</dt><dd>{reportDate}</dd></div>
-            </dl>
+            <aside className={styles.headerAside} aria-label="Scope statement">
+              <p className={styles.panelLabel}>Scope statement</p>
+              <p>{PERMIT_AREA_ACTIVITY_NOTE}</p>
+            </aside>
           </div>
         </header>
 
@@ -562,7 +567,7 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
                     <div className={styles.valueKeyRow}><span className={styles.keySquare} /><strong>0</strong><span>Valid zero (the source recorded zero).</span></div>
                     <div className={styles.valueKeyRow}><span className={`${styles.keySquare} ${styles.naSquare}`} /><strong>N/A</strong><span>Unavailable (no usable value provided).</span></div>
                   </div>
-                  <p className={styles.caveatText}>{PERMIT_AREA_ACTIVITY_NOTE} {PERMIT_AREA_COVERAGE_NOTE}</p>
+                  <p className={styles.caveatText}>{PERMIT_AREA_COVERAGE_NOTE}</p>
                 </section>
               </div>
             </details>

@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { PermitAreaResult } from "@/lib/permit-area";
+import { PERMIT_AREA_ACTIVITY_NOTE, type PermitAreaResult } from "@/lib/permit-area";
 import { PermitActivityBrief, buildPermitBriefCsv } from "./PermitActivityBrief";
 
 const mockPush = vi.hoisted(() => vi.fn());
@@ -175,6 +175,26 @@ describe("PermitActivityBrief", () => {
     expect(screen.getByText("+100.0% vs prior 12 months")).toBeTruthy();
     expect(screen.getByText(/4 geocoded filings were issued during the trailing 12 months/)).toBeTruthy();
 
+    // Eyebrow matches the investment-brief family's copy pattern.
+    expect(screen.getByText("Community evidence brief · live public data")).toBeTruthy();
+
+    // (a) single meta line carries all four " · " segments, including the
+    // report date that used to live only in the command-bar <dl>.
+    expect(
+      screen.getByText("Area 44 · Chatham · Report date August 24, 2026 · Data window Since 2015"),
+    ).toBeTruthy();
+
+    // (b) the restyled right column renders a "Scope statement" aside with
+    // PERMIT_AREA_ACTIVITY_NOTE verbatim, and exactly once on the page.
+    expect(screen.getByText("Scope statement")).toBeTruthy();
+    expect(screen.getByLabelText("Scope statement")).toBeTruthy();
+    expect(screen.getAllByText(PERMIT_AREA_ACTIVITY_NOTE)).toHaveLength(1);
+
+    // (c) "Report date" no longer appears as its own row in the command <dl>
+    // now that it is folded into the single meta line above.
+    expect(screen.queryByText("Report date", { selector: "dt" })).toBeNull();
+    expect(screen.getByText("Explorer loaded", { selector: "dt" })).toBeTruthy();
+
     const selector = screen.getByRole("combobox", { name: "Neighborhood" });
     expect((selector as HTMLSelectElement).value).toBe("chatham");
     expect(screen.getAllByRole("option")).toHaveLength(3);
@@ -246,7 +266,7 @@ describe("PermitActivityBrief", () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
     const { unmount } = renderBrief();
     expect(await screen.findByText(/Source lookup unavailable/)).toBeTruthy();
-    expect(screen.getByText("Data window Unavailable")).toBeTruthy();
+    expect(screen.getByText(/Data window Unavailable/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Retry lookup/ })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Monthly filing activity" })).toBeNull();
     unmount();
@@ -257,7 +277,7 @@ describe("PermitActivityBrief", () => {
     }));
     renderBrief();
     expect(await screen.findByText(/Source response malformed/)).toBeTruthy();
-    expect(screen.getByText("Data window Unavailable")).toBeTruthy();
+    expect(screen.getByText(/Data window Unavailable/)).toBeTruthy();
     expect(screen.queryByText(/0 recorded filings in this geocoded source window/)).toBeNull();
   });
 
