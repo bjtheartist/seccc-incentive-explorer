@@ -177,11 +177,11 @@ describe("PermitActivityBrief", () => {
     expect(screen.getByText("+100.0% vs prior 12 months")).toBeTruthy();
     expect(screen.getByText(/4 geocoded filings were issued during the trailing 12 months/)).toBeTruthy();
 
-    // The site-wide header remains the page's brand layer; the local header
-    // does not repeat the old evidence-brief brand or eyebrow.
+    // The site-wide header remains the page's only brand and navigation layer.
     expect(screen.queryByText("Community evidence brief · live public data")).toBeNull();
     expect(screen.queryByText("Chicago Incentive Explorer / Evidence Briefs")).toBeNull();
-    expect(screen.getByRole("navigation", { name: "Analysis navigation" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Analysis navigation" })).toBeNull();
+    expect(screen.queryByText("Public Investment Analysis")).toBeNull();
 
     // (a) single meta line carries all four " · " segments, including the
     // report date that used to live only in the command-bar <dl>.

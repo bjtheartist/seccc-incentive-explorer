@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ExternalLink, Info, RefreshCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -408,13 +407,6 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
     <div className={styles.page}>
       <a className={styles.skipLink} href="#permit-analysis">Skip to analysis</a>
       <div id="permit-analysis" className={styles.briefShell}>
-        <nav className={styles.topbar} aria-label="Analysis navigation">
-          <div className={styles.tabs} role="list" aria-label="Analysis briefs">
-            <Link className={styles.tab} href={`/investment/${encodeURIComponent(area.name)}`}>Public Investment Analysis</Link>
-            <Link className={styles.tab} href={`/permit-activity/${area.slug}`} aria-current="page">Permit Activity Analysis</Link>
-          </div>
-        </nav>
-
         <header className={styles.pageHeader}>
           <div>
             <h1>Permit Activity Analysis · {area.name}</h1>
