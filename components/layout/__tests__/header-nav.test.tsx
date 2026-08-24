@@ -4,9 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 /**
  * Guard for the approved Set-A global navigation: three dropdown groups plus a
  * pinned primary CTA, with the logo carrying the home link. Asserts the
- * load-bearing contract — verbatim labels, every approved href, the primary
- * treatment on Generate Report, and the disclosure ARIA wiring — not the
- * private layout classes.
+ * load-bearing contract — verbatim labels, every approved href, active
+ * treatments, and the disclosure ARIA wiring — not the private layout classes.
  *
  * Rendered with renderToStaticMarkup, so effects never run: the desktop panels
  * are always in the markup (hidden with `invisible` until opened) and the
@@ -40,6 +39,7 @@ const APPROVED_ITEMS: Array<[label: string, href: string]> = [
   ["Site Matchmaker", "/locate"],
   ["Incentive Map", "/map"],
   ["Community Investment", "/investment"],
+  ["Permit Activity", "/permit-activity"],
 ];
 
 describe("Header — approved Set-A structure", () => {
@@ -145,6 +145,16 @@ describe("Header — active group indicator", () => {
     const data = html.match(/<button[^>]*id="nav-trigger-data"[^>]*>/)?.[0] ?? "";
     expect(site).toContain("ring-[#2563EB]/30");
     expect(data).not.toContain("ring-[#2563EB]/30");
+  });
+
+  it("highlights the data group and Permit Activity item for every neighborhood", () => {
+    const html = render("/permit-activity/austin");
+    const data = html.match(/<button[^>]*id="nav-trigger-data"[^>]*>/)?.[0] ?? "";
+    const permits = html.match(/<a[^>]*href="\/permit-activity"[^>]*>/)?.[0] ?? "";
+
+    expect(data).toContain("ring-[#2563EB]/30");
+    expect(permits).toContain('aria-current="page"');
+    expect(permits).toContain("bg-[#EFF3FB]");
   });
 
   it("highlights nothing on the home route", () => {

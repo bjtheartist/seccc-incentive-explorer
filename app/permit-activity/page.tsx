@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Orphan entry point: intentionally absent from the primary site navigation. */
+/** Stable global-nav entry point; neighborhood selection continues in the brief. */
 export default function PermitActivityIndexPage() {
   redirect("/permit-activity/chatham");
 }

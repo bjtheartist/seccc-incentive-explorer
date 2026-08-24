@@ -48,7 +48,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "data",
     label: "Public Investment + Corridors",
-    items: [{ href: "/investment", label: "Community Investment" }],
+    items: [
+      { href: "/investment", label: "Community Investment" },
+      { href: "/permit-activity", label: "Permit Activity" },
+    ],
   },
 ];
 
