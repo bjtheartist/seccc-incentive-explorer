@@ -110,8 +110,15 @@ export const INVESTMENT_SOURCES = [
 ] as const;
 export type InvestmentSource = (typeof INVESTMENT_SOURCES)[number];
 
-/** Who is putting the money in. */
-export const FUNDER_TYPES = ["government", "philanthropic", "private_development"] as const;
+/** Who is putting the money in. Corporate giving is a reviewed analysis-layer
+ * classification of itemized corporate-foundation 990-PF rows; the canonical
+ * source rows remain `source: foundation` for audit continuity. */
+export const FUNDER_TYPES = [
+  "government",
+  "philanthropic",
+  "corporate",
+  "private_development",
+] as const;
 export type FunderType = (typeof FUNDER_TYPES)[number];
 
 /**

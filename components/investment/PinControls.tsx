@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
+import { Star } from "lucide-react";
 import {
   MAX_PINNED_AREAS,
   clearPinnedAreas,
@@ -44,7 +45,12 @@ export function PinButton({ area }: { area: string }) {
           : "border-[#0C1B33]/15 bg-white text-[#0C1B33]/60 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] disabled:cursor-not-allowed disabled:opacity-45"
       }`}
     >
-      <span aria-hidden>{isPinned ? "★" : "☆"}</span>
+      <Star
+        aria-hidden
+        className="h-3.5 w-3.5"
+        fill={isPinned ? "currentColor" : "none"}
+        strokeWidth={1.8}
+      />
       {isPinned ? "Pinned to compare" : "Pin to compare"}
     </button>
   );

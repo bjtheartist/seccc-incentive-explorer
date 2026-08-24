@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useSyncExternalStore } from "react";
+import { ArrowRight } from "lucide-react";
 import {
   getInvestmentSessionServerSnapshot,
   getInvestmentSessionSnapshot,
@@ -40,7 +41,7 @@ function useInvestmentSession(): InvestmentSession {
 export function ShowOnMapLink({
   area,
   className,
-  label = "Show on map →",
+  label = "Show on map",
 }: {
   area?: string;
   className?: string;
@@ -64,6 +65,7 @@ export function ShowOnMapLink({
       }
     >
       {label}
+      <ArrowRight aria-hidden className="ml-1.5 h-3.5 w-3.5" strokeWidth={1.8} />
     </a>
   );
 }

@@ -102,7 +102,12 @@ describe("source / funderType / status enums", () => {
       "sba-rrf",
       "dceo-capital",
     ]);
-    expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
+    expect([...FUNDER_TYPES]).toEqual([
+      "government",
+      "philanthropic",
+      "corporate",
+      "private_development",
+    ]);
     expect([...INVESTMENT_STATUSES]).toEqual([
       "completed",
       "awarded",

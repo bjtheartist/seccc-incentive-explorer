@@ -8,7 +8,7 @@ const { getSQLMock, sqlMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({ getSQL: getSQLMock }));
 
-import { GET } from "./route";
+import { GET, POST } from "./route";
 
 const POLYGON: GeoJSON.Polygon = {
   type: "Polygon",
@@ -23,9 +23,33 @@ const POLYGON: GeoJSON.Polygon = {
   ],
 };
 
+const MULTI_POLYGON: GeoJSON.MultiPolygon = {
+  type: "MultiPolygon",
+  coordinates: [
+    POLYGON.coordinates,
+    [
+      [
+        [-87.8, 41.95],
+        [-87.78, 41.95],
+        [-87.78, 41.97],
+        [-87.8, 41.97],
+        [-87.8, 41.95],
+      ],
+    ],
+  ],
+};
+
 function requestFor(polygon: unknown = POLYGON) {
   const params = new URLSearchParams({ polygon: JSON.stringify(polygon) });
   return new NextRequest(`http://localhost/api/permit-area?${params.toString()}`);
+}
+
+function postRequestFor(polygon: unknown = POLYGON) {
+  return new NextRequest("http://localhost/api/permit-area", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ polygon }),
+  });
 }
 
 beforeEach(() => {
@@ -62,6 +86,27 @@ describe("GET /api/permit-area", () => {
     const response = await GET(requestFor());
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "database not configured" });
+  });
+
+  it("accepts an official-style MultiPolygon without dropping detached pieces", async () => {
+    sqlMock.mockResolvedValue([
+      {
+        total_filings: 0,
+        distinct_addresses: 0,
+        first_issue_date: null,
+        latest_issue_date: null,
+        source_as_of: null,
+        type_breakdown: [],
+        year_breakdown: [],
+        status_breakdown: [],
+        recent_filings: [],
+      },
+    ]);
+
+    const response = await GET(requestFor(MULTI_POLYGON));
+    expect(response.status).toBe(200);
+    expect(sqlMock).toHaveBeenCalledOnce();
+    expect(sqlMock.mock.calls[0]).toContain(JSON.stringify(MULTI_POLYGON));
   });
 
   it("aggregates the complete polygon set and returns bounded recent records", async () => {
@@ -174,5 +219,45 @@ describe("GET /api/permit-area", () => {
     const response = await GET(requestFor());
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "permit area analysis unavailable" });
+  });
+});
+
+describe("POST /api/permit-area", () => {
+  it("accepts a body-carried official MultiPolygon without URL-size limits", async () => {
+    sqlMock.mockResolvedValue([
+      {
+        total_filings: 0,
+        distinct_addresses: 0,
+        first_issue_date: null,
+        latest_issue_date: null,
+        source_as_of: null,
+        type_breakdown: [],
+        year_breakdown: [],
+        status_breakdown: [],
+        recent_filings: [],
+      },
+    ]);
+
+    const response = await POST(postRequestFor(MULTI_POLYGON));
+    expect(response.status).toBe(200);
+    expect(sqlMock).toHaveBeenCalledOnce();
+    expect(sqlMock.mock.calls[0]).toContain(JSON.stringify(MULTI_POLYGON));
+  });
+
+  it("rejects malformed JSON and missing geometry", async () => {
+    const malformed = new NextRequest("http://localhost/api/permit-area", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{",
+    });
+    const missing = new NextRequest("http://localhost/api/permit-area", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    expect((await POST(malformed)).status).toBe(400);
+    expect((await POST(missing)).status).toBe(400);
+    expect(sqlMock).not.toHaveBeenCalled();
   });
 });

@@ -46,6 +46,7 @@ import {
   type InvestmentStatus,
 } from "./community-investment";
 import { formatCount, formatFullDollars, formatMultiple, formatPercent } from "@/components/investment/format";
+import { effectiveFunderType } from "./corporate-giving";
 import type { IllinoisArtsCouncilAward } from "./illinois-arts-council";
 import type { GovernmentFundingPurpose } from "./government-funding-purpose";
 
@@ -363,7 +364,7 @@ function funderTypeBreakdown(
   totalAwarded: number,
 ): FunderTypeBreakdown[] {
   return FUNDER_TYPES.map((funderType) => {
-    const ofType = records.filter((r) => r.funderType === funderType);
+    const ofType = records.filter((r) => effectiveFunderType(r) === funderType);
     const awardedDollars = sumInWindowAwarded(ofType);
     return {
       funderType,
@@ -541,10 +542,10 @@ export function analyzeCommunityArea(
   const rankIndex = idx.rows.findIndex((row) => row.communityArea === communityArea);
   const medianCA = median(idx.rows.map((row) => row.totalAwarded));
   // Audit finding 5 / consult Q4: computed live from the SAME in-window
-  // records as totalAwarded, over funderType "philanthropic" — the only
-  // philanthropic-mapped source is "foundation" (lib/community-investment.ts
-  // SOURCE_FUNDER_TYPE), so this is exactly "foundation rows" in plain terms.
-  const foundationDollars = sumInWindowAwarded(inWindow.filter((r) => r.funderType === "philanthropic"));
+  // records as totalAwarded over every IRS-foundation source row. Corporate
+  // foundations now have their own analysis-facing category, but remain part
+  // of this foundation-location caveat and its audited source universe.
+  const foundationDollars = sumInWindowAwarded(inWindow.filter((r) => r.source === "foundation"));
   const equity: InvestmentEquity = {
     rank: rankIndex >= 0 ? rankIndex + 1 : idx.rows.length,
     totalCAs: idx.rows.length,
@@ -758,7 +759,7 @@ export function buildFlowRows(records: readonly CommunityInvestmentRecord[]): Fl
     .map((r) => ({
       id: r.id,
       funderName: r.funderName,
-      funderType: r.funderType,
+      funderType: effectiveFunderType(r),
       source: r.source,
       governmentFundingPurpose: r.governmentFundingPurpose,
       recipient: r.recipient,

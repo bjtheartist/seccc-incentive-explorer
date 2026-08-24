@@ -7,6 +7,7 @@ import {
   PERMIT_AREA_SOURCE_LABEL,
   PERMIT_AREA_SOURCE_URL,
   type PermitAreaRecord,
+  type PermitAreaGeometry,
   type PermitAreaResult,
   type PermitAreaStatusCount,
   type PermitAreaTypeCount,
@@ -20,7 +21,10 @@ const CDN_HEADERS = {
 };
 
 const MAX_POLYGON_CHARACTERS = 100_000;
-const MAX_POLYGON_POINTS = 2_000;
+// The largest official community-area boundary currently has 2,424 positions.
+// Stay comfortably above that source-backed shape while retaining a hard cap
+// against unbounded public requests.
+const MAX_POLYGON_POINTS = 5_000;
 const UNKNOWN_TYPE_COLOR = "#64748B";
 
 type AggregateRow = {
@@ -97,7 +101,50 @@ function samePosition(a: unknown[], b: unknown[]): boolean {
   return Number(a[0]) === Number(b[0]) && Number(a[1]) === Number(b[1]);
 }
 
-function parsePolygon(raw: string | null): GeoJSON.Polygon | string {
+function parsePolygonCoordinates(
+  polygons: unknown[],
+): { pointCount: number } | string {
+  let pointCount = 0;
+  let ringCount = 0;
+
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon) || polygon.length === 0 || polygon.length > 20) {
+      return "each polygon must include between 1 and 20 rings";
+    }
+
+    for (const ring of polygon) {
+      ringCount += 1;
+      if (ringCount > 60) return "polygon geometry has too many rings";
+      if (!Array.isArray(ring) || ring.length < 4) {
+        return "each polygon ring must contain at least 4 positions";
+      }
+      pointCount += ring.length;
+      if (pointCount > MAX_POLYGON_POINTS) return "polygon has too many positions";
+
+      for (const position of ring) {
+        if (!Array.isArray(position) || position.length < 2) {
+          return "polygon positions must be longitude and latitude pairs";
+        }
+        const lon = Number(position[0]);
+        const lat = Number(position[1]);
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+          return "polygon positions must contain finite coordinates";
+        }
+        if (lon < -180 || lon > 180 || lat < -90 || lat > 90) {
+          return "polygon coordinates are outside valid longitude/latitude ranges";
+        }
+      }
+
+      if (!samePosition(ring[0] as unknown[], ring[ring.length - 1] as unknown[])) {
+        return "each polygon ring must be closed";
+      }
+    }
+  }
+
+  return { pointCount };
+}
+
+function parsePolygon(raw: string | null | undefined): PermitAreaGeometry | string {
   if (!raw) return "polygon is required";
   if (raw.length > MAX_POLYGON_CHARACTERS) return "polygon is too large";
 
@@ -111,45 +158,22 @@ function parsePolygon(raw: string | null): GeoJSON.Polygon | string {
   if (
     !parsed ||
     typeof parsed !== "object" ||
-    (parsed as { type?: unknown }).type !== "Polygon" ||
+    !["Polygon", "MultiPolygon"].includes(String((parsed as { type?: unknown }).type)) ||
     !Array.isArray((parsed as { coordinates?: unknown }).coordinates)
   ) {
-    return "polygon must be a GeoJSON Polygon geometry";
+    return "polygon must be a GeoJSON Polygon or MultiPolygon geometry";
   }
 
-  const coordinates = (parsed as { coordinates: unknown[] }).coordinates;
-  if (coordinates.length === 0 || coordinates.length > 20) {
-    return "polygon must include between 1 and 20 rings";
+  const geometry = parsed as { type: "Polygon" | "MultiPolygon"; coordinates: unknown[] };
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  if (polygons.length === 0 || polygons.length > 10) {
+    return "polygon geometry must include between 1 and 10 polygons";
   }
 
-  let pointCount = 0;
-  for (const ring of coordinates) {
-    if (!Array.isArray(ring) || ring.length < 4) {
-      return "each polygon ring must contain at least 4 positions";
-    }
-    pointCount += ring.length;
-    if (pointCount > MAX_POLYGON_POINTS) return "polygon has too many positions";
+  const validation = parsePolygonCoordinates(polygons);
+  if (typeof validation === "string") return validation;
 
-    for (const position of ring) {
-      if (!Array.isArray(position) || position.length < 2) {
-        return "polygon positions must be longitude and latitude pairs";
-      }
-      const lon = Number(position[0]);
-      const lat = Number(position[1]);
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
-        return "polygon positions must contain finite coordinates";
-      }
-      if (lon < -180 || lon > 180 || lat < -90 || lat > 90) {
-        return "polygon coordinates are outside valid longitude/latitude ranges";
-      }
-    }
-
-    if (!samePosition(ring[0] as unknown[], ring[ring.length - 1] as unknown[])) {
-      return "each polygon ring must be closed";
-    }
-  }
-
-  return parsed as GeoJSON.Polygon;
+  return parsed as PermitAreaGeometry;
 }
 
 function mapTypeCounts(value: unknown): PermitAreaTypeCount[] {
@@ -202,10 +226,7 @@ function mapRecentFilings(value: unknown): PermitAreaRecord[] {
   return records;
 }
 
-export async function GET(request: NextRequest) {
-  const polygon = parsePolygon(request.nextUrl.searchParams.get("polygon"));
-  if (typeof polygon === "string") return error(polygon);
-
+async function analyzePolygon(polygon: PermitAreaGeometry) {
   const sql = getSQL();
   if (!sql) {
     return NextResponse.json({ error: "database not configured" }, { status: 503 });
@@ -378,4 +399,28 @@ export async function GET(request: NextRequest) {
       { status: 503 },
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  const polygon = parsePolygon(request.nextUrl.searchParams.get("polygon"));
+  if (typeof polygon === "string") return error(polygon);
+  return analyzePolygon(polygon);
+}
+
+export async function POST(request: NextRequest) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return error("request body must be valid JSON");
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return error("polygon is required");
+  }
+
+  const rawPolygon = JSON.stringify((body as { polygon?: unknown }).polygon);
+  const polygon = parsePolygon(rawPolygon);
+  if (typeof polygon === "string") return error(polygon);
+  return analyzePolygon(polygon);
 }

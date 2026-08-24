@@ -17,7 +17,10 @@ import { formatCount, formatFullDollars, formatPercent } from "./format";
  */
 export function FunderTypeBars({ byFunderType }: { byFunderType: FunderTypeBreakdown[] }) {
   const withDollars = byFunderType.filter((f) => f.awardedDollars > 0).sort((a, b) => b.awardedDollars - a.awardedDollars);
-  const countOnly = byFunderType.filter((f) => f.awardedDollars <= 0);
+  // The analysis emits the full funder-type domain so new categories can flow
+  // through without bespoke UI wiring. Suppress truly absent categories here;
+  // only a category with a real count belongs in the count-only ledger.
+  const countOnly = byFunderType.filter((f) => f.awardedDollars <= 0 && f.count > 0);
   const max = Math.max(1, ...withDollars.map((f) => f.awardedDollars));
 
   return (

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Interactive illustrative mockup of the Chicago Incentive Explorer Public Investment Analysis evidence brief."
+    />
+    <title>Public Investment Analysis · Chatham — Explorer Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Playfair+Display:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="r7-evidence-briefs.css" />
+    <script defer src="https://unpkg.com/lucide@0.563.0/dist/umd/lucide.min.js"></script>
+    <script defer src="r7-evidence-briefs.js"></script>
+  </head>
+  <body data-current-brief="investment">
+    <a class="skip-link" href="#main-content">Skip to analysis</a>
+
+    <main id="main-content" class="brief-shell">
+      <nav class="topbar" aria-label="Evidence brief navigation">
+        <a class="brand" href="R7PublicInvestmentAnalysis.html?brief=investment">
+          Chicago Incentive Explorer / Evidence Briefs
+        </a>
+        <div class="tabs" role="list" aria-label="Analysis briefs">
+          <a
+            class="tab"
+            href="R7PublicInvestmentAnalysis.html?brief=investment"
+            data-brief-link="investment"
+            aria-current="page"
+          >
+            Public Investment Analysis
+          </a>
+          <a
+            class="tab"
+            href="R7PermitActivityAnalysis.html?brief=permits"
+            data-brief-link="permits"
+          >
+            Permit Activity Analysis
+          </a>
+        </div>
+      </nav>
+
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Illustrative concept · Illustrative sample data</p>
+          <h1>Public Investment Analysis · Chatham</h1>
+          <p class="meta-line">
+            <span>Area 77 · Chatham</span>
+            <span>Report date August 23, 2026</span>
+            <span>Data window 2020–2026</span>
+            <span>Source refresh varies by publisher</span>
+          </p>
+        </div>
+        <aside class="header-aside" aria-label="Scope statement">
+          <h2 class="panel-title">Scope statement</h2>
+          <p>Documented capital commitments are reported by instrument. Award records do not prove receipt, spending, impact, or eligibility.</p>
+        </aside>
+      </header>
+
+      <section class="section-frame" aria-labelledby="capital-title">
+        <div class="section-heading">
+          <h2 id="capital-title">Key capital flows (2020–2026)</h2>
+          <p>Six distinct financial instruments. Each value is an illustrative sample and retains its own status.</p>
+        </div>
+
+        <div class="capital-grid">
+          <article class="capital-card">
+            <i data-lucide="gift" aria-hidden="true"></i>
+            <h3 class="metric-label">Awarded grants</h3>
+            <p class="metric-value">$142M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+          <article class="capital-card">
+            <i data-lucide="layers-3" aria-hidden="true"></i>
+            <h3 class="metric-label">Authorized TIF</h3>
+            <p class="metric-value">$512M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+          <article class="capital-card">
+            <i data-lucide="landmark" aria-hidden="true"></i>
+            <h3 class="metric-label">Federal program commitments</h3>
+            <p class="metric-value">$74M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+          <article class="capital-card">
+            <i data-lucide="building-2" aria-hidden="true"></i>
+            <h3 class="metric-label">Published state appropriations</h3>
+            <p class="metric-value">$38M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+          <article class="capital-card">
+            <i data-lucide="badge-dollar-sign" aria-hidden="true"></i>
+            <h3 class="metric-label">Credit capital</h3>
+            <p class="metric-value">$86M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+          <article class="capital-card">
+            <i data-lucide="chart-no-axes-combined" aria-hidden="true"></i>
+            <h3 class="metric-label">Announced private capital</h3>
+            <p class="metric-value">$510M</p>
+            <span class="sample-label">Illustrative sample</span>
+          </article>
+        </div>
+
+        <p class="binding-note">
+          <i class="note-icon" data-lucide="info" aria-hidden="true"></i>
+          <span>These measures describe different financial instruments. <strong>Do not add them together.</strong></span>
+        </p>
+      </section>
+
+      <div class="evidence-grid public-grid">
+        <section class="panel" aria-labelledby="trend-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="trend-title" class="panel-title">Awarded grant trend (2020–2026)</h2>
+              <p class="panel-subtitle">Annual awarded dollars · Award timing, not proof of receipt or expenditure</p>
+            </div>
+            <span class="sample-chip">Illustrative sample</span>
+          </div>
+          <div class="legend" aria-label="Trend legend">
+            <span class="legend-item"><span class="swatch blue"></span>Philanthropic awarded dollars</span>
+            <span class="legend-item"><span class="swatch"></span>All other awarded-grant dollars</span>
+          </div>
+
+          <div class="chart-plot" aria-label="Stacked awarded grant trend chart">
+            <span class="grid-line" style="bottom: 25%"><span>$10M</span></span>
+            <span class="grid-line" style="bottom: 50%"><span>$20M</span></span>
+            <span class="grid-line" style="bottom: 75%"><span>$30M</span></span>
+            <div class="chart-bars">
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 38%; --phil-share: 27.4%; --other-share: 72.6%"
+                aria-label="2020 illustrative sample: 11.3 million dollars awarded, 3.1 million philanthropic and 8.2 million other"
+                data-mark-label="2020 · $11.3M awarded · $3.1M philanthropic · $8.2M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$11.3M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2020</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 53%; --phil-share: 25.3%; --other-share: 74.7%"
+                aria-label="2021 illustrative sample: 15.8 million dollars awarded, 4 million philanthropic and 11.8 million other"
+                data-mark-label="2021 · $15.8M awarded · $4.0M philanthropic · $11.8M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$15.8M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2021</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 76%; --phil-share: 31.4%; --other-share: 68.6%"
+                aria-label="2022 illustrative sample: 22.9 million dollars awarded, 7.2 million philanthropic and 15.7 million other"
+                data-mark-label="2022 · $22.9M awarded · $7.2M philanthropic · $15.7M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$22.9M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2022</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 67%; --phil-share: 31.2%; --other-share: 68.8%"
+                aria-label="2023 illustrative sample: 20.2 million dollars awarded, 6.3 million philanthropic and 13.9 million other"
+                data-mark-label="2023 · $20.2M awarded · $6.3M philanthropic · $13.9M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$20.2M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2023</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 82%; --phil-share: 30.5%; --other-share: 69.5%"
+                aria-label="2024 illustrative sample: 24.6 million dollars awarded, 7.5 million philanthropic and 17.1 million other"
+                data-mark-label="2024 · $24.6M awarded · $7.5M philanthropic · $17.1M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$24.6M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2024</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 90%; --phil-share: 31%; --other-share: 69%"
+                aria-label="2025 illustrative sample: 27.1 million dollars awarded, 8.4 million philanthropic and 18.7 million other"
+                data-mark-label="2025 · $27.1M awarded · $8.4M philanthropic · $18.7M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$27.1M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2025</span>
+              </button>
+              <button
+                class="year-mark"
+                type="button"
+                style="--height: 67%; --phil-share: 30.8%; --other-share: 69.2%"
+                aria-label="2026 partial illustrative sample: 20.1 million dollars awarded, 6.2 million philanthropic and 13.9 million other"
+                data-mark-label="2026 partial · $20.1M awarded · $6.2M philanthropic · $13.9M other · Illustrative sample"
+                data-mark-status="investment-mark-status"
+              >
+                <span class="stack-shell">
+                  <span class="stack">
+                    <span class="bar-total">$20.1M</span>
+                    <span class="stack-phil"></span><span class="stack-other"></span>
+                  </span>
+                </span>
+                <span class="year-label">2026<small>Partial</small></span>
+              </button>
+            </div>
+          </div>
+          <p id="investment-mark-status" class="mark-status" aria-live="polite">
+            Focus or select a bar for its exact illustrative sample values.
+          </p>
+          <p class="chart-note">2026 is partial through August 23. The philanthropic series totals $42.7M and reconciles to the philanthropic funder row.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="funder-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="funder-title" class="panel-title">Who funded awarded grants?</h2>
+              <p class="panel-subtitle">Supported funder types within awarded grants</p>
+            </div>
+            <span class="sample-chip">Illustrative sample</span>
+          </div>
+          <table class="bar-table">
+            <caption>All dollar values and shares are illustrative samples.</caption>
+            <thead>
+              <tr><th>Funder type</th><th aria-label="Visual share"></th><th class="num">Amount / count</th><th class="num">Share</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Philanthropic foundations</td>
+                <td class="bar-cell">
+                  <button class="horizontal-mark phil" type="button" style="--width: 48.9%" aria-label="Philanthropic foundations, 42.7 million dollars, 30.1 percent, illustrative sample" data-mark-label="Philanthropic foundations · $42.7M · 30.1% · Illustrative sample" data-mark-status="funder-mark-status"><span></span></button>
+                </td>
+                <td class="num">$42.7M</td><td class="num">30.1%</td>
+              </tr>
+              <tr>
+                <td>Government</td>
+                <td class="bar-cell">
+                  <button class="horizontal-mark" type="button" style="--width: 100%" aria-label="Government, 87.4 million dollars, 61.5 percent, illustrative sample" data-mark-label="Government · $87.4M · 61.5% · Illustrative sample" data-mark-status="funder-mark-status"><span></span></button>
+                </td>
+                <td class="num">$87.4M</td><td class="num">61.5%</td>
+              </tr>
+              <tr>
+                <td>Corporate / other</td>
+                <td class="bar-cell">
+                  <button class="horizontal-mark" type="button" style="--width: 13.6%" aria-label="Corporate and other, 11.9 million dollars, 8.4 percent, illustrative sample" data-mark-label="Corporate / other · $11.9M · 8.4% · Illustrative sample" data-mark-status="funder-mark-status"><span></span></button>
+                </td>
+                <td class="num">$11.9M</td><td class="num">8.4%</td>
+              </tr>
+              <tr>
+                <td>Private development</td>
+                <td class="bar-cell"><span class="count-only">Count-only; amount intentionally unavailable</span></td>
+                <td class="num">6 projects</td><td class="num">N/A</td>
+              </tr>
+              <tr>
+                <td><strong>Total awarded grants</strong></td><td></td><td class="num"><strong>$142M</strong></td><td class="num"><strong>100%</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <p id="funder-mark-status" class="mark-status" aria-live="polite">
+            Focus or select a bar for its exact illustrative sample value.
+          </p>
+          <p class="chart-note">Government remains one supported funder category; the mockup does not invent federal, state, or city grant splits.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="concentration-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="concentration-title" class="panel-title">Philanthropic concentration (2020–2026)</h2>
+              <p class="panel-subtitle">A lens inside awarded grants, not another capital class</p>
+            </div>
+            <span class="sample-chip">Illustrative sample</span>
+          </div>
+          <div class="concentration-stats">
+            <article class="concentration-stat">
+              <h3 class="stat-label">Philanthropic awarded dollars</h3>
+              <p class="stat-value">$42.7M</p>
+              <span class="sample-label">Illustrative sample</span>
+            </article>
+            <article class="concentration-stat">
+              <h3 class="stat-label">Share of awarded grants</h3>
+              <p class="stat-value">30.1%</p>
+              <span class="sample-label">Illustrative sample</span>
+            </article>
+            <article class="concentration-stat">
+              <h3 class="stat-label">Top-three recipient share</h3>
+              <p class="stat-value">65.6%</p>
+              <span class="sample-label">Illustrative sample</span>
+            </article>
+          </div>
+
+          <div class="switcher" role="tablist" aria-label="Philanthropic ranking view" data-table-switcher>
+            <button type="button" role="tab" aria-selected="true" data-table-view="recipients">Recipients</button>
+            <button type="button" role="tab" aria-selected="false" data-table-view="funders">Funders</button>
+          </div>
+
+          <table class="rank-table" data-table-panel="recipients">
+            <caption>Leading aggregated philanthropic recipients · Illustrative sample</caption>
+            <thead><tr><th>Rank</th><th>Recipient</th><th class="num">Awards</th><th class="num">Awarded dollars</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Example Foundation</td><td class="num">8</td><td class="num">$12.4M</td></tr>
+              <tr><td>2</td><td>Community Trust Example</td><td class="num">6</td><td class="num">$8.9M</td></tr>
+              <tr><td>3</td><td>Chicago Future Fund</td><td class="num">4</td><td class="num">$6.7M</td></tr>
+              <tr><td colspan="3"><strong>Top-three total</strong></td><td class="num"><strong>$28.0M</strong></td></tr>
+              <tr><td colspan="3"><strong>Share of philanthropic awards</strong></td><td class="num"><strong>65.6%</strong></td></tr>
+            </tbody>
+          </table>
+
+          <table class="rank-table" data-table-panel="funders" hidden>
+            <caption>Leading aggregated philanthropic funders · Illustrative sample</caption>
+            <thead><tr><th>Rank</th><th>Funder</th><th class="num">Awards</th><th class="num">Awarded dollars</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Sample Civic Foundation</td><td class="num">12</td><td class="num">$13.1M</td></tr>
+              <tr><td>2</td><td>Example Community Fund</td><td class="num">9</td><td class="num">$9.6M</td></tr>
+              <tr><td>3</td><td>Illustrative Family Trust</td><td class="num">7</td><td class="num">$7.4M</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <aside class="caveat-strip" aria-label="Philanthropic location caveats">
+        <div class="caveat-item"><i class="note-icon" data-lucide="info" aria-hidden="true"></i><span>Foundation records may reflect the grantee’s headquarters, not where every dollar was spent.</span></div>
+        <div class="caveat-item"><i class="note-icon" data-lucide="info" aria-hidden="true"></i><span>Community totals exclude citywide and intermediary rows unless a local project location is published.</span></div>
+      </aside>
+
+      <section class="interpretation" aria-label="Interpretation">
+        <article>
+          <h2>What this suggests</h2>
+          <p>Illustrative awarded-grant records total $142M from 2020–2026. Philanthropic foundations account for 30.1% of awarded grants, and the three leading aggregated recipient names account for 65.6% of philanthropic awarded dollars.</p>
+        </article>
+        <article>
+          <h2>What this cannot prove</h2>
+          <p>This analysis cannot establish whether funds were received, are currently available, remain unspent, or produced completed projects or outcomes. It does not establish neighborhood-wide benefit, causal impact, or eligibility for any program.</p>
+        </article>
+      </section>
+
+      <footer class="action-bar">
+        <div class="action-group">
+          <button class="button" type="button" data-download-brief="investment">Download illustrative brief</button>
+          <button class="button" type="button" data-dialog-open="methodology-dialog">Review methodology</button>
+        </div>
+        <p class="source-note">Source records vary in timing and coverage · Illustrative sample data</p>
+        <div class="action-group">
+          <button class="button primary" type="button" data-dialog-open="investment-source-dialog">Review source records</button>
+        </div>
+      </footer>
+    </main>
+
+    <dialog id="investment-source-dialog" aria-labelledby="investment-source-title">
+      <div class="dialog-head">
+        <div><span class="dialog-kicker">In-context source review</span><h2 id="investment-source-title">Public investment publishers</h2></div>
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Close source records dialog"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <div class="dialog-body">
+        <p>This prototype does not represent the illustrative values as live publisher totals. Use the official publishers below to verify real records and their current status.</p>
+        <div class="official-links">
+          <a class="official-link" href="https://dceo.illinois.gov/dceo-grants.html" target="_blank" rel="noreferrer">Illinois DCEO grants <i data-lucide="external-link" aria-hidden="true"></i></a>
+          <a class="official-link" href="https://www.irs.gov/charities-non-profits/tax-exempt-organization-search" target="_blank" rel="noreferrer">IRS Tax Exempt Organization Search <i data-lucide="external-link" aria-hidden="true"></i></a>
+          <a class="official-link" href="https://data.cityofchicago.org/" target="_blank" rel="noreferrer">City of Chicago Data Portal <i data-lucide="external-link" aria-hidden="true"></i></a>
+        </div>
+        <p class="chart-note">Official links open in a new tab; the report remains available in context.</p>
+      </div>
+    </dialog>
+
+    <dialog id="methodology-dialog" aria-labelledby="methodology-title">
+      <div class="dialog-head">
+        <div><span class="dialog-kicker">Methodology</span><h2 id="methodology-title">How to read the illustrative brief</h2></div>
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Close methodology dialog"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <div class="dialog-body">
+        <ul>
+          <li>The six capital classes describe different instruments and are never combined.</li>
+          <li>The awarded-grant trend uses the same annual window for philanthropic and other awarded-grant dollars.</li>
+          <li>The illustrative philanthropic yearly values sum to $42.7M and reconcile with the philanthropic funder row.</li>
+          <li>Recipient names are aggregated before ranking. The illustrative top-three share is $28.0M ÷ $42.7M = 65.6%.</li>
+          <li>Unavailable values stay unavailable; the prototype does not substitute $0.</li>
+        </ul>
+      </div>
+    </dialog>
+
+    <div class="toast" role="status" aria-live="polite" data-toast></div>
+  </body>
+</html>

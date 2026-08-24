@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-24",
+  "classification": "corporate-foundation",
+  "methodology": "A reviewed corporate or professional-services parent relationship plus itemized IRS Form 990-PF grant rows already present in the canonical Community Investment export. This registry classifies existing rows; it does not add press-release amounts or duplicate grant records.",
+  "irsSourceUrl": "https://www.irs.gov/charities-non-profits/form-990-series-downloads",
+  "entries": [
+    {
+      "ein": "36-3337340",
+      "funderName": "Aon Foundation",
+      "parentOrganization": "Aon",
+      "relationshipEvidenceUrl": "https://www.aon.com/usa/about-aon/aon-foundation-goals",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "91-6056738",
+      "funderName": "Boeing Company Charitable Trust",
+      "parentOrganization": "Boeing",
+      "relationshipEvidenceUrl": "https://www.boeing.com/company/community-engagement",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "45-0575574",
+      "funderName": "CME Group Foundation",
+      "parentOrganization": "CME Group",
+      "relationshipEvidenceUrl": "https://www.cmegroupfoundation.org/about.html",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "20-1734765",
+      "funderName": "DRW Foundation",
+      "parentOrganization": "DRW",
+      "relationshipEvidenceUrl": "https://www.drw.com/community-investment",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "83-0499473",
+      "funderName": "Exelon Foundation",
+      "parentOrganization": "Exelon",
+      "relationshipEvidenceUrl": "https://www.exeloncorp.com/community/foundation",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "46-2918450",
+      "funderName": "Hyatt Hotels Foundation",
+      "parentOrganization": "Hyatt",
+      "relationshipEvidenceUrl": "https://www.hyatt.com/world-of-care/en-US/risehy/community-partner-hub",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "36-3165216",
+      "funderName": "Katten Muchin Rosenman Foundation INC",
+      "parentOrganization": "Katten Muchin Rosenman LLP",
+      "relationshipEvidenceUrl": "https://katten.com/katten-cares",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "46-0858318",
+      "funderName": "Kraft Heinz Company Foundation",
+      "parentOrganization": "The Kraft Heinz Company",
+      "relationshipEvidenceUrl": "https://www.kraftheinzcompany.com/sustainability/pdf/KraftHeinz-2022-ESG-Report.pdf",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "84-4058990",
+      "funderName": "LKQ Community Foundation",
+      "parentOrganization": "LKQ Corporation",
+      "relationshipEvidenceUrl": "https://lkqcorp.com/always-delivers/",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "20-3881590",
+      "funderName": "Mondelez International Foundation",
+      "parentOrganization": "Mondelēz International",
+      "relationshipEvidenceUrl": "https://www.mondelezinternational.com/snacking-made-right/mondelez-international-foundation/",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "20-3980527",
+      "funderName": "Sidley Austin Foundation",
+      "parentOrganization": "Sidley Austin LLP",
+      "relationshipEvidenceUrl": "https://www.sidley.com/en/sidleygives",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "47-1330583",
+      "funderName": "The Clayco Foundation",
+      "parentOrganization": "Clayco",
+      "relationshipEvidenceUrl": "https://claycorp.com/latest/clayco-foundation-announces-formation-of-juneteenth-program-and-juneteenth-advisory-committee",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "36-6007812",
+      "funderName": "The Kemper Foundation",
+      "parentOrganization": "Kemper",
+      "relationshipEvidenceUrl": "https://www.kemper.com/about-kemper/Philanthropy",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "84-6025403",
+      "funderName": "Woodward Governor Charitable Trust",
+      "parentOrganization": "Woodward, Inc.",
+      "relationshipEvidenceUrl": "https://www.woodward.com/wp-content/uploads/sites/2/2025/12/W-_-SustainabilityReport_2023_Edited.pdf",
+      "publicationStatus": "published_itemized"
+    },
+    {
+      "ein": "36-3092291",
+      "funderName": "William Blair & Company Foundation",
+      "parentOrganization": "William Blair",
+      "relationshipEvidenceUrl": "https://www.williamblair.com/Who-We-Are/Corporate-Citizenship",
+      "publicationStatus": "excluded_aggregate_only"
+    },
+    {
+      "ein": "84-2220090",
+      "funderName": "Northern Trust Foundation",
+      "parentOrganization": "Northern Trust",
+      "relationshipEvidenceUrl": "https://www.northerntrust.com/united-states/about-us/corporate-social-responsibility/corporate-philanthropy/foundation",
+      "publicationStatus": "excluded_attachment_only"
+    },
+    {
+      "ein": "43-6316003",
+      "funderName": "Emerson Directors & Officers Charitable Trust",
+      "parentOrganization": "Emerson",
+      "relationshipEvidenceUrl": "https://www.emerson.com/en/corporate/about-us/charitable-giving",
+      "publicationStatus": "no_chicago_rows"
+    }
+  ]
+}

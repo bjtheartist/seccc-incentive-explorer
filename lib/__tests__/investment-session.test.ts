@@ -65,7 +65,12 @@ describe("investment-session persistence", () => {
 
   it("collapses the FULL funder-type set to 'all' (absent), keeps a strict subset", () => {
     stubStore();
-    const all: FunderType[] = ["government", "philanthropic", "private_development"];
+    const all: FunderType[] = [
+      "government",
+      "philanthropic",
+      "corporate",
+      "private_development",
+    ];
     patchInvestmentSession({ funderTypes: all });
     expect(loadInvestmentSession().funderTypes).toBeUndefined();
 
@@ -129,7 +134,9 @@ describe("investment-session URL helpers", () => {
   });
 
   it("treats a full type set in the query as 'all' (funderTypes absent)", () => {
-    const full = new URLSearchParams("types=government,philanthropic,private_development");
+    const full = new URLSearchParams(
+      "types=government,philanthropic,corporate,private_development",
+    );
     expect(sessionFromQuery(full).funderTypes).toBeUndefined();
   });
 
@@ -157,6 +164,7 @@ describe("investment-session map-record bridge", () => {
     expect(funderTypeRecordFromSession(undefined)).toEqual({
       government: true,
       philanthropic: true,
+      corporate: true,
       private_development: true,
     });
   });
@@ -165,16 +173,27 @@ describe("investment-session map-record bridge", () => {
     expect(funderTypeRecordFromSession(["philanthropic"])).toEqual({
       government: false,
       philanthropic: true,
+      corporate: false,
       private_development: false,
     });
   });
 
   it("record → session collapses the full set to undefined, keeps a subset", () => {
     expect(
-      sessionFunderTypesFromRecord({ government: true, philanthropic: true, private_development: true }),
+      sessionFunderTypesFromRecord({
+        government: true,
+        philanthropic: true,
+        corporate: true,
+        private_development: true,
+      }),
     ).toBeUndefined();
     expect(
-      sessionFunderTypesFromRecord({ government: true, philanthropic: false, private_development: false }),
+      sessionFunderTypesFromRecord({
+        government: true,
+        philanthropic: false,
+        corporate: false,
+        private_development: false,
+      }),
     ).toEqual(["government"]);
   });
 });

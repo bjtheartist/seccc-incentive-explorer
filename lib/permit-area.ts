@@ -82,6 +82,14 @@ export interface PermitAreaFetchOptions {
   timeoutMs?: number;
 }
 
+/**
+ * The drawn-area tool sends a Polygon, while Chicago's official community-area
+ * boundary export represents every area as a MultiPolygon. Keeping both shapes
+ * in the shared request contract lets neighborhood briefs use the published
+ * boundary verbatim instead of dropping detached pieces (notably O'Hare).
+ */
+export type PermitAreaGeometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;
+
 const PERMIT_MAP_TYPE_KEYS = new Set<string>(PERMIT_MAP_TYPES.map((type) => type.key));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -298,13 +306,13 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
   return result;
 }
 
-export function permitAreaRequestPath(polygon: GeoJSON.Polygon): string {
-  const params = new URLSearchParams({ polygon: JSON.stringify(polygon) });
+export function permitAreaRequestPath(geometry: PermitAreaGeometry): string {
+  const params = new URLSearchParams({ polygon: JSON.stringify(geometry) });
   return `/api/permit-area?${params.toString()}`;
 }
 
 export async function fetchPermitArea(
-  polygon: GeoJSON.Polygon,
+  geometry: PermitAreaGeometry,
   options: PermitAreaFetchOptions = {},
 ): Promise<PermitAreaResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -321,7 +329,7 @@ export async function fetchPermitArea(
   );
 
   try {
-    const response = await fetchImpl(permitAreaRequestPath(polygon), {
+    const response = await fetchImpl(permitAreaRequestPath(geometry), {
       signal: controller.signal,
     });
     if (!response.ok) {

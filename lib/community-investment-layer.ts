@@ -69,15 +69,21 @@ export interface HistoricalRecoveryRecipientsResult {
 export type CountyReliefRecipientsResult = HistoricalRecoveryRecipientsResult;
 
 /**
- * Canonical funder-type order wherever the three are listed together (legend
+ * Canonical funder-type order wherever the categories are listed together (legend
  * checkboxes, color key). Government first (the largest, most-mapped source),
  * private development last. Mirrors OWNER_TYPE_ORDER in lib/owner-classify.ts.
  */
-export const FUNDER_TYPE_ORDER: FunderType[] = ["government", "philanthropic", "private_development"];
+export const FUNDER_TYPE_ORDER: FunderType[] = [
+  "government",
+  "philanthropic",
+  "corporate",
+  "private_development",
+];
 
 export const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   government: "Government",
   philanthropic: "Philanthropic",
+  corporate: "Corporate giving",
   private_development: "Private development",
 };
 
@@ -123,12 +129,15 @@ export function investmentStatusLabel(status: string | null | undefined): string
  *     (LEVEL_COLORS, OWNER_TYPE_COLORS.city_public).
  *   • philanthropic       #059669 — the grantmaking / community green
  *     (enterprise zones, Community Assets, OWNER_TYPE_COLORS.local_private).
+ *   • corporate           #D97706 — a warm amber distinct from public,
+ *     independent-philanthropic, and announced private-development capital.
  *   • private_development  #7C3AED — the private-capital purple already used
  *     for investor ownership (OWNER_TYPE_COLORS.out_of_state, State level).
  */
 export const FUNDER_TYPE_COLORS: Record<FunderType, string> = {
   government: "#2563EB",
   philanthropic: "#059669",
+  corporate: "#D97706",
   private_development: "#7C3AED",
 };
 

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Interactive illustrative mockup of the Chicago Incentive Explorer Permit Activity Analysis evidence brief."
+    />
+    <title>Permit Activity Analysis · Chatham — Explorer Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Playfair+Display:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="r7-evidence-briefs.css" />
+    <script defer src="https://unpkg.com/lucide@0.563.0/dist/umd/lucide.min.js"></script>
+    <script defer src="r7-evidence-briefs.js"></script>
+  </head>
+  <body data-current-brief="permits">
+    <a class="skip-link" href="#main-content">Skip to analysis</a>
+
+    <main id="main-content" class="brief-shell">
+      <nav class="topbar" aria-label="Evidence brief navigation">
+        <a class="brand" href="R7PermitActivityAnalysis.html?brief=permits">Chicago Incentive Explorer / Evidence Briefs</a>
+        <div class="tabs" role="list" aria-label="Analysis briefs">
+          <a
+            class="tab"
+            href="R7PublicInvestmentAnalysis.html?brief=investment"
+            data-brief-link="investment"
+          >
+            Public Investment Analysis
+          </a>
+          <a
+            class="tab"
+            href="R7PermitActivityAnalysis.html?brief=permits"
+            data-brief-link="permits"
+            aria-current="page"
+          >
+            Permit Activity Analysis
+          </a>
+        </div>
+      </nav>
+
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Illustrative concept · Illustrative sample data</p>
+          <h1>Permit Activity Analysis · Chatham</h1>
+          <p class="meta-line">
+            <span>Area 77 · Chatham</span>
+            <span>Data window January 1, 2020–August 23, 2026</span>
+            <span>Report date August 23, 2026</span>
+          </p>
+        </div>
+        <aside class="header-aside" aria-label="Trust statement">
+          <h2 class="panel-title">Trust statement</h2>
+          <p>Permit records show filing activity, not whether construction started or finished.</p>
+        </aside>
+      </header>
+
+      <section class="evidence-strip" aria-label="Permit evidence summary" data-permit-stats>
+        <article class="evidence-stat" data-stat="filings">
+          <h2 class="metric-label">Recorded filings</h2>
+          <p class="metric-value">1,248</p>
+          <span class="sample-label">Illustrative sample</span>
+        </article>
+        <article class="evidence-stat" data-stat="addresses">
+          <h2 class="metric-label">Distinct addresses</h2>
+          <p class="metric-value">612</p>
+          <span class="sample-label">Illustrative sample</span>
+        </article>
+        <article class="evidence-stat" data-stat="latest">
+          <h2 class="metric-label">Latest filing</h2>
+          <p class="metric-value">Aug 20, 2026</p>
+          <span class="sample-label">Illustrative sample</span>
+        </article>
+        <article class="evidence-stat" data-stat="refreshed">
+          <h2 class="metric-label">Source refreshed</h2>
+          <p class="metric-value">Aug 23, 2026</p>
+          <span class="sample-label">8:15 AM CT · Illustrative sample</span>
+        </article>
+      </section>
+
+      <div class="state-banner" data-state-banner hidden></div>
+
+      <div data-permit-charts>
+        <div class="evidence-grid permit-grid">
+          <section class="panel" aria-labelledby="permit-trend-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="permit-trend-title" class="panel-title">Filing activity over time</h2>
+                <p class="panel-subtitle">Annual filings by issue year · no project-value estimate</p>
+              </div>
+              <span class="sample-chip">Illustrative sample</span>
+            </div>
+            <div class="permit-bars" aria-label="Annual permit filing chart">
+              <button class="permit-year" type="button" aria-label="2020, 132 filings, illustrative sample" data-mark-label="2020 · 132 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 49%"><span>132</span></span><span class="year-label">2020</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2021, 168 filings, illustrative sample" data-mark-label="2021 · 168 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 62%"><span>168</span></span><span class="year-label">2021</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2022, 186 filings, illustrative sample" data-mark-label="2022 · 186 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 69%"><span>186</span></span><span class="year-label">2022</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2023, 214 filings, illustrative sample" data-mark-label="2023 · 214 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 79%"><span>214</span></span><span class="year-label">2023</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2024, 246 filings, illustrative sample" data-mark-label="2024 · 246 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 91%"><span>246</span></span><span class="year-label">2024</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2025, 244 filings, illustrative sample" data-mark-label="2025 · 244 recorded filings · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 90%"><span>244</span></span><span class="year-label">2025</span>
+              </button>
+              <button class="permit-year" type="button" aria-label="2026 partial, 58 filings, illustrative sample" data-mark-label="2026 partial · 58 recorded filings through August 23 · Illustrative sample" data-mark-status="permit-trend-status">
+                <span class="permit-year-bar" style="--height: 22%"><span>58</span></span><span class="year-label">2026<small>Partial</small></span>
+              </button>
+            </div>
+            <p id="permit-trend-status" class="mark-status" aria-live="polite">Focus or select a bar for its exact illustrative sample count.</p>
+            <p class="chart-note">2026 is partial through August 23. The annual counts reconcile to 1,248 recorded filings.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="permit-type-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="permit-type-title" class="panel-title">What was filed?</h2>
+                <p class="panel-subtitle">Source-recorded filing types · count and share</p>
+              </div>
+              <span class="sample-chip">Illustrative sample</span>
+            </div>
+            <table class="bar-table">
+              <caption>All counts and shares are illustrative samples and sum to 1,248.</caption>
+              <thead><tr><th>Filing type</th><th aria-label="Visual share"></th><th class="num">Filings</th><th class="num">Share</th></tr></thead>
+              <tbody>
+                <tr><td>Repair / Alteration – Interior</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 100%" aria-label="Repair or alteration interior, 288 filings, 23.1 percent, illustrative sample" data-mark-label="Repair / Alteration – Interior · 288 · 23.1% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">288</td><td class="num">23.1%</td></tr>
+                <tr><td>Electrical</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 90.3%" aria-label="Electrical, 260 filings, 20.8 percent, illustrative sample" data-mark-label="Electrical · 260 · 20.8% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">260</td><td class="num">20.8%</td></tr>
+                <tr><td>Signs</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 59.7%" aria-label="Signs, 172 filings, 13.8 percent, illustrative sample" data-mark-label="Signs · 172 · 13.8% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">172</td><td class="num">13.8%</td></tr>
+                <tr><td>Demolition</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 36.1%" aria-label="Demolition, 104 filings, 8.3 percent, illustrative sample" data-mark-label="Demolition · 104 · 8.3% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">104</td><td class="num">8.3%</td></tr>
+                <tr><td>New Construction</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 34.7%" aria-label="New Construction, 100 filings, 8 percent, illustrative sample" data-mark-label="New Construction · 100 · 8.0% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">100</td><td class="num">8.0%</td></tr>
+                <tr><td>Repair / Alteration – Exterior</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 25%" aria-label="Repair or alteration exterior, 72 filings, 5.8 percent, illustrative sample" data-mark-label="Repair / Alteration – Exterior · 72 · 5.8% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">72</td><td class="num">5.8%</td></tr>
+                <tr><td>Plumbing</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 20.5%" aria-label="Plumbing, 59 filings, 4.7 percent, illustrative sample" data-mark-label="Plumbing · 59 · 4.7% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">59</td><td class="num">4.7%</td></tr>
+                <tr><td>Other (9 source types)</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 67%" aria-label="Other source types, 193 filings, 15.5 percent, illustrative sample" data-mark-label="Other (9 source types) · 193 · 15.5% · Illustrative sample" data-mark-status="permit-type-status"><span></span></button></td><td class="num">193</td><td class="num">15.5%</td></tr>
+                <tr><td><strong>Total</strong></td><td></td><td class="num"><strong>1,248</strong></td><td class="num"><strong>100%</strong></td></tr>
+              </tbody>
+            </table>
+            <p id="permit-type-status" class="mark-status" aria-live="polite">Focus or select a bar for its exact illustrative sample count and share.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="permit-status-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="permit-status-title" class="panel-title">Recorded status</h2>
+                <p class="panel-subtitle">Status exactly as recorded by the source</p>
+              </div>
+              <span class="sample-chip">Illustrative sample</span>
+            </div>
+            <table class="bar-table">
+              <caption>All counts and shares are illustrative samples and sum to 1,248.</caption>
+              <thead><tr><th>Status</th><th aria-label="Visual share"></th><th class="num">Records</th><th class="num">Share</th></tr></thead>
+              <tbody>
+                <tr><td>Issued</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 100%" aria-label="Issued, 1,124 records, 90.1 percent, illustrative sample" data-mark-label="Issued · 1,124 · 90.1% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">1,124</td><td class="num">90.1%</td></tr>
+                <tr><td>Active</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 5.6%" aria-label="Active, 63 records, 5 percent, illustrative sample" data-mark-label="Active · 63 · 5.0% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">63</td><td class="num">5.0%</td></tr>
+                <tr><td>Withdrawn</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 3.3%" aria-label="Withdrawn, 37 records, 3 percent, illustrative sample" data-mark-label="Withdrawn · 37 · 3.0% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">37</td><td class="num">3.0%</td></tr>
+                <tr><td>Pending / In Review</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 2.1%" aria-label="Pending or in review, 24 records, 1.9 percent, illustrative sample" data-mark-label="Pending / In Review · 24 · 1.9% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">24</td><td class="num">1.9%</td></tr>
+                <tr><td>Voided</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 0%" aria-label="Voided, valid zero records, zero percent, illustrative sample" data-mark-label="Voided · 0 valid-zero records · 0.0% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">0</td><td class="num">0.0%</td></tr>
+                <tr><td>Expired</td><td class="bar-cell"><button class="horizontal-mark" type="button" style="--width: 0%" aria-label="Expired, valid zero records, zero percent, illustrative sample" data-mark-label="Expired · 0 valid-zero records · 0.0% · Illustrative sample" data-mark-status="permit-status-status"><span></span></button></td><td class="num">0</td><td class="num">0.0%</td></tr>
+                <tr><td><strong>Total</strong></td><td></td><td class="num"><strong>1,248</strong></td><td class="num"><strong>100%</strong></td></tr>
+              </tbody>
+            </table>
+            <p id="permit-status-status" class="mark-status" aria-live="polite">Focus or select a bar for its exact illustrative sample count and share.</p>
+            <p class="chart-note">Status labels are reproduced from source records; they do not establish occupancy, completion, or compliance.</p>
+          </section>
+        </div>
+
+        <div class="ledger-grid" data-permit-ledger>
+          <section class="panel" aria-labelledby="ledger-title">
+            <div class="panel-head">
+              <div><h2 id="ledger-title" class="panel-title">Recent permit records</h2><p class="panel-subtitle">Four of 67 returned rows shown · summary covers all 1,248 matching records</p></div>
+              <span class="sample-chip">Illustrative sample</span>
+            </div>
+            <table class="record-table">
+              <caption>Illustrative recent-record ledger. Select a row action to review allowed source fields in context.</caption>
+              <thead><tr><th>Filing date</th><th>Permit type</th><th>Status</th><th>Street address</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Filing date">Aug 20, 2026</td><td data-label="Permit type">Alteration – Interior</td><td data-label="Source status">Issued</td><td data-label="Street address">8133 S Cottage Grove Ave</td>
+                  <td data-label="Action"><button type="button" data-permit-record data-permitid="100012345" data-rawtype="New Construction and Renovation" data-address="8133 S Cottage Grove Ave, Chicago, IL 60619" data-issuedate="August 20, 2026" data-status="Issued" data-milestone="Permit issued" data-worktype="Interior alteration" data-description="Illustrative interior alteration record. No cost or progress inference is shown.">View record</button></td>
+                </tr>
+                <tr>
+                  <td data-label="Filing date">Aug 19, 2026</td><td data-label="Permit type">New Construction</td><td data-label="Source status">Issued</td><td data-label="Street address">8901 S King Dr</td>
+                  <td data-label="Action"><button type="button" data-permit-record data-permitid="100012344" data-rawtype="New Construction and Renovation" data-address="8901 S King Dr, Chicago, IL 60619" data-issuedate="August 19, 2026" data-status="Issued" data-milestone="Permit issued" data-worktype="New construction" data-description="Illustrative source description for a new construction filing. Filing status does not prove construction started.">View record</button></td>
+                </tr>
+                <tr>
+                  <td data-label="Filing date">Aug 18, 2026</td><td data-label="Permit type">Alteration – Exterior</td><td data-label="Source status">Issued</td><td data-label="Street address">955 E 79th St</td>
+                  <td data-label="Action"><button type="button" data-permit-record data-permitid="100012343" data-rawtype="New Construction and Renovation" data-address="955 E 79th St, Chicago, IL 60619" data-issuedate="August 18, 2026" data-status="Issued" data-milestone="Permit issued" data-worktype="Exterior alteration" data-description="Illustrative exterior alteration filing. The source record does not establish completion or occupancy.">View record</button></td>
+                </tr>
+                <tr>
+                  <td data-label="Filing date">Aug 17, 2026</td><td data-label="Permit type">Change of Use / Occupancy</td><td data-label="Source status">Issued</td><td data-label="Street address">7201 S Michigan Ave</td>
+                  <td data-label="Action"><button type="button" data-permit-record data-permitid="100012342" data-rawtype="New Construction and Renovation" data-address="7201 S Michigan Ave, Chicago, IL 60619" data-issuedate="August 17, 2026" data-status="Issued" data-milestone="Permit issued" data-worktype="Change of use" data-description="Illustrative change-of-use filing. The source status is not evidence of current occupancy or compliance.">View record</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <aside class="panel" aria-labelledby="quality-title">
+            <div class="panel-head"><div><h2 id="quality-title" class="panel-title">Data coverage & quality</h2><p class="panel-subtitle">Location, truncation, and value-state context</p></div><span class="sample-chip">Illustrative sample</span></div>
+            <ul class="quality-list">
+              <li><i class="status-dot" data-lucide="check" aria-hidden="true"></i><span>Geocoded records only (<code>locatedRecordsOnly</code>).</span></li>
+              <li><i class="status-dot" data-lucide="check" aria-hidden="true"></i><span>Aggregate charts cover 1,248 matching records.</span></li>
+              <li><i class="status-dot" data-lucide="check" aria-hidden="true"></i><span>Recent-record response returned 67 rows and is truncated; 4 are displayed here.</span></li>
+              <li><i class="status-dot info" data-lucide="info" aria-hidden="true"></i><span>A recorded zero is different from an unavailable lookup.</span></li>
+            </ul>
+            <h3 class="panel-title">Value key</h3>
+            <div class="value-key">
+              <div class="value-key-row"><span class="key-square"></span><strong>0</strong><span>Valid zero (the source recorded zero).</span></div>
+              <div class="value-key-row"><span class="key-square na"></span><strong>N/A</strong><span>Unavailable (no usable value provided).</span></div>
+            </div>
+            <p class="chart-note">Source refresh: August 23, 2026 at 8:15 AM CT · Illustrative sample.</p>
+          </aside>
+        </div>
+      </div>
+
+      <section class="interpretation" aria-label="Interpretation">
+        <article>
+          <h2>What this suggests</h2>
+          <p>Illustrative filing activity rises from 132 filings in 2020 to a peak of 246 in 2024, then remains similar in 2025. Repair and alteration filings lead the type mix, and most source-recorded statuses are “Issued.”</p>
+        </article>
+        <article>
+          <h2>What this cannot prove</h2>
+          <p>These records do not establish construction start, completion, current activity, occupancy, code compliance, or project value. Filings may be amended, withdrawn, or superseded, and no record does not imply that no work occurred.</p>
+        </article>
+      </section>
+
+      <footer class="action-bar">
+        <div class="action-group"><button class="button" type="button" data-download-brief="permits">Download illustrative brief</button></div>
+        <p class="source-note">Aggregate summary and recent-record ledger use distinct, explicit denominators</p>
+        <div class="action-group"><button class="button primary" type="button" data-dialog-open="permit-source-dialog">Verify permit records</button></div>
+      </footer>
+    </main>
+
+    <dialog id="permit-record-dialog" aria-labelledby="permit-record-title">
+      <div class="dialog-head">
+        <div><span class="dialog-kicker">Illustrative source record</span><h2 id="permit-record-title">Permit filing detail</h2></div>
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Close permit record dialog"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <div class="dialog-body">
+        <dl class="record-detail">
+          <dt>Permit ID</dt><dd data-record-field="permitid"></dd>
+          <dt>Raw permit type</dt><dd data-record-field="rawtype"></dd>
+          <dt>Address</dt><dd data-record-field="address"></dd>
+          <dt>Issue date</dt><dd data-record-field="issuedate"></dd>
+          <dt>Source status</dt><dd data-record-field="status"></dd>
+          <dt>Source milestone</dt><dd data-record-field="milestone"></dd>
+          <dt>Work type</dt><dd data-record-field="worktype"></dd>
+          <dt>Work description</dt><dd data-record-field="description"></dd>
+        </dl>
+        <p>Only fields represented by the current PermitAreaRecord contract appear here. No reported cost or inferred project progress is displayed.</p>
+        <a class="official-link" href="https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/data?no_mobile=true" target="_blank" rel="noreferrer">Open the official Chicago Building Permits dataset <i data-lucide="external-link" aria-hidden="true"></i></a>
+      </div>
+    </dialog>
+
+    <dialog id="permit-source-dialog" aria-labelledby="permit-source-title">
+      <div class="dialog-head">
+        <div><span class="dialog-kicker">Official publisher</span><h2 id="permit-source-title">Verify Chicago permit records</h2></div>
+        <button class="dialog-close" type="button" data-dialog-close aria-label="Close permit source dialog"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <div class="dialog-body">
+        <p>The counts and addresses in this mockup are illustrative samples. Verify actual permit rows with the official City of Chicago publisher.</p>
+        <a class="official-link" href="https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/data?no_mobile=true" target="_blank" rel="noreferrer">City of Chicago Building Permits dataset <i data-lucide="external-link" aria-hidden="true"></i></a>
+        <p class="chart-note">The publisher link opens in a new tab. Returning here preserves the selected Permit Activity Analysis brief.</p>
+      </div>
+    </dialog>
+
+    <div class="toast" role="status" aria-live="polite" data-toast></div>
+  </body>
+</html>

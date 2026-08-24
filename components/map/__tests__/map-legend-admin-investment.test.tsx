@@ -119,6 +119,7 @@ describe("MapLegendPanel community-investment admin section", () => {
         investmentFunderTypes={{
           government: true,
           philanthropic: true,
+          corporate: true,
           private_development: true,
         }}
         investmentGovernmentFundingPurposes={{
