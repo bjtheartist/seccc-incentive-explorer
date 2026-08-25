@@ -747,6 +747,9 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/api/concierge/status/route.ts",
   "app/api/corridor/owners/route.ts",
   "app/api/corridor/route.ts",
+  // Authenticated internal ingestion endpoint. Its response is operational
+  // sync counters only; it renders no program, boundary, or eligibility claim.
+  "app/api/cron/sync-permits/route.ts",
   "app/api/cron/watchlist-digest/route.ts",
   "app/api/districts/route.ts",
   "app/api/events/route.ts",

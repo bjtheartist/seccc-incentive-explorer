@@ -146,8 +146,31 @@ async function migrate() {
     )
   `;
 
+  /* ── permit_sync_state ──
+   *
+   * Durable cursor and lease for the bounded daily permits refresh. This is
+   * intentionally separate from the full citywide backfill: the cron only
+   * asks Socrata for rows whose system `:updated_at` value changed since this
+   * cursor, and refuses source-wide surges.
+   */
+  console.log("7. Creating permit_sync_state table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS permit_sync_state (
+      source_key TEXT PRIMARY KEY,
+      cursor_updated_at TIMESTAMPTZ,
+      last_checked_at TIMESTAMPTZ,
+      last_success_at TIMESTAMPTZ,
+      rows_changed INTEGER NOT NULL DEFAULT 0,
+      rows_fetched INTEGER NOT NULL DEFAULT 0,
+      rows_written INTEGER NOT NULL DEFAULT 0,
+      rows_removed INTEGER NOT NULL DEFAULT 0,
+      lease_until TIMESTAMPTZ,
+      last_error TEXT
+    )
+  `;
+
   /* ── Indexes: GIST on every geom, btree on zip ── */
-  console.log("7. Creating indexes...");
+  console.log("8. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_building_permits_geom ON building_permits USING GIST (geom)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_building_permits_zip ON building_permits (zip)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_building_violations_geom ON building_violations USING GIST (geom)`;

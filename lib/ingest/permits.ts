@@ -55,7 +55,8 @@ import type { FetchOpts, Provenance, SourceAdapter, SQL } from "./types";
 
 const SOURCE_KEY = "building_permits";
 
-const PERMITS_URL = "https://data.cityofchicago.org/resource/ydr8-5enu.json";
+export const PERMITS_URL =
+  "https://data.cityofchicago.org/resource/ydr8-5enu.json";
 
 /**
  * The issue-date window. Re-exported from lib/permit-match.ts, which is the
@@ -75,7 +76,7 @@ const PAGE_SIZE = 25000;
  * columns. `raw_json` therefore preserves exactly what was retrieved — this
  * projection — not the full upstream row.
  */
-const SELECT_COLS = [
+export const PERMIT_SELECT_COLS = [
   "permit_",
   "permit_status",
   "permit_milestone",
@@ -275,7 +276,7 @@ export const permitsAdapter: SourceAdapter<RawPermit, PermitRow> = {
       const params = new URLSearchParams({
         // `id` is projected only to drive the cursor; it is stripped below so
         // raw_json stays the documented SELECT_COLS projection.
-        $select: `id,${SELECT_COLS}`,
+        $select: `id,${PERMIT_SELECT_COLS}`,
         $where: where,
         $order: "id",
         $limit: String(PAGE_SIZE),
