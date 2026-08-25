@@ -16,6 +16,7 @@ import {
   PERMIT_MATCH_ERROR_TEXT,
   PERMIT_NO_MATCH_TEXT,
   PERMIT_PORTAL_URL,
+  PERMIT_PROXIMITY_WARNING,
   PERMIT_SECTION_TITLE,
   PERMIT_VERIFICATION_NOTE,
 } from "@/lib/permit-match-lines";
@@ -90,6 +91,24 @@ describe("permitMatchHtml", () => {
     expect(html).toContain(PERMIT_DATA_SOURCE_TEXT);
     expect(html).toContain(PERMIT_VERIFICATION_NOTE);
     expect(html).toContain(PERMIT_PORTAL_URL);
+    expect(html).not.toContain(PERMIT_PROXIMITY_WARNING);
+  });
+
+  it("warns that a location-only match may belong to a neighboring parcel", () => {
+    const proximity: PermitMatchState = {
+      status: "loaded",
+      matches: [
+        {
+          ...permit,
+          matchMethod: "spatial_proximity",
+          matchConfidence: "low",
+        },
+      ],
+    };
+
+    const html = permitMatchHtml(proximity);
+    expect(html).toContain("Location within 25 m · Low confidence");
+    expect(html).toContain(PERMIT_PROXIMITY_WARNING);
   });
 
   it("never prints a cost without the applicant-estimate qualifier", () => {

@@ -921,6 +921,19 @@ async function matchPermitsToVacantParcels() {
   );
 
   // ── Tier 3 · spatial proximity (LOW confidence, capped per parcel) ──
+  // Rebuild this weakest tier from scratch. Earlier runs allowed one permit to
+  // fan out across several nearby parcel points and retained proximity rows
+  // even when a stronger identity match existed elsewhere. Strong matches stay
+  // available if this optional fallback rebuild is interrupted.
+  const clearedProximity = await sql`
+    DELETE FROM vacant_property_permit_matches
+    WHERE match_method = 'spatial_proximity'
+    RETURNING permit_id
+  `;
+  console.log(
+    `  cleared ${clearedProximity.length.toLocaleString("en-US")} prior proximity rows`,
+  );
+
   await runTier(
     "spatial_proximity",
     (lo, hi) => sql`
@@ -939,6 +952,30 @@ async function matchPermitsToVacantParcels() {
         FROM building_permits bp
         WHERE bp.geom IS NOT NULL
           AND ST_DWithin(bp.geom, vp.geom, ${SPATIAL_MATCH_RADIUS_M})
+          -- Proximity is fallback-only. If this permit has any stronger match
+          -- in the vacant-parcel universe, it must not appear on a neighbor.
+          AND NOT EXISTS (
+            SELECT 1
+            FROM vacant_property_permit_matches stronger
+            WHERE stronger.permit_id = bp.permit_id
+              AND stronger.match_method IN ('pin_exact', 'address_normalized')
+          )
+          -- A point can sit within 25 m of several narrow lots. Retain only
+          -- the globally closest vacant parcel, with id as a stable tie-break.
+          AND NOT EXISTS (
+            SELECT 1
+            FROM vacant_properties closer
+            WHERE closer.geom IS NOT NULL
+              AND closer.id <> vp.id
+              AND ST_DWithin(bp.geom, closer.geom, ${SPATIAL_MATCH_RADIUS_M})
+              AND (
+                ST_Distance(bp.geom, closer.geom) < ST_Distance(bp.geom, vp.geom)
+                OR (
+                  ST_Distance(bp.geom, closer.geom) = ST_Distance(bp.geom, vp.geom)
+                  AND closer.id < vp.id
+                )
+              )
+          )
         ORDER BY bp.issue_date DESC NULLS LAST, bp.permit_id
         LIMIT ${SPATIAL_MATCH_PER_PARCEL_CAP}
       ) near

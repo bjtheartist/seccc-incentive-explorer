@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
-import type { MatchedPermit, PermitMatchConfidence, PermitMatchMethod } from "@/lib/permit-match";
+import {
+  SPATIAL_MATCH_RADIUS_M,
+  type MatchedPermit,
+  type PermitMatchConfidence,
+  type PermitMatchMethod,
+} from "@/lib/permit-match";
 
 /**
  * Matched building permit records for ONE vacant parcel.
@@ -89,8 +94,43 @@ export async function GET(request: NextRequest) {
       FROM vacant_property_permit_matches m
       JOIN vacant_properties vp ON vp.id = m.vacant_property_id
       JOIN building_permits bp ON bp.permit_id = m.permit_id
-      WHERE (${id} <> '' AND vp.id = ${id})
-         OR (${pin} <> '' AND vp.pin = ${pin})
+      WHERE (
+        (${id} <> '' AND vp.id = ${id})
+        OR (${pin} <> '' AND vp.pin = ${pin})
+      )
+        AND (
+          m.match_method <> 'spatial_proximity'
+          OR (
+            -- Proximity is fallback evidence, never a competing explanation
+            -- for a permit that already has a PIN/address match anywhere in
+            -- the vacant-parcel universe.
+            NOT EXISTS (
+              SELECT 1
+              FROM vacant_property_permit_matches stronger
+              WHERE stronger.permit_id = m.permit_id
+                AND stronger.match_method IN ('pin_exact', 'address_normalized')
+            )
+            AND bp.geom IS NOT NULL
+            AND vp.geom IS NOT NULL
+            -- A permit point may fall within 25 m of several narrow Chicago
+            -- parcels. Serve it only on the closest parcel; id is the stable
+            -- tie-break when two parcel points share coordinates.
+            AND NOT EXISTS (
+              SELECT 1
+              FROM vacant_properties other_vp
+              WHERE other_vp.geom IS NOT NULL
+                AND other_vp.id <> vp.id
+                AND ST_DWithin(bp.geom, other_vp.geom, ${SPATIAL_MATCH_RADIUS_M})
+                AND (
+                  ST_Distance(bp.geom, other_vp.geom) < ST_Distance(bp.geom, vp.geom)
+                  OR (
+                    ST_Distance(bp.geom, other_vp.geom) = ST_Distance(bp.geom, vp.geom)
+                    AND other_vp.id < vp.id
+                  )
+                )
+            )
+          )
+        )
       ORDER BY
         array_position(
           ARRAY['pin_exact','address_normalized','spatial_proximity'],

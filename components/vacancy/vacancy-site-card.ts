@@ -38,6 +38,7 @@ import {
   PERMIT_SECTION_TITLE,
   PERMIT_VERIFICATION_NOTE,
   permitDetailLines,
+  permitMatchWarning,
 } from "@/lib/permit-match-lines";
 import {
   assessorRecordUrl,
@@ -537,6 +538,13 @@ export function permitMatchHtml(state: PermitMatchState): string {
     )
     .join("");
 
+  const matchWarning = permitMatchWarning(permit);
+  const warning = matchWarning
+    ? `<div style="margin-top:8px;padding:6px 8px;border:1px solid #A45B0033;background:#FFF8E8;color:#7A4300;line-height:1.45">${escapeHtml(
+        matchWarning,
+      )}</div>`
+    : "";
+
   const note = `<div style="margin-top:8px;padding-top:6px;border-top:1px solid ${CARD_INK}12;color:${CARD_MUTED};line-height:1.45">${escapeHtml(
     PERMIT_VERIFICATION_NOTE,
   )}</div>`;
@@ -549,7 +557,7 @@ export function permitMatchHtml(state: PermitMatchState): string {
     PERMIT_PORTAL_LABEL,
   )} &#8599;</a></div>`;
 
-  return `${rows}${note}${source}`;
+  return `${rows}${warning}${note}${source}`;
 }
 
 /** The "· matched" / "· none" badge on the collapsed accordion. Silent until

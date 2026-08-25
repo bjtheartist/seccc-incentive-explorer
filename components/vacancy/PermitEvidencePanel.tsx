@@ -15,6 +15,7 @@ import {
   PERMIT_PORTAL_URL,
   PERMIT_VERIFICATION_NOTE,
   permitDetailLines,
+  permitMatchWarning,
 } from "@/lib/permit-match-lines";
 
 const IDLE: PermitMatchState = { status: "idle" };
@@ -97,6 +98,11 @@ export function PermitEvidencePanel({ pin }: { pin: string | null }) {
                     </div>
                   ))}
                 </dl>
+                {permitMatchWarning(permit) ? (
+                  <p className="mt-3 border border-[#A45B00]/20 bg-[#FFF8E8] px-3 py-2 text-[11px] leading-relaxed text-[#7A4300]">
+                    {permitMatchWarning(permit)}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

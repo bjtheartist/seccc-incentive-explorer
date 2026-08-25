@@ -56,6 +56,10 @@ export const PERMIT_PORTAL_LABEL = "City of Chicago permit portal";
 export const PERMIT_VERIFICATION_NOTE =
   "A recent permit record was matched to this parcel. Permit issuance does not guarantee work has commenced or finished. Verify current site conditions in person before outreach or capital commitments.";
 
+/** Required whenever the only link is a nearby point rather than PIN/address. */
+export const PERMIT_PROXIMITY_WARNING =
+  "Location-only match: this filing may belong to a neighboring parcel. Confirm the permit address or PIN in the City record before relying on it.";
+
 /** Verbatim absence, carrying the window the ingest genuinely queried. */
 export const PERMIT_NO_MATCH_TEXT = `No matched permit record in current data window (${PERMIT_DATA_WINDOW_LABEL}).`;
 
@@ -101,6 +105,11 @@ export function formatMatchBasis(permit: MatchedPermit): string {
   return `${PERMIT_MATCH_METHOD_LABELS[permit.matchMethod]} · ${
     PERMIT_MATCH_CONFIDENCE_LABELS[permit.matchConfidence]
   }`;
+}
+
+/** Match-specific caution. Stronger identity joins do not need this warning. */
+export function permitMatchWarning(permit: MatchedPermit): string | null {
+  return permit.matchMethod === "spatial_proximity" ? PERMIT_PROXIMITY_WARNING : null;
 }
 
 /** The permit's work type/description, or the permit type, or an honest blank. */
