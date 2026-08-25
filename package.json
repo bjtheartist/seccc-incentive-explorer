@@ -79,6 +79,8 @@
     "data:docs:check": "npx tsx scripts/generate-investment-docs.ts --check",
     "data:audit:foundation-fresh": "python3 scripts/foundation/fresh_srs_audit.py && python3 scripts/foundation/chicago_prize_census_check.py",
     "data:audit:permit-spatial": "npx tsx scripts/audit-permit-spatial-quality.ts",
+    "data:backfill:permit-geocodes": "npx tsx scripts/backfill-permit-geocodes.ts",
+    "data:repair:permit-matches": "npx tsx scripts/repair-permit-match-table.ts",
     "data:refresh:live": "npx tsx scripts/refresh/refresh-live-sources.ts",
     "data:sync:zoning": "npx tsx scripts/sync-zoning-sources.ts"
   },

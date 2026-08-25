@@ -431,9 +431,69 @@ export const permitsAdapter: SourceAdapter<RawPermit, PermitRow> = {
           issue_date = EXCLUDED.issue_date,
           reported_cost = EXCLUDED.reported_cost,
           is_demolition = EXCLUDED.is_demolition,
-          lat = EXCLUDED.lat,
-          lon = EXCLUDED.lon,
-          geom = EXCLUDED.geom,
+          -- A native City point always wins and clears older enrichment
+          -- metadata. When the City still publishes no point, retain only a
+          -- coordinate that came from the audited geocode backfill; do not
+          -- accidentally preserve a stale native point the source removed.
+          lat = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN EXCLUDED.lat
+            WHEN building_permits.geocode_source IS NOT NULL
+              AND regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+                = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.lat
+            ELSE NULL
+          END,
+          lon = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN EXCLUDED.lon
+            WHEN building_permits.geocode_source IS NOT NULL
+              AND regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+                = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.lon
+            ELSE NULL
+          END,
+          geom = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN EXCLUDED.geom
+            WHEN building_permits.geocode_source IS NOT NULL
+              AND regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+                = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geom
+            ELSE NULL
+          END,
+          geocode_source = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN NULL
+            WHEN regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+              = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geocode_source
+            ELSE NULL
+          END,
+          geocode_match_type = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN NULL
+            WHEN regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+              = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geocode_match_type
+            ELSE NULL
+          END,
+          geocode_matched_address = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN NULL
+            WHEN regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+              = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geocode_matched_address
+            ELSE NULL
+          END,
+          geocoded_at = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN NULL
+            WHEN regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+              = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geocoded_at
+            ELSE NULL
+          END,
+          geocode_run_id = CASE
+            WHEN EXCLUDED.geom IS NOT NULL THEN NULL
+            WHEN regexp_replace(lower(coalesce(EXCLUDED.address, '')), '[^a-z0-9]', '', 'g')
+              = regexp_replace(lower(coalesce(building_permits.address, '')), '[^a-z0-9]', '', 'g')
+              THEN building_permits.geocode_run_id
+            ELSE NULL
+          END,
           source = EXCLUDED.source,
           fetched_at = NOW(),
           raw_json = EXCLUDED.raw_json
