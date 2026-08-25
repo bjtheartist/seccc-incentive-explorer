@@ -192,4 +192,13 @@ describe("/investment landing page — meta-driven contracts (Sol gate blocker 5
     expect(html).toContain("$500,000,000");
     expect(html).toContain("80.0%");
   });
+
+  it("renders approved beta access without exposing staff navigation", async () => {
+    mockState.mockResolvedValue({ configured: true, hasSession: true, accessMode: "beta" });
+    const html = await render();
+    expect(html).toContain("Private beta access.");
+    expect(html).toContain('href="/public-investment-analysis"');
+    expect(html).not.toContain('href="/admin/owner-files"');
+    expect(html).not.toContain('href="/admin"');
+  });
 });

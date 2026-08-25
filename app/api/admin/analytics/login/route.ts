@@ -11,6 +11,7 @@ const ALLOWED_ADMIN_REDIRECTS = new Set([
   "/admin/future-of-commerce",
   "/admin/zoning-changes",
   "/admin/support-network",
+  "/admin/public-investment-access",
 ]);
 
 function safeDashboardRedirect(req: NextRequest, value: FormDataEntryValue | null) {

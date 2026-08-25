@@ -1,10 +1,17 @@
 import type { NextAuthOptions } from "next-auth";
 import type { Adapter } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
+import EmailProvider from "next-auth/providers/email";
 import GoogleProvider from "next-auth/providers/google";
 import NeonAdapter from "@auth/neon-adapter";
 import { Pool } from "@neondatabase/serverless";
 import { normalizeEmail, verifyPassword } from "@/lib/password";
+import {
+  isPublicInvestmentAccessEmailConfigured,
+  publicInvestmentMagicLinkConfirmationUrl,
+  sendPublicInvestmentMagicLinkEmail,
+} from "@/lib/public-investment-access-email";
+import { hasApprovedPublicInvestmentAccess } from "@/lib/public-investment-early-access-storage";
 
 const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL })
@@ -21,6 +28,24 @@ if (googleClientId && googleClientSecret) {
       clientId: googleClientId,
       clientSecret: googleClientSecret,
     })
+  );
+}
+
+if (pool && isPublicInvestmentAccessEmailConfigured()) {
+  providers.push(
+    EmailProvider({
+      from:
+        process.env.AUTH_EMAIL_FROM ||
+        process.env.REPORT_EMAIL_FROM ||
+        "Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>",
+      maxAge: 30 * 60,
+      async sendVerificationRequest({ identifier, url }) {
+        await sendPublicInvestmentMagicLinkEmail(
+          identifier,
+          publicInvestmentMagicLinkConfirmationUrl(url),
+        );
+      },
+    }),
   );
 }
 
@@ -75,6 +100,12 @@ export const authOptions: NextAuthOptions = {
   },
   providers,
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider !== "email") return true;
+      const email = user.email || account.providerAccountId;
+      if (!email) return false;
+      return hasApprovedPublicInvestmentAccess(email);
+    },
     session({ session, user, token }) {
       if (session.user) {
         (session.user as typeof session.user & { id?: string }).id =

@@ -740,6 +740,12 @@ export default async function AdminAnalyticsPage({
             >
               Investment Beta Signups CSV
             </a>
+            <Link
+              href="/admin/public-investment-access"
+              className="border border-[#2563EB] bg-[#2563EB] px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-white"
+            >
+              Investment Access Queue
+            </Link>
             <a
               href="/api/admin/shortlist-access?format=csv"
               className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"

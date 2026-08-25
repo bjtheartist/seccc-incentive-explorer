@@ -27,7 +27,12 @@ beforeEach(() => {
     {
       name: "Billy",
       title: "Director",
+      organization: "SECC",
+      useCase: "Compare neighborhood funding patterns.",
       email: "billy@example.com",
+      status: "approved",
+      emailVerifiedAt: "2026-08-24T11:00:00.000Z",
+      approvedAt: "2026-08-24T11:30:00.000Z",
       requestedAt: "2026-08-24T12:00:00.000Z",
     },
   ]);

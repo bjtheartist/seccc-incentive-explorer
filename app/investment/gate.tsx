@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { getServerSession } from "next-auth";
 import { cookies } from "next/headers";
+import { authOptions } from "@/auth";
 import {
   OWNER_FILES_ADMIN_COOKIE,
   hasValidOwnerFilesAdminSession,
@@ -6,37 +9,70 @@ import {
 } from "@/lib/owner-files-admin-auth";
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { InvestmentSessionGuard } from "@/components/investment/SessionGuard";
+import { isPublicInvestmentAccessEmailConfigured } from "@/lib/public-investment-access-email";
+import {
+  hasApprovedPublicInvestmentAccess,
+  PublicInvestmentEarlyAccessStorageUnavailableError,
+} from "@/lib/public-investment-early-access-storage";
 
 /**
- * Admin gate for the Investment & Impact Analysis pages (/investment and
- * /investment/[area]). Reuses the Owner Files admin session — the same gate the
- * admin map layer and Owner Files pages use, so a signed-in analytics/owner-files
- * admin never hits a second wall (single sign-on). An unauthenticated visitor
- * gets the same not-configured / password UX as Owner Files (never a 404).
+ * Access gate for the Investment & Impact Analysis pages. Existing Owner Files
+ * and analytics admin sessions keep their original access. Verified beta users
+ * may also enter through the ordinary NextAuth session after staff approval.
  */
+
+export type InvestmentAccessMode = "admin" | "beta" | null;
 
 /** Reads the admin cookies once and reports whether the gate is configured and
  * whether the current request carries a valid session. */
-export async function getInvestmentAdminState(): Promise<{ configured: boolean; hasSession: boolean }> {
-  const configured = isOwnerFilesAdminConfigured();
+export async function getInvestmentAdminState(): Promise<{
+  configured: boolean;
+  hasSession: boolean;
+  accessMode?: InvestmentAccessMode;
+}> {
+  const adminConfigured = isOwnerFilesAdminConfigured();
+  const betaConfigured = isPublicInvestmentAccessEmailConfigured();
+  const configured = adminConfigured || betaConfigured;
   if (!configured) return { configured: false, hasSession: false };
   const cookieStore = await cookies();
-  const hasSession = hasValidOwnerFilesAdminSession(
-    cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
-    cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value,
-  );
-  return { configured: true, hasSession };
+  if (
+    adminConfigured &&
+    hasValidOwnerFilesAdminSession(
+      cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+      cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value,
+    )
+  ) {
+    return { configured: true, hasSession: true, accessMode: "admin" };
+  }
+
+  if (betaConfigured) {
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email;
+    if (email) {
+      try {
+        if (await hasApprovedPublicInvestmentAccess(email)) {
+          return { configured: true, hasSession: true, accessMode: "beta" };
+        }
+      } catch (error) {
+        if (!(error instanceof PublicInvestmentEarlyAccessStorageUnavailableError)) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  return { configured: true, hasSession: false, accessMode: null };
 }
 
-/** Shown when neither the Owner Files nor the analytics admin gate is configured. */
+/** Shown when neither staff access nor beta email access is configured. */
 export function InvestmentNotConfigured() {
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
       <div className="mx-auto max-w-2xl border border-[#0C1B33]/10 bg-white p-6">
         <h1 className="font-editorial text-[38px]">Investment analysis not configured</h1>
         <p className="mt-3 text-[#0C1B33]/45">
-          Set <code>OWNER_FILES_ADMIN_PASSWORD</code> (or the analytics admin password) before using the
-          Investment &amp; Impact analysis.
+          Configure the staff gate or Public Investment beta access before using the Investment &amp; Impact
+          analysis.
         </p>
       </div>
     </main>
@@ -89,6 +125,13 @@ export function InvestmentLoginForm({
         <button className="mt-4 w-full bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white">
           Open investment analysis
         </button>
+        <p className="mt-5 border-t border-[#0C1B33]/10 pt-5 text-[12px] leading-relaxed text-[#0C1B33]/45">
+          Approved beta tester? Request a passwordless sign-in link from the{" "}
+          <Link href="/public-investment-analysis" className="text-[#2563EB] hover:underline">
+            Public Investment Analysis page
+          </Link>
+          .
+        </p>
       </form>
     </main>
   );

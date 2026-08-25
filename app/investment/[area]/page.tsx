@@ -161,7 +161,7 @@ export default async function InvestmentAreaPage({
   const sp = await searchParams;
   const hasAuthError = paramValue(sp.error) === "1";
 
-  const { configured, hasSession } = await getInvestmentAdminState();
+  const { configured, hasSession, accessMode } = await getInvestmentAdminState();
   if (!configured) return <InvestmentNotConfigured />;
   if (!hasSession) {
     return <InvestmentLoginForm redirectTo={`/investment/${area}`} hasAuthError={hasAuthError} />;
@@ -199,10 +199,14 @@ export default async function InvestmentAreaPage({
       <div className="mx-auto max-w-[1440px]">
         <nav className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#0C1B33]/15 pb-4 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
           <div className="flex flex-wrap items-center gap-1.5">
-            <Link href="/admin" className="hover:text-[#2563EB]">
-              Admin
-            </Link>
-            <span>/</span>
+            {accessMode === "beta" ? null : (
+              <>
+                <Link href="/admin" className="hover:text-[#2563EB]">
+                  Admin
+                </Link>
+                <span>/</span>
+              </>
+            )}
             <Link href="/investment" className="hover:text-[#2563EB]">
               Investment analysis
             </Link>

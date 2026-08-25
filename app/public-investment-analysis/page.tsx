@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BarChart3, Building2, HeartHandshake, Landmark } from "lucide-react";
+import { isPublicInvestmentAccessEmailConfigured } from "@/lib/public-investment-access-email";
 import { PublicInvestmentEarlyAccessForm } from "./PublicInvestmentEarlyAccessForm";
+import {
+  PublicInvestmentBetaSignIn,
+  PublicInvestmentVerificationNotice,
+} from "./PublicInvestmentBetaSignIn";
 
 export const metadata: Metadata = {
   title: "Public Investment Analysis — Beta",
@@ -51,6 +57,9 @@ export default function PublicInvestmentAnalysisBetaPage() {
       <section className="border-b border-[#0C1B33]/10 bg-white">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-14 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-18">
           <div>
+            <Suspense fallback={null}>
+              <PublicInvestmentVerificationNotice />
+            </Suspense>
             <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/38">
               What we are testing
             </span>
@@ -70,7 +79,7 @@ export default function PublicInvestmentAnalysisBetaPage() {
 
           <aside className="self-start border border-[#0C1B33]/10 bg-[#F7F8FA] p-6 sm:p-8">
             <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/38">
-              Three quick details
+              Early-access request
             </span>
             <h2 className="mt-3 font-editorial text-[34px] leading-tight">Request early access</h2>
             <p className="mt-3 text-[13px] leading-6 text-[#0C1B33]/50">
@@ -78,6 +87,13 @@ export default function PublicInvestmentAnalysisBetaPage() {
             </p>
             <div className="mt-6">
               <PublicInvestmentEarlyAccessForm />
+            </div>
+            <div className="mt-8 border-t border-[#0C1B33]/10 pt-6">
+              <h3 className="font-editorial text-[24px]">Already approved?</h3>
+              <p className="mb-4 mt-2 text-[12px] leading-5 text-[#0C1B33]/48">
+                Use the same verified email address to receive a passwordless sign-in link.
+              </p>
+              <PublicInvestmentBetaSignIn enabled={isPublicInvestmentAccessEmailConfigured()} />
             </div>
           </aside>
         </div>

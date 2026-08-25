@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PublicInvestmentEarlyAccessSchema } from "@/lib/public-investment-early-access";
 import {
+  isPublicInvestmentAccessEmailConfigured,
+  publicInvestmentMagicLinkUrl,
+  sendPublicInvestmentMagicLinkEmail,
+  sendPublicInvestmentVerificationEmail,
+} from "@/lib/public-investment-access-email";
+import {
+  createPublicInvestmentEmailVerificationToken,
+  createPublicInvestmentMagicSignInToken,
   PublicInvestmentEarlyAccessStorageUnavailableError,
   publicInvestmentEarlyAccessClientIdentifier,
   reservePublicInvestmentEarlyAccessRequest,
@@ -31,11 +39,15 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return json(
         {
-          error: "Please check your name, title, and email address.",
+          error: "Please check the details in your request.",
           fields: parsed.error.flatten().fieldErrors,
         },
         400,
       );
+    }
+
+    if (!isPublicInvestmentAccessEmailConfigured()) {
+      return json({ error: "Early-access email verification is temporarily unavailable." }, 503);
     }
 
     const reservation = await reservePublicInvestmentEarlyAccessRequest(
@@ -49,8 +61,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await savePublicInvestmentEarlyAccessRequest(parsed.data);
-    return json({ success: true, message: "Your early-access request is recorded." });
+    const saved = await savePublicInvestmentEarlyAccessRequest(parsed.data);
+    let message = "Your request is recorded for review.";
+    if (saved.status === "approved" && saved.emailVerifiedAt) {
+      const { token } = await createPublicInvestmentMagicSignInToken(saved.email);
+      const url = publicInvestmentMagicLinkUrl(saved.email, token);
+      await sendPublicInvestmentMagicLinkEmail(saved.email, url);
+      message = "Check your email for a passwordless sign-in link.";
+    } else if (saved.status === "pending_verification") {
+      const token = await createPublicInvestmentEmailVerificationToken(saved.email);
+      await sendPublicInvestmentVerificationEmail(saved.email, token);
+      message = "Check your email to verify this early-access request.";
+    } else if (saved.status === "pending_review") {
+      message = "Your verified early-access request is already under review.";
+    }
+
+    return json({
+      success: true,
+      message,
+    });
   } catch (error) {
     if (error instanceof PublicInvestmentEarlyAccessStorageUnavailableError) {
       return json({ error: "Early-access signup is temporarily unavailable." }, 503);

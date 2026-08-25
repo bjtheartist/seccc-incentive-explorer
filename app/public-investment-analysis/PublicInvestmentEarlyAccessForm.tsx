@@ -6,11 +6,20 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 interface Fields {
   name: string;
   title: string;
+  organization: string;
+  useCase: string;
   email: string;
   website: string;
 }
 
-const EMPTY_FIELDS: Fields = { name: "", title: "", email: "", website: "" };
+const EMPTY_FIELDS: Fields = {
+  name: "",
+  title: "",
+  organization: "",
+  useCase: "",
+  email: "",
+  website: "",
+};
 
 function Field({
   id,
@@ -21,7 +30,7 @@ function Field({
   autoComplete,
   placeholder,
 }: {
-  id: "name" | "title" | "email";
+  id: "name" | "title" | "organization" | "email";
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -42,7 +51,7 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}
-        maxLength={id === "email" ? 254 : id === "title" ? 160 : 120}
+        maxLength={id === "email" ? 254 : id === "title" ? 160 : id === "organization" ? 180 : 120}
         placeholder={placeholder}
         className="mt-2 h-12 w-full border border-[#0C1B33]/18 bg-white px-4 text-[15px] text-[#0C1B33] outline-none transition-colors placeholder:text-[#0C1B33]/25 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
       />
@@ -54,6 +63,7 @@ export function PublicInvestmentEarlyAccessForm() {
   const [fields, setFields] = useState<Fields>(EMPTY_FIELDS);
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState("Your early-access request is recorded.");
   const successRef = useRef<HTMLDivElement>(null);
 
   function update<K extends keyof Fields>(key: K, value: Fields[K]) {
@@ -81,6 +91,11 @@ export function PublicInvestmentEarlyAccessForm() {
       }
 
       setFields(EMPTY_FIELDS);
+      setSuccessMessage(
+        typeof payload.message === "string"
+          ? payload.message
+          : "Your early-access request is recorded.",
+      );
       setStatus("success");
       window.setTimeout(() => successRef.current?.focus(), 0);
     } catch (submissionError) {
@@ -104,10 +119,10 @@ export function PublicInvestmentEarlyAccessForm() {
       >
         <CheckCircle2 className="h-8 w-8 text-[#16A34A]" aria-hidden="true" />
         <h2 className="mt-5 font-editorial text-[36px] leading-tight text-[#0C1B33]">
-          You&apos;re on the early-access list.
+          Request received.
         </h2>
         <p className="mt-3 max-w-xl text-[14px] leading-6 text-[#0C1B33]/58">
-          We&apos;ll contact you as Public Investment Analysis testing opens to more partners.
+          {successMessage}
         </p>
       </div>
     );
@@ -132,6 +147,31 @@ export function PublicInvestmentEarlyAccessForm() {
           autoComplete="organization-title"
           placeholder="Executive director, business owner, analyst"
         />
+        <Field
+          id="organization"
+          label="Organization"
+          value={fields.organization}
+          onChange={(value) => update("organization", value)}
+          autoComplete="organization"
+          placeholder="Organization or company"
+        />
+        <label htmlFor="public-investment-use-case" className="block">
+          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#0C1B33]/55">
+            How would you use the analysis?
+          </span>
+          <textarea
+            id="public-investment-use-case"
+            name="useCase"
+            required
+            minLength={10}
+            maxLength={1_000}
+            rows={4}
+            value={fields.useCase}
+            onChange={(event) => update("useCase", event.target.value)}
+            placeholder="Tell us the decision, neighborhood, program, or research question you want to explore."
+            className="mt-2 w-full resize-y border border-[#0C1B33]/18 bg-white px-4 py-3 text-[15px] text-[#0C1B33] outline-none transition-colors placeholder:text-[#0C1B33]/25 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+          />
+        </label>
         <Field
           id="email"
           label="Email address"

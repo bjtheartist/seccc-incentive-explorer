@@ -91,13 +91,14 @@ UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 RESEND_API_KEY=...
 PASSWORD_RESET_EMAILS_ENABLED=true
+PUBLIC_INVESTMENT_ACCESS_EMAILS_ENABLED=true
 AUTH_EMAIL_FROM="Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>"
 REPORT_EMAILS_ENABLED=true
 REPORT_EMAIL_FROM="Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>"
 INCENTIVE_HELP_INBOX=...
 ```
 
-Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. `DATABASE_URL`, `AUTH_SECRET`, and `NEXTAUTH_URL` are required for account login, saved reports, and workspace features. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google login; the option is hidden when either value is absent. Email/password signup also requires the workspace migration so the `users.password_hash` column exists. Password recovery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `PASSWORD_RESET_EMAILS_ENABLED=true`. Report delivery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `REPORT_EMAILS_ENABLED=true`; `INCENTIVE_HELP_INBOX` receives staff notifications only when a report recipient explicitly requests Chamber support. The rest are optional service integrations; the app should degrade gracefully when they are absent.
+Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. `DATABASE_URL`, `AUTH_SECRET`, and `NEXTAUTH_URL` are required for account login, saved reports, and workspace features. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google login; the option is hidden when either value is absent. Email/password signup also requires the workspace migration so the `users.password_hash` column exists. Password recovery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `PASSWORD_RESET_EMAILS_ENABLED=true`. Public Investment beta verification, approval invitations, and passwordless sign-in are fail-closed and require `DATABASE_URL`, `AUTH_SECRET`, `RESEND_API_KEY`, and `PUBLIC_INVESTMENT_ACCESS_EMAILS_ENABLED=true`; staff decisions use the existing analytics-admin session. Report delivery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `REPORT_EMAILS_ENABLED=true`; `INCENTIVE_HELP_INBOX` receives staff notifications only when a report recipient explicitly requests Chamber support. The rest are optional service integrations; the app should degrade gracefully when they are absent.
 
 ## Important Files
 

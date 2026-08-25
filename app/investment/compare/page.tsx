@@ -62,7 +62,7 @@ export default async function InvestmentComparePage({ searchParams }: { searchPa
   const sp = await searchParams;
   const hasAuthError = paramValue(sp.error) === "1";
 
-  const { configured, hasSession } = await getInvestmentAdminState();
+  const { configured, hasSession, accessMode } = await getInvestmentAdminState();
   if (!configured) return <InvestmentNotConfigured />;
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
@@ -76,10 +76,14 @@ export default async function InvestmentComparePage({ searchParams }: { searchPa
       <div className="mx-auto max-w-6xl">
         <nav className="mb-6 flex items-center justify-between gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
           <div className="flex items-center gap-1.5">
-            <Link href="/admin" className="hover:text-[#2563EB]">
-              Admin
-            </Link>
-            <span>/</span>
+            {accessMode === "beta" ? null : (
+              <>
+                <Link href="/admin" className="hover:text-[#2563EB]">
+                  Admin
+                </Link>
+                <span>/</span>
+              </>
+            )}
             <Link href="/investment" className="hover:text-[#2563EB]">
               Investment analysis
             </Link>

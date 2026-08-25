@@ -10,10 +10,16 @@ describe("Public Investment Analysis beta page", () => {
     expect(html).toContain("sign up for early access");
   });
 
-  it("collects exactly the requested contact identity fields", () => {
+  it("collects identity, organization, use case, and email for review", () => {
     expect(html).toContain('name="name"');
     expect(html).toContain('name="title"');
+    expect(html).toContain('name="organization"');
+    expect(html).toContain('name="useCase"');
     expect(html).toContain('name="email"');
+  });
+
+  it("keeps approved-user passwordless sign-in distinct from the public request", () => {
+    expect(html).toContain("Already approved?");
   });
 
   it("names public dollars, philanthropic dollars, and visual analysis", () => {

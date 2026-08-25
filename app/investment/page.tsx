@@ -35,7 +35,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   const sp = await searchParams;
   const hasAuthError = paramValue(sp.error) === "1";
 
-  const { configured, hasSession } = await getInvestmentAdminState();
+  const { configured, hasSession, accessMode } = await getInvestmentAdminState();
   if (!configured) return <InvestmentNotConfigured />;
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
@@ -51,19 +51,29 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
       <div className="mx-auto max-w-5xl">
         <nav className="mb-6 flex items-center justify-between gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
           <div className="flex items-center gap-1.5">
-            <Link href="/admin" className="hover:text-[#2563EB]">
-              Admin
-            </Link>
-            <span>/</span>
+            {accessMode === "beta" ? (
+              <Link href="/public-investment-analysis" className="hover:text-[#2563EB]">
+                Public Investment Analysis
+              </Link>
+            ) : (
+              <>
+                <Link href="/admin" className="hover:text-[#2563EB]">
+                  Admin
+                </Link>
+                <span>/</span>
+              </>
+            )}
             <span className="text-[#0C1B33]/80">Investment analysis</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/map" className="hover:text-[#2563EB]">
               Map
             </Link>
-            <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
-              Owner Files
-            </Link>
+            {accessMode === "beta" ? null : (
+              <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
+                Owner Files
+              </Link>
+            )}
             {index && index.rows.length > 0 ? <InvestmentTourButton /> : null}
           </div>
         </nav>
@@ -76,7 +86,8 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
           Grants, awards, and development sited into Chicago&rsquo;s community areas since 2020 — government,
-          philanthropic, and private capital, from public records. Admin-only; never shown to public visitors.
+          philanthropic, and private capital, from public records.{" "}
+          {accessMode === "beta" ? "Private beta access." : "Staff analysis access."}
         </p>
 
         {!index || index.rows.length === 0 ? (
