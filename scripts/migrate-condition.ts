@@ -114,6 +114,15 @@ async function migrate() {
   await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS permit_milestone TEXT`;
   await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS work_type TEXT`;
   await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS permit_condition TEXT`;
+  // Coordinate enrichment is additive and traceable. A null geocode_source
+  // means lat/lon came directly from the City permits source. Backfilled points
+  // always carry the run that produced them and can therefore be reverted or
+  // superseded without rewriting raw_json.
+  await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS geocode_source TEXT`;
+  await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS geocode_match_type TEXT`;
+  await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS geocode_matched_address TEXT`;
+  await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS geocoded_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE building_permits ADD COLUMN IF NOT EXISTS geocode_run_id TEXT`;
 
   /* ── vacant_property_permit_matches ──
    *
@@ -146,6 +155,85 @@ async function migrate() {
     )
   `;
 
+  /* ── controlled permit match repair staging ──
+   *
+   * A complete replacement proximity tier is built here, audited, and only
+   * then swapped into the live match table. The unique run/permit index is a
+   * database-level proof that one permit cannot fan out across several parcels
+   * during a repair, even if the application query later regresses.
+   */
+  console.log("7. Creating permit match repair stage...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS permit_match_repair_stage (
+      run_id TEXT NOT NULL,
+      vacant_property_id TEXT NOT NULL,
+      permit_id TEXT NOT NULL,
+      matched_on TEXT,
+      staged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (run_id, vacant_property_id, permit_id)
+    )
+  `;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_permit_match_repair_stage_run_permit
+    ON permit_match_repair_stage (run_id, permit_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_permit_match_repair_stage_staged_at
+    ON permit_match_repair_stage (staged_at)
+  `;
+
+  /* ── permit geocode run ledger ──
+   *
+   * One run describes the frozen backlog; one result row explains the outcome
+   * for every permit in that backlog, including no-match and review-required
+   * cases. These tables make coverage, provider behavior, and every applied
+   * coordinate independently auditable.
+   */
+  console.log("8. Creating permit geocode audit ledger...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS permit_geocode_runs (
+      run_id TEXT PRIMARY KEY,
+      strategy_version TEXT NOT NULL,
+      census_benchmark TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+      baseline_missing INTEGER NOT NULL CHECK (baseline_missing >= 0),
+      unique_addresses INTEGER NOT NULL CHECK (unique_addresses >= 0),
+      source_snapshot_max_fetched_at TIMESTAMPTZ,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      summary JSONB
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS permit_geocode_results (
+      run_id TEXT NOT NULL REFERENCES permit_geocode_runs(run_id) ON DELETE CASCADE,
+      permit_id TEXT NOT NULL,
+      input_address TEXT NOT NULL,
+      address_key TEXT NOT NULL,
+      resolution_source TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (
+        status IN ('accepted', 'unmatched', 'review_required', 'provider_error')
+      ),
+      match_type TEXT,
+      matched_address TEXT,
+      lat DOUBLE PRECISION,
+      lon DOUBLE PRECISION,
+      max_source_spread_m DOUBLE PRECISION,
+      provider_response JSONB,
+      attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      applied_at TIMESTAMPTZ,
+      PRIMARY KEY (run_id, permit_id)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_permit_geocode_results_run_status
+    ON permit_geocode_results (run_id, status)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_permit_geocode_results_permit
+    ON permit_geocode_results (permit_id, attempted_at DESC)
+  `;
+
   /* ── permit_sync_state ──
    *
    * Durable cursor and lease for the bounded daily permits refresh. This is
@@ -153,7 +241,7 @@ async function migrate() {
    * asks Socrata for rows whose system `:updated_at` value changed since this
    * cursor, and refuses source-wide surges.
    */
-  console.log("7. Creating permit_sync_state table...");
+  console.log("9. Creating permit_sync_state table...");
   await sql`
     CREATE TABLE IF NOT EXISTS permit_sync_state (
       source_key TEXT PRIMARY KEY,
@@ -170,7 +258,7 @@ async function migrate() {
   `;
 
   /* ── Indexes: GIST on every geom, btree on zip ── */
-  console.log("8. Creating indexes...");
+  console.log("10. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_building_permits_geom ON building_permits USING GIST (geom)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_building_permits_zip ON building_permits (zip)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_building_violations_geom ON building_violations USING GIST (geom)`;

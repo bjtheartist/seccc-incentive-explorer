@@ -54,7 +54,7 @@ async function query(text: string): Promise<Row[]> {
 }
 
 async function main() {
-  const [overview, sourceCoverage, missingIdentity, missingByYear, missingByPermitType, matchesByMethod, proximityRisk, missingResolution, missingTopCommunityAreas] =
+  const [overview, sourceCoverage, geocodeProvenance, latestGeocodeOutcomes, missingIdentity, missingByYear, missingByPermitType, matchesByMethod, proximityRisk, missingResolution, missingTopCommunityAreas] =
     await Promise.all([
       query(`
         SELECT
@@ -75,6 +75,38 @@ async function main() {
         FROM building_permits
         GROUP BY 1
         ORDER BY permits DESC, source
+      `),
+      query(`
+        SELECT
+          CASE
+            WHEN geom IS NULL THEN 'unresolved'
+            WHEN geocode_source IS NULL THEN 'city_source'
+            ELSE geocode_source
+          END AS geometry_source,
+          COUNT(*)::int AS permits
+        FROM building_permits
+        GROUP BY 1
+        ORDER BY permits DESC, geometry_source
+      `),
+      query(`
+        WITH latest AS (
+          SELECT run_id, started_at
+          FROM permit_geocode_runs
+          WHERE status = 'completed'
+          ORDER BY started_at DESC
+          LIMIT 1
+        )
+        SELECT
+          latest.run_id,
+          latest.started_at::text,
+          result.status,
+          COUNT(*)::int AS permits
+        FROM latest
+        JOIN permit_geocode_results result ON result.run_id = latest.run_id
+        JOIN building_permits permit ON permit.permit_id = result.permit_id
+        WHERE permit.geom IS NULL
+        GROUP BY latest.run_id, latest.started_at, result.status
+        ORDER BY result.status
       `),
       query(`
         SELECT
@@ -215,6 +247,8 @@ async function main() {
     grain: "one row per permit_id; matches are one row per vacant-property/permit pair",
     overview: overview[0] ?? {},
     sourceCoverage,
+    geocodeProvenance,
+    latestGeocodeOutcomes,
     missingIdentity: missingIdentity[0] ?? {},
     missingByYear,
     missingByPermitType,
@@ -225,6 +259,7 @@ async function main() {
     limitations: [
       "Community area is reported only when an existing vacant-property match supplies it.",
       "An ungeocoded permit without such a match remains geographically unknown; the audit does not infer a neighborhood from address text.",
+      "Census matches are interpolated from MAF/TIGER address ranges, not rooftop or parcel-boundary coordinates; their source and match type remain attached to each permit.",
       "Permit reported_cost is intentionally excluded because it is an applicant estimate, not verified investment.",
     ],
   };
@@ -254,6 +289,10 @@ async function main() {
         `  Source ${String(row.source)}: ${count(row.ungeocoded)} of ${count(row.permits)} missing geometry (${pct(row.ungeocoded, row.permits)})`,
       );
     }
+    console.log("  Geometry provenance:");
+    for (const row of report.geocodeProvenance) {
+      console.log(`    ${String(row.geometry_source)}: ${count(row.permits)}`);
+    }
     console.log("");
     console.log("Ungeocoded identity and address shape");
     console.log(`  Has PIN: ${count(identity.has_pin)}`);
@@ -262,6 +301,16 @@ async function main() {
     console.log(`  Standard street number: ${count(identity.standard_street_number)}`);
     console.log(`  Ranged street number: ${count(identity.ranged_street_number)}`);
     console.log(`  Other/missing street number: ${count(identity.other_street_number)} / ${count(identity.missing_street_number)}`);
+    if (report.latestGeocodeOutcomes.length > 0) {
+      const latest = report.latestGeocodeOutcomes[0];
+      console.log(
+        `  Latest completed backfill: ${String(latest.run_id)} at ${String(latest.started_at)}`,
+      );
+      console.log("  Remaining outcomes from that frozen backlog:");
+      for (const row of report.latestGeocodeOutcomes) {
+        console.log(`    ${String(row.status)}: ${count(row.permits)}`);
+      }
+    }
     console.log("  By issue year:");
     for (const row of report.missingByYear) {
       console.log(
