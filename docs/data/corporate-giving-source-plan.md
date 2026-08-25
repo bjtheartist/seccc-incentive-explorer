@@ -331,3 +331,90 @@ No source capture is added with this plan. Comcast is small enough to parse, but
 its paying vehicle and overlap with later foundation filings must be resolved
 first. The Exelon and ComEd rosters are official but do not publish enough
 recipient-level amount and payer detail to justify additive dollar records.
+
+## Seed release 2026-08-25
+
+Steps 6-8's data seeding: the captured, verified, deduped corporate-direct +
+corroboration + count-only records now exist as curated inputs with loaders
+and release-gate tests. Step 5 (canonical export schema migration, adding the
+`corporate-direct`/`corporate-foundation` sources to
+`lib/community-investment.ts`) is still pending — nothing in this release
+touches the canonical export, its content hash, or the awarded grand total.
+
+**5 sources PASS + 1 corrected on adversarial verification** (capture + an
+independent re-fetch/re-parse verify pass per source):
+
+- Comcast RISE 2021 — PASS. Full 100-recipient/$1,000,000 roster reconciles
+  exactly; 74 Chicago rows ($740,000) seeded, 26 suburban Cook County rows
+  excluded per the city-only filter.
+- Bank of America 2022 Neighborhood Builders — PASS. 8 named organizations
+  captured against a "more than 100"/$13M aggregate headline; only the 2
+  recipient-specific $200,000 awards are dollar-bearing and seeded.
+- Bank of America / After School Matters 2025+2024 — PASS. Both explicit
+  awards ($1,000,000 Orleans Teen Center 2025; $200,000 Neighborhood Builder
+  2024) captured as two separate awards.
+- CME Group Foundation roster corroboration — PASS (2 MINOR findings, both
+  addressed: a $10,000 cross-roster double-count and a declared education-
+  roster deferral). 306 rows captured across the Special Opportunities,
+  Violence Reduction and Intervention, and COVID-19 Response rosters (the
+  education rosters — 399 rows, $40.8M — were parsed but are explicitly
+  deferred, not part of this seed).
+- Chicago Bulls Charities + Chicago Sports Alliance (count-only) — PASS. 22
+  Bulls Charities Night 2026 grantees + 3 Chicago Sports Alliance 2025
+  recipients, all count-only.
+- Exelon 2025 Grant Recipients + ComEd Powering Communities (count-only) —
+  **corrected on verify (FAIL -> fixed)**: the verifier found a MAJOR
+  completeness miss (the roster's own Chicago/Chicagoland/Illinois/IL
+  name-string filter should have caught "PRIDEChicago" but did not) plus a
+  filter-consistency violation ("United Way of Kankakee County" was included
+  even though its name carries no Chicago/IL string). Both are fixed in the
+  seed: PRIDEChicago added, Kankakee dropped, each of the 15 ComEd rows now
+  carries its own program-page URL instead of the Exelon PDF's.
+
+**Dedupe summary** (against the 44,061-record canonical export, reviewed at
+origin/main @ 38d6300):
+
+- Corporate-direct dollar-bearing rows: 78 total (74 Comcast + 4 BofA), all
+  `duplicateState=clear` (no existing Comcast/Bank of America payer in the
+  canonical export).
+- Count-only rows: 152 total (112 Exelon + 4 ComEd Green Region + 11 ComEd
+  Powering the Arts + 22 Bulls Charities + 3 Chicago Sports Alliance);
+  142 `clear`, 10 `possible` (8 Bulls Charities grantees + Chicago CRED's
+  sibling CSA rows already carry a canonical Robert R. McCormick Foundation
+  990 row in an adjacent year — expected, not booked as a match).
+- CME corroboration rows: 302 (of 306 captured — 4 verifier-flagged
+  intra-capture duplicate pairs collapsed to one row each, 2 of them
+  cross-roster with both source URLs preserved): 79 `linked_same_award`
+  (paired to a distinct, unclaimed canonical CME Group Foundation 990 row),
+  17 `possible` (amount/entity/fiscal-year ambiguity, human review still
+  required), 206 `clear` (mostly pre-2021 rows structurally outside the
+  canonical filing coverage window, or out-of-Chicago/national recipients).
+
+**Judgment call flagged for review:** the 4 dollar-bearing Bank of America
+rows keep `vehicle=unknown` (the capture and independent verify pass both
+concluded the legal payer — Bank of America Charitable Foundation vs. the
+operating company — is unresolved on every official page checked). Read
+literally, this release gate's own text ("payer legal vehicle resolved or
+explicitly held `unknown` and not published") argues for holding those 4
+rows rather than shipping them `reviewState=ready`. They are seeded as
+`ready` in this PR per the build spec's explicit deliverable list, with the
+vehicle caveat preserved verbatim in each row's `reviewNote` — not silently
+resolved either way. Revisit before this seed is ever wired into the
+analysis layer or export.
+
+**Deviation: `data/curated/investment-inputs/manifest.json` is deliberately
+NOT updated in this PR.** The manifest is hash-bound to the canonical
+export: `scripts/lib/investment-manifest.ts`'s `manifestContentHash()` folds
+in every declared source (including HELD ones never read by the exporter),
+and `data/private/community-investment.json`'s `meta.sourceManifestHash` +
+`foundation_audit_fresh.json`'s `bound_manifest_hash` both pin that hash —
+enforced by `lib/__tests__/investment-manifest-hash-equality.test.ts`. Adding
+these 4 curated files as new `AUTHORED_SOURCES` entries (even purely
+documentary "held" ones, the `impact-grants-held` pattern) changes that hash
+and fails the equality test unless the canonical export and the foundation
+audit are regenerated in the same commit — exactly what this PR's hard rule
+forbids ("the canonical export, its content hash, and the awarded grand
+totals must not change in this PR"). The four curated CSVs therefore ship
+without a manifest entry; add them to `AUTHORED_SOURCES` in the same PR that
+performs ingestion step 5's export-schema migration, when a full
+export/audit regeneration is already in scope.
