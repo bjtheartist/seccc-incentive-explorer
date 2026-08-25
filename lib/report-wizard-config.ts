@@ -1,17 +1,23 @@
 // ─── Report Wizard Configuration ────────────────────────────────────
 // Pure TypeScript config/types for the multi-step report wizard.
-// Two report types: Site Incentive Analysis & Vacancy Analysis.
+// Two generated report types plus routed analysis entry points. The retired
+// Corridor Intelligence type remains decodable for old shared links, but is no
+// longer promoted in the report picker.
 
 // ─── Core Types ─────────────────────────────────────────────────────
 
 export type ReportType = "site-incentives" | "dev-feasibility" | "corridor-intelligence";
+export type AnalysisOptionId = ReportType | "permit-activity" | "public-investment";
 
 export interface ReportTypeOption {
-  id: ReportType;
+  id: AnalysisOptionId;
   title: string;
   subtitle: string;
   bestFor: string;
   icon: string; // emoji
+  href?: string;
+  availability?: "beta";
+  hidden?: boolean;
 }
 
 export interface StepOption {
@@ -110,6 +116,28 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
     bestFor:
       "Best for lenders, brokers, corridor managers, and chamber staff evaluating an area rather than one address.",
     icon: "\uD83E\uDDED",
+    hidden: true,
+  },
+  {
+    id: "permit-activity",
+    title: "Permit Activity Analysis",
+    subtitle:
+      "See recorded permit volume, project mix, construction value, and recent activity by community area.",
+    bestFor:
+      "Best for neighborhood partners, developers, and public-sector teams tracking visible investment activity.",
+    icon: "\uD83C\uDFD7\uFE0F",
+    href: "/permit-activity",
+  },
+  {
+    id: "public-investment",
+    title: "Public Investment Analysis",
+    subtitle:
+      "Explore public and philanthropic funding patterns, recipients, geography, and capital flows.",
+    bestFor:
+      "Beta feature currently being tested. Request early access to help shape it.",
+    icon: "\uD83C\uDFDB\uFE0F",
+    href: "/public-investment-analysis",
+    availability: "beta",
   },
 ];
 
@@ -473,11 +501,13 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     appliesTo: ["site-incentives", "dev-feasibility", "corridor-intelligence"],
     inputType: "report-type",
     stateKey: "reportType",
-    options: REPORT_TYPE_OPTIONS.map((opt) => ({
-      id: opt.id,
-      label: opt.title,
-      description: opt.subtitle,
-    })),
+    options: REPORT_TYPE_OPTIONS
+      .filter((opt) => !opt.hidden && !opt.href)
+      .map((opt) => ({
+        id: opt.id,
+        label: opt.title,
+        description: opt.subtitle,
+      })),
   },
 
   // ── Site Incentive Analysis flow ──────────────────────────────────

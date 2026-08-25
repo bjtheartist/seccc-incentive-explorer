@@ -38,8 +38,8 @@ const APPROVED_ITEMS: Array<[label: string, href: string]> = [
   ["Vacant Sites", "/vacancy"],
   ["Site Matchmaker", "/locate"],
   ["Incentive Map", "/map"],
-  ["Community Investment", "/investment"],
-  ["Permit Activity", "/permit-activity"],
+  ["Permit Activity Analysis", "/permit-activity"],
+  ["Public Investment Analysis", "/public-investment-analysis"],
 ];
 
 describe("Header — approved Set-A structure", () => {
@@ -47,7 +47,7 @@ describe("Header — approved Set-A structure", () => {
 
   it("renders the three approved group labels", () => {
     // html is serialized markup, so & renders as &amp; — assert the escaped form
-    for (const label of ["Find Incentives", "Find a Site", "Public Investment + Corridors"]) {
+    for (const label of ["Find Incentives", "Find a Site", "Neighborhood Analysis"]) {
       expect(html).toContain(label);
     }
   });
@@ -65,12 +65,19 @@ describe("Header — approved Set-A structure", () => {
 
   it("never links the index-less /neighborhoods route", () => {
     expect(html).not.toContain('href="/neighborhoods"');
-    expect(html).toContain('href="/investment"');
+    expect(html).toContain('href="/public-investment-analysis"');
   });
 
   it("does not expose the retired Corridor Signals preview", () => {
     expect(html).not.toContain('href="/corridors"');
     expect(html).not.toContain("Corridor Signals");
+    expect(html).not.toContain("Corridor Intelligence");
+  });
+
+  it("marks Public Investment Analysis as a muted beta destination", () => {
+    const item = html.match(/<a[^>]*href="\/public-investment-analysis"[^>]*>/)?.[0] ?? "";
+    expect(item).toContain("bg-[#F7F8FA]");
+    expect(html).toContain("Beta");
   });
 
   it("exposes every approved item as a menu item, and no others", () => {
@@ -155,6 +162,16 @@ describe("Header — active group indicator", () => {
     expect(data).toContain("ring-[#2563EB]/30");
     expect(permits).toContain('aria-current="page"');
     expect(permits).toContain("bg-[#EFF3FB]");
+  });
+
+  it("highlights the analysis group and beta item on Public Investment Analysis", () => {
+    const html = render("/public-investment-analysis");
+    const data = html.match(/<button[^>]*id="nav-trigger-data"[^>]*>/)?.[0] ?? "";
+    const investment =
+      html.match(/<a[^>]*href="\/public-investment-analysis"[^>]*>/)?.[0] ?? "";
+
+    expect(data).toContain("ring-[#2563EB]/30");
+    expect(investment).toContain('aria-current="page"');
   });
 
   it("highlights nothing on the home route", () => {

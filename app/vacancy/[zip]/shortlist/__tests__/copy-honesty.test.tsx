@@ -33,6 +33,8 @@ vi.mock("@/lib/shortlist-display-context", () => ({
 }));
 vi.mock("@/components/vacancy/SiteShortlistResults", () => ({ default: () => null }));
 vi.mock("@/components/vacancy/ShortlistFunnelEvent", () => ({ default: () => null }));
+vi.mock("@/components/vacancy/ShortlistAccessGate", () => ({ default: () => null }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 import ShortlistPage from "../page";
 

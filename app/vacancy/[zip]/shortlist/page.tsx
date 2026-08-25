@@ -31,6 +31,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { getVacancyIndexEdition, loadVacancyIndex } from "@/lib/vacancy-index";
 import { railStations } from "@/lib/rail-stations";
@@ -64,6 +65,11 @@ import {
 import { nonScoringCriterionSuffix, selectedNonScoringCriteria } from "@/lib/shortlist-criteria";
 import ShortlistFunnelEvent from "@/components/vacancy/ShortlistFunnelEvent";
 import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
+import ShortlistAccessGate from "@/components/vacancy/ShortlistAccessGate";
+import {
+  SHORTLIST_ACCESS_COOKIE,
+  hasValidShortlistAccessSession,
+} from "@/lib/shortlist-access";
 
 export const dynamic = "force-dynamic";
 
@@ -478,6 +484,10 @@ export default async function SiteShortlistPage({
     amenities: criteria.amenities,
     zoningAlignment: criteria.zoningAlignment === "aligned-only",
   });
+  const cookieStore = await cookies();
+  const hasShortlistAccess = hasValidShortlistAccessSession(
+    cookieStore.get(SHORTLIST_ACCESS_COOKIE)?.value,
+  );
 
   return (
     <Shell zip={zip}>
@@ -549,7 +559,7 @@ export default async function SiteShortlistPage({
 
       {ranked.length === 0 ? (
         <FunnelSection zip={zip} funnel={funnel} adjustHref={adjustHref} />
-      ) : (
+      ) : hasShortlistAccess ? (
         <SiteShortlistResults
           zip={zip}
           criteria={criteria}
@@ -562,6 +572,11 @@ export default async function SiteShortlistPage({
           // maps can never outline different geographies for the same ZIP.
           boundary={edition.boundary}
           centroid={edition.centroid}
+        />
+      ) : (
+        <ShortlistAccessGate
+          candidateCount={ranked.length}
+          neighborhood={neighborhood}
         />
       )}
 

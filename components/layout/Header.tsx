@@ -10,6 +10,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 interface NavItem {
   href: string;
   label: string;
+  badge?: string;
+  muted?: boolean;
 }
 
 interface NavGroup {
@@ -19,9 +21,6 @@ interface NavGroup {
 }
 
 /**
- * Approved Set-A information architecture. Group and item labels are
- * client-approved copy — do not reword them.
- *
  * /neighborhoods has no index page, so it is never linked from the global nav.
  * The retired Corridor Signals preview redirects to the main map and is not
  * exposed as a navigation destination.
@@ -47,10 +46,15 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "data",
-    label: "Public Investment + Corridors",
+    label: "Neighborhood Analysis",
     items: [
-      { href: "/investment", label: "Community Investment" },
-      { href: "/permit-activity", label: "Permit Activity" },
+      { href: "/permit-activity", label: "Permit Activity Analysis" },
+      {
+        href: "/public-investment-analysis",
+        label: "Public Investment Analysis",
+        badge: "Beta",
+        muted: true,
+      },
     ],
   },
 ];
@@ -210,13 +214,20 @@ function DesktopNavGroup({
                     onClose();
                   }
                 }}
-                className={`block px-4 py-3 border-b border-[#0C1B33]/5 last:border-b-0 font-mono-bureau text-[10px] tracking-[0.18em] uppercase transition-colors ${
+                className={`flex items-center justify-between gap-4 px-4 py-3 border-b border-[#0C1B33]/5 last:border-b-0 font-mono-bureau text-[10px] tracking-[0.18em] uppercase transition-colors ${
                   itemActive
                     ? "text-[#2563EB] bg-[#EFF3FB]"
+                    : item.muted
+                      ? "bg-[#F7F8FA] text-[#0C1B33]/35 hover:text-[#0C1B33]/55"
                     : "text-[#0C1B33]/70 hover:text-[#0C1B33] hover:bg-[#EFF3FB]"
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.badge ? (
+                  <span className="border border-[#0C1B33]/12 px-1.5 py-0.5 text-[8px] tracking-[0.12em] text-[#0C1B33]/35">
+                    {item.badge}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -273,11 +284,20 @@ function MobileNavGroup({
               href={item.href}
               onClick={onNavigate}
               aria-current={itemActive ? "page" : undefined}
-              className={`block py-2.5 font-mono-bureau text-[10px] tracking-[0.18em] uppercase ${
-                itemActive ? "text-[#2563EB]" : "text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
+              className={`flex items-center justify-between gap-3 py-2.5 font-mono-bureau text-[10px] tracking-[0.18em] uppercase ${
+                itemActive
+                  ? "text-[#2563EB]"
+                  : item.muted
+                    ? "text-[#0C1B33]/28 hover:text-[#0C1B33]/50"
+                    : "text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
               }`}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {item.badge ? (
+                <span className="border border-[#0C1B33]/10 px-1.5 py-0.5 text-[8px] tracking-[0.12em]">
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}

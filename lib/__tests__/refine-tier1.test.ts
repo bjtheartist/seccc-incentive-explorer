@@ -18,26 +18,38 @@ import { REPORT_GENERATED_EVENTS } from "@/lib/analytics-dashboard";
 import { generatedReportEventType } from "@/lib/report-generated-event";
 import { derivePersonaLensVisible } from "@/lib/workspace";
 
-// ─── Corridor Intelligence is a first-class report type (audit RF7/WU7) ──
+// ─── Analysis picker retirement contract ─────────────────────────────
 
-describe("corridor intelligence report type", () => {
-  it("appears in the selectable report type options", () => {
+describe("analysis picker", () => {
+  it("retires Corridor Intelligence from the visible picker while preserving legacy links", () => {
     const corridor = REPORT_TYPE_OPTIONS.find(
       (option) => option.id === "corridor-intelligence",
     );
     expect(corridor).toBeDefined();
-    expect(corridor?.title).toBe("Corridor Intelligence");
-    expect(corridor?.bestFor).toMatch(/lender|corridor|chamber/i);
-  });
+    expect(corridor?.hidden).toBe(true);
 
-  it("appears in the report-type wizard step options", () => {
-    const reportTypeStep = WIZARD_STEPS.find((step) => step.id === "report-type");
-    expect(reportTypeStep?.options?.some((o) => o.id === "corridor-intelligence")).toBe(true);
-  });
-
-  it("has a complete wizard flow: type -> corridor geography -> review", () => {
     const steps = getStepsForReportType("corridor-intelligence").map((s) => s.id);
     expect(steps).toEqual(["report-type", "ci-corridor", "ci-review"]);
+  });
+
+  it("does not expose the retired type in the report-type wizard step", () => {
+    const reportTypeStep = WIZARD_STEPS.find((step) => step.id === "report-type");
+    expect(reportTypeStep?.options?.some((o) => o.id === "corridor-intelligence")).toBe(false);
+  });
+
+  it("substitutes Permit Activity and a muted Public Investment beta entry", () => {
+    const permits = REPORT_TYPE_OPTIONS.find((option) => option.id === "permit-activity");
+    const investment = REPORT_TYPE_OPTIONS.find((option) => option.id === "public-investment");
+
+    expect(permits).toMatchObject({
+      title: "Permit Activity Analysis",
+      href: "/permit-activity",
+    });
+    expect(investment).toMatchObject({
+      title: "Public Investment Analysis",
+      href: "/public-investment-analysis",
+      availability: "beta",
+    });
   });
 });
 

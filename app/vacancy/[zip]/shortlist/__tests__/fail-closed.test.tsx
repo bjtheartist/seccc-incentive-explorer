@@ -16,9 +16,10 @@ import { SHORTLIST_RANKING_MODEL_VERSION } from "@/lib/site-matchmaker";
  * false "zero sites match", and never a thrown error.
  */
 
-const { loadShortlistUniverseMock, railStationsMock } = vi.hoisted(() => ({
+const { loadShortlistUniverseMock, railStationsMock, accessCookieMock } = vi.hoisted(() => ({
   loadShortlistUniverseMock: vi.fn<(zip: string) => ShortlistUniverseLoadResult>(),
   railStationsMock: vi.fn<() => { name: string; system: string; lat: number; lon: number }[]>(() => []),
+  accessCookieMock: vi.fn<() => { value: string } | undefined>(() => undefined),
 }));
 
 vi.mock("@/lib/shortlist-universe", () => ({
@@ -40,10 +41,17 @@ vi.mock("@/lib/shortlist-display-context", () => ({
   loadShortlistExpresswayContext: () => new Map(),
 }));
 
-vi.mock("@/components/vacancy/SiteShortlistResults", () => ({ default: () => null }));
+vi.mock("@/components/vacancy/SiteShortlistResults", () => ({
+  default: () => <div>SENSITIVE SHORTLIST RESULT</div>,
+}));
 vi.mock("@/components/vacancy/ShortlistFunnelEvent", () => ({ default: () => null }));
+vi.mock("@/components/vacancy/ShortlistAccessGate", () => ({
+  default: () => <div>SHORTLIST SIGNUP GATE</div>,
+}));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: accessCookieMock }) }));
 
 import ShortlistPage from "../page";
+import { createShortlistAccessSession } from "@/lib/shortlist-access";
 
 /** A minimal but schema-shaped row — never actually validated here since the
  *  loader itself is mocked, but kept realistic for readability. */
@@ -136,9 +144,11 @@ async function render(searchParams: Record<string, string>) {
 }
 
 beforeEach(() => {
+  process.env.NEXTAUTH_SECRET = "shortlist-page-gate-test-secret";
   loadShortlistUniverseMock.mockReset();
   railStationsMock.mockReset();
   railStationsMock.mockReturnValue([]);
+  accessCookieMock.mockReset().mockReturnValue(undefined);
 });
 
 describe("Site Shortlist — fail-closed states", () => {
@@ -263,6 +273,31 @@ describe("Site Shortlist — fail-closed states", () => {
     railStationsMock.mockReturnValue([]);
     const html = await render(READY_SEARCH_PARAMS);
     expect(html).not.toContain("Ranked shortlist temporarily unavailable");
+  });
+});
+
+describe("Site Shortlist — final output signup gate", () => {
+  it("renders the signup gate and never emits the final results without a valid session", async () => {
+    loadShortlistUniverseMock.mockReturnValue({
+      ok: true,
+      data: fixtureUniverseFile({ rows: [fixtureRow()] }),
+    });
+
+    const html = await render(READY_SEARCH_PARAMS);
+    expect(html).toContain("SHORTLIST SIGNUP GATE");
+    expect(html).not.toContain("SENSITIVE SHORTLIST RESULT");
+  });
+
+  it("emits the final results after a signed access session is present", async () => {
+    accessCookieMock.mockReturnValue({ value: createShortlistAccessSession() });
+    loadShortlistUniverseMock.mockReturnValue({
+      ok: true,
+      data: fixtureUniverseFile({ rows: [fixtureRow()] }),
+    });
+
+    const html = await render(READY_SEARCH_PARAMS);
+    expect(html).toContain("SENSITIVE SHORTLIST RESULT");
+    expect(html).not.toContain("SHORTLIST SIGNUP GATE");
   });
 });
 

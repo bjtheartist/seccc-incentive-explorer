@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -630,8 +631,8 @@ function ReportWizardPage() {
   const isRefineEntry = requestedRefineMode && hasValidInstantCoords;
 
   // Try to hydrate wizard state from URL params.
-  // Corridor Intelligence is a first-class report type (audit RF7/WU7), so
-  // shared corridor links no longer require the preview key.
+  // Legacy Corridor Intelligence share links remain decodable after the type
+  // was retired from the public picker, so old recipient links do not break.
   const urlWizardState = useMemo(() => decodeWizardState(searchParams), [searchParams]);
   const shareWizardState = urlWizardState;
   const isShareMode = !!shareWizardState?.reportType && !isInstantMode;
@@ -2421,11 +2422,76 @@ function ReportTypeStep({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {REPORT_TYPE_OPTIONS.map((option, i) => {
+      {REPORT_TYPE_OPTIONS.filter((option) => !option.hidden).map((option, i) => {
         const isSelected = selected === option.id;
+        const isBeta = option.availability === "beta";
+        const cardClassName = `group relative block h-full text-left p-5 transition-all duration-150 ${
+          isSelected
+            ? "bg-white border-2 border-[#2563EB] shadow-sm"
+            : isBeta
+              ? "bg-[#F3F4F6] border border-[#0C1B33]/8 text-[#0C1B33]/45 hover:border-[#0C1B33]/16"
+              : "bg-white border border-[#0C1B33]/10 hover:border-[#0C1B33]/20"
+        }`;
+        const contents = (
+          <>
+            {isBeta ? (
+              <span className="absolute right-3 top-3 border border-[#0C1B33]/12 bg-white/60 px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.16em] text-[#0C1B33]/38">
+                Beta · Early access
+              </span>
+            ) : null}
+            <div className={`text-3xl mb-3 ${isBeta ? "grayscale opacity-45" : ""}`}>
+              {option.icon}
+            </div>
+            <h3
+              className={`font-mono-bureau text-[12px] tracking-[0.08em] uppercase mb-1 ${
+                isSelected
+                  ? "text-[#0C1B33]"
+                  : isBeta
+                    ? "text-[#0C1B33]/45"
+                    : "text-[#0C1B33]/70"
+              }`}
+            >
+              {option.title}
+            </h3>
+            <p className={`text-[13px] leading-relaxed ${isBeta ? "text-[#0C1B33]/35" : "text-[#0C1B33]/40"}`}>
+              {option.subtitle}
+            </p>
+            <p className="mt-3 border-t border-[#0C1B33]/6 pt-3 font-mono-bureau text-[9px] tracking-[0.08em] uppercase leading-relaxed text-[#0C1B33]/35">
+              {option.bestFor}
+            </p>
+            {option.href ? (
+              <span className={`mt-4 inline-block font-mono-bureau text-[9px] uppercase tracking-[0.14em] ${isBeta ? "text-[#0C1B33]/45" : "text-[#2563EB]"}`}>
+                {isBeta ? "Request early access" : "Open analysis"} &rarr;
+              </span>
+            ) : null}
+
+            {isSelected ? (
+              <div className="absolute top-3 right-3 w-5 h-5 bg-[#2563EB] flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" strokeWidth={2.5} />
+              </div>
+            ) : null}
+          </>
+        );
+
+        if (option.href) {
+          return (
+            <motion.div
+              key={option.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.06, ease: "easeOut" }}
+            >
+              <Link href={option.href} className={cardClassName}>
+                {contents}
+              </Link>
+            </motion.div>
+          );
+        }
+
         return (
           <motion.button
             key={option.id}
+            type="button"
             onClick={() => onSelect(option.id as ReportType)}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2434,33 +2500,9 @@ function ReportTypeStep({
               delay: i * 0.06,
               ease: "easeOut",
             }}
-            className={`group relative text-left cursor-pointer p-5 transition-all duration-150 ${
-              isSelected
-                ? "bg-white border-2 border-[#2563EB] shadow-sm"
-                : "bg-white border border-[#0C1B33]/10 hover:border-[#0C1B33]/20"
-            }`}
+            className={`${cardClassName} cursor-pointer`}
           >
-            <div className="text-3xl mb-3">{option.icon}</div>
-            <h3
-              className={`font-mono-bureau text-[12px] tracking-[0.08em] uppercase mb-1 ${
-                isSelected ? "text-[#0C1B33]" : "text-[#0C1B33]/70"
-              }`}
-            >
-              {option.title}
-            </h3>
-            <p className="text-[#0C1B33]/40 text-[13px] leading-relaxed">
-              {option.subtitle}
-            </p>
-            <p className="mt-3 border-t border-[#0C1B33]/6 pt-3 font-mono-bureau text-[9px] tracking-[0.08em] uppercase leading-relaxed text-[#0C1B33]/35">
-              {option.bestFor}
-            </p>
-
-            {/* Selection indicator */}
-            {isSelected && (
-              <div className="absolute top-3 right-3 w-5 h-5 bg-[#2563EB] flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" strokeWidth={2.5} />
-              </div>
-            )}
+            {contents}
           </motion.button>
         );
       })}
