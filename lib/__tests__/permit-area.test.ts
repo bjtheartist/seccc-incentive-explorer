@@ -614,3 +614,14 @@ describe("permit area client", () => {
     ).toBe("Since 2015; database update date unavailable");
   });
 });
+
+describe("analysis picker copy honesty (audit F1, 2026-08-24)", () => {
+  it("the permit-activity picker card never claims construction value — the API pins reported_cost OUT of the query", async () => {
+    const { REPORT_TYPE_OPTIONS } = await import("@/lib/report-wizard-config");
+    const card = REPORT_TYPE_OPTIONS.find((option) => option.id === "permit-activity");
+    expect(card).toBeDefined();
+    const copy = `${card?.title ?? ""} ${card?.subtitle ?? ""} ${card?.bestFor ?? ""}`.toLowerCase();
+    expect(copy).not.toContain("construction value");
+    expect(copy).not.toContain("reported cost");
+  });
+});

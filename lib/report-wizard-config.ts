@@ -122,7 +122,7 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
     id: "permit-activity",
     title: "Permit Activity Analysis",
     subtitle:
-      "See recorded permit volume, project mix, construction value, and recent activity by community area.",
+      "See recorded permit volume, project mix, and recent activity by community area.",
     bestFor:
       "Best for neighborhood partners, developers, and public-sector teams tracking visible investment activity.",
     icon: "\uD83C\uDFD7\uFE0F",
