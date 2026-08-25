@@ -257,12 +257,28 @@ function loadCsv(fileName: string): CorporateGivingInput[] | null {
   return parseCorporateGivingCsv(text, fileName);
 }
 
-/** Ready, dollar-bearing corporate-direct award rows (Comcast RISE 2021 +
- * Bank of America 2022 Neighborhood Builders + Bank of America / After
- * School Matters). Every row here has a non-null amountAwarded. */
+/** Every captured dollar-bearing corporate-direct award row (Comcast RISE
+ * 2021 + Bank of America 2022 Neighborhood Builders + Bank of America /
+ * After School Matters), `reviewState` included and unfiltered. Every row
+ * has a non-null amountAwarded, but NOT every row is `reviewState=ready` —
+ * the 4 Bank of America rows are `reviewState=hold` (payer legal vehicle
+ * unresolved: Bank of America Charitable Foundation vs. the operating
+ * bank — see each row's reviewNote and the release gate in
+ * docs/data/corporate-giving-source-plan.md). Callers that must honor the
+ * release gate should filter on `reviewState` themselves, or use
+ * corporateDirectReadyAwards() below. */
 export function corporateDirectAwards(): CorporateGivingInput[] {
   if (awardsCache === undefined) awardsCache = loadCsv(AWARDS_CSV);
   return awardsCache ?? [];
+}
+
+/** The subset of corporateDirectAwards() that has cleared every release
+ * gate (`reviewState === "ready"`) — currently the 74 Comcast RISE 2021
+ * rows only. The 4 Bank of America rows are withheld here until their
+ * payer vehicle is resolved and their row is flipped to `ready` in the
+ * curated CSV. */
+export function corporateDirectReadyAwards(): CorporateGivingInput[] {
+  return corporateDirectAwards().filter((row) => row.reviewState === "ready");
 }
 
 /** Count-only corporate-direct rows (Exelon roster, ComEd program

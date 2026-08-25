@@ -7,6 +7,7 @@ import {
   cmeCorroboration,
   corporateDirectAwards,
   corporateDirectCountOnly,
+  corporateDirectReadyAwards,
   decodeHtmlEntitiesOnce,
   parseCorporateGivingCsv,
   __resetCorporateDirectCacheForTests,
@@ -149,15 +150,50 @@ describe("release gate — Comcast and BofA reconciliation totals", () => {
     expect(total).toBe(740000);
   });
 
-  it("Bank of America (2022 Neighborhood Builders + 2025/2024 After School Matters) totals $1,600,000", () => {
+  it("Bank of America (2022 Neighborhood Builders + 2025/2024 After School Matters) captured total is $1,600,000 (all 4 rows HELD — see the reviewState gate block below)", () => {
     const bofaRows = corporateDirectAwards().filter((row) => row.sourceRecordId.startsWith("bofa-"));
     expect(bofaRows.length).toBe(4);
     const total = bofaRows.reduce((sum, row) => sum + (row.amountAwarded ?? 0), 0);
     expect(total).toBe(1600000);
   });
 
-  it("corporate_direct_awards.csv contains exactly Comcast (74) + BofA (4) = 78 rows", () => {
-    expect(corporateDirectAwards().length).toBe(78);
+  it("corporate_direct_awards.csv contains exactly Comcast (74) + BofA (4) = 78 captured dollar-bearing rows, $2,340,000 total", () => {
+    const rows = corporateDirectAwards();
+    expect(rows.length).toBe(78);
+    const total = rows.reduce((sum, row) => sum + (row.amountAwarded ?? 0), 0);
+    expect(total).toBe(2340000);
+  });
+});
+
+describe("release gate — payer legal vehicle resolved or explicitly held unknown and not published", () => {
+  it("corporateDirectReadyAwards() is exactly the 74 Comcast RISE 2021 rows, totaling $740,000 — the 4 Bank of America rows are withheld", () => {
+    const ready = corporateDirectReadyAwards();
+    expect(ready.length).toBe(74);
+    expect(ready.every((row) => row.sourceRecordId.startsWith("comcast-rise-2021-"))).toBe(true);
+    expect(ready.every((row) => row.reviewState === "ready")).toBe(true);
+    const total = ready.reduce((sum, row) => sum + (row.amountAwarded ?? 0), 0);
+    expect(total).toBe(740000);
+  });
+
+  it("all 4 Bank of America rows are reviewState=hold with a reviewNote naming the unresolved payer vehicle", () => {
+    const bofaRows = corporateDirectAwards().filter((row) => row.sourceRecordId.startsWith("bofa-"));
+    expect(bofaRows.length).toBe(4);
+    for (const row of bofaRows) {
+      expect(row.vehicle).toBe("unknown");
+      expect(row.reviewState).toBe("hold");
+      expect(row.reviewNote).toContain("HELD per release gate");
+      expect(row.reviewNote).toContain("payer vehicle unresolved");
+    }
+  });
+
+  it("corporateDirectAwards() (unfiltered) still returns all 78 rows with reviewState visible per row — callers must filter themselves if they need only ready rows", () => {
+    const all = corporateDirectAwards();
+    expect(all.length).toBe(78);
+    const byState = all.reduce<Record<string, number>>((acc, row) => {
+      acc[row.reviewState] = (acc[row.reviewState] ?? 0) + 1;
+      return acc;
+    }, {});
+    expect(byState).toEqual({ ready: 74, hold: 4 });
   });
 });
 
@@ -236,6 +272,7 @@ describe("canonical-firewall — the new loaders never touch the canonical commu
     // Exercise every new accessor.
     __resetCorporateDirectCacheForTests();
     corporateDirectAwards();
+    corporateDirectReadyAwards();
     corporateDirectCountOnly();
     cmeCorroboration();
     corporateDirectAwards();

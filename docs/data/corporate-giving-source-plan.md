@@ -341,18 +341,22 @@ and release-gate tests. Step 5 (canonical export schema migration, adding the
 `lib/community-investment.ts`) is still pending — nothing in this release
 touches the canonical export, its content hash, or the awarded grand total.
 
-**5 sources PASS + 1 corrected on adversarial verification** (capture + an
-independent re-fetch/re-parse verify pass per source):
+**5 sources PASS (2 of those HELD on payer vehicle) + 1 corrected on
+adversarial verification** (capture + an independent re-fetch/re-parse verify
+pass per source):
 
 - Comcast RISE 2021 — PASS. Full 100-recipient/$1,000,000 roster reconciles
   exactly; 74 Chicago rows ($740,000) seeded, 26 suburban Cook County rows
   excluded per the city-only filter.
-- Bank of America 2022 Neighborhood Builders — PASS. 8 named organizations
-  captured against a "more than 100"/$13M aggregate headline; only the 2
-  recipient-specific $200,000 awards are dollar-bearing and seeded.
-- Bank of America / After School Matters 2025+2024 — PASS. Both explicit
-  awards ($1,000,000 Orleans Teen Center 2025; $200,000 Neighborhood Builder
-  2024) captured as two separate awards.
+- Bank of America 2022 Neighborhood Builders — PASS, **HELD on payer
+  vehicle**. 8 named organizations captured against a "more than 100"/$13M
+  aggregate headline; the 2 recipient-specific $200,000 awards are
+  dollar-bearing, captured, and seeded, but `reviewState=hold` — first
+  refresh task below.
+- Bank of America / After School Matters 2025+2024 — PASS, **HELD on payer
+  vehicle**. Both explicit awards ($1,000,000 Orleans Teen Center 2025;
+  $200,000 Neighborhood Builder 2024) captured as two separate awards,
+  `reviewState=hold` — first refresh task below.
 - CME Group Foundation roster corroboration — PASS (2 MINOR findings, both
   addressed: a $10,000 cross-roster double-count and a declared education-
   roster deferral). 306 rows captured across the Special Opportunities,
@@ -376,7 +380,9 @@ origin/main @ 38d6300):
 
 - Corporate-direct dollar-bearing rows: 78 total (74 Comcast + 4 BofA), all
   `duplicateState=clear` (no existing Comcast/Bank of America payer in the
-  canonical export).
+  canonical export). Of the 78, 74 are `reviewState=ready` (Comcast) and 4
+  are `reviewState=hold` (BofA, payer vehicle unresolved — see below), so the
+  release-gate-cleared total is $740,000, not the full $2,340,000 captured.
 - Count-only rows: 152 total (112 Exelon + 4 ComEd Green Region + 11 ComEd
   Powering the Arts + 22 Bulls Charities + 3 Chicago Sports Alliance);
   142 `clear`, 10 `possible` (8 Bulls Charities grantees + Chicago CRED's
@@ -390,17 +396,27 @@ origin/main @ 38d6300):
   required), 206 `clear` (mostly pre-2021 rows structurally outside the
   canonical filing coverage window, or out-of-Chicago/national recipients).
 
-**Judgment call flagged for review:** the 4 dollar-bearing Bank of America
-rows keep `vehicle=unknown` (the capture and independent verify pass both
-concluded the legal payer — Bank of America Charitable Foundation vs. the
-operating company — is unresolved on every official page checked). Read
-literally, this release gate's own text ("payer legal vehicle resolved or
-explicitly held `unknown` and not published") argues for holding those 4
-rows rather than shipping them `reviewState=ready`. They are seeded as
-`ready` in this PR per the build spec's explicit deliverable list, with the
-vehicle caveat preserved verbatim in each row's `reviewNote` — not silently
-resolved either way. Revisit before this seed is ever wired into the
-analysis layer or export.
+**Ruling (2026-08-25 fix round): the release gate wins.** The 4 dollar-bearing
+Bank of America rows keep `vehicle=unknown` (the capture and independent
+verify pass both concluded the legal payer — Bank of America Charitable
+Foundation vs. the operating bank — is unresolved on every official page
+checked). This release gate's own text ("payer legal vehicle resolved or
+explicitly held `unknown` and not published") is binding and overrides the
+first-release build spec's deliverable list, which had shipped them
+`reviewState=ready`. All 4 rows are now `reviewState=hold` in
+`corporate_direct_awards.csv`, with the reviewNote extended:
+"HELD per release gate — payer vehicle unresolved (Bank of America
+Charitable Foundation vs operating bank); resolve via 990-PF or an explicit
+official statement, then flip to ready." They remain in the awards CSV
+(they are dollar-bearing capture rows; the hold flag is the machine-readable
+gate) rather than moving to the count-only file. `lib/corporate-direct.ts`
+exposes this honestly: `corporateDirectAwards()` returns all 78 rows with
+`reviewState` visible per row, and `corporateDirectReadyAwards()` filters to
+the 74 `ready` rows only ($740,000) for any caller that must honor the gate.
+**First refresh task:** resolve the legal payer via the Bank of America
+Charitable Foundation's Form 990-PF (which itemizes Neighborhood Builders
+grants by recipient) or an explicit official statement, then flip these 4
+rows to `ready`.
 
 **Deviation: `data/curated/investment-inputs/manifest.json` is deliberately
 NOT updated in this PR.** The manifest is hash-bound to the canonical
