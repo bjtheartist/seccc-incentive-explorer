@@ -69,6 +69,7 @@ import {
   type VacancyLicenseFilter,
 } from "@/lib/area-vacancy-presentation";
 import type { VacancyFreshnessFilter } from "@/lib/vacancy-evidence";
+import { programContextToText } from "@/lib/vacancy-spreadsheet";
 
 // ── Point-in-polygon ─────────────────────────────────────────────────────────
 
@@ -692,8 +693,18 @@ function csvRow(values: readonly unknown[]): string {
 
 /** Vacancy-table columns, after the leading "Area Name". */
 export const DRAWN_AREA_VACANCY_COLUMNS = [
+  "Record ID",
+  "PIN",
   "Address",
   "Source",
+  "Source Key",
+  "Source Dataset ID",
+  "Source Dataset Label",
+  "Source Row ID",
+  "Source URL",
+  "Source Snapshot ID",
+  "Source As Of",
+  "Source Retrieved At",
   "Source Status",
   "Source Record Date",
   "Freshness Class",
@@ -710,6 +721,20 @@ export const DRAWN_AREA_VACANCY_COLUMNS = [
   "Sq Ft",
   "Owner Name",
   "Owner Type",
+  "Owner Jurisdiction",
+  "Managing Organization",
+  "Published Source / Program Context",
+  "Published Source / Program Context Details",
+  "Program Key",
+  "Offer Round",
+  "Application Use",
+  "Application Opens",
+  "Application Deadline",
+  "Application URL",
+  "Property Status",
+  "Sales Status",
+  "Sale Offering Status",
+  "Sale Offering Reason",
   "Incentive Count",
   "Zone Matches",
 ] as const;
@@ -765,6 +790,13 @@ export const DRAWN_AREA_INVESTMENT_COLUMNS: readonly string[] = [
 export interface DrawnAreaCsvInput {
   /** The user-editable area label. Lands on the title line AND every data row. */
   areaName: string;
+  /** Exact saved-boundary identity carried into this export. */
+  scopeProvenance?: {
+    fingerprint: string;
+    selectionMethod: "point_in_saved_polygon";
+    generatedAt: string;
+    manifestSelectedCount: number;
+  } | null;
   /** Vacancy features already scoped to the drawn area by /api/vacant. */
   vacancyFeatures: readonly GeoJSON.Feature[];
   /** Returned feature count before user-selected evidence filters. */
@@ -823,6 +855,15 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
 
   lines.push(csvRow(["Area Name", areaName]));
   lines.push("");
+  if (input.scopeProvenance) {
+    lines.push(csvRow(["Section", "Boundary provenance"]));
+    lines.push(csvRow(["Area Name", "Metric", "Value"]));
+    lines.push(csvRow([areaName, "Boundary fingerprint", input.scopeProvenance.fingerprint]));
+    lines.push(csvRow([areaName, "Selection method", input.scopeProvenance.selectionMethod]));
+    lines.push(csvRow([areaName, "Scope generated at", input.scopeProvenance.generatedAt]));
+    lines.push(csvRow([areaName, "Manifest selected count", input.scopeProvenance.manifestSelectedCount]));
+    lines.push("");
+  }
   const vacancyDisclosure = input.vacancyLoadFailed
     ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
     : vacancyCoverageDisclosure(input.vacancyCoverage);
@@ -842,6 +883,20 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
       lines.push(csvRow([areaName, "Source", input.vacancyCoverage.sourcePath]));
       lines.push(csvRow([areaName, "Explorer refreshed at", input.vacancyCoverage.explorerRefreshedAt ?? "Not recorded"]));
       lines.push(csvRow([areaName, "Records returned", input.vacancyCoverage.returnedCount]));
+      const cclbaCoverage = input.vacancyCoverage.cclbaSourceCoverage;
+      lines.push(csvRow([areaName, "CCLBA source coverage status", cclbaCoverage.status]));
+      lines.push(csvRow([areaName, "CCLBA source dataset", cclbaCoverage.sourceDatasetId]));
+      lines.push(csvRow([areaName, "CCLBA source URL", cclbaCoverage.sourceUrl]));
+      if (cclbaCoverage.status === "available") {
+        lines.push(csvRow([areaName, "CCLBA published countywide", cclbaCoverage.publishedCountyTotal]));
+        lines.push(csvRow([areaName, "CCLBA published in Chicago", cclbaCoverage.chicagoTotal]));
+        lines.push(csvRow([areaName, "CCLBA located in Chicago", cclbaCoverage.locatedChicagoTotal]));
+        lines.push(csvRow([areaName, "CCLBA unlocated in Chicago", cclbaCoverage.unlocatedChicagoTotal]));
+        lines.push(csvRow([areaName, "CCLBA source retrieved at", cclbaCoverage.retrievedAt]));
+        lines.push(csvRow([areaName, "CCLBA source as of", cclbaCoverage.sourceAsOf ?? "Not published by source"]));
+      } else {
+        lines.push(csvRow([areaName, "CCLBA source coverage unavailable reason", cclbaCoverage.reason]));
+      }
       lines.push(
         csvRow([
           areaName,
@@ -903,8 +958,18 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
       lines.push(
         csvRow([
           areaName,
+          p.recordId ?? p.id ?? "",
+          p.pin ?? "",
           p.address ?? "",
           vacancySourceLabel(p.source),
+          p.source ?? "",
+          p.sourceDatasetId ?? "",
+          p.sourceDatasetLabel ?? "",
+          p.sourceRowId ?? "",
+          p.sourceUrl ?? "",
+          p.sourceSnapshotId ?? "",
+          p.sourceAsOf ?? "",
+          p.sourceRetrievedAt ?? "",
           p.status ?? "",
           p.sourceRecordDate ?? "",
           p.freshnessClass ?? "",
@@ -921,6 +986,20 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
           p.squareFeet ?? "",
           p.ownerName ?? "",
           p.ownerType ?? "",
+          p.ownerJurisdiction ?? "",
+          p.managingOrganization ?? "",
+          p.programName ?? "",
+          programContextToText(p.programContext),
+          p.programKey ?? "",
+          p.offerRound ?? "",
+          p.applicationUse ?? "",
+          p.applicationOpens ?? "",
+          p.applicationDeadline ?? "",
+          p.applicationUrl ?? "",
+          p.propertyStatus ?? "",
+          p.salesStatus ?? "",
+          p.saleOfferingStatus ?? "",
+          p.saleOfferingReason ?? "",
           uniqueZoneKeys.length,
           uniqueZoneKeys.join("; "),
         ]),

@@ -3,13 +3,22 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { WizardState } from "@/lib/report-wizard-config";
-import { normalizeSavedReport } from "@/lib/report-schema";
+import {
+  normalizeSavedReport,
+  stampReportSchemaVersion,
+} from "@/lib/report-schema";
 import { SaveReportModal, type PendingSavedReport } from "./SaveReportModal";
 
 const PENDING_REPORT_KEY = "csim.pendingReport";
 
 export function storePendingReport(payload: PendingSavedReport) {
-  localStorage.setItem(PENDING_REPORT_KEY, JSON.stringify(payload));
+  localStorage.setItem(
+    PENDING_REPORT_KEY,
+    JSON.stringify({
+      ...payload,
+      reportData: stampReportSchemaVersion(payload.reportData),
+    }),
+  );
 }
 
 export function PendingReportSaver() {

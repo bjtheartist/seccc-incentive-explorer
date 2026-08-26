@@ -30,6 +30,10 @@ import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 
 const INTERNAL_CATALOG_PATH = resolve(process.cwd(), "data/programs-internal.json");
+// GitHub's shared runner is materially slower than a developer machine for
+// ts-morph's repeated whole-project graph walks. Keep the integrity assertions
+// unchanged while giving each real-codebase scan enough time to finish.
+const REAL_CODEBASE_SCAN_TIMEOUT_MS = 180_000;
 
 function hasUseClientDirective(sourceFile: SourceFile): boolean {
   const first = sourceFile.getStatements()[0];
@@ -443,7 +447,7 @@ describe("client-transitive import guard — real codebase scan", () => {
       );
     }
     expect(offenders.length).toBe(0);
-  }, 60000);
+  }, REAL_CODEBASE_SCAN_TIMEOUT_MS);
 
   it("lib/investment-analysis.ts is NOT reachable from any 'use client' file, directly or transitively (gate round 2, MAJOR 24 — the exact file whose static import broke the production webpack client build earlier this session)", () => {
     const targetPath = resolve(process.cwd(), "lib/investment-analysis.ts");
@@ -461,7 +465,7 @@ describe("client-transitive import guard — real codebase scan", () => {
       );
     }
     expect(offenders.length).toBe(0);
-  }, 60000);
+  }, REAL_CODEBASE_SCAN_TIMEOUT_MS);
 
   it("no node:fs (or bare 'fs') import is reachable from any 'use client' file, directly or transitively (gate round 2, MAJOR 24)", () => {
     const offenders: { root: string; chain: string[] }[] = [];
@@ -478,5 +482,5 @@ describe("client-transitive import guard — real codebase scan", () => {
       );
     }
     expect(offenders.length).toBe(0);
-  }, 60000);
+  }, REAL_CODEBASE_SCAN_TIMEOUT_MS);
 });

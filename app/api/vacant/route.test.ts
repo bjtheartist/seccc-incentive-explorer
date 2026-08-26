@@ -18,6 +18,7 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 import { GET } from "./route";
+import { includeVacancyForFreshnessFilter } from "@/lib/vacancy-evidence";
 
 const BOUNDS = "-87.75,41.75,-87.55,41.95";
 const NOT_REQUESTED_LICENSE_SCREENING = {
@@ -40,6 +41,41 @@ const NOT_REQUESTED_LICENSE_SCREENING = {
     "No exact-address match is not evidence that a property is unoccupied; address formatting and change-of-location records can limit matching.",
   ],
 };
+
+const CCLBA_SOURCE_COVERAGE = {
+  status: "available",
+  source: "cclba",
+  sourceDatasetId: "epropertyplus-published-properties",
+  sourceUrl: "https://public-cclba.epropertyplus.com/",
+  publishedCountyTotal: 1_033,
+  chicagoTotal: 915,
+  locatedChicagoTotal: 913,
+  unlocatedChicagoTotal: 2,
+  sourceAsOf: null,
+  retrievedAt: "2026-08-26T18:00:00.000Z",
+} as const;
+
+const CCLBA_SOURCE_COVERAGE_ROW = {
+  source: "cclba",
+  source_dataset_id: "epropertyplus-published-properties",
+  source_url: "https://public-cclba.epropertyplus.com/",
+  published_county_total: 1_033,
+  chicago_total: 915,
+  located_chicago_total: 913,
+  unlocated_chicago_total: 2,
+  source_as_of: null,
+  source_retrieved_at: "2026-08-26 18:00:00+00",
+};
+
+function mockVacancySql(rows: unknown[]) {
+  sqlMock.mockImplementation((strings: TemplateStringsArray) =>
+    Promise.resolve(
+      String(strings).includes("FROM vacant_source_snapshots")
+        ? [CCLBA_SOURCE_COVERAGE_ROW]
+        : rows,
+    ),
+  );
+}
 
 function vacantRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -73,7 +109,11 @@ function staticFeature(id: string, coordinates: [number, number]): GeoJSON.Featu
       source: "cols",
       address: `${id} S STATE ST`,
       propertyType: "vacant_land",
+      status: "city_owned",
       zoneMatches: [],
+      sourceSnapshotId: "unsubstantiated-static-snapshot",
+      sourceUrl: "javascript:alert(1)",
+      applicationUrl: "data:text/html,unsafe",
     },
   };
 }
@@ -107,7 +147,7 @@ afterEach(() => {
 
 describe("GET /api/vacant", () => {
   it("screens polygon results for issued, unexpired exact-address conflicts", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({
         source: "dpd_vacant",
         property_type: "vacant_building",
@@ -176,7 +216,7 @@ describe("GET /api/vacant", () => {
   });
 
   it("short-caches an unavailable polygon license lookup for recovery", async () => {
-    sqlMock.mockResolvedValue([vacantRow()]);
+    mockVacancySql([vacantRow()]);
     fetchMock.mockResolvedValue(new Response("down", { status: 503 }));
     const polygon: GeoJSON.Polygon = {
       type: "Polygon",
@@ -202,7 +242,7 @@ describe("GET /api/vacant", () => {
   });
 
   it("returns database records with complete source coverage metadata", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({ explorer_refreshed_at: "2026-08-05 12:00:00+00" }),
     ]);
 
@@ -236,6 +276,29 @@ describe("GET /api/vacant", () => {
             ownerName: "CITY OF CHICAGO",
             ownerType: "public",
             canonicalType: "land",
+            recordId: "cols:cols-1",
+            pin: null,
+            sourceDatasetId: "aksk-kvfp",
+            sourceDatasetLabel: "Chicago City-Owned Land Inventory",
+            sourceSnapshotId: null,
+            sourceRowId: null,
+            sourceUrl: "https://data.cityofchicago.org/Community-Economic-Development/City-Owned-Land-Inventory/aksk-kvfp",
+            sourceAsOf: null,
+            sourceRetrievedAt: null,
+            ownerJurisdiction: null,
+            managingOrganization: null,
+            programName: null,
+            programKey: null,
+            offerRound: null,
+            applicationUse: null,
+            applicationOpens: null,
+            applicationDeadline: null,
+            applicationUrl: null,
+            propertyStatus: null,
+            salesStatus: null,
+            saleOfferingStatus: null,
+            saleOfferingReason: null,
+            programContext: [],
             sourceRecordDate: null,
             freshnessClass: "unknown_date",
             explorerRefreshedAt: "2026-08-05T12:00:00.000Z",
@@ -265,6 +328,7 @@ describe("GET /api/vacant", () => {
         coverageStatus: "complete",
         potentiallyTruncated: false,
         fallbackReason: null,
+        cclbaSourceCoverage: CCLBA_SOURCE_COVERAGE,
       },
     });
 
@@ -274,11 +338,42 @@ describe("GET /api/vacant", () => {
     expect(query).toContain("to_jsonb(vp)->>'source_record_date'");
     expect(query).toContain("ST_Intersects");
     expect(values).toContain(6);
-    expect(cachedMock.mock.calls[0]?.[0]).toContain("vacant:v5:");
+    expect(cachedMock.mock.calls[0]?.[0]).toContain("vacant:v7:");
+  });
+
+  it("keeps database rows available but fails CCLBA coverage closed before migration", async () => {
+    sqlMock.mockImplementation((strings: TemplateStringsArray) => {
+      if (String(strings).includes("FROM vacant_source_snapshots")) {
+        return Promise.reject(new Error("relation vacant_source_snapshots does not exist"));
+      }
+      return Promise.resolve([vacantRow()]);
+    });
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+
+    expect(body.features).toHaveLength(1);
+    expect(body.meta).toMatchObject({
+      sourceMode: "database",
+      coverageStatus: "complete",
+      cclbaSourceCoverage: {
+        status: "unavailable",
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceUrl: "https://public-cclba.epropertyplus.com/",
+        reason: "metadata_unavailable",
+      },
+    });
+    expect(response.headers.get("cache-control")).toBe(
+      "public, s-maxage=300, stale-while-revalidate=0",
+    );
+    expect(resolvedCacheTTL(0, body)).toBe(300);
   });
 
   it("normalizes an empty legacy zone name to its canonical zone key", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({
         zone_matches: [{ zoneKey: "illinoisOZ", zoneName: "" }],
         incentive_count: 1,
@@ -296,9 +391,64 @@ describe("GET /api/vacant", () => {
     ]);
   });
 
+  it("publishes stable CCLBA provenance without relabeling it City-owned", async () => {
+    mockVacancySql([
+      vacantRow({
+        id: "cclba-52905642",
+        source: "cclba",
+        pin: "16141010090000",
+        property_type: "vacant_land",
+        status: "Acquired",
+        owner_name: "Cook County Land Bank Authority",
+        owner_type: "city_public",
+        owner_jurisdiction: "cook_county",
+        source_dataset_id: "epropertyplus-published-properties",
+        source_row_id: "52905642",
+        source_url: "https://public-cclba.epropertyplus.com/",
+        source_as_of: null,
+        source_retrieved_at: "2026-08-26T18:00:00.000Z",
+        program_name: null,
+        program_key: null,
+        program_context: [{
+          sourceRowId: "52905642",
+          currentStatus: "Acquired",
+          inventoryType: "Vacant Land",
+        }],
+      }),
+    ]);
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+
+    expect(body.features[0].properties).toMatchObject({
+      recordId: "cclba:52905642",
+      pin: "16141010090000",
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceRowId: "52905642",
+      sourceSnapshotId: null,
+      sourceAsOf: null,
+      sourceRetrievedAt: "2026-08-26T18:00:00.000Z",
+      ownerName: "Cook County Land Bank Authority",
+      ownerJurisdiction: "cook_county",
+      status: "Acquired",
+      programName: null,
+      programContext: [{
+        sourceRowId: "52905642",
+        currentStatus: "Acquired",
+        inventoryType: "Vacant Land",
+      }],
+    });
+    expect(body.features[0].properties.ownerName).not.toBe("City of Chicago");
+  });
+
   it("anchors freshness to Chicago today before the UTC-day rollover", async () => {
     vi.setSystemTime(new Date("2026-08-15T04:38:00.000Z"));
-    sqlMock.mockResolvedValue([vacantRow()]);
+    mockVacancySql([vacantRow()]);
 
     const response = await GET(
       new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
@@ -313,7 +463,7 @@ describe("GET /api/vacant", () => {
   });
 
   it("discloses truncation when a sentinel row exceeds the configured limit", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({ id: "cols-1" }),
       vacantRow({ id: "cols-2", address: "125 S STATE ST" }),
       vacantRow({ id: "sentinel", address: "127 S STATE ST" }),
@@ -354,6 +504,7 @@ describe("GET /api/vacant", () => {
       coverageStatus: "truncated",
       potentiallyTruncated: true,
       fallbackReason: null,
+      cclbaSourceCoverage: CCLBA_SOURCE_COVERAGE,
     });
   });
 
@@ -364,6 +515,7 @@ describe("GET /api/vacant", () => {
         JSON.stringify({
           type: "FeatureCollection",
           generatedAt: "2026-08-13T09:00:00.000Z",
+          cclbaSourceCoverage: CCLBA_SOURCE_COVERAGE,
           features: [
             staticFeature("fallback-1", [-87.6278, 41.8819]),
             staticFeature("outside", [-88.1, 41.8819]),
@@ -386,11 +538,33 @@ describe("GET /api/vacant", () => {
         ...staticFeature("fallback-1", [-87.6278, 41.8819]),
         properties: {
           ...staticFeature("fallback-1", [-87.6278, 41.8819]).properties,
+          recordId: "cols:fallback-1",
+          pin: null,
+          sourceDatasetId: "aksk-kvfp",
+          sourceDatasetLabel: "Chicago City-Owned Land Inventory",
+          sourceSnapshotId: null,
+          sourceRowId: null,
+          sourceUrl: "https://data.cityofchicago.org/Community-Economic-Development/City-Owned-Land-Inventory/aksk-kvfp",
+          sourceAsOf: null,
+          sourceRetrievedAt: null,
+          ownerJurisdiction: null,
+          managingOrganization: null,
+          programName: null,
+          programKey: null,
+          offerRound: null,
+          applicationUse: null,
+          applicationOpens: null,
+          applicationDeadline: null,
+          applicationUrl: null,
+          salesStatus: null,
+          saleOfferingStatus: null,
+          saleOfferingReason: null,
+          programContext: [],
           canonicalType: "land",
           sourceRecordDate: null,
           freshnessClass: "unknown_date",
           explorerRefreshedAt: "2026-08-13T09:00:00.000Z",
-          status: "Not recorded",
+          status: "city_owned",
           zoneMatches: [],
           incentiveCount: 0,
         },
@@ -419,7 +593,16 @@ describe("GET /api/vacant", () => {
       coverageStatus: "partial",
       potentiallyTruncated: false,
       fallbackReason: "database_query_failed",
+      cclbaSourceCoverage: CCLBA_SOURCE_COVERAGE,
     });
+    expect(body.features[0].properties).not.toHaveProperty("propertyStatus");
+    expect(body.features[0].properties.applicationUrl).toBeNull();
+    expect(
+      includeVacancyForFreshnessFilter(
+        body.features[0],
+        "current_screening",
+      ),
+    ).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost/data/vacant-properties.json",
     );
@@ -430,7 +613,7 @@ describe("GET /api/vacant", () => {
   });
 
   it("fails over instead of publishing an incoherent source/property pair", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({
         id: "bad-source-pair",
         source: "311_clean_lot",
@@ -453,7 +636,7 @@ describe("GET /api/vacant", () => {
   });
 
   it("classifies clean-lot reports from their original source date", async () => {
-    sqlMock.mockResolvedValue([
+    mockVacancySql([
       vacantRow({
         id: "311-clean-lot-SR21-1",
         source: "311_clean_lot",

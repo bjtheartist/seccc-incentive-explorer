@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { createDrawnAreaReportScope } from "@/lib/drawn-area-report-scope";
 import { normalizeSavedReport, CURRENT_REPORT_SCHEMA_VERSION } from "@/lib/report-schema";
 
 /**
@@ -73,6 +74,38 @@ const REPORT = {
   metadata: { address: "1234 S Halsted St" },
 };
 
+function exactAreaReport() {
+  const scope = createDrawnAreaReportScope({
+    name: "79th Corridor — Ward 6",
+    geometry: {
+      type: "Polygon",
+      coordinates: [[
+        [-87.63, 41.75],
+        [-87.61, 41.75],
+        [-87.61, 41.76],
+        [-87.63, 41.76],
+        [-87.63, 41.75],
+      ]],
+    },
+    generatedAt: "2026-08-26T14:15:00.000Z",
+    vacancy: {
+      loadFailed: true,
+      freshnessFilter: "current_screening",
+      licenseFilter: "all",
+      returnedCountBeforeFilters: null,
+      selectedFeatures: [],
+    },
+  });
+  if (!scope.ok) throw new Error(scope.detail);
+  return {
+    ...REPORT,
+    title: "Area Analysis Report — 79th Corridor — Ward 6",
+    subtitle: "Drawn-area public-record vacancy signals and permit context",
+    reportType: "best-location",
+    drawnAreaScope: scope.scope,
+  };
+}
+
 describe("POST /api/saved-reports", () => {
   beforeEach(() => {
     delete captured.reportJson;
@@ -85,6 +118,15 @@ describe("POST /api/saved-reports", () => {
     expect(captured.reportJson).toBeDefined();
     const stored = JSON.parse(captured.reportJson as string);
     expect(stored.schemaVersion).toBe(CURRENT_REPORT_SCHEMA_VERSION);
+  });
+
+  it("stamps a new exact-polygon report as schema version 2", async () => {
+    const res = await POST(saveRequest(reportBody(exactAreaReport())));
+
+    expect(res.status).toBe(201);
+    const stored = JSON.parse(captured.reportJson as string);
+    expect(stored.schemaVersion).toBe(2);
+    expect(stored.drawnAreaScope.scope.type).toBe("polygon");
   });
 
   it("overwrites a schemaVersion the client tried to supply", async () => {

@@ -2,6 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { createDrawnAreaReportScope } from "@/lib/drawn-area-report-scope";
+import type { VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import type { WizardState } from "@/lib/report-wizard-config";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ status: "unauthenticated", data: null }),
@@ -182,5 +185,90 @@ describe("ReportDisplay public safety", () => {
     expect(html).toMatch(/<details[^>]*id="recommended-actions"/);
     expect(html).toContain("Recommended Actions · 1");
     expect(html).toContain("Gather facade renovation estimates");
+  });
+
+  it("uses the authoritative renamed title and never exposes a polygon-dropping share link", () => {
+    const coverage = {
+      sourceMode: "database",
+      sourcePath: "database:vacant_properties",
+      asOf: null,
+      asOfBasis: null,
+      explorerRefreshedAt: null,
+      freshness: {},
+      licenseScreening: { status: "available" },
+      returnedCount: 1,
+      configuredLimit: 10_000,
+      queryLimit: 10_001,
+      coverageStatus: "complete",
+      potentiallyTruncated: false,
+      fallbackReason: null,
+    } as VacancyCoverageMetadata;
+    const created = createDrawnAreaReportScope({
+      name: "Original generated area label",
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [-87.7, 41.8],
+          [-87.6, 41.8],
+          [-87.6, 41.9],
+          [-87.7, 41.8],
+        ]],
+      },
+      generatedAt: "2026-08-26T12:00:00.000Z",
+      vacancy: {
+        loadFailed: false,
+        coverage,
+        freshnessFilter: "current_screening",
+        licenseFilter: "all",
+        returnedCountBeforeFilters: 1,
+        selectedFeatures: [{ properties: { recordId: "cols:1" } }],
+      },
+    });
+    if (!created.ok) throw new Error(created.detail);
+    const report = {
+      title: "79th Corridor — Ward 6",
+      subtitle: "Drawn-area public-record vacancy signals and permit context",
+      reportType: "best-location",
+      generatedAt: "2026-08-26T12:00:00.000Z",
+      summary: "Saved exact-area report.",
+      sections: [],
+      recommendedActions: [],
+      metadata: {},
+      drawnAreaScope: created.scope,
+    } as GeneratedReport;
+
+    const html = renderToStaticMarkup(
+      <ReportDisplay
+        report={report}
+        wizardState={{ neighborhood: "Chatham" } as WizardState}
+        onStartOver={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Vacancy Spreadsheet — 79th Corridor — Ward 6");
+    expect(html).not.toContain("Share Spreadsheet");
+    expect(html).toContain("Loading vacancy records");
+    expect(html).not.toContain("No tracked vacancy records returned");
+  });
+
+  it("distinguishes malformed drawn-area provenance from a legacy missing boundary", () => {
+    const malformed = {
+      title: "Malformed drawn-area report",
+      subtitle: "Drawn-area public-record vacancy signals and permit context",
+      reportType: "best-location",
+      generatedAt: "2026-08-26T12:00:00.000Z",
+      summary: "Stored summary.",
+      sections: [],
+      recommendedActions: [],
+      metadata: {},
+      drawnAreaScope: { kind: "drawn-area", scope: { type: "community-area" } },
+    } as unknown as GeneratedReport;
+
+    const html = renderToStaticMarkup(
+      <ReportDisplay report={malformed} onStartOver={() => {}} />,
+    );
+
+    expect(html).toContain("invalid saved boundary or provenance contract");
+    expect(html).not.toContain("legacy drawn-area report did not save its boundary");
   });
 });

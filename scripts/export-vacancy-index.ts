@@ -65,6 +65,7 @@ import {
 } from "../lib/parcel-space";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 import type { ExemptionReferralFile, ExemptionReferralRow } from "../lib/exemption-anomalies";
+import { filterLegacyCity311Rows } from "../lib/legacy-vacancy-derived-sources";
 import {
   addressHasViolation,
   assignQuantileDots,
@@ -1778,8 +1779,12 @@ async function main() {
 
   // Single anonymized vacant-inventory pull, bucketed by PIP.
   console.log("\nQuerying vacant_properties (anonymized columns only)...");
-  const allRows = await fetchAllVacantRows(sql);
-  console.log(`  ${allRows.length} vacant rows with coordinates`);
+  const fetchedRows = await fetchAllVacantRows(sql);
+  const allRows = filterLegacyCity311Rows(fetchedRows);
+  console.log(
+    `  ${allRows.length} City/311 rows with coordinates` +
+      ` (${fetchedRows.length - allRows.length} unmodeled-source row(s) excluded pending an honest source branch)`,
+  );
 
   const rowsByZip = new Map<string, VacantRow[]>();
   for (const zip of requestedZips) rowsByZip.set(zip, []);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDrawnAreaCsv } from "@/lib/polygon-investment";
-import type { VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
 
 const COVERAGE: VacancyCoverageMetadata = {
   sourceMode: "database",
@@ -41,6 +41,7 @@ const COVERAGE: VacancyCoverageMetadata = {
   coverageStatus: "complete",
   potentiallyTruncated: false,
   fallbackReason: null,
+  cclbaSourceCoverage: unavailableCclbaSourceCoverage("snapshot_not_recorded"),
 };
 
 describe("drawn-area vacancy CSV evidence", () => {
@@ -52,8 +53,17 @@ describe("drawn-area vacancy CSV evidence", () => {
           type: "Feature",
           geometry: { type: "Point", coordinates: [-87.63, 41.88] },
           properties: {
+            recordId: "311_clean_lot:SR21-1",
+            pin: null,
             address: "300 S STATE ST",
             source: "311_clean_lot",
+            sourceDatasetId: "v6vf-nfxy",
+            sourceDatasetLabel: "Chicago 311 Service Requests",
+            sourceRowId: "SR21-1",
+            sourceUrl: "https://data.cityofchicago.org/resource/v6vf-nfxy.json?sr_number=SR21-1",
+            sourceSnapshotId: "source-published-row-revision-test-2",
+            sourceAsOf: null,
+            sourceRetrievedAt: "2026-08-14T02:00:00.000Z",
             status: "Completed",
             sourceRecordDate: "2021-07-01T00:00:00.000Z",
             freshnessClass: "stale",
@@ -76,10 +86,14 @@ describe("drawn-area vacancy CSV evidence", () => {
     });
 
     expect(csv).toContain('"Explorer refreshed at","2026-08-14T02:00:00.000Z"');
-    expect(csv).not.toContain('"Source as of"');
+    expect(csv).toContain("Source As Of");
+    expect(csv).toContain("Source Retrieved At");
+    expect(csv).toContain('"311_clean_lot:SR21-1"');
+    expect(csv).toContain('"source-published-row-revision-test-2"');
     expect(csv).toContain('"Records before filters","3"');
     expect(csv).toContain('"Records exported","1"');
-    expect(csv).toContain('"311 Clean Vacant Lot Request","Completed","2021-07-01T00:00:00.000Z","stale"');
+    expect(csv).toContain('"311 Clean Vacant Lot Request","311_clean_lot"');
+    expect(csv).toContain('"Completed","2021-07-01T00:00:00.000Z","stale"');
     expect(csv).toContain('"Tracked land signal","reported_vacant_lot"');
     expect(csv).toContain('"match","Current Shop (AAI) through 2027-01-01"');
     expect(csv).toContain("conflict signal, not proof of occupancy");

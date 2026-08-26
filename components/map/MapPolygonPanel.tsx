@@ -59,6 +59,10 @@ import {
   vacancySourceLabel,
   type VacancyLicenseFilter,
 } from "@/lib/area-vacancy-presentation";
+import { createDrawnAreaReportScope } from "@/lib/drawn-area-report-scope";
+import { programContextToText } from "@/lib/vacancy-spreadsheet";
+import { safeVacancyProgramUrl } from "@/lib/vacancy-spreadsheet-scope";
+import { CCLBA_PUBLIC_PORTAL_URL } from "@/lib/vacancy-inventory-sources";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -70,7 +74,7 @@ const RESOURCES = [
   {
     name: "Cook County Land Bank (CCLBA)",
     desc: "Acquire vacant lots and buildings cleared of back taxes",
-    url: "http://www.cookcountylandbank.org/",
+    url: "https://cookcountylandbank.org/pre-qualification-application-purchasing-property/",
   },
   {
     name: "Chicago Large Lots Program",
@@ -214,7 +218,7 @@ export default function MapPolygonPanel({
   const effectiveLicenseFilter = licenseFilterAvailable ? licenseFilter : "all";
   const freshnessFilterLabel =
     freshnessFilter === "current_screening"
-      ? "Current screen — City inventory + reports within 3 years"
+      ? "Current screen — public inventory + reports within 3 years"
       : freshnessFilter === "recent_reports"
         ? "Reports within 3 years only"
         : "All retained source records — 311 window is 5 years";
@@ -491,10 +495,10 @@ export default function MapPolygonPanel({
       );
     }
 
-    const cityCount = ownerCounts.find((o) => o.key === "city_public")?.count ?? 0;
-    if (cityCount > 0) {
+    const publicCount = ownerCounts.find((o) => o.key === "city_public")?.count ?? 0;
+    if (publicCount > 0) {
       parts.push(
-        `${cityCount} ${cityCount === 1 ? "is" : "are"} city-owned — potentially available through the Large Lots program or CCLBA.`
+        `${publicCount} ${publicCount === 1 ? "is" : "are"} classified as public ownership. Review the source record to distinguish City inventory from Cook County Land Bank inventory and to confirm any disposition path.`
       );
     }
 
@@ -508,8 +512,42 @@ export default function MapPolygonPanel({
     ownerCounts,
   ]);
 
+  const drawnAreaScope = useMemo(() => {
+    if (!permitPolygon) return null;
+    const result = createDrawnAreaReportScope({
+      name: areaName.trim() || topCommunityArea || "Drawn Area",
+      geometry: permitPolygon,
+      generatedAt: new Date().toISOString(),
+      vacancy: {
+        loadFailed: vacancyLoadFailed,
+        coverage: vacancyCoverage,
+        freshnessFilter,
+        licenseFilter: effectiveLicenseFilter,
+        returnedCountBeforeFilters: vacancyLoadFailed ? null : allFeatures.length,
+        selectedFeatures: features,
+      },
+      permit: {
+        analysis: permitAnalysis,
+        loadFailed: permitLoadFailed,
+      },
+    });
+    return result.ok ? result.scope : null;
+  }, [
+    allFeatures.length,
+    areaName,
+    effectiveLicenseFilter,
+    features,
+    freshnessFilter,
+    permitAnalysis,
+    permitLoadFailed,
+    permitPolygon,
+    topCommunityArea,
+    vacancyCoverage,
+    vacancyLoadFailed,
+  ]);
+
   const areaReport = useMemo<GeneratedReport>(() => {
-    const reportAreaName = topCommunityArea || "Drawn Area";
+    const reportAreaName = areaName.trim() || topCommunityArea || "Drawn Area";
     const permitCoverageLabel = permitAnalysis
       ? formatPermitAreaCoverageLabel(permitAnalysis)
       : null;
@@ -541,10 +579,29 @@ export default function MapPolygonPanel({
         typeof p.status === "string" && p.status.trim()
           ? p.status.trim()
           : "not recorded";
+      const programName =
+        typeof p.programName === "string" && p.programName.trim()
+          ? p.programName.trim()
+          : null;
+      const managingOrganization =
+        typeof p.managingOrganization === "string" &&
+        p.managingOrganization.trim()
+          ? p.managingOrganization.trim()
+          : null;
+      const publishedSourceContext = programContextToText(p.programContext);
+      const programContext = [
+        programName ? `Published program / disposition context: ${programName}` : null,
+        managingOrganization
+          ? `Managing organization: ${managingOrganization}`
+          : null,
+        publishedSourceContext || null,
+      ].filter((value): value is string => value !== null);
+      const applicationUrl = safeVacancyProgramUrl(p.applicationUrl);
       return {
         label: String(p.address || "Unknown Address"),
         value: vacancyCanonicalTypeLabel(p.canonicalType),
-        detail: `${vacancySourceLabel(p.source)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
+        detail: `${vacancySourceLabel(p.source)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${programContext.length > 0 ? ` · ${programContext.join(" · ")} · Verify current availability and terms.` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
+        url: applicationUrl ?? undefined,
       };
     });
 
@@ -570,10 +627,11 @@ export default function MapPolygonPanel({
     }
 
     return {
+      ...(drawnAreaScope ? { drawnAreaScope } : {}),
       title: `Area Analysis Report — ${reportAreaName}`,
       subtitle: "Drawn-area public-record vacancy signals and permit context",
       reportType: "best-location",
-      generatedAt: new Date().toISOString(),
+      generatedAt: drawnAreaScope?.generatedAt ?? new Date().toISOString(),
       summary: summaryParts.join(" "),
       sections: [
         {
@@ -708,6 +766,37 @@ export default function MapPolygonPanel({
               },
             ]
           : []),
+        ...(drawnAreaScope
+          ? [
+              {
+                title: "Provenance Chain",
+                description:
+                  "The saved boundary, source coverage, filters, and generation-time record manifest connect this analysis to its report and CSV outputs.",
+                items: [
+                  {
+                    label: "Selection Method",
+                    value: "Point in saved polygon",
+                    detail:
+                      "Records are selected against the exact drawn GeoJSON polygon; community-area and ward labels are context only.",
+                  },
+                  {
+                    label: "Boundary Fingerprint",
+                    value: drawnAreaScope.scope.fingerprint,
+                  },
+                  {
+                    label: "Generation-Time Record Manifest",
+                    value: `${drawnAreaScope.provenance.vacancy.selectedCount} record reference${drawnAreaScope.provenance.vacancy.selectedCount === 1 ? "" : "s"}`,
+                    detail:
+                      "Stable record references are saved with the report so a later polygon refresh can disclose additions or removals.",
+                  },
+                  {
+                    label: "Saved At",
+                    value: drawnAreaScope.generatedAt,
+                  },
+                ],
+              },
+            ]
+          : []),
       ],
       recommendedActions: [
         {
@@ -756,6 +845,17 @@ export default function MapPolygonPanel({
             : "Vacant property and public boundary data.",
           url: "https://data.cityofchicago.org/",
         },
+        ...(allFeatures.some((feature) => feature.properties?.source === "cclba")
+          ? [
+              {
+                id: "cook-county-land-bank-inventory",
+                label: "Cook County Land Bank Authority Published Property Inventory",
+                description:
+                  "Published land-bank property inventory retrieved by the Explorer. Publication is not proof of current availability or ownership; review the upstream status and confirm with CCLBA.",
+                url: CCLBA_PUBLIC_PORTAL_URL,
+              },
+            ]
+          : []),
         {
           id: "cook-county-assessor",
           label: "Cook County Assessor",
@@ -785,9 +885,11 @@ export default function MapPolygonPanel({
       ],
     };
   }, [
-    allFeatures.length,
+    areaName,
+    allFeatures,
     freshnessFilterLabel,
     features,
+    drawnAreaScope,
     licenseConflictCount,
     licenseFilterLabel,
     licenseScreening,
@@ -807,7 +909,7 @@ export default function MapPolygonPanel({
 
   const areaWizardState = useMemo<WizardState>(() => ({
     reportType: "dev-feasibility",
-    address: topCommunityArea || "Drawn Area",
+    address: areaName.trim() || topCommunityArea || "Drawn Area",
     lat: null,
     lon: null,
     neighborhood: topCommunityArea || "",
@@ -825,9 +927,10 @@ export default function MapPolygonPanel({
     jobsImpact: "",
     supportNeeded: [],
     creditsToAnalyze: zoneCounts.map(({ key }) => key),
-  }), [topCommunityArea, zoneCounts]);
+  }), [areaName, topCommunityArea, zoneCounts]);
 
   const handleSaveReport = useCallback(() => {
+    if (!drawnAreaScope || loading || permitPending) return;
     if (status === "authenticated") {
       setSaveModalOpen(true);
       return;
@@ -837,12 +940,18 @@ export default function MapPolygonPanel({
     window.location.assign(
       `/login?callbackUrl=${encodeURIComponent("/workspace?savePending=1")}`
     );
-  }, [areaReport, areaWizardState, status]);
+  }, [areaReport, areaWizardState, drawnAreaScope, loading, permitPending, status]);
+
+  const handleEmailReport = useCallback(() => {
+    if (!drawnAreaScope || loading || permitPending) return;
+    setEmailModalOpen(true);
+  }, [drawnAreaScope, loading, permitPending]);
 
   /* ── Export CSV ──
      One file with source-separated vacancy, permit, and gated investment
      tables. Applicant-reported permit cost is never part of this export. */
   const handleExportCsv = useCallback(() => {
+    if (!drawnAreaScope || loading || permitPending) return;
     const csv = buildDrawnAreaCsv({
       areaName,
       vacancyFeatures: features,
@@ -857,6 +966,15 @@ export default function MapPolygonPanel({
       // "Not attached" — mis-describing a lookup that was attempted and failed
       // as one that was never run. Ignored when permitAnalysis is present.
       permitLoadFailed,
+      scopeProvenance: drawnAreaScope
+        ? {
+            fingerprint: drawnAreaScope.scope.fingerprint,
+            selectionMethod: "point_in_saved_polygon",
+            generatedAt: drawnAreaScope.generatedAt,
+            manifestSelectedCount:
+              drawnAreaScope.provenance.vacancy.selectedCount,
+          }
+        : null,
       investment:
         investmentSummary && investmentSelection
           ? { summary: investmentSummary, selected: investmentSelection }
@@ -874,13 +992,16 @@ export default function MapPolygonPanel({
   }, [
     areaName,
     allFeatures.length,
+    drawnAreaScope,
     effectiveLicenseFilter,
     features,
     freshnessFilter,
     investmentSelection,
     investmentSummary,
+    loading,
     permitAnalysis,
     permitLoadFailed,
+    permitPending,
     vacancyCoverage,
     vacancyLoadFailed,
   ]);
@@ -988,7 +1109,7 @@ export default function MapPolygonPanel({
           className="w-full border border-[#0C1B33]/12 px-2.5 py-2 text-[16px] md:text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/35 focus-visible:border-[#2563EB]"
         />
         <p className="text-[8px] text-[#0C1B33]/30 mt-1 leading-snug">
-          Names this area in the panel header and on every row of the CSV export.
+          Names this area in the panel header, saved report, and every row of the CSV export.
         </p>
         <p className="sr-only" role="status" aria-live="polite">
           {editing
@@ -1087,7 +1208,7 @@ export default function MapPolygonPanel({
                     className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
                   >
                     <option value="current_screening">
-                      Current screen — City inventory + reports within 3 years
+                      Current screen — public inventory + reports within 3 years
                     </option>
                     <option value="recent_reports">Reports within 3 years only</option>
                     <option value="all_records">
@@ -1678,6 +1799,17 @@ export default function MapPolygonPanel({
                     const ownerColor =
                       OWNER_TYPE_COLORS[p.ownerType as OwnerType] ??
                       "#9CA3AF";
+                    const programName =
+                      typeof p.programName === "string" && p.programName.trim()
+                        ? p.programName.trim()
+                        : null;
+                    const managingOrganization =
+                      typeof p.managingOrganization === "string" &&
+                      p.managingOrganization.trim()
+                        ? p.managingOrganization.trim()
+                        : null;
+                    const sourceContext = programContextToText(p.programContext);
+                    const applicationUrl = safeVacancyProgramUrl(p.applicationUrl);
                     return (
                       <div
                         key={p.id ?? `${p.address ?? "unknown"}-${i}`}
@@ -1709,9 +1841,20 @@ export default function MapPolygonPanel({
                                   ? "Storefront signal"
                                   : "Other signal"}
                           </span>
-                          <span className="text-[8px] text-[#0C1B33]/45">
-                            {vacancySourceLabel(p.source)}
-                          </span>
+                          {typeof p.sourceUrl === "string" && p.sourceUrl ? (
+                            <a
+                              href={p.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[8px] text-[#2563EB]/75 hover:underline"
+                            >
+                              {vacancySourceLabel(p.source)}
+                            </a>
+                          ) : (
+                            <span className="text-[8px] text-[#0C1B33]/45">
+                              {vacancySourceLabel(p.source)}
+                            </span>
+                          )}
                           {typeof p.status === "string" && p.status.trim() && (
                             <span className="text-[8px] text-[#0C1B33]/40">
                               Source status: {p.status}
@@ -1744,6 +1887,36 @@ export default function MapPolygonPanel({
                             </span>
                           )}
                         </div>
+                        {(programName || managingOrganization || sourceContext) && (
+                          <div className="mt-1 text-[8px] leading-snug text-[#0C1B33]/50">
+                            {programName && (
+                              <span>Published program / disposition context: {programName}</span>
+                            )}
+                            {programName && managingOrganization && (
+                              <span> · </span>
+                            )}
+                            {managingOrganization && (
+                              <span>
+                                Managing organization: {managingOrganization}
+                              </span>
+                            )}
+                            {(programName || managingOrganization) && sourceContext && (
+                              <span> · </span>
+                            )}
+                            {sourceContext && <span>{sourceContext}</span>}
+                            <span> · Verify current availability and terms.</span>
+                          </div>
+                        )}
+                        {applicationUrl && (
+                          <a
+                            href={applicationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-block text-[8px] text-[#2563EB]/75 hover:underline"
+                          >
+                            Review published program record ↗
+                          </a>
+                        )}
                       </div>
                     );
                   })}
@@ -1767,23 +1940,36 @@ export default function MapPolygonPanel({
                   <div className="grid grid-cols-1 gap-2 mb-2">
                     <button
                       onClick={handleSaveReport}
-                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] transition-colors"
+                      disabled={loading || permitPending || !drawnAreaScope}
+                      aria-busy={loading || permitPending}
+                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Save Report
                     </button>
                     <button
-                      onClick={() => setEmailModalOpen(true)}
-                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 transition-colors"
+                      onClick={handleEmailReport}
+                      disabled={loading || permitPending || !drawnAreaScope}
+                      aria-busy={loading || permitPending}
+                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Mail className="w-3.5 h-3.5" />
                       Email This to Me
                     </button>
+                    {(loading || permitPending || !drawnAreaScope) && (
+                      <p role="status" className="text-[9px] leading-snug text-[#0C1B33]/45">
+                        {loading || permitPending
+                          ? "Save, email, and CSV export will be available after the vacancy and permit lookups finish."
+                          : "Save, email, and CSV export are unavailable because the exact boundary provenance could not be created."}
+                      </p>
+                    )}
                   </div>
                 )}
                 <button
                   onClick={handleExportCsv}
-                  className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 transition-colors"
+                  disabled={loading || permitPending || !drawnAreaScope}
+                  aria-busy={loading || permitPending}
+                  className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Export Area Data (CSV)
                 </button>
@@ -1834,19 +2020,19 @@ export default function MapPolygonPanel({
           {/* ── Attribution ── */}
           <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
-              Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
+              Data: City of Chicago Open Data, Cook County Land Bank Authority public inventory, and Cook County Assessor. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
             </p>
           </div>
         </>
       )}
-      {saveModalOpen && (
+      {saveModalOpen && drawnAreaScope && !loading && !permitPending && (
         <SaveReportModal
           reportData={areaReport}
           wizardState={areaWizardState}
           onClose={() => setSaveModalOpen(false)}
         />
       )}
-      {emailModalOpen && (
+      {emailModalOpen && drawnAreaScope && !loading && !permitPending && (
         <AreaEmailReportModal
           report={areaReport}
           onClose={() => setEmailModalOpen(false)}

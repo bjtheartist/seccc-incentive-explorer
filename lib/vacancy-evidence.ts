@@ -66,6 +66,7 @@ export function normalizeChicagoSourceCalendarDate(value: unknown): string | nul
 
 export type VacancySource =
   | "cols"
+  | "cclba"
   | "dpd_vacant"
   | "311_clean_lot"
   | "violations";
@@ -148,6 +149,9 @@ export function isVacancySourceTypePair(
   propertyType: unknown,
 ): boolean {
   if (source === "cols") return propertyType === "vacant_land";
+  if (source === "cclba") {
+    return propertyType === "vacant_land" || propertyType === "vacant_building";
+  }
   if (source === "311_clean_lot") {
     return propertyType === "reported_vacant_lot";
   }
@@ -164,8 +168,16 @@ export function vacancyTypeLabel(type: VacancyCanonicalType): string {
   return "Other tracked vacancy signal";
 }
 
-export function isCurrentInventorySource(source: unknown): boolean {
-  return source === "cols";
+export function isCurrentInventorySource(
+  source: unknown,
+  propertyStatus?: unknown,
+  legacyStatus?: unknown,
+): boolean {
+  if (source === "cclba") return true;
+  if (source !== "cols") return false;
+  if (propertyStatus === "Owned by City") return true;
+  // The committed pre-provenance fallback has no propertyStatus field.
+  return propertyStatus === undefined && legacyStatus === "city_owned";
 }
 
 export function includeVacancyForFreshnessFilter(
@@ -176,12 +188,22 @@ export function includeVacancyForFreshnessFilter(
   if (filter === "all_records") return true;
   if (
     filter === "current_screening" &&
-    isCurrentInventorySource(properties.source)
+    isCurrentInventorySource(
+      properties.source,
+      properties.propertyStatus,
+      properties.status,
+    )
   ) {
     return true;
   }
   if (properties.freshnessClass !== "recent") return false;
-  if (filter === "recent_reports") return !isCurrentInventorySource(properties.source);
+  if (filter === "recent_reports") {
+    return !isCurrentInventorySource(
+      properties.source,
+      properties.propertyStatus,
+      properties.status,
+    );
+  }
   return true;
 }
 

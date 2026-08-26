@@ -57,7 +57,11 @@ describe("vacancy evidence semantics", () => {
   it("keeps stale and unknown evidence discoverable but out of recent defaults", () => {
     const recent = feature({ source: "dpd_vacant", freshnessClass: "recent" });
     const stale = feature({ source: "311_clean_lot", freshnessClass: "stale" });
-    const inventory = feature({ source: "cols", freshnessClass: "unknown_date" });
+    const inventory = feature({
+      source: "cols",
+      status: "city_owned",
+      freshnessClass: "unknown_date",
+    });
 
     expect(includeVacancyForFreshnessFilter(recent, "current_screening")).toBe(true);
     expect(includeVacancyForFreshnessFilter(stale, "current_screening")).toBe(false);
@@ -66,6 +70,34 @@ describe("vacancy evidence semantics", () => {
     expect(includeVacancyForFreshnessFilter(inventory, "recent_reports")).toBe(false);
     expect(includeVacancyForFreshnessFilter(stale, "all_records")).toBe(true);
     expect(includeVacancyForFreshnessFilter(inventory, "all_records")).toBe(true);
+  });
+
+  it("treats only current COLS holdings and CCLBA public inventory as current", () => {
+    const held = feature({
+      source: "cols",
+      propertyStatus: "Owned by City",
+      freshnessClass: "unknown_date",
+    });
+    const sold = feature({
+      source: "cols",
+      propertyStatus: "Sold",
+      status: "city_owned",
+      freshnessClass: "unknown_date",
+    });
+    const unknown = feature({
+      source: "cols",
+      propertyStatus: null,
+      status: "city_owned",
+      freshnessClass: "unknown_date",
+    });
+    const landBank = feature({
+      source: "cclba",
+      freshnessClass: "unknown_date",
+    });
+    expect(includeVacancyForFreshnessFilter(held, "current_screening")).toBe(true);
+    expect(includeVacancyForFreshnessFilter(sold, "current_screening")).toBe(false);
+    expect(includeVacancyForFreshnessFilter(unknown, "current_screening")).toBe(false);
+    expect(includeVacancyForFreshnessFilter(landBank, "current_screening")).toBe(true);
   });
 
   it("publishes coherent returned-set counts", () => {

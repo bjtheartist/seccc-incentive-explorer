@@ -3,6 +3,7 @@ import { getSQL } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/current-user";
 
 type Params = { params: Promise<{ id: string }> };
+const SAVED_REPORT_TITLE_MAX_LENGTH = 200;
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const userId = await getCurrentUserId();
@@ -70,6 +71,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+  if (title.length > SAVED_REPORT_TITLE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `title must be ${SAVED_REPORT_TITLE_MAX_LENGTH} characters or fewer` },
+      { status: 400 },
+    );
   }
 
   const { id } = await params;

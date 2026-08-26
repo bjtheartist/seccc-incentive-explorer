@@ -102,6 +102,17 @@ describe("normalizeSavedReport — current reports", () => {
 });
 
 describe("normalizeSavedReport — version-less legacy blobs", () => {
+  it("migrates an explicit version-1 ordinary report to version 2", () => {
+    const result = normalizeSavedReport({ ...legacyReport(), schemaVersion: 1 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.sourceVersion).toBe(1);
+    expect(result.migrated).toBe(true);
+    expect(result.report.schemaVersion).toBe(2);
+    expect(result.report.title).toBe("Incentive Report");
+  });
+
   it("treats a missing schemaVersion as version 1 rather than a failure", () => {
     const result = normalizeSavedReport(legacyReport());
 
@@ -222,6 +233,19 @@ describe("normalizeSavedReport — safe failure", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe("missing-required-fields");
+  });
+
+  it("fails closed when a version-1 report is marked drawn-area but has no exact scope", () => {
+    const result = normalizeSavedReport({
+      ...legacyReport(),
+      schemaVersion: 1,
+      subtitle: "Drawn-area public-record vacancy signals and permit context",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "invalid-drawn-area-scope",
+    });
   });
 
   it("fails on a report written by a newer deploy instead of guessing at it", () => {

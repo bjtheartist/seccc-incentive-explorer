@@ -5,6 +5,9 @@ import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
 import {
   DRAWN_AREA_VACANCY_LIMIT,
+  normalizeCclbaSourceCoverage,
+  unavailableCclbaSourceCoverage,
+  type CclbaSourceCoverage,
   type VacancyFeatureCollection,
 } from "@/lib/drawn-area-vacancy";
 import {
@@ -19,6 +22,12 @@ import {
   canonicalizeVacancyZoneMatches,
   isVacancyZoneMatchInput,
 } from "@/lib/vacancy-zone-matches";
+import {
+  CCLBA_PUBLIC_DATASET_ID,
+  CCLBA_PUBLIC_PORTAL_URL,
+  COLS_DATASET_ID,
+  COLS_LANDING_URL,
+} from "@/lib/vacancy-inventory-sources";
 import {
   notRequestedLicenseScreening,
   screenVacancyLicenseConflicts,
@@ -63,18 +72,40 @@ type VacancyRow = {
   incentive_count: unknown;
   owner_name: unknown;
   owner_type: unknown;
+  pin?: unknown;
+  owner_jurisdiction?: unknown;
+  source_dataset_id?: unknown;
+  source_row_id?: unknown;
+  source_url?: unknown;
+  source_as_of?: unknown;
+  source_retrieved_at?: unknown;
+  managing_organization?: unknown;
+  program_name?: unknown;
+  program_key?: unknown;
+  offer_round?: unknown;
+  application_use?: unknown;
+  application_opens?: unknown;
+  application_deadline?: unknown;
+  application_url?: unknown;
+  property_status?: unknown;
+  sales_status?: unknown;
+  sale_offering_status?: unknown;
+  sale_offering_reason?: unknown;
+  program_context?: unknown;
   source_record_date?: unknown;
   explorer_refreshed_at?: unknown;
 };
 
 type StaticVacancyFeatureCollection = GeoJSON.FeatureCollection & {
   generatedAt?: unknown;
+  cclbaSourceCoverage?: unknown;
 };
 
 function hasTransientVacancyDegradation(result: VacancyFeatureCollection): boolean {
   const screening = result.meta.licenseScreening;
   return Boolean(
     result.meta.fallbackReason ||
+      result.meta.cclbaSourceCoverage.status === "unavailable" ||
       screening.status === "unavailable" ||
       screening.partialReasons.includes("source_batch_failure"),
   );
@@ -108,6 +139,51 @@ function timestampOrNull(value: unknown): string | null {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
+function textOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function absoluteHttpUrlOrNull(value: unknown): string | null {
+  const candidate = textOrNull(value);
+  if (!candidate) return null;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? candidate
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function fallbackSourceDatasetId(source: unknown): string | null {
+  if (source === "cols") return COLS_DATASET_ID;
+  if (source === "cclba") return CCLBA_PUBLIC_DATASET_ID;
+  if (source === "dpd_vacant" || source === "311_clean_lot") return "v6vf-nfxy";
+  return null;
+}
+
+function fallbackSourceDatasetLabel(source: unknown): string | null {
+  if (source === "cols") return "Chicago City-Owned Land Inventory";
+  if (source === "cclba") {
+    return "Cook County Land Bank Authority Published Property Inventory";
+  }
+  if (source === "dpd_vacant" || source === "311_clean_lot") {
+    return "Chicago 311 Service Requests";
+  }
+  if (source === "violations") return "Chicago Vacant Building Violations";
+  return null;
+}
+
+function fallbackSourceUrl(source: unknown): string | null {
+  if (source === "cols") return COLS_LANDING_URL;
+  if (source === "cclba") return CCLBA_PUBLIC_PORTAL_URL;
+  if (source === "dpd_vacant" || source === "311_clean_lot") {
+    return "https://data.cityofchicago.org/resource/v6vf-nfxy.json";
+  }
+  return null;
+}
+
 function latestTimestamp(values: unknown[]): string | null {
   let latest: string | null = null;
   let latestMillis = Number.NEGATIVE_INFINITY;
@@ -125,6 +201,42 @@ function latestTimestamp(values: unknown[]): string | null {
   }
 
   return latest;
+}
+
+async function loadCclbaSourceCoverage(
+  sql: NonNullable<ReturnType<typeof getSQL>>,
+): Promise<CclbaSourceCoverage> {
+  try {
+    const rows = await sql`
+      SELECT source, source_dataset_id, source_url,
+             published_county_total, chicago_total,
+             located_chicago_total, unlocated_chicago_total,
+             source_as_of::text, source_retrieved_at::text
+      FROM vacant_source_snapshots
+      WHERE source = 'cclba'
+      ORDER BY source_retrieved_at DESC
+      LIMIT 1
+    `;
+    if (!rows[0]) return unavailableCclbaSourceCoverage("snapshot_not_recorded");
+    const row = rows[0];
+    return normalizeCclbaSourceCoverage({
+      status: "available",
+      source: row.source,
+      sourceDatasetId: row.source_dataset_id,
+      sourceUrl: row.source_url,
+      publishedCountyTotal: Number(row.published_county_total),
+      chicagoTotal: Number(row.chicago_total),
+      locatedChicagoTotal: Number(row.located_chicago_total),
+      unlocatedChicagoTotal: Number(row.unlocated_chicago_total),
+      sourceAsOf: timestampOrNull(row.source_as_of),
+      retrievedAt: timestampOrNull(row.source_retrieved_at),
+    }) ?? unavailableCclbaSourceCoverage("malformed_metadata");
+  } catch {
+    // A code deployment may precede the idempotent DB migration. Vacancy rows
+    // remain usable, but source-level completeness must fail closed rather than
+    // fabricating zero unlocated records or forcing a static-data fallback.
+    return unavailableCclbaSourceCoverage("metadata_unavailable");
+  }
 }
 
 async function loadCommunityAreaBoundary(
@@ -172,6 +284,16 @@ function enrichFeatureEvidence(
   const explorerRefreshedAt =
     timestampOrNull(properties.explorerRefreshedAt) ??
     timestampOrNull(fallbackExplorerRefreshedAt);
+  const source = textOrNull(properties.source);
+  const internalId = textOrNull(properties.id);
+  const sourceRowId = textOrNull(properties.sourceRowId);
+  const sourceAsOf = timestampOrNull(properties.sourceAsOf);
+  const sourceRetrievedAt = timestampOrNull(properties.sourceRetrievedAt);
+  const sourceDatasetId =
+    textOrNull(properties.sourceDatasetId) ?? fallbackSourceDatasetId(source);
+  const applicationOpens = timestampOrNull(properties.applicationOpens);
+  const applicationDeadline = timestampOrNull(properties.applicationDeadline);
+  const pin = textOrNull(properties.pin);
   const zoneMatches = canonicalizeVacancyZoneMatches(properties.zoneMatches);
   return {
     ...feature,
@@ -184,6 +306,43 @@ function enrichFeatureEvidence(
       zoneMatches,
       incentiveCount: zoneMatches.length,
       canonicalType: canonicalVacancyType(properties.propertyType),
+      recordId:
+        textOrNull(properties.recordId) ??
+        (source && (sourceRowId || internalId)
+          ? `${source}:${sourceRowId ?? internalId}`
+          : internalId),
+      pin: pin && /^\d{14}$/.test(pin) ? pin : null,
+      sourceDatasetId,
+      sourceDatasetLabel:
+        textOrNull(properties.sourceDatasetLabel) ??
+        fallbackSourceDatasetLabel(source),
+      // No current vacancy source publishes a row-content revision. Retrieval
+      // time remains separate freshness metadata and must not be promoted into
+      // snapshot identity, or unchanged rows appear changed after every sync.
+      sourceSnapshotId: null,
+      sourceRowId,
+      sourceUrl:
+        absoluteHttpUrlOrNull(properties.sourceUrl) ?? fallbackSourceUrl(source),
+      sourceAsOf,
+      sourceRetrievedAt,
+      ownerJurisdiction: textOrNull(properties.ownerJurisdiction),
+      managingOrganization: textOrNull(properties.managingOrganization),
+      programName: textOrNull(properties.programName),
+      programKey: textOrNull(properties.programKey),
+      offerRound: textOrNull(properties.offerRound),
+      applicationUse: textOrNull(properties.applicationUse),
+      applicationOpens,
+      applicationDeadline,
+      applicationUrl: absoluteHttpUrlOrNull(properties.applicationUrl),
+      ...(Object.prototype.hasOwnProperty.call(properties, "propertyStatus")
+        ? { propertyStatus: textOrNull(properties.propertyStatus) }
+        : {}),
+      salesStatus: textOrNull(properties.salesStatus),
+      saleOfferingStatus: textOrNull(properties.saleOfferingStatus),
+      saleOfferingReason: textOrNull(properties.saleOfferingReason),
+      programContext: Array.isArray(properties.programContext)
+        ? properties.programContext
+        : [],
       sourceRecordDate,
       freshnessClass: classifyVacancyFreshness(sourceRecordDate, referenceDate),
       explorerRefreshedAt,
@@ -206,6 +365,7 @@ function rowsToGeoJSON(
       properties: {
         id: r.id,
         source: r.source,
+        pin: r.pin,
         address: r.address,
         propertyType: r.property_type,
         ward: r.ward,
@@ -220,6 +380,28 @@ function rowsToGeoJSON(
         incentiveCount: r.incentive_count,
         ownerName: r.owner_name || null,
         ownerType: r.owner_type || null,
+        ownerJurisdiction: r.owner_jurisdiction,
+        sourceDatasetId: r.source_dataset_id,
+        sourceRowId: r.source_row_id,
+        sourceUrl: r.source_url,
+        sourceAsOf: r.source_as_of,
+        sourceRetrievedAt: r.source_retrieved_at,
+        managingOrganization: r.managing_organization,
+        programName: r.program_name,
+        programKey: r.program_key,
+        offerRound: r.offer_round,
+        applicationUse: r.application_use,
+        applicationOpens: r.application_opens,
+        applicationDeadline: r.application_deadline,
+        applicationUrl: r.application_url,
+        propertyStatus: r.property_status,
+        salesStatus: r.sales_status,
+        saleOfferingStatus: r.sale_offering_status,
+        saleOfferingReason: r.sale_offering_reason,
+        programContext:
+          typeof r.program_context === "string"
+            ? JSON.parse(r.program_context)
+            : r.program_context,
         sourceRecordDate: r.source_record_date,
         explorerRefreshedAt: r.explorer_refreshed_at,
       },
@@ -255,6 +437,23 @@ function buildDatabaseResponse(
       coverageStatus: potentiallyTruncated ? "truncated" : "complete",
       potentiallyTruncated,
       fallbackReason: null,
+      cclbaSourceCoverage: unavailableCclbaSourceCoverage("metadata_unavailable"),
+    },
+  };
+}
+
+async function buildDatabaseResponseWithCoverage(
+  rows: VacancyRow[],
+  limit: number,
+  referenceDate: string,
+  sql: NonNullable<ReturnType<typeof getSQL>>,
+): Promise<VacancyFeatureCollection> {
+  const result = buildDatabaseResponse(rows, limit, referenceDate);
+  return {
+    ...result,
+    meta: {
+      ...result.meta,
+      cclbaSourceCoverage: await loadCclbaSourceCoverage(sql),
     },
   };
 }
@@ -263,6 +462,7 @@ function buildStaticFallbackResponse(
   features: GeoJSON.Feature[],
   limit: number,
   generatedAt: unknown,
+  cclbaSourceCoverage: unknown,
   fallbackReason: "database_unavailable" | "database_query_failed",
   referenceDate: string,
 ): VacancyFeatureCollection {
@@ -289,6 +489,13 @@ function buildStaticFallbackResponse(
       coverageStatus: "partial",
       potentiallyTruncated,
       fallbackReason,
+      cclbaSourceCoverage:
+        normalizeCclbaSourceCoverage(cclbaSourceCoverage) ??
+        unavailableCclbaSourceCoverage(
+          cclbaSourceCoverage === undefined
+            ? "snapshot_not_recorded"
+            : "malformed_metadata",
+        ),
     },
   };
 }
@@ -358,16 +565,16 @@ export async function GET(request: NextRequest) {
     ? createHash("sha256").update(communityAreaParam.toLowerCase()).digest("hex").slice(0, 16)
     : null;
   const cacheKey = communityAreaParam
-    ? `vacant:community-boundary:v5:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${communityHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
+    ? `vacant:community-boundary:v7:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${communityHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
     : polygonParam
-    ? `vacant:poly:v5:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
-    : `vacant:v5:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`;
+    ? `vacant:poly:v7:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
+    : `vacant:v7:${VACANCY_FRESHNESS_POLICY_VERSION}:${evidenceReferenceDay}:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`;
 
   const sql = getSQL();
 
   const baseResult = await cached<VacancyFeatureCollection>(
     cacheKey,
-    (result) => result.meta.fallbackReason
+    (result) => hasTransientVacancyDegradation(result)
       ? DEGRADED_CACHE_TTL_SECONDS
       : BASE_CACHE_TTL_SECONDS,
     async () => {
@@ -387,6 +594,26 @@ export async function GET(request: NextRequest) {
               SELECT id, source, address, lat, lon, property_type, ward, community_area,
                      zoning_class, square_feet, status, zone_matches, incentive_count,
                      owner_name, owner_type,
+                     (to_jsonb(vp)->>'pin') AS pin,
+                     (to_jsonb(vp)->>'owner_jurisdiction') AS owner_jurisdiction,
+                     (to_jsonb(vp)->>'source_dataset_id') AS source_dataset_id,
+                     (to_jsonb(vp)->>'source_row_id') AS source_row_id,
+                     (to_jsonb(vp)->>'source_url') AS source_url,
+                     (to_jsonb(vp)->>'source_as_of') AS source_as_of,
+                     (to_jsonb(vp)->>'source_retrieved_at') AS source_retrieved_at,
+                     (to_jsonb(vp)->>'managing_organization') AS managing_organization,
+                     (to_jsonb(vp)->>'program_name') AS program_name,
+                     (to_jsonb(vp)->>'program_key') AS program_key,
+                     (to_jsonb(vp)->>'offer_round') AS offer_round,
+                     (to_jsonb(vp)->>'application_use') AS application_use,
+                     (to_jsonb(vp)->>'application_opens') AS application_opens,
+                     (to_jsonb(vp)->>'application_deadline') AS application_deadline,
+                     (to_jsonb(vp)->>'application_url') AS application_url,
+                     (to_jsonb(vp)->>'property_status') AS property_status,
+                     (to_jsonb(vp)->>'sales_status') AS sales_status,
+                     (to_jsonb(vp)->>'sale_offering_status') AS sale_offering_status,
+                     (to_jsonb(vp)->>'sale_offering_reason') AS sale_offering_reason,
+                     (to_jsonb(vp)->'program_context') AS program_context,
                      (to_jsonb(vp)->>'source_record_date') AS source_record_date,
                      updated_at::text AS explorer_refreshed_at
               FROM vacant_properties vp
@@ -401,6 +628,26 @@ export async function GET(request: NextRequest) {
               SELECT id, source, address, lat, lon, property_type, ward, community_area,
                      zoning_class, square_feet, status, zone_matches, incentive_count,
                      owner_name, owner_type,
+                     (to_jsonb(vp)->>'pin') AS pin,
+                     (to_jsonb(vp)->>'owner_jurisdiction') AS owner_jurisdiction,
+                     (to_jsonb(vp)->>'source_dataset_id') AS source_dataset_id,
+                     (to_jsonb(vp)->>'source_row_id') AS source_row_id,
+                     (to_jsonb(vp)->>'source_url') AS source_url,
+                     (to_jsonb(vp)->>'source_as_of') AS source_as_of,
+                     (to_jsonb(vp)->>'source_retrieved_at') AS source_retrieved_at,
+                     (to_jsonb(vp)->>'managing_organization') AS managing_organization,
+                     (to_jsonb(vp)->>'program_name') AS program_name,
+                     (to_jsonb(vp)->>'program_key') AS program_key,
+                     (to_jsonb(vp)->>'offer_round') AS offer_round,
+                     (to_jsonb(vp)->>'application_use') AS application_use,
+                     (to_jsonb(vp)->>'application_opens') AS application_opens,
+                     (to_jsonb(vp)->>'application_deadline') AS application_deadline,
+                     (to_jsonb(vp)->>'application_url') AS application_url,
+                     (to_jsonb(vp)->>'property_status') AS property_status,
+                     (to_jsonb(vp)->>'sales_status') AS sales_status,
+                     (to_jsonb(vp)->>'sale_offering_status') AS sale_offering_status,
+                     (to_jsonb(vp)->>'sale_offering_reason') AS sale_offering_reason,
+                     (to_jsonb(vp)->'program_context') AS program_context,
                      (to_jsonb(vp)->>'source_record_date') AS source_record_date,
                      updated_at::text AS explorer_refreshed_at
               FROM vacant_properties vp
@@ -412,7 +659,12 @@ export async function GET(request: NextRequest) {
               LIMIT ${limit + 1}
             `;
 
-          return buildDatabaseResponse(rows as VacancyRow[], limit, evidenceReferenceDate);
+          return await buildDatabaseResponseWithCoverage(
+            rows as VacancyRow[],
+            limit,
+            evidenceReferenceDate,
+            sql,
+          );
         }
 
         if (polygonParam) {
@@ -421,6 +673,26 @@ export async function GET(request: NextRequest) {
             SELECT id, source, address, lat, lon, property_type, ward, community_area,
                    zoning_class, square_feet, status, zone_matches, incentive_count,
                    owner_name, owner_type,
+                   (to_jsonb(vp)->>'pin') AS pin,
+                   (to_jsonb(vp)->>'owner_jurisdiction') AS owner_jurisdiction,
+                   (to_jsonb(vp)->>'source_dataset_id') AS source_dataset_id,
+                   (to_jsonb(vp)->>'source_row_id') AS source_row_id,
+                   (to_jsonb(vp)->>'source_url') AS source_url,
+                   (to_jsonb(vp)->>'source_as_of') AS source_as_of,
+                   (to_jsonb(vp)->>'source_retrieved_at') AS source_retrieved_at,
+                   (to_jsonb(vp)->>'managing_organization') AS managing_organization,
+                   (to_jsonb(vp)->>'program_name') AS program_name,
+                   (to_jsonb(vp)->>'program_key') AS program_key,
+                   (to_jsonb(vp)->>'offer_round') AS offer_round,
+                   (to_jsonb(vp)->>'application_use') AS application_use,
+                   (to_jsonb(vp)->>'application_opens') AS application_opens,
+                   (to_jsonb(vp)->>'application_deadline') AS application_deadline,
+                   (to_jsonb(vp)->>'application_url') AS application_url,
+                   (to_jsonb(vp)->>'property_status') AS property_status,
+                   (to_jsonb(vp)->>'sales_status') AS sales_status,
+                   (to_jsonb(vp)->>'sale_offering_status') AS sale_offering_status,
+                   (to_jsonb(vp)->>'sale_offering_reason') AS sale_offering_reason,
+                   (to_jsonb(vp)->'program_context') AS program_context,
                    (to_jsonb(vp)->>'source_record_date') AS source_record_date,
                    updated_at::text AS explorer_refreshed_at
             FROM vacant_properties vp
@@ -432,13 +704,38 @@ export async function GET(request: NextRequest) {
             LIMIT ${limit + 1}
           `;
 
-          return buildDatabaseResponse(rows as VacancyRow[], limit, evidenceReferenceDate);
+          return await buildDatabaseResponseWithCoverage(
+            rows as VacancyRow[],
+            limit,
+            evidenceReferenceDate,
+            sql,
+          );
         }
 
         const rows = await sql`
           SELECT id, source, address, lat, lon, property_type, ward, community_area,
                  zoning_class, square_feet, status, zone_matches, incentive_count,
                  owner_name, owner_type,
+                 (to_jsonb(vp)->>'pin') AS pin,
+                 (to_jsonb(vp)->>'owner_jurisdiction') AS owner_jurisdiction,
+                 (to_jsonb(vp)->>'source_dataset_id') AS source_dataset_id,
+                 (to_jsonb(vp)->>'source_row_id') AS source_row_id,
+                 (to_jsonb(vp)->>'source_url') AS source_url,
+                 (to_jsonb(vp)->>'source_as_of') AS source_as_of,
+                 (to_jsonb(vp)->>'source_retrieved_at') AS source_retrieved_at,
+                 (to_jsonb(vp)->>'managing_organization') AS managing_organization,
+                 (to_jsonb(vp)->>'program_name') AS program_name,
+                 (to_jsonb(vp)->>'program_key') AS program_key,
+                 (to_jsonb(vp)->>'offer_round') AS offer_round,
+                 (to_jsonb(vp)->>'application_use') AS application_use,
+                 (to_jsonb(vp)->>'application_opens') AS application_opens,
+                 (to_jsonb(vp)->>'application_deadline') AS application_deadline,
+                 (to_jsonb(vp)->>'application_url') AS application_url,
+                 (to_jsonb(vp)->>'property_status') AS property_status,
+                 (to_jsonb(vp)->>'sales_status') AS sales_status,
+                 (to_jsonb(vp)->>'sale_offering_status') AS sale_offering_status,
+                 (to_jsonb(vp)->>'sale_offering_reason') AS sale_offering_reason,
+                 (to_jsonb(vp)->'program_context') AS program_context,
                  (to_jsonb(vp)->>'source_record_date') AS source_record_date,
                  updated_at::text AS explorer_refreshed_at
           FROM vacant_properties vp
@@ -450,7 +747,12 @@ export async function GET(request: NextRequest) {
           LIMIT ${limit + 1}
         `;
 
-        return buildDatabaseResponse(rows as VacancyRow[], limit, evidenceReferenceDate);
+        return await buildDatabaseResponseWithCoverage(
+          rows as VacancyRow[],
+          limit,
+          evidenceReferenceDate,
+          sql,
+        );
       } catch (err) {
         console.warn("[vacant] DB query failed, falling back to static:", err);
         fallbackReason = "database_query_failed";
@@ -466,6 +768,7 @@ export async function GET(request: NextRequest) {
           [],
           limit,
           null,
+          undefined,
           fallbackReason,
           evidenceReferenceDate,
         );
@@ -503,6 +806,7 @@ export async function GET(request: NextRequest) {
         filtered,
         limit,
         data.generatedAt,
+        data.cclbaSourceCoverage,
         fallbackReason,
         evidenceReferenceDate,
       );
@@ -511,6 +815,7 @@ export async function GET(request: NextRequest) {
         [],
         limit,
         null,
+        undefined,
         fallbackReason,
         evidenceReferenceDate,
       );

@@ -56,6 +56,17 @@ describe("PATCH /api/saved-reports/[id]", () => {
     expect(sqlMock).not.toHaveBeenCalled();
   });
 
+  it("rejects an overlong title before updating the database", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    const res = await PATCH(patchRequest({ title: "x".repeat(201) }), params);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: "title must be 200 characters or fewer",
+    });
+    expect(sqlMock).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the report belongs to another user", async () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock.mockResolvedValue([]);

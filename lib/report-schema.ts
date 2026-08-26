@@ -26,19 +26,25 @@
  *  - **Failures are typed and returned, never thrown.** The caller renders
  *    "this saved report could not be loaded"; nothing crashes the page.
  *
- * Adding version 2: bump `CURRENT_REPORT_SCHEMA_VERSION`, add a migration step
- * to `MIGRATIONS` keyed by the version it upgrades *from*, and leave the
+ * Adding another version: bump `CURRENT_REPORT_SCHEMA_VERSION`, add a migration
+ * step to `MIGRATIONS` keyed by the version it upgrades *from*, and leave the
  * version-1 validation below alone — old rows keep arriving forever.
  */
 
 import type { GeneratedReport, ReportItem, ReportSection, ReportType } from "./report-engine";
+import {
+  isLegacyDrawnAreaReport,
+  parseDrawnAreaReportScope,
+  type DrawnAreaReportScope,
+} from "./drawn-area-report-scope";
 
 /**
- * The shape the engine writes today. Version 1 is the shape that existed
- * before any of this was versioned, so the first stamped version and the first
- * legacy version are deliberately the same number.
+ * Version 2 is the first shape that guarantees a drawn-area marker carries a
+ * validated exact-polygon scope. Keeping that guarantee in the persisted
+ * version prevents a version-1 deploy from accepting a new exact-area report
+ * and silently widening it to community-area behavior.
  */
-export const CURRENT_REPORT_SCHEMA_VERSION = 1;
+export const CURRENT_REPORT_SCHEMA_VERSION = 2;
 
 /** Read on a blob with no `schemaVersion` field at all. */
 export const LEGACY_REPORT_SCHEMA_VERSION = 1;
@@ -51,7 +57,9 @@ export type SavedReportFailureReason =
   /** Written by a newer deploy than this build understands. */
   | "future-version"
   /** Object, but missing something a report cannot be a report without. */
-  | "missing-required-fields";
+  | "missing-required-fields"
+  /** Explicit drawn-area marker exists, but cannot prove an exact polygon scope. */
+  | "invalid-drawn-area-scope";
 
 export interface SavedReportSuccess {
   ok: true;
@@ -153,11 +161,15 @@ function normalizeRecommendedAction(raw: unknown): GeneratedReport["recommendedA
 }
 
 /**
- * Migration table, keyed by the version each step upgrades *from*. Empty today
- * because version 1 is current; the plumbing is here so the first real shape
- * change is a table entry rather than a rewrite of the load path.
+ * Migration table, keyed by the version each step upgrades *from*. Version 2
+ * does not reshape ordinary reports; it adds the invariant checked below that
+ * drawn-area intent must carry a validated exact polygon. Copying the object
+ * and advancing its version makes that identity migration explicit while the
+ * normalizer continues to repair recoverable legacy fields.
  */
-const MIGRATIONS: Record<number, (report: Record<string, unknown>) => Record<string, unknown>> = {};
+const MIGRATIONS: Record<number, (report: Record<string, unknown>) => Record<string, unknown>> = {
+  1: (report) => ({ ...report, schemaVersion: 2 }),
+};
 
 function fail(reason: SavedReportFailureReason, detail: string): SavedReportFailure {
   return { ok: false, reason, detail };
@@ -215,6 +227,23 @@ export function normalizeSavedReport(raw: unknown): NormalizedSavedReport {
     .map(normalizeRecommendedAction)
     .filter((action): action is GeneratedReport["recommendedActions"][number] => action !== null);
 
+  let drawnAreaScope: DrawnAreaReportScope | undefined;
+  if (working.drawnAreaScope !== undefined) {
+    const parsedScope = parseDrawnAreaReportScope(working.drawnAreaScope);
+    if (!parsedScope.ok) {
+      return fail(
+        "invalid-drawn-area-scope",
+        `Saved drawn-area scope is invalid (${parsedScope.reason}): ${parsedScope.detail}`,
+      );
+    }
+    drawnAreaScope = parsedScope.scope;
+  } else if (isLegacyDrawnAreaReport(working)) {
+    return fail(
+      "invalid-drawn-area-scope",
+      "Saved report is marked as drawn-area but does not contain a validated exact-polygon scope.",
+    );
+  }
+
   const report: GeneratedReport = {
     ...(working as unknown as GeneratedReport),
     schemaVersion: CURRENT_REPORT_SCHEMA_VERSION,
@@ -226,6 +255,7 @@ export function normalizeSavedReport(raw: unknown): NormalizedSavedReport {
     sections,
     recommendedActions,
     metadata: asObject(working.metadata) as GeneratedReport["metadata"],
+    ...(drawnAreaScope ? { drawnAreaScope } : {}),
   };
 
   return {
@@ -242,7 +272,7 @@ export function normalizeSavedReport(raw: unknown): NormalizedSavedReport {
  * the stored snapshot, and an in-memory report that is never saved has no
  * snapshot to describe.
  */
-export function stampReportSchemaVersion<T extends Record<string, unknown>>(
+export function stampReportSchemaVersion<T extends object>(
   reportData: T,
 ): T & { schemaVersion: number } {
   return { ...reportData, schemaVersion: CURRENT_REPORT_SCHEMA_VERSION };

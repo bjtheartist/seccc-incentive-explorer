@@ -312,12 +312,12 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
             )}
             <DataPendingRow
               label="Cook County Land Bank inventory"
-              detail="CCLBA publishes no public API — needs a periodic manual snapshot import."
+              detail="CCLBA publishes a public property inventory, but this owner-file view does not yet join it. No row-level result is asserted here."
             />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/40">
-            Vacant-building violations and tax-sale exposure are live. Delinquent-tax exposure and Cook County
-            Land Bank inventory require a periodic manual import — neither source publishes a public API.
+            Vacant-building violations and tax-sale exposure are live. Delinquent-tax exposure still requires a
+            controlled file import; CCLBA publishes an inventory feed, but its owner-file PIN join is not attached here.
             &quot;Not yet available&quot; always means the source hasn&apos;t loaded — never a silent zero.
           </p>
         </section>

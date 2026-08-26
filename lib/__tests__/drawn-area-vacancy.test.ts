@@ -3,10 +3,25 @@ import {
   createDrawnAreaVacancyRequestLifecycle,
   drawnAreaVacancyRequestPath,
   fetchDrawnAreaVacancy,
+  normalizeCclbaSourceCoverage,
   parseDrawnAreaVacancyResponse,
+  unavailableCclbaSourceCoverage,
   vacancyCoverageDisclosure,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+
+const AVAILABLE_CCLBA_COVERAGE = {
+  status: "available",
+  source: "cclba",
+  sourceDatasetId: "epropertyplus-published-properties",
+  sourceUrl: "https://public-cclba.epropertyplus.com/",
+  publishedCountyTotal: 1_033,
+  chicagoTotal: 915,
+  locatedChicagoTotal: 913,
+  unlocatedChicagoTotal: 2,
+  sourceAsOf: null,
+  retrievedAt: "2026-08-26T18:00:00.000Z",
+} as const;
 
 const COMPLETE_META: VacancyCoverageMetadata = {
   sourceMode: "database",
@@ -47,6 +62,7 @@ const COMPLETE_META: VacancyCoverageMetadata = {
   coverageStatus: "complete",
   potentiallyTruncated: false,
   fallbackReason: null,
+  cclbaSourceCoverage: unavailableCclbaSourceCoverage("snapshot_not_recorded"),
 };
 
 const POLYGON: GeoJSON.Polygon = {
@@ -89,6 +105,24 @@ function screenedFeature(
 }
 
 describe("drawn-area vacancy response", () => {
+  it("accepts only coherent CCLBA source-coverage arithmetic", () => {
+    expect(normalizeCclbaSourceCoverage(AVAILABLE_CCLBA_COVERAGE)).toEqual(
+      AVAILABLE_CCLBA_COVERAGE,
+    );
+    expect(normalizeCclbaSourceCoverage({
+      ...AVAILABLE_CCLBA_COVERAGE,
+      locatedChicagoTotal: 914,
+    })).toBeNull();
+    expect(normalizeCclbaSourceCoverage({
+      ...AVAILABLE_CCLBA_COVERAGE,
+      sourceUrl: "https://example.com/not-the-source",
+    })).toBeNull();
+    expect(normalizeCclbaSourceCoverage({
+      ...AVAILABLE_CCLBA_COVERAGE,
+      retrievedAt: "2026-08-26",
+    })).toBeNull();
+  });
+
   it("accepts adaptive source calls while preserving root-group coverage semantics", () => {
     const features = Array.from({ length: 50 }, (_, index) =>
       screenedFeature(index, "no_match"),
@@ -111,6 +145,115 @@ describe("drawn-area vacancy response", () => {
 
     expect(parseDrawnAreaVacancyResponse({ type: "FeatureCollection", features, meta }))
       .not.toBeNull();
+  });
+
+  it("keeps CCLBA retrieval metadata separate from unavailable snapshot identity", () => {
+    const base = screenedFeature(0, "no_match");
+    const feature: GeoJSON.Feature = {
+      ...base,
+      properties: {
+        ...base.properties,
+        id: "cclba-52905642",
+        recordId: "cclba:52905642",
+        pin: "16141010090000",
+        source: "cclba",
+        status: "Acquired",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceDatasetLabel:
+          "Cook County Land Bank Authority Published Property Inventory",
+        sourceRowId: "52905642",
+        sourceUrl: "https://public-cclba.epropertyplus.com/",
+        sourceAsOf: null,
+        sourceRetrievedAt: "2026-08-26T18:00:00.000Z",
+        sourceSnapshotId: null,
+        ownerName: "Cook County Land Bank Authority",
+        ownerType: "city_public",
+        ownerJurisdiction: "cook_county",
+        programName: null,
+        programContext: [
+          {
+            sourceRowId: "52905642",
+            currentStatus: "Acquired",
+            inventoryType: "Vacant Land",
+          },
+        ],
+      },
+    };
+    const meta: VacancyCoverageMetadata = {
+      ...COMPLETE_META,
+      returnedCount: 1,
+      freshness: {
+        ...COMPLETE_META.freshness,
+        returnedCounts: { recent: 0, stale: 0, unknownDate: 1 },
+      },
+      licenseScreening: {
+        ...COMPLETE_META.licenseScreening,
+        candidateCount: 1,
+        checkedCount: 1,
+        sourceCallCount: 1,
+        successfulBatches: 1,
+      },
+    };
+
+    expect(
+      parseDrawnAreaVacancyResponse({
+        type: "FeatureCollection",
+        features: [feature],
+        meta,
+      }),
+    ).not.toBeNull();
+    expect(
+      parseDrawnAreaVacancyResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              sourceSnapshotId:
+                "epropertyplus-published-properties@2026-08-26T18:00:00.000Z",
+            },
+          },
+        ],
+        meta,
+      }),
+    ).toBeNull();
+    for (const unsafeLink of [
+      "javascript:alert(1)",
+      "data:text/html,unsafe",
+      "/relative",
+    ]) {
+      expect(
+        parseDrawnAreaVacancyResponse({
+          type: "FeatureCollection",
+          features: [
+            {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                applicationUrl: unsafeLink,
+              },
+            },
+          ],
+          meta,
+        }),
+      ).toBeNull();
+    }
+    expect(
+      parseDrawnAreaVacancyResponse({
+        type: "FeatureCollection",
+        features: [
+          {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              sourceUrl: "javascript:alert(1)",
+            },
+          },
+        ],
+        meta,
+      }),
+    ).toBeNull();
   });
 
   it("accepts terminal saturation only as unavailable, never as a clean zero", () => {
@@ -421,7 +564,28 @@ describe("drawn-area vacancy response", () => {
       potentiallyTruncated: true,
     });
     expect(truncated).toContain("10,000-record response limit");
-    expect(vacancyCoverageDisclosure(COMPLETE_META)).toBeNull();
+    const unlocated = vacancyCoverageDisclosure({
+      ...COMPLETE_META,
+      cclbaSourceCoverage: AVAILABLE_CCLBA_COVERAGE,
+    });
+    expect(unlocated).toContain("1,033 countywide records");
+    expect(unlocated).toContain("915 in Chicago");
+    expect(unlocated).toContain("913 Chicago records had usable coordinates");
+    expect(unlocated).toContain("2 could not be tested against this area");
+    expect(unlocated).toContain("not independent deed proof");
+    expect(vacancyCoverageDisclosure(COMPLETE_META)).toContain(
+      "cannot quantify published CCLBA records excluded",
+    );
+    expect(
+      vacancyCoverageDisclosure({
+        ...COMPLETE_META,
+        cclbaSourceCoverage: {
+          ...AVAILABLE_CCLBA_COVERAGE,
+          locatedChicagoTotal: 915,
+          unlocatedChicagoTotal: 0,
+        },
+      }),
+    ).toBeNull();
   });
 });
 

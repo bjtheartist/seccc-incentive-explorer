@@ -73,7 +73,14 @@ export default function SavedReportPage() {
           setLoadError(SAVED_REPORT_LOAD_ERROR);
           return;
         }
-        setReport(normalized.report);
+        const persistedTitle = data.report?.title;
+        setReport({
+          ...normalized.report,
+          title:
+            typeof persistedTitle === "string" && persistedTitle.trim()
+              ? persistedTitle
+              : normalized.report.title,
+        });
         setWizardState(data.report.wizardState as WizardState);
       })
       .catch(() => setLoadError("This report could not be loaded right now. Refresh to try again."))

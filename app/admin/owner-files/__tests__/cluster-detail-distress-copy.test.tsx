@@ -110,16 +110,19 @@ describe("Distress Signals — manual-import-pending cards", () => {
     const html = await renderPage();
     expect(html).toContain("Requires the Cook County Clerk&#x27;s monthly delinquency file (manual import)");
     expect(html).toContain("sale-exposure below is the public signal in the meantime");
-    expect(html).toContain("CCLBA publishes no public API");
-    expect(html).toContain("needs a periodic manual snapshot import");
+    expect(html).toContain(
+      "CCLBA publishes a public property inventory, but this owner-file view does not yet join it",
+    );
+    expect(html).toContain(
+      "CCLBA publishes an inventory feed, but its owner-file PIN join is not attached here",
+    );
   });
 
-  it("updates the section footer to reflect two live signals and two manual-import-pending ones", async () => {
+  it("updates the section footer to distinguish the public feed from its pending owner-file join", async () => {
     getOwnerFileMock.mockResolvedValue(makeOwnerFile(baseCluster));
     const html = await renderPage();
     expect(html).toContain("Vacant-building violations and tax-sale exposure are live");
-    expect(html).toContain("Delinquent-tax exposure and Cook County");
-    expect(html).toContain("require a periodic manual import");
+    expect(html).toContain("Delinquent-tax exposure still requires a controlled file import");
   });
 });
 

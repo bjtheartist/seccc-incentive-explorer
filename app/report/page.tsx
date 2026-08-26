@@ -116,10 +116,23 @@ import {
   buildTableCsv,
   buildVacancySpreadsheetCsv,
   downloadCsv,
+  programContextToText,
   slugifyFilePart,
   zoneMatchesToText,
   type VacancySpreadsheetFeature,
 } from "@/lib/vacancy-spreadsheet";
+import { filterAreaVacancyFeatures } from "@/lib/area-vacancy-presentation";
+import {
+  assessDrawnAreaRecordDriftComparability,
+  compareDrawnAreaRecordManifest,
+  hasCompleteCurrentDrawnAreaSelection,
+  resolveVacancySpreadsheetScope,
+  safeVacancyProgramUrl,
+} from "@/lib/vacancy-spreadsheet-scope";
+import {
+  parseDrawnAreaVacancyResponse,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 import {
   AnchorCards,
   ComparisonBar,
@@ -3710,6 +3723,8 @@ function ReportDisplay({
     useState(false);
   const [vacancySpreadsheetFeatures, setVacancySpreadsheetFeatures] =
     useState<VacancySpreadsheetFeature[] | null>(null);
+  const vacancySpreadsheetCoverageRef =
+    useRef<VacancyCoverageMetadata | null>(null);
   const [vacancySpreadsheetError, setVacancySpreadsheetError] =
     useState<string | null>(null);
   const [editedSummaryText, setEditedSummaryText] = useState(
@@ -4122,49 +4137,113 @@ function ReportDisplay({
     report.reportType === "dev-feasibility" ||
     report.reportType === "best-location" ||
     report.title.toLowerCase().includes("vacancy");
+  const vacancySpreadsheetScope = useMemo(
+    () => resolveVacancySpreadsheetScope(report, reportWizardState),
+    [report, reportWizardState],
+  );
+  const isDrawnAreaReport =
+    (vacancySpreadsheetScope.status === "ready" &&
+      vacancySpreadsheetScope.kind === "drawn-area") ||
+    vacancySpreadsheetScope.status === "unavailable";
   const vacancySpreadsheetLocale =
-    isVacancyReport && reportWizardState?.neighborhood
-      ? reportWizardState.neighborhood.trim()
+    vacancySpreadsheetScope.status === "ready"
+      ? vacancySpreadsheetScope.label
+      : "";
+  const vacancySpreadsheetDisplayName =
+    vacancySpreadsheetScope.status === "ready" &&
+    vacancySpreadsheetScope.kind === "drawn-area"
+      ? report.title.trim() || vacancySpreadsheetScope.label
+      : vacancySpreadsheetLocale;
+  const vacancySpreadsheetRequestPath =
+    vacancySpreadsheetScope.status === "ready"
+      ? vacancySpreadsheetScope.requestPath
       : "";
 
+  const vacancyFeaturesForScope = useCallback(
+    (features: VacancySpreadsheetFeature[]): VacancySpreadsheetFeature[] => {
+      if (
+        vacancySpreadsheetScope.status !== "ready" ||
+        vacancySpreadsheetScope.kind !== "drawn-area"
+      ) {
+        return features;
+      }
+      const filters = vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters;
+      return filterAreaVacancyFeatures(
+        features as GeoJSON.Feature[],
+        filters.freshness,
+        filters.license,
+      ) as VacancySpreadsheetFeature[];
+    },
+    [vacancySpreadsheetScope],
+  );
+  const vacancyPayloadForScope = useCallback(
+    (value: unknown): {
+      features: VacancySpreadsheetFeature[];
+      coverage: VacancyCoverageMetadata | null;
+    } => {
+      if (
+        vacancySpreadsheetScope.status === "ready" &&
+        vacancySpreadsheetScope.kind === "drawn-area"
+      ) {
+        const parsed = parseDrawnAreaVacancyResponse(value);
+        if (!parsed) throw new Error("Malformed drawn-area vacancy response");
+        return {
+          features: vacancyFeaturesForScope(parsed.features),
+          coverage: parsed.meta,
+        };
+      }
+      const collection = value as { features?: VacancySpreadsheetFeature[] };
+      return {
+        features: vacancyFeaturesForScope(collection.features ?? []),
+        coverage: null,
+      };
+    },
+    [vacancyFeaturesForScope, vacancySpreadsheetScope],
+  );
+
   useEffect(() => {
-    if (!vacancySpreadsheetLocale) {
+    if (compact || !vacancySpreadsheetRequestPath) {
       setVacancySpreadsheetFeatures(null);
+      vacancySpreadsheetCoverageRef.current = null;
       setVacancySpreadsheetError(null);
       setIsLoadingVacancySpreadsheet(false);
       return;
     }
 
     const controller = new AbortController();
+    setVacancySpreadsheetFeatures(null);
+    vacancySpreadsheetCoverageRef.current = null;
 
     async function loadVacancySpreadsheet() {
       setIsLoadingVacancySpreadsheet(true);
       setVacancySpreadsheetError(null);
       try {
-        const res = await fetch(
-          `/api/vacant?communityArea=${encodeURIComponent(vacancySpreadsheetLocale)}&limit=10000`,
-          { signal: controller.signal }
-        );
+        const res = await fetch(vacancySpreadsheetRequestPath, {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Vacancy spreadsheet unavailable");
 
-        const data = (await res.json()) as {
-          features?: VacancySpreadsheetFeature[];
-        };
-        setVacancySpreadsheetFeatures(data.features ?? []);
+        const data: unknown = await res.json();
+        const payload = vacancyPayloadForScope(data);
+        vacancySpreadsheetCoverageRef.current = payload.coverage;
+        setVacancySpreadsheetFeatures(payload.features);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("[report] vacancy spreadsheet load failed:", err);
         setVacancySpreadsheetFeatures(null);
+        vacancySpreadsheetCoverageRef.current = null;
         setVacancySpreadsheetError("Vacancy spreadsheet could not be loaded.");
       } finally {
-        setIsLoadingVacancySpreadsheet(false);
+        if (!controller.signal.aborted) {
+          setIsLoadingVacancySpreadsheet(false);
+        }
       }
     }
 
     loadVacancySpreadsheet();
 
     return () => controller.abort();
-  }, [vacancySpreadsheetLocale]);
+  }, [compact, vacancyPayloadForScope, vacancySpreadsheetRequestPath]);
 
   /* ── Admin-only ownership context (screen-only; never PDF/email — see
         components/report/AdminOwnershipPanel.tsx). Probes the Owner Files
@@ -4204,34 +4283,98 @@ function ReportDisplay({
   }, [compact, reportZip, report.metadata?.address]);
 
   const handleVacancySpreadsheetExport = useCallback(async () => {
-    if (!vacancySpreadsheetLocale) return;
+    if (!vacancySpreadsheetRequestPath) return;
 
     setIsExportingVacancySpreadsheet(true);
     try {
       let features = vacancySpreadsheetFeatures;
       if (!features) {
-        const res = await fetch(
-          `/api/vacant?communityArea=${encodeURIComponent(vacancySpreadsheetLocale)}&limit=10000`
-        );
+        const res = await fetch(vacancySpreadsheetRequestPath);
         if (!res.ok) throw new Error("Vacancy export failed");
 
-        const data = (await res.json()) as {
-          features?: VacancySpreadsheetFeature[];
-        };
-        features = data.features ?? [];
+        const data: unknown = await res.json();
+        const payload = vacancyPayloadForScope(data);
+        features = payload.features;
+        vacancySpreadsheetCoverageRef.current = payload.coverage;
         setVacancySpreadsheetFeatures(features);
       }
+      if (
+        vacancySpreadsheetScope.status === "ready" &&
+        vacancySpreadsheetScope.kind === "drawn-area" &&
+        !hasCompleteCurrentDrawnAreaSelection(
+          vacancySpreadsheetScope.drawnArea,
+          vacancySpreadsheetCoverageRef.current,
+        )
+      ) {
+        throw new Error(
+          "Incomplete drawn-area vacancy selection cannot be exported as a complete spreadsheet",
+        );
+      }
 
+      const csvProvenance =
+        vacancySpreadsheetScope.status === "ready" &&
+        vacancySpreadsheetScope.kind === "drawn-area"
+          ? {
+              scopeFingerprint:
+                vacancySpreadsheetScope.drawnArea.scope.fingerprint,
+              selectionMethod: "point_in_saved_polygon",
+              scopeGeneratedAt: vacancySpreadsheetScope.drawnArea.generatedAt,
+              generationFreshnessFilter:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
+                  .freshness,
+              generationLicenseFilter:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
+                  .license,
+              generationManifestSelectedCount:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy
+                  .selectedCount,
+              generationCoverageStatus:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
+                  ?.status,
+              generationLicenseScreeningStatus:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
+                  ?.licenseScreeningStatus,
+              generationSourcePath:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.source
+                  ?.path,
+              generationFallbackReason:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
+                  ?.fallbackReason,
+              generationCclbaSourceCoverage:
+                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
+                  ?.cclbaSourceCoverage,
+              currentCoverageStatus:
+                vacancySpreadsheetCoverageRef.current?.coverageStatus,
+              currentLicenseScreeningStatus:
+                vacancySpreadsheetCoverageRef.current?.licenseScreening.status,
+              currentSourcePath:
+                vacancySpreadsheetCoverageRef.current?.sourcePath,
+              currentFallbackReason:
+                vacancySpreadsheetCoverageRef.current?.fallbackReason,
+              currentCclbaSourceCoverage:
+                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
+            }
+          : {
+              selectionMethod: "community_area_boundary",
+              currentCclbaSourceCoverage:
+                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
+            };
       downloadCsv(
-        buildVacancySpreadsheetCsv(features),
-        `vacant-properties-${slugifyFilePart(vacancySpreadsheetLocale)}-${new Date().toISOString().slice(0, 10)}.csv`
+        buildVacancySpreadsheetCsv(features, csvProvenance),
+        `vacant-properties-${slugifyFilePart(vacancySpreadsheetDisplayName)}-${new Date().toISOString().slice(0, 10)}.csv`
       );
     } catch (err) {
       console.error("[report] vacancy spreadsheet export failed:", err);
     } finally {
       setIsExportingVacancySpreadsheet(false);
     }
-  }, [vacancySpreadsheetFeatures, vacancySpreadsheetLocale]);
+  }, [
+    vacancyPayloadForScope,
+    vacancySpreadsheetFeatures,
+    vacancySpreadsheetDisplayName,
+    vacancySpreadsheetRequestPath,
+    vacancySpreadsheetScope,
+  ]);
 
   const vacancySpreadsheetStats = useMemo(() => {
     const features = vacancySpreadsheetFeatures ?? [];
@@ -4239,9 +4382,40 @@ function ReportDisplay({
       total: features.length,
       land: features.filter((feature) => feature.properties?.propertyType === "vacant_land").length,
       buildings: features.filter((feature) => feature.properties?.propertyType === "vacant_building").length,
-      cityOwned: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
+      publicOwnership: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
     };
   }, [vacancySpreadsheetFeatures]);
+  const drawnAreaRecordDrift = useMemo(() => {
+    if (
+      vacancySpreadsheetScope.status !== "ready" ||
+      vacancySpreadsheetScope.kind !== "drawn-area" ||
+      !vacancySpreadsheetFeatures
+    ) {
+      return null;
+    }
+    const comparability = assessDrawnAreaRecordDriftComparability(
+      vacancySpreadsheetScope.drawnArea,
+      vacancySpreadsheetCoverageRef.current,
+    );
+    if (comparability.status !== "comparable") return null;
+    return compareDrawnAreaRecordManifest(
+      vacancySpreadsheetScope.drawnArea,
+      vacancySpreadsheetFeatures,
+    );
+  }, [vacancySpreadsheetFeatures, vacancySpreadsheetScope]);
+  const drawnAreaRecordDriftComparability = useMemo(() => {
+    if (
+      vacancySpreadsheetScope.status !== "ready" ||
+      vacancySpreadsheetScope.kind !== "drawn-area" ||
+      !vacancySpreadsheetFeatures
+    ) {
+      return null;
+    }
+    return assessDrawnAreaRecordDriftComparability(
+      vacancySpreadsheetScope.drawnArea,
+      vacancySpreadsheetCoverageRef.current,
+    );
+  }, [vacancySpreadsheetFeatures, vacancySpreadsheetScope]);
   const ownerOperatorSection = useMemo(
     () =>
       report.sections.find(
@@ -4260,6 +4434,37 @@ function ReportDisplay({
 
   if (vacancySpreadsheetLocale && !compact) {
     const features = vacancySpreadsheetFeatures ?? [];
+    const isDrawnArea =
+      vacancySpreadsheetScope.status === "ready" &&
+      vacancySpreadsheetScope.kind === "drawn-area";
+    const responsePending =
+      isLoadingVacancySpreadsheet ||
+      (vacancySpreadsheetFeatures === null && !vacancySpreadsheetError);
+    const currentLicenseConflictScreeningIncomplete =
+      isDrawnArea &&
+      vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters.license ===
+        "conflicts" &&
+      vacancySpreadsheetCoverageRef.current?.licenseScreening.status !==
+        "available";
+    const currentSelectionIncomplete =
+      isDrawnArea &&
+      !hasCompleteCurrentDrawnAreaSelection(
+        vacancySpreadsheetScope.drawnArea,
+        vacancySpreadsheetCoverageRef.current,
+      );
+    const canExportVacancySpreadsheet =
+      !isDrawnArea ||
+      (vacancySpreadsheetFeatures !== null &&
+        !vacancySpreadsheetError &&
+        !currentSelectionIncomplete);
+    const spreadsheetCount = (count: number, loadingLabel: string): string => {
+      if (responsePending) return loadingLabel;
+      if (vacancySpreadsheetError) return "Unavailable";
+      if (currentSelectionIncomplete) {
+        return count > 0 ? `${count.toLocaleString("en-US")}+` : "Incomplete";
+      }
+      return count.toLocaleString("en-US");
+    };
 
     return (
       <motion.div {...fadeIn}>
@@ -4270,10 +4475,12 @@ function ReportDisplay({
                 Chicago Site Incentive Map
               </p>
               <h1 className="font-editorial text-3xl sm:text-4xl lg:text-[42px] text-white leading-tight mb-3">
-                Vacancy Spreadsheet — {vacancySpreadsheetLocale}
+                Vacancy Spreadsheet — {vacancySpreadsheetDisplayName}
               </h1>
               <p className="text-white/50 text-[15px] leading-relaxed max-w-xl mb-6">
-                Vacant-property addresses and site context for the selected Chicago community area.
+                {isDrawnArea
+                  ? "Tracked vacancy-record addresses and site context inside the exact boundary saved with this report."
+                  : "Tracked vacancy-record addresses and site context for the selected Chicago community area."}
               </p>
               <div className="w-10 h-[3px] bg-white/30" />
             </div>
@@ -4292,26 +4499,48 @@ function ReportDisplay({
                   Output
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
-                  Vacant Property Spreadsheet
+                  Vacancy Record Spreadsheet
                 </span>
               </div>
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Locale
+                  {isDrawnArea ? "Saved area" : "Locale"}
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
-                  {vacancySpreadsheetLocale}
+                  {vacancySpreadsheetDisplayName}
                 </span>
               </div>
             </div>
 
             <div className="px-5 sm:px-12 md:px-16 py-10">
+              {isDrawnArea && vacancySpreadsheetScope.status === "ready" && (
+                <div className="border border-[#2563EB]/15 bg-[#EFF6FF] px-4 py-4 mb-8">
+                  <p className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#2563EB] mb-2">
+                    Provenance chain
+                  </p>
+                  <p className="text-[12px] leading-relaxed text-[#0C1B33]/65">
+                    Exact saved polygon · fingerprint {vacancySpreadsheetScope.drawnArea.scope.fingerprint} · saved {vacancySpreadsheetScope.drawnArea.generatedAt} · current results filtered under the saved evidence policy.
+                  </p>
+                  {drawnAreaRecordDrift && (
+                    <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
+                      Generation manifest: {drawnAreaRecordDrift.saved.toLocaleString("en-US")} records. Current polygon result: {drawnAreaRecordDrift.current.toLocaleString("en-US")} ({drawnAreaRecordDrift.added.toLocaleString("en-US")} added, {drawnAreaRecordDrift.removed.toLocaleString("en-US")} removed, {drawnAreaRecordDrift.changedSnapshots.toLocaleString("en-US")} source snapshot changed since save, {drawnAreaRecordDrift.snapshotsNotComparable.toLocaleString("en-US")} shared-record snapshot comparison unavailable).
+                    </p>
+                  )}
+                  {!responsePending &&
+                    !drawnAreaRecordDrift &&
+                    drawnAreaRecordDriftComparability?.status === "unavailable" && (
+                      <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
+                        {drawnAreaRecordDriftComparability.detail}
+                      </p>
+                    )}
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mb-8">
                 {[
-                  ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
-                  ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
-                  ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
-                  ["City / public", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.cityOwned.toLocaleString()],
+                  ["Records", spreadsheetCount(vacancySpreadsheetStats.total, "Loading")],
+                  ["Vacant land", spreadsheetCount(vacancySpreadsheetStats.land, "...")],
+                  ["Buildings", spreadsheetCount(vacancySpreadsheetStats.buildings, "...")],
+                  ["Public ownership", spreadsheetCount(vacancySpreadsheetStats.publicOwnership, "...")],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-[#FAF9F6] px-4 py-4">
                     <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
@@ -4327,7 +4556,7 @@ function ReportDisplay({
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
                 <div>
                   <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33] mb-2">
-                    Vacant Property Addresses
+                    Tracked Vacancy Addresses
                   </h2>
                   <p className="text-[#0C1B33]/40 text-[13px] leading-relaxed max-w-2xl">
                     Download the CSV to share, filter, or continue analysis in a spreadsheet tool.
@@ -4335,7 +4564,7 @@ function ReportDisplay({
                 </div>
                 <button
                   onClick={handleVacancySpreadsheetExport}
-                  disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+                  disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
                   className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-6 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
                 >
                   {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
@@ -4354,7 +4583,7 @@ function ReportDisplay({
               )}
 
               <div className="border border-[#0C1B33]/8 overflow-x-auto">
-                <table className="w-full min-w-[980px] text-left text-[12px]">
+                <table className="w-full min-w-[1140px] text-left text-[12px]">
                   <thead className="bg-[#0C1B33]/[0.03]">
                     <tr>
                       {[
@@ -4366,7 +4595,9 @@ function ReportDisplay({
                         "Sq Ft",
                         "Owner",
                         "Owner Type",
+                        "Source status / context",
                         "Zones",
+                        "Source",
                         "Action",
                       ].map((heading) => (
                         <th
@@ -4379,15 +4610,35 @@ function ReportDisplay({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0C1B33]/5">
-                    {isLoadingVacancySpreadsheet ? (
+                    {responsePending ? (
                       <tr>
-                        <td colSpan={10} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          Loading vacant properties...
+                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
+                          Loading vacancy records...
+                        </td>
+                      </tr>
+                    ) : vacancySpreadsheetError ? (
+                      <tr>
+                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
+                          Vacancy records are unavailable. No zero-record claim is being made.
                         </td>
                       </tr>
                     ) : features.length > 0 ? (
                       features.map((feature, rowIndex) => {
                         const property = feature.properties ?? {};
+                        const programName =
+                          typeof property.programName === "string" && property.programName.trim()
+                            ? property.programName.trim()
+                            : null;
+                        const managingOrganization =
+                          typeof property.managingOrganization === "string" && property.managingOrganization.trim()
+                            ? property.managingOrganization.trim()
+                            : null;
+                        const applicationUrl = safeVacancyProgramUrl(property.applicationUrl);
+                        const sourceContext = programContextToText(property.programContext);
+                        const sourceStatus =
+                          typeof property.status === "string" && property.status.trim()
+                            ? property.status.trim()
+                            : null;
                         return (
                           <tr key={`${property.address ?? "property"}-${rowIndex}`} className="hover:bg-[#FAF9F6]">
                             <td className="px-3 py-3 text-[#0C1B33]/75 font-medium">
@@ -4414,8 +4665,61 @@ function ReportDisplay({
                             <td className="px-3 py-3 text-[#0C1B33]/45">
                               {String(property.ownerType ?? "")}
                             </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[240px]">
+                              {sourceStatus || programName || managingOrganization || sourceContext || applicationUrl ? (
+                                <div className="space-y-1">
+                                  {sourceStatus && (
+                                    <div>Source status: {sourceStatus}</div>
+                                  )}
+                                  {programName && <div>{programName}</div>}
+                                  {managingOrganization && (
+                                    <div className="text-[#0C1B33]/35">
+                                      Managed by {managingOrganization}
+                                    </div>
+                                  )}
+                                  {sourceContext && (
+                                    <div className="text-[#0C1B33]/35 break-words">
+                                      {sourceContext}
+                                    </div>
+                                  )}
+                                  {(programName || managingOrganization || sourceContext || applicationUrl) && (
+                                    <div className="text-[#0C1B33]/35">
+                                      Published context; verify current availability and terms.
+                                    </div>
+                                  )}
+                                  {applicationUrl && (
+                                    <a
+                                      href={applicationUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
+                                    >
+                                      Review published program record
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
                             <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[260px] truncate">
                               {zoneMatchesToText(property.zoneMatches)}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[220px]">
+                              {typeof property.sourceUrl === "string" && property.sourceUrl ? (
+                                <a
+                                  href={property.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
+                                >
+                                  {String(property.sourceDatasetLabel ?? property.source ?? "Source record")}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                String(property.sourceDatasetLabel ?? property.source ?? "")
+                              )}
                             </td>
                             <td className="px-3 py-3">
                               <a
@@ -4433,8 +4737,12 @@ function ReportDisplay({
                       })
                     ) : (
                       <tr>
-                        <td colSpan={10} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          No vacant properties found for this locale.
+                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
+                          {currentLicenseConflictScreeningIncomplete
+                            ? "No conflict rows were returned, but current license screening is incomplete and cannot establish a clean zero."
+                            : currentSelectionIncomplete
+                              ? "No rows were returned, but current coverage is incomplete and cannot establish a clean zero."
+                            : `No tracked vacancy records returned for this ${isDrawnArea ? "saved area" : "locale"}.`}
                         </td>
                       </tr>
                     )}
@@ -4448,7 +4756,7 @@ function ReportDisplay({
             <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
               <button
                 onClick={handleVacancySpreadsheetExport}
-                disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+                disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
               >
                 {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
@@ -4478,7 +4786,7 @@ function ReportDisplay({
                 <Mail className="w-3.5 h-3.5" />
                 Email This to Me
               </button>
-              {reportWizardState && (
+              {reportWizardState && !isDrawnAreaReport && (
                 <button
                   onClick={handleShareReport}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
@@ -4602,6 +4910,14 @@ function ReportDisplay({
             )}
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
+          )}
+
+          {vacancySpreadsheetScope.status === "unavailable" && (
+            <div className="mx-5 sm:mx-12 md:mx-16 mt-6 border border-amber-300/60 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-[#0C1B33]/70">
+              {vacancySpreadsheetScope.reason === "malformed-scope"
+                ? "This drawn-area report contains an invalid saved boundary or provenance contract. The stored summary is shown below, but no boundary re-query or CSV can be recreated safely. Redraw the area to create a new exact-scope report."
+                : "This legacy drawn-area report did not save its boundary. The stored report is shown below, but a full boundary CSV cannot be recreated honestly. Redraw the area to create a new exact-scope report."}
+            </div>
           )}
 
           {/* Refine value preview (audit RF6/WU5/BM1): explain what
@@ -4865,7 +5181,7 @@ function ReportDisplay({
               </div>
             )}
 
-            {!showPersonaView && vacancySpreadsheetLocale && (
+            {!compact && !showPersonaView && vacancySpreadsheetLocale && (
               <div className="mb-12 border border-[#0C1B33]/8 bg-[#FAF9F6] p-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
                   <div className="min-w-0">
@@ -4898,7 +5214,7 @@ function ReportDisplay({
                     ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
                     ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
                     ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
-                    ["City / public", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.cityOwned.toLocaleString()],
+                    ["Public ownership", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.publicOwnership.toLocaleString()],
                   ].map(([label, value]) => (
                     <div key={label} className="bg-white px-4 py-3">
                       <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
@@ -5759,7 +6075,7 @@ function ReportDisplay({
                 Vacancy Spreadsheet
               </button>
             )}
-            {reportWizardState && (
+            {reportWizardState && !isDrawnAreaReport && (
               <button
                 onClick={handleShareReport}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
