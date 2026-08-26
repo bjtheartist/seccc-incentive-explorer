@@ -162,21 +162,8 @@ function fallbackSourceDatasetId(source: unknown): string | null {
   return null;
 }
 
-function isOfficialCclbaDataset(
-  source: unknown,
-  sourceDatasetId: string | null,
-): boolean {
-  return source === "cclba" && sourceDatasetId === CCLBA_PUBLIC_DATASET_ID;
-}
-
-function fallbackSourceDatasetLabel(
-  source: unknown,
-  sourceDatasetId: string | null,
-): string | null {
+function fallbackSourceDatasetLabel(source: unknown): string | null {
   if (source === "cols") return "Chicago City-Owned Land Inventory";
-  if (isOfficialCclbaDataset(source, sourceDatasetId)) {
-    return "Cook County Land Bank Authority Published Property Inventory";
-  }
   if (source === "dpd_vacant" || source === "311_clean_lot") {
     return "Chicago 311 Service Requests";
   }
@@ -184,14 +171,8 @@ function fallbackSourceDatasetLabel(
   return null;
 }
 
-function fallbackSourceUrl(
-  source: unknown,
-  sourceDatasetId: string | null,
-): string | null {
+function fallbackSourceUrl(source: unknown): string | null {
   if (source === "cols") return COLS_LANDING_URL;
-  if (isOfficialCclbaDataset(source, sourceDatasetId)) {
-    return CCLBA_PUBLIC_PORTAL_URL;
-  }
   if (source === "dpd_vacant" || source === "311_clean_lot") {
     return "https://data.cityofchicago.org/resource/v6vf-nfxy.json";
   }
@@ -303,8 +284,32 @@ function enrichFeatureEvidence(
   const sourceRowId = textOrNull(properties.sourceRowId);
   const sourceAsOf = timestampOrNull(properties.sourceAsOf);
   const sourceRetrievedAt = timestampOrNull(properties.sourceRetrievedAt);
-  const sourceDatasetId =
-    textOrNull(properties.sourceDatasetId) ?? fallbackSourceDatasetId(source);
+  const suppliedSourceDatasetId = textOrNull(properties.sourceDatasetId);
+  const suppliedSourceUrlText = textOrNull(properties.sourceUrl);
+  const suppliedSourceUrl = absoluteHttpUrlOrNull(properties.sourceUrl);
+  const officialCclbaTuple =
+    source === "cclba" &&
+    suppliedSourceDatasetId === CCLBA_PUBLIC_DATASET_ID &&
+    (suppliedSourceUrlText === null ||
+      suppliedSourceUrl === CCLBA_PUBLIC_PORTAL_URL);
+  const sourceDatasetId = source === "cclba"
+    ? suppliedSourceDatasetId === CCLBA_PUBLIC_DATASET_ID && !officialCclbaTuple
+      ? null
+      : suppliedSourceDatasetId
+    : suppliedSourceDatasetId ?? fallbackSourceDatasetId(source);
+  const sourceUrl = source === "cclba"
+    ? officialCclbaTuple
+      ? CCLBA_PUBLIC_PORTAL_URL
+      : suppliedSourceUrl === CCLBA_PUBLIC_PORTAL_URL
+        ? null
+        : suppliedSourceUrl
+    : suppliedSourceUrl ?? fallbackSourceUrl(source);
+  const sourceDatasetLabel = source === "cclba"
+    ? officialCclbaTuple
+      ? "Cook County Land Bank Authority Published Property Inventory"
+      : null
+    : textOrNull(properties.sourceDatasetLabel) ??
+      fallbackSourceDatasetLabel(source);
   const applicationOpens = timestampOrNull(properties.applicationOpens);
   const applicationDeadline = timestampOrNull(properties.applicationDeadline);
   const pin = textOrNull(properties.pin);
@@ -327,17 +332,13 @@ function enrichFeatureEvidence(
           : internalId),
       pin: pin && /^\d{14}$/.test(pin) ? pin : null,
       sourceDatasetId,
-      sourceDatasetLabel:
-        textOrNull(properties.sourceDatasetLabel) ??
-        fallbackSourceDatasetLabel(source, sourceDatasetId),
+      sourceDatasetLabel,
       // No current vacancy source publishes a row-content revision. Retrieval
       // time remains separate freshness metadata and must not be promoted into
       // snapshot identity, or unchanged rows appear changed after every sync.
       sourceSnapshotId: null,
       sourceRowId,
-      sourceUrl:
-        absoluteHttpUrlOrNull(properties.sourceUrl) ??
-        fallbackSourceUrl(source, sourceDatasetId),
+      sourceUrl,
       sourceAsOf,
       sourceRetrievedAt,
       ownerJurisdiction: textOrNull(properties.ownerJurisdiction),

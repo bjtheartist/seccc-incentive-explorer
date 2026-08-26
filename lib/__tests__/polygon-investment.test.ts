@@ -617,6 +617,9 @@ describe("buildDrawnAreaCsv", () => {
     expect(officialCsv).toContain(
       '"Cook County Land Bank Authority Published Property Inventory"',
     );
+    expect(officialCsv).toContain(
+      '"79th corridor","","","123 S State St","Cook County Land Bank Authority Published Property Inventory","cclba","epropertyplus-published-properties"',
+    );
     expect(officialCsv).toContain('"epropertyplus-published-properties"');
     expect(officialCsv).toContain('"https://public-cclba.epropertyplus.com/"');
   });
