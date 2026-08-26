@@ -61,6 +61,9 @@ function AreaRecordRow({ row }: { row: PermitExhibitAreaRow }) {
         )}
       </td>
       <td className="px-2.5 py-2 text-[12px] text-[#0C1B33]/70">{row.type}</td>
+      <td className="min-w-[18rem] max-w-[30rem] whitespace-normal break-words px-2.5 py-2 text-[12px] leading-relaxed text-[#0C1B33]/55">
+        {row.workDescription ?? <span className="italic text-[#0C1B33]/40">Not published by City</span>}
+      </td>
       <td className="px-2.5 py-2 text-right text-[12px] font-medium text-[#0C1B33] [font-variant-numeric:tabular-nums]">
         {formatFullDollars(row.estimatedCostSelfReported)}
       </td>
@@ -72,13 +75,14 @@ function AreaRecordRow({ row }: { row: PermitExhibitAreaRow }) {
 function AreaRecordTable({ rows, caption }: { rows: PermitExhibitAreaRow[]; caption: string }) {
   return (
     <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
-      <table className="w-full min-w-[640px] border-collapse">
+      <table className="w-full min-w-[900px] border-collapse">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-[#0C1B33]/10 text-left font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
             <th className="px-2.5 py-2 font-medium">Issue date</th>
             <th className="px-2.5 py-2 font-medium">Permit #</th>
             <th className="px-2.5 py-2 font-medium">Type</th>
+            <th className="px-2.5 py-2 font-medium">Work description</th>
             <th className="px-2.5 py-2 text-right font-medium">{PERMIT_EXHIBIT_COST_LABEL}</th>
             <th className="px-2.5 py-2 font-medium">Status</th>
           </tr>
