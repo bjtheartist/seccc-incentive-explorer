@@ -379,6 +379,61 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
     );
     expect(payload).toContain("Source row ID=42");
     expect(payload).not.toContain("Published program / disposition context");
+    expect(payload).toContain('"id":"cook-county-land-bank-inventory"');
+    expect(payload).toContain(
+      '"url":"https://public-cclba.epropertyplus.com/"',
+    );
+  });
+
+  it("does not turn a metadata-less CCLBA row into an official inventory source", () => {
+    const legacyCclba = vacancyFeature("cclba-legacy", {
+      source: "cclba",
+      status: "Acquired",
+      propertyType: "vacant_land",
+      canonicalType: "land",
+      sourceRecordDate: null,
+      freshnessClass: "unknown_date",
+      licenseCheckState: "no_match",
+      ownerName: "Cook County Land Bank Authority",
+      ownerType: "city_public",
+      ownerJurisdiction: "cook_county",
+    });
+    render(
+      panel({
+        results: { type: "FeatureCollection", features: [legacyCclba] },
+        vacancyCoverage: { ...COVERAGE, returnedCount: 1 },
+      }),
+    );
+
+    expect(
+      screen.getByText("Cook County Land Bank Authority public record"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Data: source-attributed public records/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/Data:.*Cook County Land Bank Authority public inventory/),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Report" }));
+    const payload = screen.getByTestId("saved-report-payload").textContent ?? "";
+    const report = JSON.parse(payload) as {
+      dataSources?: Array<{ id?: string; label?: string; url?: string }>;
+    };
+    expect(
+      report.dataSources?.some(
+        (source) => source.id === "cook-county-land-bank-inventory",
+      ),
+    ).toBe(false);
+    expect(payload).not.toContain(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(
+      report.dataSources?.some(
+        (source) =>
+          source.url === "https://public-cclba.epropertyplus.com/",
+      ),
+    ).toBe(false);
   });
 
   it("holds save, email, and CSV actions until vacancy and permit lookups settle", () => {

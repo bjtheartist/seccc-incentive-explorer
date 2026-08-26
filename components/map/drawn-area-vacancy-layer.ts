@@ -43,7 +43,7 @@ export function buildDrawnAreaVacancyPopupHtml(
   properties: Record<string, unknown>,
 ): string {
   const address = escapeHtml(properties.address || "Address not recorded");
-  const source = escapeHtml(vacancySourceLabel(properties.source));
+  const source = escapeHtml(vacancySourceLabel(properties.source, properties));
   const type = escapeHtml(vacancyCanonicalTypeLabel(properties.canonicalType));
   const freshness = escapeHtml(vacancyFreshnessLabel(properties.freshnessClass));
   const sourceDate = escapeHtml(

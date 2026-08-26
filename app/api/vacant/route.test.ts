@@ -446,6 +446,141 @@ describe("GET /api/vacant", () => {
     expect(body.features[0].properties.ownerName).not.toBe("City of Chicago");
   });
 
+  it("does not invent official CCLBA provenance for a pre-migration row", async () => {
+    mockVacancySql([
+      vacantRow({
+        id: "legacy-cclba-row",
+        source: "cclba",
+        property_type: "vacant_land",
+        status: "Listed",
+        source_dataset_id: null,
+        source_url: null,
+      }),
+    ]);
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+    const properties = body.features[0].properties;
+
+    expect(properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel: null,
+      sourceUrl: null,
+    });
+    expect(properties.sourceDatasetId).not.toBe(
+      "epropertyplus-published-properties",
+    );
+    expect(properties.sourceDatasetLabel).not.toBe(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(properties.sourceUrl).not.toBe(
+      "https://public-cclba.epropertyplus.com/",
+    );
+  });
+
+  it("fills known CCLBA provenance only for the explicit official dataset", async () => {
+    mockVacancySql([
+      vacantRow({
+        id: "official-cclba-row",
+        source: "cclba",
+        property_type: "vacant_land",
+        status: "Acquired",
+        source_dataset_id: "epropertyplus-published-properties",
+        source_url: null,
+      }),
+    ]);
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+
+    expect(body.features[0].properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceUrl: "https://public-cclba.epropertyplus.com/",
+    });
+  });
+
+  it("strips incomplete official CCLBA tuples from static fallback rows", async () => {
+    sqlMock.mockRejectedValue(new Error("connection failed"));
+    const labelOnly = staticFeature("cclba-label-only", [-87.6278, 41.8819]);
+    labelOnly.properties = {
+      ...labelOnly.properties,
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceUrl: "https://public-cclba.epropertyplus.com/",
+    };
+    const mismatchedPair = staticFeature(
+      "cclba-mismatched-pair",
+      [-87.6277, 41.8818],
+    );
+    mismatchedPair.properties = {
+      ...mismatchedPair.properties,
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceUrl: "https://example.com/not-the-official-source",
+    };
+    const malformedUrl = staticFeature(
+      "cclba-malformed-url",
+      [-87.6276, 41.8817],
+    );
+    malformedUrl.properties = {
+      ...malformedUrl.properties,
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceUrl: "javascript:invent-official-provenance()",
+    };
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          type: "FeatureCollection",
+          features: [labelOnly, mismatchedPair, malformedUrl],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+
+    expect(body.meta).toMatchObject({
+      sourceMode: "static_fallback",
+      coverageStatus: "partial",
+    });
+    expect(body.features[0].properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel: null,
+      sourceUrl: null,
+    });
+    expect(body.features[1].properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel: null,
+      sourceUrl: "https://example.com/not-the-official-source",
+    });
+    expect(body.features[2].properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel: null,
+      sourceUrl: null,
+    });
+  });
+
   it("anchors freshness to Chicago today before the UTC-day rollover", async () => {
     vi.setSystemTime(new Date("2026-08-15T04:38:00.000Z"));
     mockVacancySql([vacantRow()]);

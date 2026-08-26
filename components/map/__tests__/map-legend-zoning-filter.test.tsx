@@ -53,11 +53,13 @@ function baseProps() {
 }
 
 describe("MapLegendPanel linked zoning filters", () => {
-  it("labels the mixed vacancy layer neutrally and attributes Cook County Land Bank records", () => {
+  it("labels the mixed vacancy layer without claiming an inventory is loaded", () => {
     const html = renderToStaticMarkup(<MapLegendPanel {...baseProps()} />);
 
     expect(html).toContain("Tracked Vacant Land");
-    expect(html).toContain("Cook County Land Bank Authority");
+    expect(html).toContain("Source-attributed public vacancy records");
+    expect(html).toContain("Coverage varies");
+    expect(html).not.toContain("Cook County Land Bank Authority");
     expect(html).not.toContain("City-Owned Vacant Land");
     expect(html).not.toContain("City data + 311 reports");
   });

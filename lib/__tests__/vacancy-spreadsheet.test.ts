@@ -225,6 +225,26 @@ describe("buildVacancySpreadsheetCsv", () => {
     ].map(toCsvCell).join(","))).toBe(true);
   });
 
+  it("does not manufacture official CCLBA provenance for a metadata-less row", () => {
+    const csv = buildVacancySpreadsheetCsv([
+      {
+        properties: {
+          recordId: "cclba:legacy-row",
+          source: "cclba",
+          sourceRowId: "legacy-row",
+          address: "7900 S TEST AVE",
+          status: "published record",
+        },
+      },
+    ]);
+
+    expect(csv).toContain('"cclba:legacy-row"');
+    expect(csv).toContain('"cclba"');
+    expect(csv).not.toContain("epropertyplus-published-properties");
+    expect(csv).not.toContain("Cook County Land Bank Authority Published Property Inventory");
+    expect(csv).not.toContain("https://public-cclba.epropertyplus.com/");
+  });
+
   it("discloses partial coverage even when the export contains zero records", () => {
     const csv = buildVacancySpreadsheetCsv([], {
       scopeFingerprint: "sha256:empty",

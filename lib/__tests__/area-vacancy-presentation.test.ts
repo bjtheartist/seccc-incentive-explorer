@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterAreaVacancyFeatures,
+  isOfficialCclbaPublishedInventorySource,
   summarizeAreaVacancyTypes,
   vacancySourceLabel,
 } from "@/lib/area-vacancy-presentation";
@@ -45,9 +46,49 @@ describe("drawn-area vacancy presentation", () => {
     expect(filterAreaVacancyFeatures(features, "all_records", "conflicts")).toHaveLength(2);
   });
 
-  it("labels CCLBA as Cook County land-bank inventory, not City-owned land", () => {
+  it("labels a source-only CCLBA row neutrally, not as loaded inventory", () => {
     expect(vacancySourceLabel("cclba")).toBe(
-      "Cook County Land Bank Authority Published Property Inventory",
+      "Cook County Land Bank Authority public record",
     );
+  });
+
+  it("uses the official inventory label only for a proved official row", () => {
+    expect(
+      vacancySourceLabel("cclba", {
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceUrl: "https://public-cclba.epropertyplus.com/",
+      }),
+    ).toBe("Cook County Land Bank Authority Published Property Inventory");
+    expect(
+      vacancySourceLabel("cclba", {
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+      }),
+    ).toBe("Cook County Land Bank Authority public record");
+  });
+
+  it("requires both the official dataset id and exact HTTPS portal URL", () => {
+    expect(isOfficialCclbaPublishedInventorySource({ source: "cclba" })).toBe(false);
+    expect(
+      isOfficialCclbaPublishedInventorySource({
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+      }),
+    ).toBe(false);
+    expect(
+      isOfficialCclbaPublishedInventorySource({
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceUrl: "http://public-cclba.epropertyplus.com/",
+      }),
+    ).toBe(false);
+    expect(
+      isOfficialCclbaPublishedInventorySource({
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceUrl: "https://public-cclba.epropertyplus.com/",
+      }),
+    ).toBe(true);
   });
 });

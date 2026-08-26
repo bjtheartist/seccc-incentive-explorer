@@ -52,6 +52,7 @@ import type { VacancyFreshnessFilter } from "@/lib/vacancy-evidence";
 import {
   currentLicenseConflictSummary,
   filterAreaVacancyFeatures,
+  isOfficialCclbaPublishedInventorySource,
   licenseScreeningReportItems,
   summarizeAreaVacancyTypes,
   vacancyCanonicalTypeLabel,
@@ -412,6 +413,13 @@ export default function MapPolygonPanel({
     (feature) => feature.properties?.licenseCheckState === "match",
   ).length;
   const propertyListFeatures = features.slice(0, PROPERTY_LIST_RENDER_LIMIT);
+  const hasOfficialCclbaPublishedInventory = useMemo(
+    () =>
+      features.some((feature) =>
+        isOfficialCclbaPublishedInventorySource(feature.properties),
+      ),
+    [features],
+  );
 
   /* ── Top community area ── */
   const topCommunityArea = useMemo(() => {
@@ -498,7 +506,7 @@ export default function MapPolygonPanel({
     const publicCount = ownerCounts.find((o) => o.key === "city_public")?.count ?? 0;
     if (publicCount > 0) {
       parts.push(
-        `${publicCount} ${publicCount === 1 ? "is" : "are"} classified as public ownership. Review the source record to distinguish City inventory from Cook County Land Bank inventory and to confirm any disposition path.`
+        `${publicCount} ${publicCount === 1 ? "is" : "are"} classified as public ownership. Review the source record to distinguish City inventory from Cook County Land Bank Authority records and to confirm any disposition path.`
       );
     }
 
@@ -600,7 +608,7 @@ export default function MapPolygonPanel({
       return {
         label: String(p.address || "Unknown Address"),
         value: vacancyCanonicalTypeLabel(p.canonicalType),
-        detail: `${vacancySourceLabel(p.source)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${programContext.length > 0 ? ` · ${programContext.join(" · ")} · Verify current availability and terms.` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
+        detail: `${vacancySourceLabel(p.source, p)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${programContext.length > 0 ? ` · ${programContext.join(" · ")} · Verify current availability and terms.` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
         url: applicationUrl ?? undefined,
       };
     });
@@ -845,7 +853,7 @@ export default function MapPolygonPanel({
             : "Vacant property and public boundary data.",
           url: "https://data.cityofchicago.org/",
         },
-        ...(allFeatures.some((feature) => feature.properties?.source === "cclba")
+        ...(hasOfficialCclbaPublishedInventory
           ? [
               {
                 id: "cook-county-land-bank-inventory",
@@ -889,6 +897,7 @@ export default function MapPolygonPanel({
     allFeatures,
     freshnessFilterLabel,
     features,
+    hasOfficialCclbaPublishedInventory,
     drawnAreaScope,
     licenseConflictCount,
     licenseFilterLabel,
@@ -1848,11 +1857,11 @@ export default function MapPolygonPanel({
                               rel="noopener noreferrer"
                               className="text-[8px] text-[#2563EB]/75 hover:underline"
                             >
-                              {vacancySourceLabel(p.source)}
+                              {vacancySourceLabel(p.source, p)}
                             </a>
                           ) : (
                             <span className="text-[8px] text-[#0C1B33]/45">
-                              {vacancySourceLabel(p.source)}
+                              {vacancySourceLabel(p.source, p)}
                             </span>
                           )}
                           {typeof p.status === "string" && p.status.trim() && (
@@ -2020,7 +2029,7 @@ export default function MapPolygonPanel({
           {/* ── Attribution ── */}
           <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
-              Data: City of Chicago Open Data, Cook County Land Bank Authority public inventory, and Cook County Assessor. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
+              Data: source-attributed public records and Cook County Assessor context. Source coverage varies by query and deployment; review each row&apos;s source and the report provenance before treating an inventory as loaded or complete. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
             </p>
           </div>
         </>

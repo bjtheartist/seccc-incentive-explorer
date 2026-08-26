@@ -5,6 +5,10 @@ import {
   type VacancyFreshnessFilter,
 } from "@/lib/vacancy-evidence";
 import type { VacancyLicenseScreeningMetadata } from "@/lib/vacancy-license-screening";
+import {
+  CCLBA_PUBLIC_DATASET_ID,
+  CCLBA_PUBLIC_PORTAL_URL,
+} from "@/lib/vacancy-inventory-sources";
 
 export type VacancyLicenseFilter = "all" | "conflicts";
 
@@ -87,10 +91,16 @@ export function summarizeAreaVacancyTypes(
   return counts;
 }
 
-export function vacancySourceLabel(source: unknown): string {
+export function vacancySourceLabel(
+  source: unknown,
+  properties?: unknown,
+): string {
   if (source === "cols") return "City-Owned Land Inventory";
   if (source === "cclba") {
-    return "Cook County Land Bank Authority Published Property Inventory";
+    if (isOfficialCclbaPublishedInventorySource(properties)) {
+      return "Cook County Land Bank Authority Published Property Inventory";
+    }
+    return "Cook County Land Bank Authority public record";
   }
   if (source === "dpd_vacant") {
     return "311 Vacant/Abandoned Building Complaint";
@@ -98,6 +108,23 @@ export function vacancySourceLabel(source: unknown): string {
   if (source === "311_clean_lot") return "311 Clean Vacant Lot Request";
   if (source === "violations") return "Vacant-building violation record";
   return "Other tracked public record";
+}
+
+/**
+ * A source enum alone cannot establish that the current official CCLBA feed
+ * supplied a row. Require the exact row-level dataset and HTTPS source pair so
+ * legacy or pre-migration records never inherit an official inventory claim.
+ */
+export function isOfficialCclbaPublishedInventorySource(
+  properties: unknown,
+): boolean {
+  if (!properties || typeof properties !== "object") return false;
+  const record = properties as Record<string, unknown>;
+  return (
+    record.source === "cclba" &&
+    record.sourceDatasetId === CCLBA_PUBLIC_DATASET_ID &&
+    record.sourceUrl === CCLBA_PUBLIC_PORTAL_URL
+  );
 }
 
 export function vacancyFreshnessLabel(value: unknown): string {

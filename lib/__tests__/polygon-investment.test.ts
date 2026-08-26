@@ -585,6 +585,43 @@ describe("buildDrawnAreaCsv", () => {
     expect(contextualCsv).toContain(
       '"Residential/Community Developer [isIneligible=true; isBeforeApplicationStart=false]"',
     );
+    expect(contextualCsv).toContain(
+      '"Cook County Land Bank Authority public record"',
+    );
+    expect(contextualCsv).not.toContain(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(contextualCsv).not.toContain("epropertyplus-published-properties");
+    expect(contextualCsv).not.toContain("https://public-cclba.epropertyplus.com/");
+  });
+
+  it("uses the official CCLBA label in direct CSV only for proved official rows", () => {
+    const officialCsv = buildDrawnAreaCsv({
+      areaName: "79th corridor",
+      vacancyFeatures: [
+        {
+          ...vacancy[0],
+          properties: {
+            ...vacancy[0].properties,
+            source: "cclba",
+            sourceDatasetId: "epropertyplus-published-properties",
+            sourceDatasetLabel:
+              "Cook County Land Bank Authority Published Property Inventory",
+            sourceUrl: "https://public-cclba.epropertyplus.com/",
+          },
+        },
+      ],
+      investment: null,
+    });
+
+    expect(officialCsv).toContain(
+      '"Cook County Land Bank Authority Published Property Inventory"',
+    );
+    expect(officialCsv).toContain(
+      '"79th corridor","","","123 S State St","Cook County Land Bank Authority Published Property Inventory","cclba","epropertyplus-published-properties"',
+    );
+    expect(officialCsv).toContain('"epropertyplus-published-properties"');
+    expect(officialCsv).toContain('"https://public-cclba.epropertyplus.com/"');
   });
 
   it("writes one money column per noun and puts each amount only under its own", () => {
