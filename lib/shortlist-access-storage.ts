@@ -6,6 +6,7 @@ import { getSQL } from "@/lib/db";
 import {
   SHORTLIST_ACCESS_SOURCE,
   type ShortlistAccessSignupInput,
+  type ShortlistAccessSource,
 } from "@/lib/shortlist-access";
 
 type SqlClient = NeonQueryFunction<false, false>;
@@ -111,12 +112,17 @@ export async function reserveShortlistAccessSignup(
 
 export async function saveShortlistAccessSignup(
   input: ShortlistAccessSignupInput,
+  // Additive (PR2): defaults to the original shortlist tag so every
+  // existing caller (the site-shortlist gate) is byte-for-byte unchanged.
+  // A caller on another gated surface (e.g. the Permit History Exhibit)
+  // passes its own registered source tag instead.
+  source: ShortlistAccessSource = SHORTLIST_ACCESS_SOURCE,
 ): Promise<string> {
   const sql = requireSQL();
   await ensureStorage(sql);
   const rows = await sql`
     INSERT INTO shortlist_access_signups (full_name, job_title, email, source)
-    VALUES (${input.name}, ${input.title}, ${input.email}, ${SHORTLIST_ACCESS_SOURCE})
+    VALUES (${input.name}, ${input.title}, ${input.email}, ${source})
     ON CONFLICT (email) DO UPDATE SET
       full_name = EXCLUDED.full_name,
       job_title = EXCLUDED.job_title,
