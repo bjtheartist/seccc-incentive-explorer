@@ -53,6 +53,16 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: npm test -- lib/__tests__/zoning-legislation.test.ts lib/__tests__/chicago-zba.test.ts lib/__tests__/zoning-source-artifacts.test.ts app/api/zoning/legislation/route.test.ts
 
+      # Permit History Exhibit "Archive" (rides with its evidence-spine PR):
+      # dates and hashes today's zoning-map-snapshot.json under
+      # data/archive/zoning/ so the exhibit's S3 boundary context can state
+      # what vintage range of archived boundaries exists. Makes no new City
+      # API calls — see scripts/archive-zoning-snapshot.ts's own doc comment
+      # for the full size/format judgment call.
+      - name: Archive zoning snapshot
+        if: steps.diff.outputs.changed == 'true'
+        run: npm run data:archive:zoning
+
       - name: Open source-review PR
         if: steps.diff.outputs.changed == 'true'
         env:

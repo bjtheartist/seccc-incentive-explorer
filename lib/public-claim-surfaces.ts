@@ -340,6 +340,20 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     ],
   },
   {
+    // Permit History Exhibit, PR 1 (evidence spine): registered now even
+    // though no route/page exists yet (PR 2 wires the UI surface) because
+    // this lib already owns real user-facing prose — the self-reported-cost
+    // label, the S3 boundary honest-limit line, the S4 methods & limits
+    // block, and the coverage note — the exact kind of hand-authored
+    // "reviewed-copy" this registry exists to track. PR 2 will extend this
+    // entry's `files` with its route/page rather than opening a duplicate
+    // entry.
+    id: "permit-exhibit-evidence-spine",
+    description: "The Permit History Exhibit's evidence-spine library: subject-parcel/area permit matching, boundary-context honest limits, and the S4 methods & limits copy (no route yet).",
+    contracts: ["reviewed-copy"],
+    files: ["lib/permit-exhibit.ts"],
+  },
+  {
     id: "public-investment-beta-access",
     description: "The Public Investment Analysis beta request, email-verification, staff-approval, passwordless access, and private operations surfaces.",
     contracts: ["reviewed-copy"],

@@ -1,0 +1,14 @@
+{
+  "date": "2026-08-26",
+  "vintage": "2026-07-23T21:36:35.000Z",
+  "sourceUrl": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+  "sha256": "c257218754f74d16c10f3983ebedabacaf71161b3e4a93388382e9fcb15aa711",
+  "sizeBytes": 8977167,
+  "featureCount": 14920,
+  "changeCounts": {
+    "added": 0,
+    "removed": 0,
+    "attributesChanged": 0,
+    "geometryChanged": 0
+  }
+}
