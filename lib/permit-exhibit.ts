@@ -232,12 +232,9 @@ export interface PermitExhibitSubjectRow {
    *  separate. */
   milestone: string | null;
   matchConfidence: "high" | "medium" | "low";
-  /** Deep link to the City record, when the dataset provides one. The
-   *  Socrata `ydr8-5enu` / City building-records portal do not publish a
-   *  verified per-permit query-string URL, so this is the general portal
-   *  entry point (`PERMIT_AREA_PORTAL_URL`) rather than a fabricated
-   *  per-row link — never invent a URL the source does not actually
-   *  support. */
+  /** Deep link to the City record — see {@link buildPermitSourceRecordUrl}.
+   *  A row-level Socrata SoQL explorer link keyed on `permit_` (verified
+   *  live), never a fabricated URL the source does not actually support. */
   sourceRecordUrl: string | null;
 }
 
@@ -297,6 +294,10 @@ export interface PermitExhibitBoundaryContext {
    *  resolution is LIVE, not a stored snapshot), interpolated into
    *  {@link limitNote}. */
   asOfDate: string;
+  /** The subject parcel's County-published situs address — the SAME value
+   *  as `meta.subjectParcel.situsAddress`, duplicated here as a convenience
+   *  for a page-header/S3 renderer that only reaches into boundaryContext. */
+  parcelAddress: string | null;
   zoningDistrict: PermitExhibitZoningDistrict;
   tifDistricts: { key: string; name: string }[];
   /** Every other matched overlay (Opportunity Zone, Enterprise Zone, SSA,
@@ -794,6 +795,27 @@ interface RawAreaPermitRow extends RawPermitRow {
   located_via: unknown;
 }
 
+const PERMIT_SOURCE_EXPLORE_BASE_URL =
+  "https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/explore/query";
+
+/** Per-permit deep link into the Chicago Data Portal's own row-level SoQL
+ *  explorer, keyed on `permit_` — Socrata's own "Row Identifier" for this
+ *  dataset (its published metadata labels that column "Row Identifier:
+ *  PERMIT#"), so it is a stable per-record key, not a guessed URL param.
+ *  Verified live in a real browser on 2026-08-25 — filtering
+ *  `` `permit_` = "101046020" `` returns "Showing row 1 of 1" against the
+ *  real ydr8-5enu dataset. Jointly confirmed with the PR-2 surface
+ *  builder, who found this same pattern independently while wiring the
+ *  UI; consolidated here so both surfaces share ONE builder rather than
+ *  two copies of the same URL-construction logic. */
+export function buildPermitSourceRecordUrl(permitNumber: string): string {
+  const escaped = permitNumber.replace(/"/g, '\\"');
+  const soql =
+    "SELECT `id`, `permit_`, `permit_type`, `issue_date`, `work_description`, `reported_cost` " +
+    `WHERE \`permit_\` = "${escaped}"`;
+  return `${PERMIT_SOURCE_EXPLORE_BASE_URL}/${encodeURIComponent(soql)}/page/filter`;
+}
+
 function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const text = String(value).trim();
@@ -838,7 +860,7 @@ function mapRawPermitRow(row: RawPermitRow): MappedPermitRow | null {
     estimatedCostSelfReported: nullableFiniteNumber(row.reported_cost),
     status: textOrNull(row.permit_status),
     milestone: textOrNull(row.permit_milestone),
-    sourceRecordUrl: PERMIT_AREA_PORTAL_URL,
+    sourceRecordUrl: buildPermitSourceRecordUrl(permitNumber),
     lat: nullableFiniteNumber(row.lat),
     lon: nullableFiniteNumber(row.lon),
     normalizedAddress: textOrNull(row.normalized_address) ?? "",
@@ -1079,6 +1101,7 @@ export async function buildPermitExhibit(
   const asOfDate = now().toISOString().slice(0, 10);
   const boundaryContext: PermitExhibitBoundaryContext = {
     asOfDate,
+    parcelAddress: parcel.situsAddress,
     zoningDistrict,
     tifDistricts,
     overlays,

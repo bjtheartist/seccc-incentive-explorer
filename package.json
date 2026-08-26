@@ -82,7 +82,8 @@
     "data:backfill:permit-geocodes": "npx tsx scripts/backfill-permit-geocodes.ts",
     "data:repair:permit-matches": "npx tsx scripts/repair-permit-match-table.ts",
     "data:refresh:live": "npx tsx scripts/refresh/refresh-live-sources.ts",
-    "data:sync:zoning": "npx tsx scripts/sync-zoning-sources.ts"
+    "data:sync:zoning": "npx tsx scripts/sync-zoning-sources.ts",
+    "data:archive:zoning": "npx tsx scripts/archive-zoning-snapshot.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",
