@@ -3,7 +3,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { PERMIT_EXHIBIT_COST_LABEL } from "@/lib/permit-exhibit";
-import { FIXTURE_PERMIT_EXHIBIT_MIXED } from "@/lib/permit-exhibit-fixtures";
+import {
+  FIXTURE_PERMIT_EXHIBIT_MIXED,
+  fixturePermitExhibitAreaRow,
+} from "@/lib/permit-exhibit-fixtures";
 import { AreaContextSection } from "../AreaContextSection";
 
 afterEach(() => {
@@ -47,6 +50,42 @@ describe("AreaContextSection — S2", () => {
       0,
     );
     expect(container.textContent).not.toContain(`$${sum.toLocaleString("en-US")}`);
+  });
+
+  it("renders the City's published work description for point-located and address-only rows", () => {
+    render(<AreaContextSection area={FIXTURE_PERMIT_EXHIBIT_MIXED.area} radiusFt={500} />);
+
+    const easyPermitRow = screen.getByText("100234567").closest("tr");
+    expect(easyPermitRow).not.toBeNull();
+    expect(within(easyPermitRow!).getByText("REPLACE (3) ROOFTOP HVAC UNITS IN KIND")).toBeTruthy();
+
+    const addressOnlyRow = screen.getByText("100778899").closest("tr");
+    expect(addressOnlyRow).not.toBeNull();
+    expect(within(addressOnlyRow!).getByText("SERVICE UPGRADE, 400 AMP")).toBeTruthy();
+
+    expect(screen.getAllByText("Work description")).toHaveLength(2);
+  });
+
+  it("says when the City did not publish a work description instead of inventing permit scope", () => {
+    const row = fixturePermitExhibitAreaRow({
+      permitNumber: "B200508924",
+      type: "Express Permit Program",
+      typeKey: "express_permit_program",
+      rawType: "PERMIT – EXPRESS PERMIT PROGRAM",
+      workDescription: null,
+      locatedVia: "point",
+    });
+
+    render(
+      <AreaContextSection
+        area={{ byYear: [{ year: 2026, count: 1 }], byType: [{ key: row.typeKey, label: row.type, count: 1 }], rows: [row] }}
+        radiusFt={500}
+      />,
+    );
+
+    const permitRow = screen.getByText("B200508924").closest("tr");
+    expect(permitRow).not.toBeNull();
+    expect(within(permitRow!).getByText("Not published by City")).toBeTruthy();
   });
 
   it("renders the honest 'no point-located records' message when the radius has none", () => {
