@@ -3,7 +3,6 @@
 import { FormEvent, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { PERMIT_EXHIBIT_ACCESS_SOURCE } from "@/lib/shortlist-access";
 
 /**
  * The Permit History Exhibit's signup gate. Reuses the SAME server-side
@@ -12,8 +11,18 @@ import { PERMIT_EXHIBIT_ACCESS_SOURCE } from "@/lib/shortlist-access";
  * per the master spec's explicit ruling that one professional-access
  * session covering both surfaces is fine. Only the copy and the `source`
  * tag posted to the signup API differ, so leads attribute back to this
- * feature (PERMIT_EXHIBIT_ACCESS_SOURCE = "permit-exhibit-gate-2026").
+ * feature.
+ *
+ * The source tag is a LOCAL literal, not imported from lib/shortlist-
+ * access.ts: that module's top-level `node:crypto` import (used by its
+ * session-signing functions) breaks the client webpack bundle the moment
+ * anything is imported from it in a "use client" file — the same class of
+ * bug the client-bundle guard test caught on PermitExhibitEntryForm.tsx.
+ * lib/__tests__/permit-exhibit-access-gate-source.test.ts pins this
+ * literal against lib/shortlist-access.ts's PERMIT_EXHIBIT_ACCESS_SOURCE
+ * so the two can never silently drift.
  */
+export const PERMIT_EXHIBIT_ACCESS_SOURCE_LITERAL = "permit-exhibit-gate-2026";
 
 interface Fields {
   name: string;
@@ -42,7 +51,7 @@ export default function PermitExhibitAccessGate({ address }: { address: string }
       const response = await fetch("/api/shortlist-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...fields, source: PERMIT_EXHIBIT_ACCESS_SOURCE }),
+        body: JSON.stringify({ ...fields, source: PERMIT_EXHIBIT_ACCESS_SOURCE_LITERAL }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
