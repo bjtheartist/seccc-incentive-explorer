@@ -25,20 +25,20 @@ export function PermitExhibitHeader({
 
   return (
     <header>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start lg:gap-[26px]">
         <div>
           <span className="font-mono-bureau text-[9px] uppercase tracking-[0.2em] text-[#2563EB]">
             {PERMIT_EXHIBIT_EYEBROW}
           </span>
-          <h1 className="mt-3 max-w-[1040px] font-editorial text-[clamp(34px,3.4vw,50px)] leading-[0.98] tracking-[-0.02em] text-[#0C1B33]">
+          <h1 className="mt-3 max-w-[720px] font-editorial text-[clamp(34px,4vw,55px)] leading-[1.02] tracking-[-0.035em] text-[#0C1B33]">
             Permit History Exhibit · {address}
           </h1>
-          <p className="mt-4 font-mono-bureau text-[9px] uppercase leading-relaxed tracking-[0.12em] text-[#0C1B33]/55">
+          <p className="mt-[11px] max-w-[760px] font-mono-bureau text-[9px] uppercase leading-[1.65] tracking-[0.12em] text-[#697485]">
             PIN {meta.subjectParcel.pinFormatted} · Radius {radiusFt.toLocaleString("en-US")} ft · Snapshot{" "}
             {formatPermitAreaDate(meta.snapshotDate)} · Exhibit {meta.exhibitId}
           </p>
         </div>
-        <aside className="border border-[#0C1B33]/75 bg-white/60 p-4 sm:p-5" aria-label="Scope statement">
+        <aside className="border border-[#0C1B33]/75 bg-white/60 p-4 sm:mt-[30px] sm:p-5" aria-label="Scope statement">
           <p className="font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0C1B33]">
             Scope statement
           </p>

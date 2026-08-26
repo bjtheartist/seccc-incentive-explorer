@@ -64,7 +64,6 @@ The blue rectangle visible around the last automated target in some captures is 
 No P3 follow-up is required for this scope.
 
 final result: passed
-
 ---
 
 # Strategic Neighborhood Permit MVP — Final QA
@@ -370,5 +369,37 @@ The current strategic MVP is documented in “Strategic Neighborhood Permit MVP 
 - Strategic permit/boundary/map/public-claim verification: 144 tests passed, with TypeScript, ESLint, and the 331-page Next.js production build passing.
 
 No actionable P0, P1, or P2 issue remains.
+
+final result: passed
+
+---
+
+# Permit Exhibit Snapshot Design QA
+
+## Target and state
+
+- Reference: Verified Document direction selected for the saved Permit History Exhibit.
+- Viewport: 1487 x 1058 for both the reference and implementation captures.
+- Implementation state: a real, immutable saved exhibit for PIN `20-36-323-008-0000`, rendered from production-shaped permit and zoning evidence.
+- Comparison method: the reference and browser capture were joined side by side and reviewed as one image.
+
+## Iterations
+
+1. The first implementation capture sat lower than the reference because of an extra breadcrumb, used a wider and smaller title lockup, and made the verification certificate visually too light.
+2. The breadcrumb was removed from the saved route, the title measure and type scale were brought into line with the reference, the scope statement was aligned to the heading, and the certificate grid, seal, metadata, and action widths were tightened.
+3. The final comparison confirmed the intended document hierarchy: global navigation, evidence eyebrow, large parcel title, scope statement, read-only certificate, and S1/S2 evidence sections align with the selected direction.
+
+## Functional visual checks
+
+- The certificate clearly distinguishes a saved, read-only artifact from the current live exhibit.
+- Print / Save PDF and Open current exhibit are visible and operable.
+- View full provenance expands to show source vintages, application revision, query, row counts, and SHA-256 content hash.
+- The no-subject-permit state reads as a recorded zero and leads into nearby context rather than implying missing data.
+- The pre-signup route shows the access gate and does not render saved evidence or its snapshot ID.
+- The saved page and print route produced no browser console warnings or errors.
+
+## Intentional data-driven differences
+
+The reference illustrates subject-parcel matches. The verified implementation uses a real parcel with zero subject matches and 55 nearby records, so the first viewport advances into S2 instead of showing the reference table. This is the correct truthful state, not a visual regression.
 
 final result: passed

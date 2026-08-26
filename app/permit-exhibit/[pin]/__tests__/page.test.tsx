@@ -19,6 +19,7 @@ const { loadPermitExhibitMock, accessCookieMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/permit-exhibit-source", () => ({ loadPermitExhibit: loadPermitExhibitMock }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: accessCookieMock }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 vi.mock("@/components/permit-exhibit/SubjectParcelSection", () => ({
   SubjectParcelSection: () => <div>SENSITIVE S1 SUBJECT ROWS</div>,
@@ -66,6 +67,7 @@ describe("Permit Exhibit page — signup gate (server-side, fail-closed)", () =>
     expect(html).not.toContain("SENSITIVE S2 AREA ROWS");
     expect(html).not.toContain("SENSITIVE S3 BOUNDARY");
     expect(html).not.toContain("SENSITIVE S4 METHODS");
+    expect(html).not.toContain("Save read-only snapshot");
   });
 
   it("emits every section once a signed access session is present, and hides the gate", async () => {
@@ -76,6 +78,7 @@ describe("Permit Exhibit page — signup gate (server-side, fail-closed)", () =>
     expect(html).toContain("SENSITIVE S2 AREA ROWS");
     expect(html).toContain("SENSITIVE S3 BOUNDARY");
     expect(html).toContain("SENSITIVE S4 METHODS");
+    expect(html).toContain("Save read-only snapshot");
     expect(html).not.toContain("PERMIT EXHIBIT SIGNUP GATE");
   });
 
