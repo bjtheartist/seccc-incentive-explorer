@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
@@ -8,6 +9,7 @@ import { AreaContextSection } from "@/components/permit-exhibit/AreaContextSecti
 import { BoundaryContextSection } from "@/components/permit-exhibit/BoundaryContextSection";
 import { MethodsFooter } from "@/components/permit-exhibit/MethodsFooter";
 import PermitExhibitAccessGate from "@/components/permit-exhibit/PermitExhibitAccessGate";
+import { SavePermitExhibitSnapshotButton } from "@/components/permit-exhibit/SavePermitExhibitSnapshotButton";
 import { loadPermitExhibit } from "@/lib/permit-exhibit-source";
 import { PERMIT_EXHIBIT_ALLOWED_RADIUS_FT, PERMIT_EXHIBIT_DEFAULT_RADIUS_FT } from "@/lib/permit-exhibit";
 import { PERMIT_EXHIBIT_UNAVAILABLE_COPY } from "@/lib/permit-exhibit-copy";
@@ -98,13 +100,20 @@ export default async function PermitExhibitPage({
         radiusFt={radiusFt}
         actions={
           hasAccess ? (
-            <Link
-              href={`/print/permit-exhibit/${data.meta.subjectParcel.pin}?radius=${radiusFt}`}
-              className="inline-flex min-h-9 items-center border border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#0C1B33]/65 hover:border-[#2563EB] hover:text-[#2563EB]"
-            >
-              Print exhibit
-              <ArrowRight aria-hidden className="ml-1.5 h-3.5 w-3.5" strokeWidth={1.8} />
-            </Link>
+            <>
+              <SavePermitExhibitSnapshotButton
+                pin={data.meta.subjectParcel.pin}
+                radiusFt={radiusFt}
+                requestId={randomUUID()}
+              />
+              <Link
+                href={`/print/permit-exhibit/${data.meta.subjectParcel.pin}?radius=${radiusFt}`}
+                className="inline-flex min-h-9 items-center border border-[#0C1B33]/20 bg-white px-3 py-1.5 font-mono-bureau text-[10px] font-medium uppercase tracking-[0.08em] text-[#0C1B33]/65 hover:border-[#2563EB] hover:text-[#2563EB]"
+              >
+                Print current exhibit
+                <ArrowRight aria-hidden className="ml-1.5 h-3.5 w-3.5" strokeWidth={1.8} />
+              </Link>
+            </>
           ) : null
         }
       />

@@ -358,6 +358,7 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
       "lib/permit-exhibit-source.ts",
       "app/permit-exhibit",
       "app/print/permit-exhibit",
+      "app/api/permit-exhibit-snapshots/route.ts",
       "components/permit-exhibit",
     ],
   },
