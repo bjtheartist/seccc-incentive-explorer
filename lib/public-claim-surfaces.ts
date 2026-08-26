@@ -340,18 +340,26 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     ],
   },
   {
-    // Permit History Exhibit, PR 1 (evidence spine): registered now even
-    // though no route/page exists yet (PR 2 wires the UI surface) because
-    // this lib already owns real user-facing prose — the self-reported-cost
-    // label, the S3 boundary honest-limit line, the S4 methods & limits
-    // block, and the coverage note — the exact kind of hand-authored
-    // "reviewed-copy" this registry exists to track. PR 2 will extend this
-    // entry's `files` with its route/page rather than opening a duplicate
-    // entry.
+    // Permit History Exhibit — PR 1 (evidence spine, lib/permit-exhibit.ts)
+    // owns the S1/S3/S4 verbatim reviewed copy (self-reported-cost label,
+    // boundary honest-limit line, methods & limits block, coverage note).
+    // PR 2 (this entry's `files` extension) wires the gated UI surface that
+    // renders it: the /permit-exhibit entry + [pin] exhibit page, the
+    // /print/permit-exhibit print route, the section/gate/entry-form
+    // components, and PR2's own surface-chrome copy
+    // (lib/permit-exhibit-copy.ts) — extended here per this entry's
+    // original comment rather than opening a duplicate entry.
     id: "permit-exhibit-evidence-spine",
-    description: "The Permit History Exhibit's evidence-spine library: subject-parcel/area permit matching, boundary-context honest limits, and the S4 methods & limits copy (no route yet).",
+    description: "The Permit History Exhibit: evidence-spine library (subject-parcel/area permit matching, boundary-context honest limits, S4 methods & limits copy) plus the gated entry/exhibit/print surface and its access gate.",
     contracts: ["reviewed-copy"],
-    files: ["lib/permit-exhibit.ts"],
+    files: [
+      "lib/permit-exhibit.ts",
+      "lib/permit-exhibit-copy.ts",
+      "lib/permit-exhibit-source.ts",
+      "app/permit-exhibit",
+      "app/print/permit-exhibit",
+      "components/permit-exhibit",
+    ],
   },
   {
     id: "public-investment-beta-access",

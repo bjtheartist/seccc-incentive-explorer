@@ -5,6 +5,35 @@ export const SHORTLIST_ACCESS_COOKIE = "cie_shortlist_access";
 export const SHORTLIST_ACCESS_MAX_AGE = 60 * 60 * 24 * 180;
 export const SHORTLIST_ACCESS_SOURCE = "site-shortlist-gate-2026";
 
+/**
+ * Permit History Exhibit gate (PR2): reuses this SAME session mechanism and
+ * cookie one-for-one — a holder of either surface's signup session gets
+ * access to both, by design (one professional-access session, per the
+ * master spec's PR2 section) — but signups from this surface are tagged
+ * with their OWN source so leads attribute back to the feature that
+ * produced them. See SHORTLIST_ACCESS_SOURCES / isShortlistAccessSource
+ * below and lib/shortlist-access-storage.ts's `saveShortlistAccessSignup`.
+ */
+export const PERMIT_EXHIBIT_ACCESS_SOURCE = "permit-exhibit-gate-2026";
+
+/** Every source tag this shared signup mechanism currently issues. Adding a
+ *  new gated surface that reuses this mechanism means adding its tag here
+ *  (additively) and nowhere else — the API route and storage layer both
+ *  validate against this list rather than hardcoding a source string. */
+export const SHORTLIST_ACCESS_SOURCES = [
+  SHORTLIST_ACCESS_SOURCE,
+  PERMIT_EXHIBIT_ACCESS_SOURCE,
+] as const;
+
+export type ShortlistAccessSource = (typeof SHORTLIST_ACCESS_SOURCES)[number];
+
+export function isShortlistAccessSource(value: unknown): value is ShortlistAccessSource {
+  return (
+    typeof value === "string" &&
+    (SHORTLIST_ACCESS_SOURCES as readonly string[]).includes(value)
+  );
+}
+
 const cleanText = (minimum: number, maximum: number) =>
   z
     .string()

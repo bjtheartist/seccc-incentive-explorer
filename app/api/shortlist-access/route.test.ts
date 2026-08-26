@@ -64,4 +64,22 @@ describe("POST /api/shortlist-access", () => {
     expect(response.status).toBe(500);
     expect(response.cookies.get(SHORTLIST_ACCESS_COOKIE)).toBeUndefined();
   });
+
+  // Additive (PR2, Permit History Exhibit): a caller may tag its signup
+  // with a registered source so leads attribute back to the feature that
+  // produced them, without changing the original shortlist gate's behavior.
+  it("defaults to the site-shortlist source when no source is posted (existing gate unchanged)", async () => {
+    await POST(request(VALID_BODY));
+    expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ email: "billy@example.com" }), "site-shortlist-gate-2026");
+  });
+
+  it("passes through a registered alternate source tag (the Permit History Exhibit gate)", async () => {
+    await POST(request({ ...VALID_BODY, source: "permit-exhibit-gate-2026" }));
+    expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ email: "billy@example.com" }), "permit-exhibit-gate-2026");
+  });
+
+  it("ignores an unregistered source string and falls back to the default rather than persisting an arbitrary tag", async () => {
+    await POST(request({ ...VALID_BODY, source: "some-made-up-source" }));
+    expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ email: "billy@example.com" }), "site-shortlist-gate-2026");
+  });
 });

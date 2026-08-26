@@ -308,4 +308,16 @@ describe("PermitActivityBrief", () => {
     expect(csv).not.toMatch(/reported.?cost/i);
     expect(csv).not.toContain("$");
   });
+
+  // Permit History Exhibit cross-link — the ONLY touch this page makes for
+  // that feature (spec: "a single entry link from the permit-activity
+  // brief's scope aside"). Everything else on this page is untouched.
+  it("carries the Permit History Exhibit entry link in the scope aside, alongside PERMIT_AREA_ACTIVITY_NOTE, not replacing it", () => {
+    renderBrief();
+    const link = screen.getByRole("link", { name: /Build a Permit History Exhibit/ });
+    expect(link.getAttribute("href")).toBe("/permit-exhibit");
+    // Still exactly once, per the existing pinned assertion above — the new
+    // link is a sibling element, not a rewrite of the scope statement.
+    expect(screen.getAllByText(PERMIT_AREA_ACTIVITY_NOTE)).toHaveLength(1);
+  });
 });

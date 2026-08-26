@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ExternalLink, Info, RefreshCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -13,6 +14,7 @@ import {
   type PermitAreaRecord,
   type PermitAreaResult,
 } from "@/lib/permit-area";
+import { PERMIT_EXHIBIT_ENTRY_LINK_TEXT } from "@/lib/permit-exhibit-copy";
 import styles from "./permit-activity.module.css";
 
 type BriefState =
@@ -434,6 +436,9 @@ export function PermitActivityBrief({ area, areas, geometry, reportDate }: Permi
             <aside className={styles.headerAside} aria-label="Scope statement">
               <p className={styles.panelLabel}>Scope statement</p>
               <p>{PERMIT_AREA_ACTIVITY_NOTE}</p>
+              <Link href="/permit-exhibit" className={styles.exhibitCrossLink}>
+                {PERMIT_EXHIBIT_ENTRY_LINK_TEXT}
+              </Link>
             </aside>
           </div>
         </header>

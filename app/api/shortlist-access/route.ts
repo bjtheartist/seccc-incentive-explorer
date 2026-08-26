@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   SHORTLIST_ACCESS_COOKIE,
   SHORTLIST_ACCESS_MAX_AGE,
+  SHORTLIST_ACCESS_SOURCE,
   ShortlistAccessSignupSchema,
   createShortlistAccessSession,
   isShortlistAccessConfigured,
+  isShortlistAccessSource,
 } from "@/lib/shortlist-access";
 import {
   ShortlistAccessStorageUnavailableError,
@@ -55,7 +57,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await saveShortlistAccessSignup(parsed.data);
+    // Additive (PR2): a caller on another gated surface (e.g. the Permit
+    // History Exhibit) may tag its signup with its own registered source so
+    // leads attribute back to the feature that produced them. Any other
+    // value — including an absent one — falls back to the original
+    // site-shortlist tag, so the existing gate's behavior is unchanged.
+    const source = isShortlistAccessSource(body?.source) ? body.source : SHORTLIST_ACCESS_SOURCE;
+    await saveShortlistAccessSignup(parsed.data, source);
     const response = json({ success: true, message: "Your shortlist is unlocked." });
     response.cookies.set(SHORTLIST_ACCESS_COOKIE, createShortlistAccessSession(), {
       httpOnly: true,
