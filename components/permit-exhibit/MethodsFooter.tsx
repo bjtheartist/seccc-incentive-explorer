@@ -1,23 +1,21 @@
 import { formatPermitAreaDate } from "@/lib/permit-area";
-import {
-  PERMIT_EXHIBIT_LIMITS,
-  PERMIT_EXHIBIT_SOURCE_LABEL,
-  PERMIT_EXHIBIT_SOURCE_URL,
-  permitExhibitVintageSentence,
-} from "@/lib/permit-exhibit-copy";
-import type { PermitExhibitCoverage, PermitExhibitMeta } from "@/lib/permit-exhibit-types";
+import type { PermitExhibitCoverage, PermitExhibitMeta } from "@/lib/permit-exhibit";
 
 function queryParamsLine(meta: PermitExhibitMeta): string {
-  const entries = Object.entries(meta.queryParams).map(([key, value]) => `${key}=${value}`);
-  return entries.join(" · ");
+  const { pinFormatted, radiusFt, filters } = meta.queryParams;
+  const filterKeys = filters.permitTypeKeys;
+  const filterLine =
+    filterKeys && filterKeys.length > 0 ? `permitTypeKeys=${filterKeys.join(",")}` : "filters=none";
+  return `pin=${pinFormatted} · radiusFt=${radiusFt} · ${filterLine}`;
 }
 
 /**
  * S4 — methods & limits footer. Non-suppressible: this section always
  * renders (never behind a details/summary toggle), carrying the exact
- * claim-surface copy from lib/permit-exhibit-copy.ts, the match-method +
- * unlocated coverage arithmetic, the reproducible exhibit ID, and its
- * vintage semantics.
+ * claim-surface copy from lib/permit-exhibit.ts (the spine's own S4
+ * strings — cost label, limits block, coverage note, exhibit-id footer),
+ * plus the match-method + unlocated coverage arithmetic and the
+ * reproducible exhibit ID.
  */
 export function MethodsFooter({
   meta,
@@ -41,14 +39,16 @@ export function MethodsFooter({
         <div>
           <dt className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/45">Source dataset</dt>
           <dd>
-            <a href={PERMIT_EXHIBIT_SOURCE_URL} target="_blank" rel="noreferrer" className="text-[#2563EB] hover:underline">
-              {PERMIT_EXHIBIT_SOURCE_LABEL}
+            <a href={meta.sourceUrl} target="_blank" rel="noreferrer" className="text-[#2563EB] hover:underline">
+              {meta.sourceLabel}
             </a>
           </dd>
         </div>
         <div>
           <dt className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/45">Dataset last updated</dt>
-          <dd className="text-[#0C1B33]/75">{formatPermitAreaDate(meta.datasetLastUpdate)}</dd>
+          <dd className="text-[#0C1B33]/75">
+            {meta.datasetLastUpdate ? formatPermitAreaDate(meta.datasetLastUpdate) : "Not recorded"}
+          </dd>
         </div>
         <div>
           <dt className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/45">Query parameters</dt>
@@ -56,48 +56,68 @@ export function MethodsFooter({
             {queryParamsLine(meta)}
           </dd>
         </div>
+        <div className="sm:col-span-2">
+          <dt className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/45">Data window</dt>
+          <dd className="text-[#0C1B33]/75">
+            Full ingested history (since {formatPermitAreaDate(meta.ingestFloorDate)}), not the rolling analysis
+            window the neighborhood permit-activity brief uses.
+          </dd>
+        </div>
       </dl>
 
       <div className="mt-4 border border-[#0C1B33]/10 bg-white p-4">
         <p className="font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.08em] text-[#0C1B33]/60">
-          Match-method breakdown
+          Match-method breakdown (subject parcel)
         </p>
-        <dl className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="match-method-breakdown">
+        <dl className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="match-method-breakdown">
           <div>
             <dt className="text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">Pin/parcel</dt>
             <dd className="tabular-nums text-[15px] font-medium text-[#0C1B33]">
-              {coverage.matchMethodCounts.pinParcel.toLocaleString("en-US")}
+              {coverage.matchMethodBreakdown.pinParcel.toLocaleString("en-US")}
             </dd>
           </div>
           <div>
             <dt className="text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">Address exact</dt>
             <dd className="tabular-nums text-[15px] font-medium text-[#0C1B33]">
-              {coverage.matchMethodCounts.addressExact.toLocaleString("en-US")}
+              {coverage.matchMethodBreakdown.addressExact.toLocaleString("en-US")}
             </dd>
           </div>
           <div>
             <dt className="text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">Proximity</dt>
             <dd className="tabular-nums text-[15px] font-medium text-[#0C1B33]">
-              {coverage.matchMethodCounts.proximity.toLocaleString("en-US")}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-[0.06em] text-[#A45B00]">Unlocated</dt>
-            <dd className="tabular-nums text-[15px] font-medium text-[#A45B00]" data-testid="unlocated-count">
-              {coverage.unlocatedCount.toLocaleString("en-US")}
+              {coverage.matchMethodBreakdown.proximity.toLocaleString("en-US")}
             </dd>
           </div>
         </dl>
-        <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/55">
-          {coverage.geolocatedRows.toLocaleString("en-US")} of {coverage.totalSourceRowsInRadius.toLocaleString("en-US")}{" "}
-          source records in this radius have a usable map location; {coverage.unlocatedCount.toLocaleString("en-US")}{" "}
-          could not be geolocated and are excluded from every map, count, and table above. An unlocated
-          record is not evidence the work did not happen — only that this tool cannot place it.
+
+        <p className="mt-4 font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.08em] text-[#0C1B33]/60">
+          Area coverage (radius)
         </p>
+        <dl className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">Located by point</dt>
+            <dd className="tabular-nums text-[15px] font-medium text-[#0C1B33]">
+              {coverage.area.geolocatedCount.toLocaleString("en-US")}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.06em] text-[#A45B00]">Unlocated (address-only)</dt>
+            <dd className="tabular-nums text-[15px] font-medium text-[#A45B00]" data-testid="unlocated-count">
+              {coverage.area.unlocatedCount.toLocaleString("en-US")}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">Total area records</dt>
+            <dd className="tabular-nums text-[15px] font-medium text-[#0C1B33]">
+              {coverage.area.totalCount.toLocaleString("en-US")}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/55">{coverage.coverageNote}</p>
       </div>
 
       <ol className="mt-4 space-y-2 border border-[#0C1B33]/10 bg-[#0C1B33]/[0.02] p-4 text-[12px] leading-relaxed text-[#0C1B33]/70">
-        {PERMIT_EXHIBIT_LIMITS.map((limit, index) => (
+        {meta.limitsBlock.map((limit, index) => (
           <li key={index} className="flex gap-3">
             <span className="font-mono-bureau text-[11px] font-semibold text-[#2563EB]">{index + 1}</span>
             <span>{limit}</span>
@@ -106,7 +126,7 @@ export function MethodsFooter({
       </ol>
 
       <p className="mt-4 font-mono-bureau text-[10px] uppercase leading-relaxed tracking-[0.06em] text-[#0C1B33]/45">
-        {permitExhibitVintageSentence(meta.exhibitId)}
+        {meta.exhibitIdFooter}
       </p>
       <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/45">
         Every permit number above links to its City record where the dataset provides one.

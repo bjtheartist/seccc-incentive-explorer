@@ -1,67 +1,59 @@
 /**
  * lib/permit-exhibit-source.ts — the ONE indirection point between the PR2
- * surface (this branch, feat/permit-exhibit-surface) and PR1's evidence
- * spine (feat/permit-exhibit-spine, lib/permit-exhibit.ts).
+ * surface (page, print route) and PR1's evidence spine
+ * (lib/permit-exhibit.ts, feat/permit-exhibit-spine). PHASE B: wired to the
+ * real `buildPermitExhibit`, rebased onto commit dc81645 of
+ * feat/permit-exhibit-spine — see the joint envelope negotiation between
+ * the PR1 and PR2 builders (session messages, 2026-08-25) for the two
+ * documented deltas from PR2's original Phase-A assumptions:
+ *   - area rows carry `locatedVia: "point" | "address_only"`, not
+ *     `matchMethod` (S2 is "vs the RADIUS", a different vocabulary than
+ *     S1's parcel-relative pin_parcel/address_exact/proximity).
+ *   - `coverage` is `{ matchMethodBreakdown, area: { geolocatedCount,
+ *     unlocatedCount, totalCount }, coverageNote }`, computed from
+ *     `subject` for the match-method half and from `area.rows` for the
+ *     unlocated half.
  *
- * PHASE A (current): the sibling spine branch has not landed yet. This
- * module validates the PIN/radius exactly as the frozen contract requires
- * and returns a fixture-backed PermitExhibitResult so the full surface —
- * page, sections, gate, print route — is real and demoable end to end, not
- * placeholder markup. Every page/route in this feature imports ONLY this
- * module for data, never lib/permit-exhibit-fixtures.ts directly (tests are
- * the one exception, importing fixtures to build expected/mocked shapes).
- *
- * PHASE B (once feat/permit-exhibit-spine lands and lib/permit-exhibit.ts
- * exports the contract types): replace the fixture call in
- * `loadPermitExhibit` below with `buildPermitExhibit({ pin, radiusFt })`
- * from "@/lib/permit-exhibit", mapping its result onto
- * PermitExhibitResult if any field names differ from this file's working
- * assumptions (see lib/permit-exhibit-types.ts's header comment for the
- * one documented judgment call — `boundaryContext.parcelAddress`). No
- * other file in app/permit-exhibit or app/print/permit-exhibit should need
- * to change.
+ * Every page/route in this feature imports ONLY this module for data,
+ * never lib/permit-exhibit.ts directly and never
+ * lib/permit-exhibit-fixtures.ts directly (tests are the one exception,
+ * mocking this module the same way app/vacancy/[zip]/shortlist's tests
+ * mock lib/shortlist-universe).
  */
 
-import { normalizePin14 } from "./cook-viewer";
-import { fixturePermitExhibit } from "./permit-exhibit-fixtures";
 import {
-  isPermitExhibitRadiusFt,
-  type PermitExhibitLoadResult,
+  PermitExhibitBuildError,
+  buildPermitExhibit,
+  type PermitExhibitErrorCode,
   type PermitExhibitRadiusFt,
-} from "./permit-exhibit-types";
+  type PermitExhibitResult,
+} from "./permit-exhibit";
 
 export interface LoadPermitExhibitInput {
   pin: string;
   radiusFt: number;
 }
 
-/**
- * Deterministic per-PIN variation so the Phase A demo surface behaves
- * differently for different inputs (an empty-subject PIN, a proximity-only
- * PIN) rather than always rendering the identical canned exhibit.
- */
-function fixtureForPin(pin: string, radiusFt: PermitExhibitRadiusFt) {
-  if (pin === "00000000000000") {
-    return { ok: false as const, error: { kind: "parcel_not_found" as const } };
-  }
-  return {
-    ok: true as const,
-    data: fixturePermitExhibit({
-      pin,
-      radiusFt,
-      exhibitId: `pex_${pin.slice(-10)}_${radiusFt}`,
-    }),
-  };
-}
+export type PermitExhibitLoadError = { kind: PermitExhibitErrorCode } | { kind: "unavailable" };
+
+export type PermitExhibitLoadResult =
+  | { ok: true; data: PermitExhibitResult }
+  | { ok: false; error: PermitExhibitLoadError };
 
 export async function loadPermitExhibit(
   input: LoadPermitExhibitInput,
 ): Promise<PermitExhibitLoadResult> {
-  const pin = normalizePin14(input.pin);
-  if (!pin) return { ok: false, error: { kind: "invalid_pin" } };
-  if (!isPermitExhibitRadiusFt(input.radiusFt)) {
-    return { ok: false, error: { kind: "invalid_radius" } };
+  try {
+    const data = await buildPermitExhibit({
+      pin: input.pin,
+      radiusFt: input.radiusFt as PermitExhibitRadiusFt,
+    });
+    return { ok: true, data };
+  } catch (error) {
+    if (error instanceof PermitExhibitBuildError) {
+      return { ok: false, error: { kind: error.code } };
+    }
+    console.error("Permit exhibit build failed:", error);
+    return { ok: false, error: { kind: "unavailable" } };
   }
-
-  return fixtureForPin(pin, input.radiusFt);
 }

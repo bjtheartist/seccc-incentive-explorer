@@ -2,23 +2,24 @@ import { formatFullDollars } from "@/components/investment/format";
 import { formatPermitAreaDate } from "@/lib/permit-area";
 import {
   PERMIT_EXHIBIT_COST_LABEL,
-  PERMIT_EXHIBIT_PROXIMITY_HEADING,
-  PERMIT_EXHIBIT_PROXIMITY_NOTE,
-  permitExhibitCityRecordUrl,
-} from "@/lib/permit-exhibit-copy";
-import type { PermitExhibitRow } from "@/lib/permit-exhibit-types";
+  PERMIT_EXHIBIT_MATCH_METHOD_LABELS,
+  PERMIT_EXHIBIT_PROXIMITY_SUBSECTION_TITLE,
+  type PermitExhibitMatchMethod,
+  type PermitExhibitSubjectRow,
+} from "@/lib/permit-exhibit";
+import { PERMIT_EXHIBIT_PROXIMITY_NOTE } from "@/lib/permit-exhibit-copy";
 
-const MATCH_METHOD_LABEL: Record<PermitExhibitRow["matchMethod"], string> = {
-  pin_parcel: "Parcel match",
-  address_exact: "Address match",
-  proximity: "Proximity only",
+const CONFIDENCE_LABEL: Record<PermitExhibitSubjectRow["matchConfidence"], string> = {
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
 };
 
-function chronological(rows: PermitExhibitRow[]): PermitExhibitRow[] {
-  return [...rows].sort((a, b) => a.issueDate.localeCompare(b.issueDate));
+function chronological(rows: PermitExhibitSubjectRow[]): PermitExhibitSubjectRow[] {
+  return [...rows].sort((a, b) => (a.issueDate ?? "").localeCompare(b.issueDate ?? ""));
 }
 
-function MethodTag({ method }: { method: PermitExhibitRow["matchMethod"] }) {
+function MethodTag({ method, confidence }: { method: PermitExhibitMatchMethod; confidence: PermitExhibitSubjectRow["matchConfidence"] }) {
   const tone =
     method === "pin_parcel"
       ? "border-[#2563EB]/30 bg-[#2563EB]/8 text-[#2563EB]"
@@ -27,25 +28,25 @@ function MethodTag({ method }: { method: PermitExhibitRow["matchMethod"] }) {
         : "border-[#A45B00]/35 bg-[#A45B00]/8 text-[#A45B00]";
   return (
     <span
-      className={`inline-flex items-center border px-1.5 py-0.5 font-mono-bureau text-[9px] uppercase tracking-[0.08em] ${tone}`}
+      className={`inline-flex flex-col items-start gap-0.5 border px-1.5 py-0.5 font-mono-bureau text-[9px] uppercase tracking-[0.06em] ${tone}`}
       data-testid="match-method-tag"
       data-match-method={method}
     >
-      {MATCH_METHOD_LABEL[method]}
+      <span>{PERMIT_EXHIBIT_MATCH_METHOD_LABELS[method]}</span>
+      <span className="normal-case tracking-normal opacity-70">{CONFIDENCE_LABEL[confidence]}</span>
     </span>
   );
 }
 
-function RecordRow({ row }: { row: PermitExhibitRow }) {
-  const recordUrl = permitExhibitCityRecordUrl(row.permitNumber);
+function RecordRow({ row }: { row: PermitExhibitSubjectRow }) {
   return (
     <tr className="border-b border-[#0C1B33]/6 last:border-b-0">
       <td className="px-2.5 py-2 text-[12px] text-[#0C1B33]/70 [font-variant-numeric:tabular-nums]">
         {formatPermitAreaDate(row.issueDate)}
       </td>
       <td className="px-2.5 py-2 text-[12px] font-medium text-[#0C1B33]">
-        {recordUrl ? (
-          <a href={recordUrl} target="_blank" rel="noreferrer" className="hover:text-[#2563EB] hover:underline">
+        {row.sourceRecordUrl ? (
+          <a href={row.sourceRecordUrl} target="_blank" rel="noreferrer" className="hover:text-[#2563EB] hover:underline">
             {row.permitNumber}
           </a>
         ) : (
@@ -59,13 +60,13 @@ function RecordRow({ row }: { row: PermitExhibitRow }) {
       </td>
       <td className="px-2.5 py-2 text-[12px] text-[#0C1B33]/55">{row.status ?? "Not recorded"}</td>
       <td className="px-2.5 py-2">
-        <MethodTag method={row.matchMethod} />
+        <MethodTag method={row.matchMethod} confidence={row.matchConfidence} />
       </td>
     </tr>
   );
 }
 
-function RecordTable({ rows, caption }: { rows: PermitExhibitRow[]; caption: string }) {
+function RecordTable({ rows, caption }: { rows: PermitExhibitSubjectRow[]; caption: string }) {
   return (
     <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
       <table className="w-full min-w-[820px] border-collapse">
@@ -99,7 +100,7 @@ function RecordTable({ rows, caption }: { rows: PermitExhibitRow[]; caption: str
  * table. See components/permit-exhibit/__tests__/subject-parcel-section.test.tsx
  * for the pinned separation assertion.
  */
-export function SubjectParcelSection({ subject }: { subject: PermitExhibitRow[] }) {
+export function SubjectParcelSection({ subject }: { subject: PermitExhibitSubjectRow[] }) {
   const mainRows = chronological(subject.filter((row) => row.matchMethod !== "proximity"));
   const proximityRows = chronological(subject.filter((row) => row.matchMethod === "proximity"));
 
@@ -132,7 +133,7 @@ export function SubjectParcelSection({ subject }: { subject: PermitExhibitRow[] 
       {proximityRows.length > 0 ? (
         <div className="mt-5 border border-[#A45B00]/30 bg-[#A45B00]/[0.04] p-4" data-testid="proximity-subsection">
           <p className="font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A45B00]">
-            {PERMIT_EXHIBIT_PROXIMITY_HEADING}
+            {PERMIT_EXHIBIT_PROXIMITY_SUBSECTION_TITLE}
           </p>
           <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/60">
             {PERMIT_EXHIBIT_PROXIMITY_NOTE}

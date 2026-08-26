@@ -1,10 +1,9 @@
-import { formatPin14 } from "@/lib/cook-viewer";
 import { formatPermitAreaDate } from "@/lib/permit-area";
+import type { PermitExhibitMeta } from "@/lib/permit-exhibit";
 import {
   PERMIT_EXHIBIT_EYEBROW,
   PERMIT_EXHIBIT_HEADER_SCOPE_STATEMENT,
 } from "@/lib/permit-exhibit-copy";
-import type { PermitExhibitMeta, PermitExhibitBoundaryContext } from "@/lib/permit-exhibit-types";
 
 /**
  * The standardized evidence-brief header anatomy (matches
@@ -14,18 +13,15 @@ import type { PermitExhibitMeta, PermitExhibitBoundaryContext } from "@/lib/perm
  * (matching the /print/investment precedent) rather than reusing this.
  */
 export function PermitExhibitHeader({
-  boundaryContext,
   meta,
   radiusFt,
   actions,
 }: {
-  boundaryContext: PermitExhibitBoundaryContext;
   meta: PermitExhibitMeta;
   radiusFt: number;
   actions?: React.ReactNode;
 }) {
-  const formattedPin = formatPin14(meta.queryParams.pin) ?? meta.queryParams.pin;
-  const address = boundaryContext.parcelAddress ?? "Address not on record";
+  const address = meta.subjectParcel.situsAddress ?? "Address not on record";
 
   return (
     <header>
@@ -38,7 +34,7 @@ export function PermitExhibitHeader({
             Permit History Exhibit · {address}
           </h1>
           <p className="mt-4 font-mono-bureau text-[9px] uppercase leading-relaxed tracking-[0.12em] text-[#0C1B33]/55">
-            PIN {formattedPin} · Radius {radiusFt.toLocaleString("en-US")} ft · Snapshot{" "}
+            PIN {meta.subjectParcel.pinFormatted} · Radius {radiusFt.toLocaleString("en-US")} ft · Snapshot{" "}
             {formatPermitAreaDate(meta.snapshotDate)} · Exhibit {meta.exhibitId}
           </p>
         </div>
