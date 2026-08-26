@@ -141,6 +141,14 @@ function megabytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+/** THE size judgment call, pulled out as a pure function so it is unit-
+ *  testable without touching the filesystem — see
+ *  scripts/__tests__/archive-zoning-snapshot.test.ts. At or under the
+ *  threshold: "full" (inline gzip archive). Over it: "hash_manifest". */
+export function decideArchiveMode(sizeBytes: number): ArchiveSnapshotMode {
+  return sizeBytes <= FULL_ARCHIVE_SIZE_THRESHOLD_BYTES ? "full" : "hash_manifest";
+}
+
 async function main() {
   let raw: string;
   try {
@@ -191,12 +199,11 @@ async function main() {
     return;
   }
 
-  let mode: ArchiveSnapshotMode;
   let archivePath: string | null;
   let note: string;
 
-  if (sizeBytes <= FULL_ARCHIVE_SIZE_THRESHOLD_BYTES) {
-    mode = "full";
+  const mode = decideArchiveMode(sizeBytes);
+  if (mode === "full") {
     const fileName = `${date}.geojson.gz`;
     await writeFile(path.join(ARCHIVE_DIR, fileName), gzipSync(Buffer.from(raw, "utf8")));
     archivePath = path.posix.join("data", "archive", "zoning", fileName);
@@ -204,7 +211,6 @@ async function main() {
       FULL_ARCHIVE_SIZE_THRESHOLD_BYTES,
     )} threshold).`;
   } else {
-    mode = "hash_manifest";
     const fileName = `${date}.manifest.json`;
     const manifest = {
       date,

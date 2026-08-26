@@ -479,12 +479,27 @@ export function polygonCentroid(
   const exterior = rings[0];
   if (!exterior || exterior.length < 4) return bboxCenter;
 
+  // Translate to a LOCAL origin (the bbox center) before the shoelace sums.
+  // Chicago-scale absolute coordinates (~-87.6, ~41.7) are enormous next to
+  // a typical parcel's extent (~1e-4 degrees); summing x0*y1 - x1*y0 in
+  // ABSOLUTE coordinates subtracts near-equal large products and destroys
+  // almost all precision (catastrophic cancellation). Caught by
+  // lib/__tests__/permit-exhibit.test.ts: an untranslated version of this
+  // function placed a real 25x125 ft lot's "centroid" measurably OUTSIDE
+  // the lot. Translating first and adding the origin back at the end keeps
+  // every summed term the same tiny order of magnitude as the polygon
+  // itself, eliminating the cancellation.
+  const originLon = bboxCenter.lon;
+  const originLat = bboxCenter.lat;
+
   let area = 0;
   let cx = 0;
   let cy = 0;
   for (let i = 0; i < exterior.length - 1; i += 1) {
-    const [x0, y0] = exterior[i];
-    const [x1, y1] = exterior[i + 1];
+    const x0 = exterior[i][0] - originLon;
+    const y0 = exterior[i][1] - originLat;
+    const x1 = exterior[i + 1][0] - originLon;
+    const y1 = exterior[i + 1][1] - originLat;
     const cross = x0 * y1 - x1 * y0;
     area += cross;
     cx += (x0 + x1) * cross;
@@ -492,7 +507,7 @@ export function polygonCentroid(
   }
   area /= 2;
   if (Math.abs(area) < 1e-12) return bboxCenter;
-  return { lon: cx / (6 * area), lat: cy / (6 * area) };
+  return { lon: originLon + cx / (6 * area), lat: originLat + cy / (6 * area) };
 }
 
 /** GeoJSON circle polygon around a centroid, per spec's explicit direction
@@ -775,6 +790,24 @@ async function defaultReadZoningArchiveVintageRange(): Promise<PermitExhibitZoni
 // SQL row shape + mapping
 // ════════════════════════════════════════════════════════════════════════
 
+/** The exact SQL text both queries in {@link buildPermitExhibit} inline
+ *  literally (neon's `sql` tag treats every `${}` substitution as a bound
+ *  PARAMETER, never raw SQL text, so `NORMALIZED_ADDRESS_SQL` cannot be
+ *  interpolated into the template directly — it can only be compared
+ *  against, which is what this guard rail does). Mirrors
+ *  scripts/sync-vacant-properties.ts's own drift guard for the identical
+ *  expression, but as a pure string-equality check at module load rather
+ *  than a runtime DB probe, since no live database is required to catch a
+ *  divergence here. */
+const INLINE_NORMALIZED_ADDRESS_SQL =
+  "regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g')";
+if (INLINE_NORMALIZED_ADDRESS_SQL !== NORMALIZED_ADDRESS_SQL) {
+  throw new Error(
+    "lib/permit-exhibit.ts's inline SQL address normalization has drifted from " +
+      "lib/permit-match.ts's NORMALIZED_ADDRESS_SQL — fix the SQL text inline above to match.",
+  );
+}
+
 interface RawPermitRow {
   permit_id: unknown;
   permit_type: unknown;
@@ -945,7 +978,18 @@ export async function buildPermitExhibit(
     );
   }
 
-  const normalizedSitusAddress = normalizePermitAddress(parcel.situsAddress);
+  // CookViewer publishes situsAddress as "STREET, CITY, STATE ZIP" (see
+  // fetchExhibitParcel), but building_permits.address is STREET ONLY — the
+  // City permits source never carries city/state/zip. Comparing the FULL
+  // situs address against a permit's street-only address would normalize to
+  // two different strings for the SAME address and address_exact would
+  // never fire for any real row. Strip to the street line first, exactly
+  // the same pattern app/api/parcel/route.ts's own (route-local, not
+  // importable) `parcelStreetAddress` helper uses — take everything before
+  // the first comma. Caught by lib/__tests__/permit-exhibit.test.ts, whose
+  // first draft made this exact mistake.
+  const situsStreetAddress = parcel.situsAddress?.split(",")[0]?.trim() ?? null;
+  const normalizedSitusAddress = normalizePermitAddress(situsStreetAddress);
   const candidateRadiusM = subjectCandidateRadiusMeters(parcel.bbox);
   const radiusMeters = radiusFeetToMeters(radiusFt);
   const radiusPolygon = radiusCirclePolygon(parcel.centroid.lat, parcel.centroid.lon, radiusMeters);
@@ -961,7 +1005,7 @@ export async function buildPermitExhibit(
         permit_id, permit_type, address, issue_date::text AS issue_date,
         permit_status, permit_milestone, work_type, work_description,
         reported_cost, lat, lon, fetched_at::text AS fetched_at,
-        ${NORMALIZED_ADDRESS_SQL} AS normalized_address
+        regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS normalized_address
       FROM building_permits
       WHERE
         (
@@ -974,7 +1018,7 @@ export async function buildPermitExhibit(
         )
         OR (
           ${normalizedSitusAddress} <> ''
-          AND ${NORMALIZED_ADDRESS_SQL} = ${normalizedSitusAddress}
+          AND regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') = ${normalizedSitusAddress}
         )
     )
     SELECT * FROM candidates
@@ -988,7 +1032,7 @@ export async function buildPermitExhibit(
         permit_id, permit_type, address, issue_date::text AS issue_date,
         permit_status, permit_milestone, work_type, work_description,
         reported_cost, lat, lon, fetched_at::text AS fetched_at,
-        ${NORMALIZED_ADDRESS_SQL} AS normalized_address
+        regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS normalized_address
       FROM building_permits
       WHERE geom IS NOT NULL
         AND ST_Intersects(
@@ -1001,10 +1045,10 @@ export async function buildPermitExhibit(
         permit_id, permit_type, address, issue_date::text AS issue_date,
         permit_status, permit_milestone, work_type, work_description,
         reported_cost, lat, lon, fetched_at::text AS fetched_at,
-        ${NORMALIZED_ADDRESS_SQL} AS normalized_address
+        regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS normalized_address
       FROM building_permits
       WHERE geom IS NULL
-        AND ${NORMALIZED_ADDRESS_SQL} IN (
+        AND regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') IN (
           SELECT DISTINCT normalized_address FROM point_matches WHERE normalized_address <> ''
         )
     )
