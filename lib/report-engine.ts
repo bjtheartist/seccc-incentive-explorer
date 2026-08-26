@@ -31,6 +31,7 @@ import type { SectionBucketKey } from "./report-personas";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
 import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
+import type { DrawnAreaReportScope } from "./drawn-area-report-scope";
 import { buildLocationContext, publicParcelContext } from "./location-context";
 import type { LocationContext } from "./location-context";
 import { isClass7aEligible } from "./parcel-classes";
@@ -469,6 +470,17 @@ export interface GeneratedReport {
    * an old saved blob from one written by a newer deploy.
    */
   schemaVersion?: number;
+  /**
+   * Explicit polygon scope and generation-time provenance for reports created
+   * by the map's drawn-area tool. A consumer that sees this field must use its
+   * polygon and must never widen the report to `metadata.address`, a ward, or
+   * the wizard's community-area/neighborhood label.
+   *
+   * Reports saved before this contract existed have no field. Use
+   * `resolveDrawnAreaReportScope` to distinguish those legacy drawn-area
+   * reports (scope unavailable; fail closed) from ordinary non-area reports.
+   */
+  drawnAreaScope?: DrawnAreaReportScope;
   title: string;
   subtitle: string;
   reportType: ReportType;

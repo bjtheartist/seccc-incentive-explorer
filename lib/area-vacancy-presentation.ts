@@ -89,6 +89,9 @@ export function summarizeAreaVacancyTypes(
 
 export function vacancySourceLabel(source: unknown): string {
   if (source === "cols") return "City-Owned Land Inventory";
+  if (source === "cclba") {
+    return "Cook County Land Bank Authority Published Property Inventory";
+  }
   if (source === "dpd_vacant") {
     return "311 Vacant/Abandoned Building Complaint";
   }

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import type { PermitAreaResult } from "@/lib/permit-area";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { email: "test@example.com" } }, status: "authenticated" }),
@@ -122,6 +123,50 @@ const COVERAGE: VacancyCoverageMetadata = {
   coverageStatus: "complete",
   potentiallyTruncated: false,
   fallbackReason: null,
+  cclbaSourceCoverage: unavailableCclbaSourceCoverage("snapshot_not_recorded"),
+};
+
+const EMPTY_PERMIT_AREA: PermitAreaResult = {
+  status: "ready",
+  source: {
+    label: "City of Chicago Building Permits",
+    url: "https://data.cityofchicago.org/resource/ydr8-5enu.json",
+    portalUrl:
+      "https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu",
+  },
+  dataWindow: "Issued since 2006",
+  sourceRefresh: { asOf: null, asOfBasis: null },
+  locatedRecordsOnly: true,
+  totalFilings: 0,
+  distinctAddresses: 0,
+  issueDateSpan: null,
+  rollingPulse: {
+    asOf: null,
+    current: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    previous: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    changeCount: 0,
+    changePercent: null,
+  },
+  monthlyBreakdown: [],
+  topAddresses: [],
+  typeBreakdown: [],
+  yearBreakdown: [],
+  statusBreakdown: [],
+  records: [],
+  recordsReturned: 0,
+  recordsTruncated: false,
 };
 
 function panel(overrides: Partial<React.ComponentProps<typeof MapPolygonPanel>> = {}) {
@@ -131,6 +176,7 @@ function panel(overrides: Partial<React.ComponentProps<typeof MapPolygonPanel>> 
       loading={false}
       vacancyCoverage={COVERAGE}
       polygon={POLYGON}
+      permitArea={EMPTY_PERMIT_AREA}
       permitFetchImpl={vi.fn(() => new Promise<Response>(() => {})) as typeof fetch}
       onClose={() => {}}
       onClear={() => {}}
@@ -277,6 +323,106 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
     expect(screen.getByText(/CSV contains every row/)).toBeTruthy();
   });
 
+  it("distinguishes Cook County land-bank inventory from City ownership", () => {
+    const cclba = vacancyFeature("cclba-42", {
+      source: "cclba",
+      status: "Acquired",
+      propertyType: "vacant_land",
+      canonicalType: "land",
+      sourceRecordDate: null,
+      freshnessClass: "unknown_date",
+      licenseCheckState: "no_match",
+      ownerName: "Cook County Land Bank Authority",
+      ownerType: "city_public",
+      ownerJurisdiction: "cook_county",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceUrl: "https://public-cclba.epropertyplus.com/",
+      programName: null,
+      managingOrganization: null,
+      applicationUrl: null,
+      programContext: [
+        {
+          sourceRowId: "42",
+          currentStatus: "Acquired",
+          inventoryType: "Vacant Land",
+          propertyClass: "Residential Land",
+        },
+      ],
+    });
+    render(
+      panel({
+        results: { type: "FeatureCollection", features: [cclba] },
+        vacancyCoverage: { ...COVERAGE, returnedCount: 1 },
+      }),
+    );
+
+    expect(screen.getByText(/classified as public ownership/i)).toBeTruthy();
+    expect(screen.queryByText(/is city-owned/i)).toBeNull();
+    expect(
+      screen
+        .getByRole("link", {
+          name: "Cook County Land Bank Authority Published Property Inventory",
+        })
+        .getAttribute("href"),
+    ).toBe("https://public-cclba.epropertyplus.com/");
+    expect(
+      screen.getByText(/Source status: Acquired/),
+    ).toBeTruthy();
+    expect(screen.getByText(/Source row ID=42/)).toBeTruthy();
+    expect(screen.getByText(/Inventory type=Vacant Land/)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Review published program record ↗" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Report" }));
+    const payload = screen.getByTestId("saved-report-payload").textContent ?? "";
+    expect(payload).toContain(
+      "Source status: Acquired",
+    );
+    expect(payload).toContain("Source row ID=42");
+    expect(payload).not.toContain("Published program / disposition context");
+  });
+
+  it("holds save, email, and CSV actions until vacancy and permit lookups settle", () => {
+    render(panel({ permitArea: undefined }));
+
+    for (const name of ["Save Report", "Email This to Me", "Export Area Data (CSV)"]) {
+      expect(screen.getByRole("button", { name })).toHaveProperty("disabled", true);
+    }
+    expect(
+      screen.getByText(
+        "Save, email, and CSV export will be available after the vacancy and permit lookups finish.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("saved-report-payload")).toBeNull();
+  });
+
+  it("fails closed when exact boundary provenance cannot be created", () => {
+    const featureWithMalformedSnapshot = vacancyFeature("invalid-snapshot", {
+      source: "cols",
+      status: "city_owned",
+      propertyType: "vacant_land",
+      canonicalType: "land",
+      sourceRecordDate: null,
+      freshnessClass: "unknown_date",
+      licenseCheckState: "no_match",
+      sourceSnapshotId: 123,
+    });
+    render(
+      panel({
+        results: { type: "FeatureCollection", features: [featureWithMalformedSnapshot] },
+        vacancyCoverage: { ...COVERAGE, returnedCount: 1 },
+      }),
+    );
+
+    for (const name of ["Save Report", "Email This to Me", "Export Area Data (CSV)"]) {
+      expect(screen.getByRole("button", { name })).toHaveProperty("disabled", true);
+    }
+    expect(
+      screen.getByText(
+        "Save, email, and CSV export are unavailable because the exact boundary provenance could not be created.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("serializes clean-lot, source-date, freshness and license evidence into the saved report", () => {
     render(panel());
     fireEvent.change(screen.getByLabelText("Vacancy evidence timeframe"), {
@@ -298,5 +444,40 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
       '"value":"1 signal","detail":"33% of the displayed vacancy signals fall within this zone."',
     );
     expect(payload).not.toContain('300 S STATE ST\",\"value\":\"Vacant building');
+  });
+
+  it("uses the editable area name as the saved report identity", () => {
+    render(panel());
+    fireEvent.change(screen.getByLabelText("Area Name"), {
+      target: { value: "79th Corridor — Ward 6" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Report" }));
+
+    const payload = JSON.parse(
+      screen.getByTestId("saved-report-payload").textContent ?? "{}",
+    ) as {
+      title?: string;
+      metadata?: { address?: string };
+      drawnAreaScope?: {
+        name?: string;
+        scope?: { geometry?: GeoJSON.Polygon; fingerprint?: string };
+        provenance?: {
+          vacancy?: {
+            selectedCount?: number;
+            recordRefsAtGeneration?: Array<{ recordId?: string }>;
+          };
+        };
+      };
+    };
+    expect(payload.title).toBe("Area Analysis Report — 79th Corridor — Ward 6");
+    expect(payload.metadata?.address).toBe("79th Corridor — Ward 6");
+    expect(payload.drawnAreaScope?.name).toBe("79th Corridor — Ward 6");
+    expect(payload.drawnAreaScope?.scope?.geometry).toEqual(POLYGON);
+    expect(payload.drawnAreaScope?.scope?.fingerprint).toMatch(/^polygon-v1-/);
+    expect(payload.drawnAreaScope?.provenance?.vacancy?.selectedCount).toBe(2);
+    expect(
+      payload.drawnAreaScope?.provenance?.vacancy?.recordRefsAtGeneration,
+    ).toEqual([{ recordId: "100" }, { recordId: "200" }]);
   });
 });

@@ -75,6 +75,10 @@ import {
   type ShortlistUniverseRow,
 } from "../lib/shortlist-universe-schema";
 import { normalizePublishedArea } from "../lib/published-area";
+import {
+  filterLegacyCity311Rows,
+  legacyShortlistEvidenceType,
+} from "../lib/legacy-vacancy-derived-sources";
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -160,11 +164,9 @@ async function fetchZipBoundaries(): Promise<Map<string, ZipGeometry>> {
 
 interface VacantRow {
   id: string;
-  /** Live values observed on vacant_properties.source (constraint allows
-   * 'cols' | 'dpd_vacant' | '311_clean_lot' | 'violations'; typed as string
-   * here rather than that literal union so an unanticipated future source
-   * degrades to the safe "311_building" default in sourceToEvidenceType
-   * instead of a TypeScript-only compile error nobody sees at runtime). */
+  /** Live values observed on vacant_properties.source. CCLBA is deliberately
+   * removed before this legacy City/311-only export maps evidence; its schema
+   * does not yet have an honest land-bank evidence type. */
   source: string;
   pin: string | null;
   address: string | null;
@@ -283,19 +285,6 @@ function toResolvedPropertyType(rawPropertyType: string): "vacant_land" | "vacan
   return rawPropertyType === "vacant_land" || rawPropertyType === "reported_vacant_lot" ? "vacant_land" : "vacant_building";
 }
 
-/** COLS City-inventory rows are `city_land`; every other source is a citizen/
- * City-condition report with no PIN, split into `311_land` vs `311_building`
- * by its RESOLVED property type (see toResolvedPropertyType) rather than by
- * the literal source string — `311_clean_lot` reports land, `dpd_vacant`
- * reports buildings, and a future source is classified the same honest way. */
-function sourceToEvidenceType(
-  source: string,
-  resolvedPropertyType: "vacant_land" | "vacant_building",
-): "city_land" | "311_building" | "311_land" {
-  if (source === "cols") return "city_land";
-  return resolvedPropertyType === "vacant_land" ? "311_land" : "311_building";
-}
-
 function sha256(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
@@ -334,10 +323,17 @@ async function main() {
   }
 
   console.log("\nQuerying vacant_properties...");
-  const allVacantRows = await fetchAllVacantRows();
-  console.log(`  ${allVacantRows.length} rows with coordinates`);
+  const fetchedVacantRows = await fetchAllVacantRows();
+  const allVacantRows = filterLegacyCity311Rows(fetchedVacantRows);
+  console.log(
+    `  ${allVacantRows.length} City/311 rows with coordinates` +
+      ` (${fetchedVacantRows.length - allVacantRows.length} unmodeled-source row(s) excluded pending an explicit evidence type)`,
+  );
   if (allVacantRows.length === 0) {
-    console.error("FATAL: vacant_properties returned 0 rows — this is always a sync failure (missing .env.local / SOCRATA creds / SYNC_ZIPS), never a legitimate state. Aborting.");
+    console.error(
+      "FATAL: vacant_properties returned 0 City/311 rows supported by the shortlist schema — " +
+        "the sync may have failed or the branch may contain only excluded source types. Aborting.",
+    );
     process.exit(1);
   }
 
@@ -383,9 +379,11 @@ async function main() {
 
     for (const row of vacantRows) {
       const resolvedPropertyType = toResolvedPropertyType(row.property_type);
+      const evidenceType = legacyShortlistEvidenceType(row.source, resolvedPropertyType);
+      if (!evidenceType) continue;
       records.push({
         recordId: `vacant_properties:${row.id}`,
-        evidenceType: sourceToEvidenceType(row.source, resolvedPropertyType),
+        evidenceType,
         pin: row.pin,
         address: row.address,
         lat: toNumOrNull(row.lat),

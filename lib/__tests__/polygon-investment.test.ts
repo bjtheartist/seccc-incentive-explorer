@@ -514,6 +514,12 @@ describe("buildDrawnAreaCsv", () => {
 
   const csv = buildDrawnAreaCsv({
     areaName: "63rd & Halsted",
+    scopeProvenance: {
+      fingerprint: "polygon-v1:test",
+      selectionMethod: "point_in_saved_polygon",
+      generatedAt: "2026-08-26T17:00:00.000Z",
+      manifestSelectedCount: 1,
+    },
     vacancyFeatures: vacancy,
     investment: {
       summary: aggregateInvestmentPoints(selected, {
@@ -536,10 +542,49 @@ describe("buildDrawnAreaCsv", () => {
   });
 
   it("keeps the vacancy table intact under the area-name column", () => {
-    expect(csv).toContain('"Area Name","Address","Source","Source Status","Source Record Date","Freshness Class"');
-    expect(csv).toContain('"63rd & Halsted","123 S State St","City-Owned Land Inventory","city_owned"');
+    expect(csv).toContain('"Area Name","Record ID","PIN","Address","Source","Source Key","Source Dataset ID"');
+    expect(csv).toContain('"63rd & Halsted","","","123 S State St","City-Owned Land Inventory","cols"');
+    expect(csv).toContain('"city_owned"');
     expect(csv).toContain('"Source record date unavailable","Tracked land signal","vacant_land"');
     expect(csv).toContain('"tif; opportunity_zone"');
+  });
+
+  it("carries the exact saved-boundary provenance into the direct map export", () => {
+    expect(csv).toContain('"Section","Boundary provenance"');
+    expect(csv).toContain('"63rd & Halsted","Boundary fingerprint","polygon-v1:test"');
+    expect(csv).toContain('"63rd & Halsted","Selection method","point_in_saved_polygon"');
+    expect(csv).toContain('"63rd & Halsted","Scope generated at","2026-08-26T17:00:00.000Z"');
+    expect(csv).toContain('"63rd & Halsted","Manifest selected count","1"');
+  });
+
+  it("exports program associations as context with the source eligibility flags", () => {
+    const contextualCsv = buildDrawnAreaCsv({
+      areaName: "79th corridor",
+      vacancyFeatures: [
+        {
+          ...vacancy[0],
+          properties: {
+            ...vacancy[0].properties,
+            source: "cclba",
+            status: "land_bank_inventory",
+            programName: "Residential/Community Developer",
+            programContext: [
+              {
+                isIneligible: true,
+                isBeforeApplicationStart: false,
+                program: { name: "Residential/Community Developer" },
+              },
+            ],
+          },
+        },
+      ],
+      investment: null,
+    });
+    expect(contextualCsv).toContain("Published Source / Program Context");
+    expect(contextualCsv).toContain("Published Source / Program Context Details");
+    expect(contextualCsv).toContain(
+      '"Residential/Community Developer [isIneligible=true; isBeforeApplicationStart=false]"',
+    );
   });
 
   it("writes one money column per noun and puts each amount only under its own", () => {
@@ -574,7 +619,9 @@ describe("buildDrawnAreaCsv", () => {
       vacancyFeatures: vacancy,
       investment: null,
     });
-    expect(publicCsv).toContain('"Drawn area — Jul 29, 2026","123 S State St"');
+    expect(publicCsv).toContain(
+      '"Drawn area — Jul 29, 2026","","","123 S State St"',
+    );
     expect(publicCsv.toLowerCase()).not.toContain("investment");
     expect(publicCsv.toLowerCase()).not.toContain("awarded");
     expect(publicCsv.toLowerCase()).not.toContain("announced");

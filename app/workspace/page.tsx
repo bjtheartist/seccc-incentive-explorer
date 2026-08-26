@@ -121,6 +121,10 @@ function WorkspaceContent() {
       setRenamingId(null);
       return;
     }
+    if (title.length > 200) {
+      setError("Report names must be 200 characters or fewer.");
+      return;
+    }
     setRowBusyId(reportId);
     try {
       const res = await fetch(`/api/saved-reports/${reportId}`, {
@@ -490,7 +494,7 @@ function WorkspaceContent() {
             />
           ) : (
             <div className="bg-white border border-[#0C1B33]/10 divide-y divide-[#0C1B33]/6">
-              {(reports || []).slice(0, 8).map((report) => {
+              {(reports || []).map((report) => {
                 const isRenaming = renamingId === report.id;
                 const isBusy = rowBusyId === report.id;
                 return (
@@ -503,6 +507,7 @@ function WorkspaceContent() {
                         <div className="flex items-center gap-2">
                           <input
                             value={renameDraft}
+                            maxLength={200}
                             onChange={(e) => setRenameDraft(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") commitRename(report.id);

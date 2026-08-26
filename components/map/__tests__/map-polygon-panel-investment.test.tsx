@@ -27,6 +27,8 @@ import type {
   InvestmentPointFeature,
   InvestmentPointProps,
 } from "@/lib/community-investment-layer";
+import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import type { PermitAreaResult } from "@/lib/permit-area";
 
 /** A Loop-sized box around downtown Chicago. */
 const DOWNTOWN: GeoJSON.Polygon = {
@@ -193,19 +195,113 @@ const VACANCY: GeoJSON.FeatureCollection = {
         ward: "4",
         communityArea: "Loop",
         ownerType: "city_public",
+        propertyStatus: "Owned by City",
         zoneMatches: [{ zoneKey: "tif" }],
       },
     },
   ],
 };
 
+function vacancyCoverage(returnedCount: number): VacancyCoverageMetadata {
+  return {
+    sourceMode: "database",
+    sourcePath: "database:vacant_properties",
+    asOf: "2026-08-14T00:00:00.000Z",
+    asOfBasis: "explorer_refresh_timestamp",
+    explorerRefreshedAt: "2026-08-14T00:00:00.000Z",
+    freshness: {
+      policyVersion: "source-record-date-v1",
+      referenceDate: "2026-08-14T00:00:00.000Z",
+      recentWithinYears: 3,
+      cutoffDate: "2023-08-14T00:00:00.000Z",
+      retainedWithinYears: 5,
+      retentionPolicyCutoffDate: "2021-08-14T00:00:00.000Z",
+      retentionCutoffBasis: "current_request_reference_policy",
+      returnedCounts: {
+        recent: 0,
+        stale: 0,
+        unknownDate: returnedCount,
+      },
+    },
+    licenseScreening: {
+      policyVersion: "issued-exact-address-v4",
+      sourcePath: "https://data.cityofchicago.org/resource/r5kz-chrr.json",
+      status: "available",
+      checkedAt: "2026-08-14T00:00:00.000Z",
+      candidateCount: returnedCount,
+      checkedCount: returnedCount,
+      matchedPropertyCount: 0,
+      capped: false,
+      addressCap: 500,
+      sourceCallCount: 0,
+      successfulBatches: 0,
+      failedBatches: 0,
+      malformedRowCount: 0,
+      partialReasons: [],
+      caveats: [],
+    },
+    returnedCount,
+    configuredLimit: 10_000,
+    queryLimit: 10_001,
+    coverageStatus: "complete",
+    potentiallyTruncated: false,
+    fallbackReason: null,
+    cclbaSourceCoverage: unavailableCclbaSourceCoverage("snapshot_not_recorded"),
+  };
+}
+
+const EMPTY_PERMIT_AREA: PermitAreaResult = {
+  status: "ready",
+  source: {
+    label: "City of Chicago Building Permits",
+    url: "https://data.cityofchicago.org/resource/ydr8-5enu.json",
+    portalUrl:
+      "https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu",
+  },
+  dataWindow: "Issued since 2006",
+  sourceRefresh: { asOf: null, asOfBasis: null },
+  locatedRecordsOnly: true,
+  totalFilings: 0,
+  distinctAddresses: 0,
+  issueDateSpan: null,
+  rollingPulse: {
+    asOf: null,
+    current: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    previous: {
+      start: null,
+      end: null,
+      filings: 0,
+      distinctAddresses: 0,
+      addressedFilings: 0,
+    },
+    changeCount: 0,
+    changePercent: null,
+  },
+  monthlyBreakdown: [],
+  topAddresses: [],
+  typeBreakdown: [],
+  yearBreakdown: [],
+  statusBreakdown: [],
+  records: [],
+  recordsReturned: 0,
+  recordsTruncated: false,
+};
+
 function baseProps() {
   return {
     results: VACANCY,
     loading: false,
+    vacancyCoverage: vacancyCoverage(1),
     onClose: () => {},
     onClear: () => {},
     polygon: DOWNTOWN,
+    permitArea: EMPTY_PERMIT_AREA,
   };
 }
 
@@ -362,6 +458,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
       <MapPolygonPanel
         {...baseProps()}
         results={NO_VACANCY}
+        vacancyCoverage={vacancyCoverage(0)}
         adminSessionActive
         investmentLayer={LAYER}
       />,
@@ -378,6 +475,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
       <MapPolygonPanel
         {...baseProps()}
         results={NO_VACANCY}
+        vacancyCoverage={vacancyCoverage(0)}
         adminSessionActive={false}
         investmentLayer={LAYER}
       />,
@@ -391,6 +489,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
       <MapPolygonPanel
         {...baseProps()}
         results={NO_VACANCY}
+        vacancyCoverage={vacancyCoverage(0)}
         adminSessionActive
         investmentLayer={{ ...LAYER, pointFeatures: [] }}
       />,
@@ -491,7 +590,8 @@ describe("MapPolygonPanel — area label reaches the CSV", () => {
       vacancyFeatures: VACANCY.features,
       investment: null,
     });
-    expect(csv).toContain('"Loop pilot area","300 S State St"');
+    expect(csv).toContain('"Loop pilot area","cols-300-s-state"');
+    expect(csv).toContain('"300 S State St"');
     expect(csv.toLowerCase()).not.toContain("recipient");
     expect(csv.toLowerCase()).not.toContain("awarded");
   });

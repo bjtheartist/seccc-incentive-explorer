@@ -21,11 +21,11 @@ import {
  * u7si-yh3t, by normalized address — same technique as buildingViolationCount)
  * and `scavengerOrAnnualSaleFlag` (joined from `scavenger_sale_entries` /
  * `annual_tax_sale_entries`, ydgz-vkrp / 55ju-2fs9, by PIN). `delinquentTaxCount`
- * and `cclbaInventoryFlag` stay a literal `null` — never a silent zero —
- * until their manual-import sources ship (Cook County Clerk delinquency
- * file; CCLBA inventory snapshot; neither publishes a public API). `null`
- * always means "not yet available," while `0`/`false` is a real, confirmed
- * value once the join could run.
+ * and `cclbaInventoryFlag` stay a literal `null` — never a silent zero.
+ * Delinquent-tax data still needs the controlled Cook County Clerk file;
+ * CCLBA now publishes an inventory feed, but that PIN join has not yet been
+ * attached to this separate owner-cluster pipeline. `null` always means "not
+ * yet available," while `0`/`false` is a real value once the join could run.
  */
 export interface OwnerClusterDistressSignals {
   buildingViolationCount: number | null;

@@ -19,6 +19,7 @@ import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
 import MapDossierCard from "./MapDossierCard";
+import { buildMapVacancySelectionEvidence } from "./map-vacancy-selection";
 import { DESKTOP_DOSSIER_WRAPPER_CLASS, MOBILE_DOSSIER_WRAPPER_CLASS } from "./map-overlay-layout";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
@@ -1389,12 +1390,7 @@ export default function MapView() {
         const vacancyFeature = firstFeature(["vacant-unclustered"]);
         if (vacancyFeature) {
           const properties = vacancyFeature.properties || {};
-          const sourceId = textValue(properties.id);
-          const candidatePin =
-            textValue(properties.source) === "cols" && sourceId
-              ? sourceId.replace(/^cols-/, "")
-              : null;
-          const pin = candidatePin && /^\d{14}$/.test(candidatePin) ? candidatePin : null;
+          const vacancyEvidence = buildMapVacancySelectionEvidence(properties);
           const rawType = textValue(properties.propertyType);
           selection = {
             kind: "vacancy",
@@ -1403,7 +1399,7 @@ export default function MapView() {
               rawType === "vacant_building" || rawType === "vacant_storefront"
                 ? "vacant_building"
                 : "vacant_land",
-            pin,
+            pin: vacancyEvidence.pin,
             squareFeet: numberValue(properties.squareFeet),
             space: compactParcelSpaceFacts({
               lotAreaSqft:
@@ -1425,17 +1421,7 @@ export default function MapView() {
                 textValue(properties.availableSpaceReconfirmAfter) ?? undefined,
             }),
             incentiveGeographyCount: numberValue(properties.incentiveCount),
-            sources: [
-              {
-                label:
-                  textValue(properties.source) === "cols"
-                    ? "City-Owned Land Inventory"
-                    : textValue(properties.source) === "311_clean_lot"
-                      ? "311 Clean Vacant Lot Request"
-                      : "311 Vacant/Abandoned Building Complaint",
-                note: `${textValue(properties.sourceRecordDate) ? `Source record date ${textValue(properties.sourceRecordDate)?.slice(0, 10)}. ` : "Source record date unavailable. "}Tracked vacancy signals are research leads, not availability listings.`,
-              },
-            ],
+            sources: vacancyEvidence.sources,
           };
         }
       }

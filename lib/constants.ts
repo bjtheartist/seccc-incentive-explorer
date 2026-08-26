@@ -289,7 +289,7 @@ export const VACANT_COLORS: Record<string, string> = {
 };
 
 export const VACANT_LABELS: Record<string, string> = {
-  vacantLand: "City-Owned Vacant Land",
+  vacantLand: "Tracked Vacant Land",
   vacantBuildings: "Vacant Buildings",
 };
 

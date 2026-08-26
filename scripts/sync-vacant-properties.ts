@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Sync vacant properties from Chicago's City-Owned Land Inventory (Socrata).
+ * Sync vacancy signals from Chicago COLS/311 and CCLBA's public inventory.
  * Upserts into vacant_properties table, cross-references against zone geometries,
  * matches citywide building permits to the vacant-parcel universe, and generates
  * a static GeoJSON fallback file.
@@ -17,7 +17,7 @@
  *
  * Steps can be selected so a targeted re-run does not redo the whole sync:
  *   SYNC_VACANT_STEPS=permits,export npx tsx scripts/sync-vacant-properties.ts
- *   (steps: cols, sr311, zones, permits, export — default: all)
+ *   (steps: cols, cclba, sr311, zones, permits, export — default: all)
  */
 
 import { neon } from "@neondatabase/serverless";
@@ -25,8 +25,22 @@ import { randomUUID } from "node:crypto";
 import { socrataHeaders } from "../lib/socrata";
 import { classifyOwner } from "../lib/owner-classify";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
-import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import { fetchCompleteOffsetPages } from "../lib/complete-source-pagination";
+import {
+  attachColsOwnership,
+  CCLBA_PUBLIC_DATASET_ID,
+  CCLBA_PUBLIC_PORTAL_URL,
+  COLS_API_URL,
+  COLS_DATASET_ID,
+  fetchCclbaPublicInventory,
+  normalizeCclbaInventoryAsset,
+  normalizeColsInventoryRecord,
+  type CclbaSourceAsset,
+  type CclbaPublicInventorySnapshot,
+  type ColsSourceRecord,
+  type NormalizedCclbaInventoryRecord,
+  type NormalizedColsSnapshotRecord,
+} from "../lib/vacancy-inventory-sources";
 import {
   chicagoCalendarDay,
   normalizeChicagoSourceCalendarDate,
@@ -41,9 +55,12 @@ import {
 } from "../lib/vacancy-static-fallback";
 import {
   assertVacancySourceSnapshotSane,
+  assertCclbaMembershipTransitionSane,
+  assertCclbaSourceSnapshotSane,
   build311VacancySourcePageUrl,
   buildColsSourcePageUrl,
   isPlausible311VacancySourceRow,
+  isPlausibleCclbaSourceRow,
   isPlausibleColsSourceRow,
 } from "../lib/vacancy-source-contract";
 import {
@@ -54,6 +71,11 @@ import {
 } from "../lib/permit-match";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
+import {
+  normalizeCclbaSourceCoverage,
+  unavailableCclbaSourceCoverage,
+  type CclbaSourceCoverage,
+} from "../lib/drawn-area-vacancy";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -64,7 +86,7 @@ if (!DATABASE_URL) {
 const sql = neon(DATABASE_URL);
 
 /** Which phases to run. Default is every phase, in order. */
-const ALL_STEPS = ["cols", "sr311", "zones", "permits", "export"] as const;
+const ALL_STEPS = ["cols", "cclba", "sr311", "zones", "permits", "export"] as const;
 type SyncStep = (typeof ALL_STEPS)[number];
 const STEPS = new Set<SyncStep>(
   (process.env.SYNC_VACANT_STEPS
@@ -73,30 +95,9 @@ const STEPS = new Set<SyncStep>(
   ).filter((s): s is SyncStep => (ALL_STEPS as readonly string[]).includes(s)),
 );
 
-// City-Owned Land Inventory — Socrata dataset
-const COLS_DATASET_ID = "aksk-kvfp";
-const COLS_BASE_URL = `https://data.cityofchicago.org/resource/${COLS_DATASET_ID}.json`;
-
 // 311 Service Requests — vacant-building and clean-lot public-record signals
 const SR311_DATASET_ID = "v6vf-nfxy";
 const SR311_BASE_URL = `https://data.cityofchicago.org/resource/${SR311_DATASET_ID}.json`;
-
-interface ColsRecord {
-  pin: string;
-  address: string;
-  dir?: string;
-  street?: string;
-  type?: string;
-  property_name?: string;
-  managing_organization?: string;
-  ward?: string;
-  community_area_name?: string;
-  community_area_number?: string;
-  zoning_classification?: string;
-  sq_ft?: string;
-  latitude?: string;
-  longitude?: string;
-}
 
 /** Cook County Assessor record (taxpayer info). */
 interface AssessorRecord {
@@ -186,67 +187,20 @@ async function fetchOwnershipBatch(
   return result;
 }
 
-async function fetchAllPages(): Promise<ColsRecord[]> {
+async function fetchAllPages(): Promise<ColsSourceRecord[]> {
   const pageSize = 1000;
 
   console.log("Fetching City-Owned Land Inventory...");
-  return fetchCompleteOffsetPages<ColsRecord>({
+  return fetchCompleteOffsetPages<ColsSourceRecord>({
     sourceLabel: "COLS API",
     pageSize,
     buildUrl: (offset, limit) =>
-      buildColsSourcePageUrl(COLS_BASE_URL, offset, limit),
+      buildColsSourcePageUrl(COLS_API_URL, offset, limit),
     headers: socrataHeaders(),
     timeoutMs: 30_000,
     onProgress: (total, offset) =>
       console.log(`  Fetched ${total} records (offset ${offset})...`),
   });
-}
-
-function normalizeRecord(r: ColsRecord): {
-  id: string;
-  /** As published by COLS — dashed, e.g. "16-11-105-004-0000". Keys the id and
-   *  the Assessor lookup, both of which predate the digits-only column. */
-  pin: string | null;
-  /** The same PIN in the digits-only 14-char `parcels.pin` convention, which is
-   *  what the permit match engine joins on. Null when COLS published no PIN or
-   *  published one that is not 14 digits. */
-  pinDigits: string | null;
-  address: string;
-  lat: number;
-  lon: number;
-  ward: string | null;
-  communityArea: string | null;
-  zoningClass: string | null;
-  squareFeet: number | null;
-  managingOrg: string | null;
-} | null {
-  const lat = r.latitude ? parseFloat(r.latitude) : NaN;
-  const lon = r.longitude ? parseFloat(r.longitude) : NaN;
-
-  if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) return null;
-  // Basic Chicago bounds check
-  if (lat < 41.6 || lat > 42.1 || lon < -88.0 || lon > -87.4) return null;
-
-  const address =
-    r.address ||
-    [r.dir, r.street, r.type].filter(Boolean).join(" ") ||
-    "Unknown";
-
-  const pinDigits = toDigitsOnlyPin(r.pin ?? "");
-
-  return {
-    id: `cols-${r.pin || `${lat.toFixed(6)}-${lon.toFixed(6)}`}`,
-    pin: r.pin || null,
-    pinDigits: pinDigits.length === 14 ? pinDigits : null,
-    address,
-    lat,
-    lon,
-    ward: r.ward || null,
-    communityArea: r.community_area_name || null,
-    zoningClass: r.zoning_classification || null,
-    squareFeet: r.sq_ft ? parseFloat(r.sq_ft) : null,
-    managingOrg: r.managing_organization || null,
-  };
 }
 
 // ── 311 vacancy-related service requests ──
@@ -332,9 +286,14 @@ interface Normalized311VacancySignal {
   squareFeet: number | null;
   status: string;
   sourceRecordDate: string | null;
+  sourceRowId: string;
+  sourceRetrievedAt: string;
 }
 
-function normalize311Record(r: Sr311Record): Normalized311VacancySignal | null {
+function normalize311Record(
+  r: Sr311Record,
+  sourceRetrievedAt: string,
+): Normalized311VacancySignal | null {
   const lat = r.latitude ? parseFloat(r.latitude) : NaN;
   const lon = r.longitude ? parseFloat(r.longitude) : NaN;
 
@@ -360,6 +319,8 @@ function normalize311Record(r: Sr311Record): Normalized311VacancySignal | null {
     // it does not establish that the property is occupied or no longer vacant.
     status: r.status?.trim() || "Unknown",
     sourceRecordDate,
+    sourceRowId: r.sr_number,
+    sourceRetrievedAt,
   };
 }
 
@@ -383,18 +344,27 @@ async function stage311Snapshot(
       square_feet: record.squareFeet,
       status: record.status,
       source_record_date: record.sourceRecordDate,
+      source_dataset_id: SR311_DATASET_ID,
+      source_row_id: record.sourceRowId,
+      source_url: `${SR311_BASE_URL}?sr_number=${encodeURIComponent(record.sourceRowId)}`,
+      source_as_of: null,
+      source_retrieved_at: record.sourceRetrievedAt,
     }));
 
     await sql`
       INSERT INTO vacant_311_sync_stage (
         run_id, id, source, address, lat, lon, property_type, ward,
-        community_area, zoning_class, square_feet, status, source_record_date
+        community_area, zoning_class, square_feet, status, source_record_date,
+        source_dataset_id, source_row_id, source_url, source_as_of,
+        source_retrieved_at
       )
       SELECT
         ${runId}, incoming.id, incoming.source, incoming.address,
         incoming.lat, incoming.lon, incoming.property_type, incoming.ward,
         incoming.community_area, incoming.zoning_class, incoming.square_feet,
-        incoming.status, incoming.source_record_date
+        incoming.status, incoming.source_record_date, incoming.source_dataset_id,
+        incoming.source_row_id, incoming.source_url, incoming.source_as_of,
+        incoming.source_retrieved_at
       FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS incoming(
         id TEXT,
         source TEXT,
@@ -407,7 +377,12 @@ async function stage311Snapshot(
         zoning_class TEXT,
         square_feet DOUBLE PRECISION,
         status TEXT,
-        source_record_date TIMESTAMPTZ
+        source_record_date TIMESTAMPTZ,
+        source_dataset_id TEXT,
+        source_row_id TEXT,
+        source_url TEXT,
+        source_as_of TIMESTAMPTZ,
+        source_retrieved_at TIMESTAMPTZ
       )
       ON CONFLICT (run_id, id) DO UPDATE SET
         source = EXCLUDED.source,
@@ -421,6 +396,11 @@ async function stage311Snapshot(
         square_feet = EXCLUDED.square_feet,
         status = EXCLUDED.status,
         source_record_date = EXCLUDED.source_record_date,
+        source_dataset_id = EXCLUDED.source_dataset_id,
+        source_row_id = EXCLUDED.source_row_id,
+        source_url = EXCLUDED.source_url,
+        source_as_of = EXCLUDED.source_as_of,
+        source_retrieved_at = EXCLUDED.source_retrieved_at,
         staged_at = NOW()
     `;
 
@@ -471,12 +451,15 @@ async function replace311MembershipAtomically(
             id, source, address, lat, lon, property_type, ward,
             community_area, zoning_class, square_feet, status,
             source_record_date, owner_name, owner_mailing_address,
-            owner_type, geom, updated_at
+            owner_type, source_dataset_id, source_row_id, source_url,
+            source_as_of, source_retrieved_at, geom, updated_at
           )
           SELECT
             id, source, address, lat, lon, property_type, ward,
             community_area, zoning_class, square_feet, status,
             source_record_date, 'Unknown', NULL, 'unknown',
+            source_dataset_id, source_row_id, source_url, source_as_of,
+            source_retrieved_at,
             ST_MakePoint(lon, lat)::geography, NOW()
           FROM incoming
           ON CONFLICT (id) DO UPDATE SET
@@ -490,6 +473,11 @@ async function replace311MembershipAtomically(
             property_type = EXCLUDED.property_type,
             status = EXCLUDED.status,
             source_record_date = EXCLUDED.source_record_date,
+            source_dataset_id = EXCLUDED.source_dataset_id,
+            source_row_id = EXCLUDED.source_row_id,
+            source_url = EXCLUDED.source_url,
+            source_as_of = EXCLUDED.source_as_of,
+            source_retrieved_at = EXCLUDED.source_retrieved_at,
             geom = EXCLUDED.geom,
             updated_at = NOW()
           RETURNING id
@@ -523,31 +511,6 @@ async function replace311MembershipAtomically(
   console.log(`  Retired ${result} 311 rows no longer in the complete ${VACANCY_RETENTION_YEARS}-year source pull`);
 }
 
-type NormalizedColsSnapshotRecord = NonNullable<ReturnType<typeof normalizeRecord>> & {
-  ownerName: string;
-  ownerMailingAddress: string | null;
-  ownerType: string;
-};
-
-function attachColsOwnership(
-  records: NonNullable<ReturnType<typeof normalizeRecord>>[],
-  ownershipMap: Map<string, { ownerName: string; mailingAddress: string; ownerType: string }>
-): NormalizedColsSnapshotRecord[] {
-  return records.map((record) => {
-    const ownership = record.pin ? ownershipMap.get(record.pin) : undefined;
-    return {
-      ...record,
-      ownerName:
-        ownership?.ownerName ||
-        (record.managingOrg && record.managingOrg !== "None"
-          ? `City of Chicago — ${record.managingOrg}`
-          : "City of Chicago"),
-      ownerMailingAddress: ownership?.mailingAddress || null,
-      ownerType: ownership?.ownerType || "city_public",
-    };
-  });
-}
-
 async function stageColsSnapshot(
   runId: string,
   records: NormalizedColsSnapshotRecord[],
@@ -568,18 +531,49 @@ async function stageColsSnapshot(
       owner_name: record.ownerName,
       owner_mailing_address: record.ownerMailingAddress,
       owner_type: record.ownerType,
+      owner_jurisdiction: record.ownerJurisdiction,
+      source_dataset_id: COLS_DATASET_ID,
+      source_row_id: record.sourceRowId,
+      source_url: record.sourceUrl,
+      source_as_of: record.sourceAsOf,
+      source_retrieved_at: record.sourceRetrievedAt,
+      managing_organization: record.managingOrganization,
+      program_name: record.programName,
+      program_key: record.programKey,
+      offer_round: record.offerRound,
+      application_use: record.applicationUse,
+      application_opens: record.applicationOpens,
+      application_deadline: record.applicationDeadline,
+      application_url: record.applicationUrl,
+      property_status: record.propertyStatus,
+      sales_status: record.salesStatus,
+      sale_offering_status: record.saleOfferingStatus,
+      sale_offering_reason: record.saleOfferingReason,
     }));
 
     await sql`
       INSERT INTO vacant_cols_sync_stage (
         run_id, id, pin, address, lat, lon, ward, community_area,
-        zoning_class, square_feet, owner_name, owner_mailing_address, owner_type
+        zoning_class, square_feet, owner_name, owner_mailing_address, owner_type,
+        owner_jurisdiction, source_dataset_id, source_row_id, source_url,
+        source_as_of, source_retrieved_at, managing_organization, program_name,
+        program_key, offer_round, application_use, application_opens,
+        application_deadline, application_url, property_status, sales_status,
+        sale_offering_status, sale_offering_reason
       )
       SELECT
         ${runId}, incoming.id, incoming.pin, incoming.address,
         incoming.lat, incoming.lon, incoming.ward, incoming.community_area,
         incoming.zoning_class, incoming.square_feet, incoming.owner_name,
-        incoming.owner_mailing_address, incoming.owner_type
+        incoming.owner_mailing_address, incoming.owner_type,
+        incoming.owner_jurisdiction, incoming.source_dataset_id,
+        incoming.source_row_id, incoming.source_url, incoming.source_as_of,
+        incoming.source_retrieved_at, incoming.managing_organization,
+        incoming.program_name, incoming.program_key, incoming.offer_round,
+        incoming.application_use, incoming.application_opens,
+        incoming.application_deadline, incoming.application_url,
+        incoming.property_status, incoming.sales_status,
+        incoming.sale_offering_status, incoming.sale_offering_reason
       FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS incoming(
         id TEXT,
         pin TEXT,
@@ -592,7 +586,25 @@ async function stageColsSnapshot(
         square_feet DOUBLE PRECISION,
         owner_name TEXT,
         owner_mailing_address TEXT,
-        owner_type TEXT
+        owner_type TEXT,
+        owner_jurisdiction TEXT,
+        source_dataset_id TEXT,
+        source_row_id TEXT,
+        source_url TEXT,
+        source_as_of TIMESTAMPTZ,
+        source_retrieved_at TIMESTAMPTZ,
+        managing_organization TEXT,
+        program_name TEXT,
+        program_key TEXT,
+        offer_round TEXT,
+        application_use TEXT,
+        application_opens TIMESTAMPTZ,
+        application_deadline TIMESTAMPTZ,
+        application_url TEXT,
+        property_status TEXT,
+        sales_status TEXT,
+        sale_offering_status TEXT,
+        sale_offering_reason TEXT
       )
       ON CONFLICT (run_id, id) DO UPDATE SET
         pin = EXCLUDED.pin,
@@ -606,6 +618,24 @@ async function stageColsSnapshot(
         owner_name = EXCLUDED.owner_name,
         owner_mailing_address = EXCLUDED.owner_mailing_address,
         owner_type = EXCLUDED.owner_type,
+        owner_jurisdiction = EXCLUDED.owner_jurisdiction,
+        source_dataset_id = EXCLUDED.source_dataset_id,
+        source_row_id = EXCLUDED.source_row_id,
+        source_url = EXCLUDED.source_url,
+        source_as_of = EXCLUDED.source_as_of,
+        source_retrieved_at = EXCLUDED.source_retrieved_at,
+        managing_organization = EXCLUDED.managing_organization,
+        program_name = EXCLUDED.program_name,
+        program_key = EXCLUDED.program_key,
+        offer_round = EXCLUDED.offer_round,
+        application_use = EXCLUDED.application_use,
+        application_opens = EXCLUDED.application_opens,
+        application_deadline = EXCLUDED.application_deadline,
+        application_url = EXCLUDED.application_url,
+        property_status = EXCLUDED.property_status,
+        sales_status = EXCLUDED.sales_status,
+        sale_offering_status = EXCLUDED.sale_offering_status,
+        sale_offering_reason = EXCLUDED.sale_offering_reason,
         staged_at = NOW()
     `;
 
@@ -651,12 +681,24 @@ async function replaceColsMembershipAtomically(
             id, source, pin, address, lat, lon, property_type, ward,
             community_area, zoning_class, square_feet, status,
             source_record_date, owner_name, owner_mailing_address,
-            owner_type, geom, updated_at
+            owner_type, owner_jurisdiction, source_dataset_id, source_row_id,
+            source_url, source_as_of, source_retrieved_at,
+            managing_organization, program_name, program_key, offer_round,
+            application_use, application_opens, application_deadline,
+            application_url, property_status, sales_status,
+            sale_offering_status, sale_offering_reason, geom, updated_at
           )
           SELECT
             id, 'cols', pin, address, lat, lon, 'vacant_land', ward,
-            community_area, zoning_class, square_feet, 'city_owned',
+            community_area, zoning_class, square_feet,
+            COALESCE(property_status, 'City inventory record'),
             NULL, owner_name, owner_mailing_address, owner_type,
+            owner_jurisdiction, source_dataset_id, source_row_id, source_url,
+            source_as_of, source_retrieved_at, managing_organization,
+            program_name, program_key, offer_round, application_use,
+            application_opens, application_deadline, application_url,
+            property_status, sales_status, sale_offering_status,
+            sale_offering_reason,
             ST_MakePoint(lon, lat)::geography, NOW()
           FROM incoming
           ON CONFLICT (id) DO UPDATE SET
@@ -675,6 +717,24 @@ async function replaceColsMembershipAtomically(
             owner_name = EXCLUDED.owner_name,
             owner_mailing_address = EXCLUDED.owner_mailing_address,
             owner_type = EXCLUDED.owner_type,
+            owner_jurisdiction = EXCLUDED.owner_jurisdiction,
+            source_dataset_id = EXCLUDED.source_dataset_id,
+            source_row_id = EXCLUDED.source_row_id,
+            source_url = EXCLUDED.source_url,
+            source_as_of = EXCLUDED.source_as_of,
+            source_retrieved_at = EXCLUDED.source_retrieved_at,
+            managing_organization = EXCLUDED.managing_organization,
+            program_name = EXCLUDED.program_name,
+            program_key = EXCLUDED.program_key,
+            offer_round = EXCLUDED.offer_round,
+            application_use = EXCLUDED.application_use,
+            application_opens = EXCLUDED.application_opens,
+            application_deadline = EXCLUDED.application_deadline,
+            application_url = EXCLUDED.application_url,
+            property_status = EXCLUDED.property_status,
+            sales_status = EXCLUDED.sales_status,
+            sale_offering_status = EXCLUDED.sale_offering_status,
+            sale_offering_reason = EXCLUDED.sale_offering_reason,
             geom = EXCLUDED.geom,
             updated_at = NOW()
           RETURNING id
@@ -707,6 +767,243 @@ async function replaceColsMembershipAtomically(
   }
   console.log(`  Published ${records.length} complete COLS records atomically`);
   console.log(`  Retired ${retired} COLS rows no longer in the complete source pull`);
+}
+
+async function stageCclbaSnapshot(
+  runId: string,
+  records: readonly NormalizedCclbaInventoryRecord[],
+) {
+  const batchSize = 250;
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+    const payload = batch.map((record) => ({
+      id: record.id,
+      pin: record.pinDigits,
+      address: record.address,
+      lat: record.lat,
+      lon: record.lon,
+      property_type: record.propertyType,
+      square_feet: record.squareFeet,
+      status: record.status,
+      owner_name: record.ownerName,
+      owner_type: record.ownerType,
+      owner_jurisdiction: record.ownerJurisdiction,
+      source_dataset_id: record.sourceDatasetId,
+      source_row_id: record.sourceRowId,
+      source_url: record.sourceUrl,
+      source_as_of: record.sourceAsOf,
+      source_retrieved_at: record.sourceRetrievedAt,
+      program_name: record.programName,
+      program_key: record.programKey,
+      application_opens: record.applicationOpens,
+      application_deadline: record.applicationDeadline,
+      application_url: record.applicationUrl,
+      program_context: record.programContext,
+    }));
+
+    await sql`
+      INSERT INTO vacant_cclba_sync_stage (
+        run_id, id, pin, address, lat, lon, property_type, square_feet,
+        status, owner_name, owner_type, owner_jurisdiction,
+        source_dataset_id, source_row_id, source_url, source_as_of,
+        source_retrieved_at, program_name, program_key, application_opens,
+        application_deadline, application_url, program_context
+      )
+      SELECT
+        ${runId}, incoming.id, incoming.pin, incoming.address, incoming.lat,
+        incoming.lon, incoming.property_type, incoming.square_feet,
+        incoming.status, incoming.owner_name, incoming.owner_type,
+        incoming.owner_jurisdiction, incoming.source_dataset_id,
+        incoming.source_row_id, incoming.source_url, incoming.source_as_of,
+        incoming.source_retrieved_at, incoming.program_name,
+        incoming.program_key, incoming.application_opens,
+        incoming.application_deadline, incoming.application_url,
+        incoming.program_context
+      FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS incoming(
+        id TEXT,
+        pin TEXT,
+        address TEXT,
+        lat DOUBLE PRECISION,
+        lon DOUBLE PRECISION,
+        property_type TEXT,
+        square_feet DOUBLE PRECISION,
+        status TEXT,
+        owner_name TEXT,
+        owner_type TEXT,
+        owner_jurisdiction TEXT,
+        source_dataset_id TEXT,
+        source_row_id TEXT,
+        source_url TEXT,
+        source_as_of TIMESTAMPTZ,
+        source_retrieved_at TIMESTAMPTZ,
+        program_name TEXT,
+        program_key TEXT,
+        application_opens TIMESTAMPTZ,
+        application_deadline TIMESTAMPTZ,
+        application_url TEXT,
+        program_context JSONB
+      )
+      ON CONFLICT (run_id, id) DO UPDATE SET
+        pin = EXCLUDED.pin,
+        address = EXCLUDED.address,
+        lat = EXCLUDED.lat,
+        lon = EXCLUDED.lon,
+        property_type = EXCLUDED.property_type,
+        square_feet = EXCLUDED.square_feet,
+        status = EXCLUDED.status,
+        owner_name = EXCLUDED.owner_name,
+        owner_type = EXCLUDED.owner_type,
+        owner_jurisdiction = EXCLUDED.owner_jurisdiction,
+        source_dataset_id = EXCLUDED.source_dataset_id,
+        source_row_id = EXCLUDED.source_row_id,
+        source_url = EXCLUDED.source_url,
+        source_as_of = EXCLUDED.source_as_of,
+        source_retrieved_at = EXCLUDED.source_retrieved_at,
+        program_name = EXCLUDED.program_name,
+        program_key = EXCLUDED.program_key,
+        application_opens = EXCLUDED.application_opens,
+        application_deadline = EXCLUDED.application_deadline,
+        application_url = EXCLUDED.application_url,
+        program_context = EXCLUDED.program_context,
+        staged_at = NOW()
+    `;
+  }
+}
+
+async function replaceCclbaMembershipAtomically(
+  records: readonly NormalizedCclbaInventoryRecord[],
+  complete: boolean,
+  snapshot: CclbaPublicInventorySnapshot,
+) {
+  const runId = randomUUID();
+  await sql`
+    DELETE FROM vacant_cclba_sync_stage
+    WHERE staged_at < NOW() - INTERVAL '2 days'
+  `;
+  if (complete) await stageCclbaSnapshot(runId, records);
+
+  const [staged] = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM vacant_cclba_sync_stage
+    WHERE run_id = ${runId}
+  `;
+  const stagedCount = Number(staged?.count ?? 0);
+  if (complete && stagedCount !== records.length) {
+    throw new Error(
+      `CCLBA staging completeness check failed: expected ${records.length}, found ${stagedCount}`,
+    );
+  }
+
+  const retired = await reconcileVacancyMembership(
+    records.map((record) => ({ id: record.id, source: "cclba" as const })),
+    complete,
+    async () => {
+      const rows = await sql`
+        WITH incoming AS MATERIALIZED (
+          SELECT * FROM vacant_cclba_sync_stage WHERE run_id = ${runId}
+        ),
+        snapshot_published AS (
+          INSERT INTO vacant_source_snapshots (
+            source, source_dataset_id, source_url,
+            published_county_total, chicago_total,
+            located_chicago_total, unlocated_chicago_total,
+            source_as_of, source_retrieved_at, published_at
+          )
+          VALUES (
+            'cclba', ${CCLBA_PUBLIC_DATASET_ID}, ${CCLBA_PUBLIC_PORTAL_URL},
+            ${snapshot.expectedCount}, ${snapshot.chicagoCount},
+            ${snapshot.locatedChicagoCount}, ${snapshot.unlocatedChicagoCount},
+            ${snapshot.sourceAsOf}, ${snapshot.retrievedAt}, NOW()
+          )
+          ON CONFLICT (source, source_dataset_id, source_retrieved_at)
+          DO UPDATE SET
+            source_url = EXCLUDED.source_url,
+            published_county_total = EXCLUDED.published_county_total,
+            chicago_total = EXCLUDED.chicago_total,
+            located_chicago_total = EXCLUDED.located_chicago_total,
+            unlocated_chicago_total = EXCLUDED.unlocated_chicago_total,
+            source_as_of = EXCLUDED.source_as_of,
+            published_at = NOW()
+          RETURNING source
+        ),
+        upserted AS (
+          INSERT INTO vacant_properties (
+            id, source, pin, address, lat, lon, property_type, square_feet,
+            status, source_record_date, owner_name, owner_mailing_address,
+            owner_type, owner_jurisdiction, source_dataset_id, source_row_id,
+            source_url, source_as_of, source_retrieved_at, program_name,
+            program_key, application_opens, application_deadline,
+            application_url, program_context, geom, updated_at
+          )
+          SELECT
+            id, 'cclba', pin, address, lat, lon, property_type, square_feet,
+            status, NULL, owner_name, NULL, owner_type, owner_jurisdiction,
+            source_dataset_id, source_row_id, source_url, source_as_of,
+            source_retrieved_at, program_name, program_key, application_opens,
+            application_deadline, application_url, program_context,
+            ST_MakePoint(lon, lat)::geography, NOW()
+          FROM incoming
+          ON CONFLICT (id) DO UPDATE SET
+            source = EXCLUDED.source,
+            pin = EXCLUDED.pin,
+            address = EXCLUDED.address,
+            lat = EXCLUDED.lat,
+            lon = EXCLUDED.lon,
+            property_type = EXCLUDED.property_type,
+            square_feet = EXCLUDED.square_feet,
+            status = EXCLUDED.status,
+            source_record_date = EXCLUDED.source_record_date,
+            owner_name = EXCLUDED.owner_name,
+            owner_mailing_address = EXCLUDED.owner_mailing_address,
+            owner_type = EXCLUDED.owner_type,
+            owner_jurisdiction = EXCLUDED.owner_jurisdiction,
+            source_dataset_id = EXCLUDED.source_dataset_id,
+            source_row_id = EXCLUDED.source_row_id,
+            source_url = EXCLUDED.source_url,
+            source_as_of = EXCLUDED.source_as_of,
+            source_retrieved_at = EXCLUDED.source_retrieved_at,
+            program_name = EXCLUDED.program_name,
+            program_key = EXCLUDED.program_key,
+            application_opens = EXCLUDED.application_opens,
+            application_deadline = EXCLUDED.application_deadline,
+            application_url = EXCLUDED.application_url,
+            program_context = EXCLUDED.program_context,
+            geom = EXCLUDED.geom,
+            updated_at = NOW()
+          RETURNING id
+        ),
+        retired AS (
+          DELETE FROM vacant_properties vp
+          WHERE vp.source = 'cclba'
+            AND NOT EXISTS (
+              SELECT 1 FROM incoming current WHERE current.id = vp.id
+            )
+          RETURNING vp.id
+        ),
+        cleared AS (
+          DELETE FROM vacant_cclba_sync_stage WHERE run_id = ${runId}
+          RETURNING id
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM upserted) AS upserted,
+          (SELECT COUNT(*)::int FROM retired) AS retired,
+          (SELECT COUNT(*)::int FROM cleared) AS cleared,
+          (SELECT COUNT(*)::int FROM snapshot_published) AS snapshots_published
+      `;
+      if (Number(rows[0]?.snapshots_published ?? 0) !== 1) {
+        throw new Error("CCLBA source coverage was not published atomically");
+      }
+      return Number(rows[0]?.retired ?? 0);
+    },
+    ["cclba"],
+  );
+
+  if (!complete) {
+    console.log("  Partial CCLBA snapshot left live membership unchanged");
+    return;
+  }
+  console.log(`  Published ${records.length} complete CCLBA inventory records atomically`);
+  console.log(`  Retired ${retired} CCLBA rows no longer in the complete public source pull`);
 }
 
 async function crossReferenceZones() {
@@ -1148,13 +1445,20 @@ async function generateStaticFile() {
   // tied source snapshots reproducible. The API labels this bounded export partial.
   const rows = await sql`
     WITH ranked AS (
-      SELECT id, source, address, lat, lon, property_type, ward, community_area,
+      SELECT id, source, pin, address, lat, lon, property_type, ward, community_area,
              zoning_class, square_feet, status, zone_matches, incentive_count,
              owner_name, owner_type, source_record_date::text,
+             owner_jurisdiction, source_dataset_id, source_row_id, source_url,
+             source_as_of::text, source_retrieved_at::text,
+             managing_organization, program_name, program_key, offer_round,
+             application_use, application_opens::text, application_deadline::text,
+             application_url, property_status, sales_status,
+             sale_offering_status, sale_offering_reason, program_context,
              updated_at::text AS explorer_refreshed_at,
              ROW_NUMBER() OVER (
                PARTITION BY property_type
-               ORDER BY incentive_count DESC, source_record_date DESC NULLS LAST, id ASC
+               ORDER BY CASE WHEN source = 'cclba' THEN 0 ELSE 1 END,
+                        incentive_count DESC, source_record_date DESC NULLS LAST, id ASC
              ) AS type_rank
       FROM vacant_properties
     ), quota AS (
@@ -1170,9 +1474,14 @@ async function generateStaticFile() {
       ORDER BY incentive_count DESC, source_record_date DESC NULLS LAST, id ASC
       LIMIT GREATEST(0, ${STATIC_FALLBACK_LIMIT} - (SELECT COUNT(*) FROM quota))
     )
-    SELECT id, source, address, lat, lon, property_type, ward, community_area,
+    SELECT id, source, pin, address, lat, lon, property_type, ward, community_area,
            zoning_class, square_feet, status, zone_matches, incentive_count,
-           owner_name, owner_type, source_record_date, explorer_refreshed_at
+           owner_name, owner_type, source_record_date, owner_jurisdiction,
+           source_dataset_id, source_row_id, source_url, source_as_of,
+           source_retrieved_at, managing_organization, program_name, program_key,
+           offer_round, application_use, application_opens, application_deadline,
+           application_url, property_status, sales_status, sale_offering_status,
+           sale_offering_reason, program_context, explorer_refreshed_at
     FROM (
       SELECT * FROM quota
       UNION ALL
@@ -1182,10 +1491,15 @@ async function generateStaticFile() {
              source_record_date DESC NULLS LAST, id ASC
   `;
 
+  const cclbaSourceCoverage = await loadLatestCclbaSourceCoverage();
   const generatedAt = new Date().toISOString();
-  const geojson: GeoJSON.FeatureCollection & { generatedAt: string } = {
+  const geojson: GeoJSON.FeatureCollection & {
+    generatedAt: string;
+    cclbaSourceCoverage: CclbaSourceCoverage;
+  } = {
     type: "FeatureCollection",
     generatedAt,
+    cclbaSourceCoverage,
     features: rows.map((r) => ({
       type: "Feature" as const,
       geometry: {
@@ -1201,6 +1515,7 @@ async function generateStaticFile() {
         return {
         id: r.id,
         source: r.source,
+        pin: r.pin,
         address: r.address,
         propertyType: r.property_type,
         ward: r.ward,
@@ -1212,6 +1527,25 @@ async function generateStaticFile() {
         incentiveCount: zoneMatches.length,
         ownerName: r.owner_name,
         ownerType: r.owner_type,
+        ownerJurisdiction: r.owner_jurisdiction,
+        sourceDatasetId: r.source_dataset_id,
+        sourceRowId: r.source_row_id,
+        sourceUrl: r.source_url,
+        sourceAsOf: r.source_as_of,
+        sourceRetrievedAt: r.source_retrieved_at,
+        managingOrganization: r.managing_organization,
+        programName: r.program_name,
+        programKey: r.program_key,
+        offerRound: r.offer_round,
+        applicationUse: r.application_use,
+        applicationOpens: r.application_opens,
+        applicationDeadline: r.application_deadline,
+        applicationUrl: r.application_url,
+        propertyStatus: r.property_status,
+        salesStatus: r.sales_status,
+        saleOfferingStatus: r.sale_offering_status,
+        saleOfferingReason: r.sale_offering_reason,
+        programContext: r.program_context,
         sourceRecordDate: r.source_record_date,
         explorerRefreshedAt: r.explorer_refreshed_at,
         };
@@ -1224,6 +1558,41 @@ async function generateStaticFile() {
   const outPath = join(outDir, "vacant-properties.json");
   writeFileSync(outPath, JSON.stringify(geojson));
   console.log(`  Wrote ${geojson.features.length} features to ${outPath}`);
+}
+
+async function loadLatestCclbaSourceCoverage(): Promise<CclbaSourceCoverage> {
+  try {
+    const rows = await sql`
+      SELECT source, source_dataset_id, source_url,
+             published_county_total, chicago_total,
+             located_chicago_total, unlocated_chicago_total,
+             source_as_of::text, source_retrieved_at::text
+      FROM vacant_source_snapshots
+      WHERE source = 'cclba'
+      ORDER BY source_retrieved_at DESC
+      LIMIT 1
+    `;
+    if (!rows[0]) return unavailableCclbaSourceCoverage("snapshot_not_recorded");
+    const row = rows[0];
+    return normalizeCclbaSourceCoverage({
+      status: "available",
+      source: row.source,
+      sourceDatasetId: row.source_dataset_id,
+      sourceUrl: row.source_url,
+      publishedCountyTotal: Number(row.published_county_total),
+      chicagoTotal: Number(row.chicago_total),
+      locatedChicagoTotal: Number(row.located_chicago_total),
+      unlocatedChicagoTotal: Number(row.unlocated_chicago_total),
+      sourceAsOf: row.source_as_of,
+      retrievedAt: row.source_retrieved_at,
+    }) ?? unavailableCclbaSourceCoverage("malformed_metadata");
+  } catch (error) {
+    console.warn(
+      "  CCLBA source coverage metadata unavailable for static fallback:",
+      error instanceof Error ? error.message : error,
+    );
+    return unavailableCclbaSourceCoverage("metadata_unavailable");
+  }
 }
 
 async function printSummary() {
@@ -1262,10 +1631,11 @@ async function main() {
   // ── Source 1: City-Owned Land Inventory (vacant land) ──
   if (STEPS.has("cols")) {
     const raw = await fetchAllPages();
+    const sourceRetrievedAt = new Date().toISOString();
     console.log(`\nTotal COLS raw records: ${raw.length}`);
 
     const normalizedWithDuplicates = raw
-      .map(normalizeRecord)
+      .map((record) => normalizeColsInventoryRecord(record, sourceRetrievedAt))
       .filter((r): r is NonNullable<typeof r> => r !== null);
     const normalized = Array.from(
       new Map(normalizedWithDuplicates.map((record) => [record.id, record])).values(),
@@ -1299,18 +1669,72 @@ async function main() {
 
   }
 
-  // ── Source 2: 311 vacancy-related public-record signals ──
+  // ── Source 2: Cook County Land Bank public property inventory ──
+  if (STEPS.has("cclba")) {
+    console.log("\nFetching CCLBA public inventory...");
+    const snapshot = await fetchCclbaPublicInventory();
+    const normalizedWithDuplicates = snapshot.assets
+      .map((asset) => normalizeCclbaInventoryAsset(asset, snapshot.retrievedAt))
+      .filter((record): record is NormalizedCclbaInventoryRecord => record !== null);
+    const normalized = Array.from(
+      new Map(normalizedWithDuplicates.map((record) => [record.id, record])).values(),
+    );
+    const uniqueIdCount = new Set(
+      snapshot.assets.map((asset: CclbaSourceAsset) => asset.id),
+    ).size;
+    const priorLiveRows = (await sql`
+      SELECT id
+      FROM vacant_properties
+      WHERE source = 'cclba'
+      ORDER BY id
+    `) as Array<{ id: string }>;
+    const priorLiveIds = priorLiveRows.map((row) => row.id);
+    const priorLiveCount = priorLiveIds.length;
+    const allowImplausibleSnapshot =
+      process.env.ALLOW_IMPLAUSIBLE_CCLBA_SOURCE_SNAPSHOT === "1";
+    assertCclbaSourceSnapshotSane(
+      {
+        expectedCount: snapshot.expectedCount,
+        rawCount: snapshot.assets.length,
+        uniqueIdCount,
+        validShapeCount: snapshot.assets.filter(isPlausibleCclbaSourceRow).length,
+        chicagoCount: snapshot.chicagoCount,
+        locatedChicagoCount: snapshot.locatedChicagoCount,
+        unlocatedChicagoCount: snapshot.unlocatedChicagoCount,
+        normalizedCount: normalized.length,
+        priorLiveCount,
+      },
+      allowImplausibleSnapshot,
+    );
+    assertCclbaMembershipTransitionSane(
+      {
+        priorLiveIds,
+        normalizedChicagoIds: normalized.map((record) => record.id),
+      },
+      allowImplausibleSnapshot,
+    );
+    console.log(
+      `  Published assets: ${snapshot.assets.length}; Chicago: ${snapshot.chicagoCount}; located Chicago: ${snapshot.locatedChicagoCount}; unlocated Chicago: ${snapshot.unlocatedChicagoCount}; prior live located Chicago records: ${priorLiveCount}`,
+    );
+    console.log(
+      `  Source as-of: not published; retrieved ${snapshot.retrievedAt}`,
+    );
+    await replaceCclbaMembershipAtomically(normalized, true, snapshot);
+  }
+
+  // ── Source 3: 311 vacancy-related public-record signals ──
   if (STEPS.has("sr311")) {
     // fetch311VacancySignals throws on any failed page. Reconciliation is
     // deliberately unreachable unless pagination completed successfully.
     const raw311 = await fetch311VacancySignals();
+    const sourceRetrievedAt = new Date().toISOString();
     console.log(`\nTotal 311 raw records: ${raw311.length}`);
 
     const deduped311 = dedup311BySourceAddress(raw311);
     console.log(`Unique source/address signals after dedup: ${deduped311.length}`);
 
     const normalized311 = deduped311
-      .map(normalize311Record)
+      .map((record) => normalize311Record(record, sourceRetrievedAt))
       .filter((r): r is NonNullable<typeof r> => r !== null);
     console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
     assertVacancySourceSnapshotSane(

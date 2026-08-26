@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PermitAreaResult } from "@/lib/permit-area";
-import type { VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "unauthenticated" }),
@@ -186,6 +186,7 @@ const COMPLETE_VACANCY_COVERAGE: VacancyCoverageMetadata = {
   coverageStatus: "complete",
   potentiallyTruncated: false,
   fallbackReason: null,
+  cclbaSourceCoverage: unavailableCclbaSourceCoverage("snapshot_not_recorded"),
 };
 
 function render(

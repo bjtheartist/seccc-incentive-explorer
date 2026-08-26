@@ -13,6 +13,37 @@ import {
   type VacancyLicenseScreeningMetadata,
 } from "@/lib/vacancy-license-screening";
 import { isCanonicalVacancyZoneMatchSet } from "@/lib/vacancy-zone-matches";
+import {
+  CCLBA_PUBLIC_DATASET_ID,
+  CCLBA_PUBLIC_PORTAL_URL,
+} from "@/lib/vacancy-inventory-sources";
+
+export type CclbaSourceCoverageUnavailableReason =
+  | "metadata_unavailable"
+  | "snapshot_not_recorded"
+  | "malformed_metadata"
+  | "not_recorded_at_generation";
+
+export type CclbaSourceCoverage =
+  | {
+      status: "available";
+      source: "cclba";
+      sourceDatasetId: typeof CCLBA_PUBLIC_DATASET_ID;
+      sourceUrl: typeof CCLBA_PUBLIC_PORTAL_URL;
+      publishedCountyTotal: number;
+      chicagoTotal: number;
+      locatedChicagoTotal: number;
+      unlocatedChicagoTotal: number;
+      sourceAsOf: string | null;
+      retrievedAt: string;
+    }
+  | {
+      status: "unavailable";
+      source: "cclba";
+      sourceDatasetId: typeof CCLBA_PUBLIC_DATASET_ID;
+      sourceUrl: typeof CCLBA_PUBLIC_PORTAL_URL;
+      reason: CclbaSourceCoverageUnavailableReason;
+    };
 
 export interface VacancyCoverageMetadata {
   sourceMode: "database" | "static_fallback";
@@ -32,6 +63,12 @@ export interface VacancyCoverageMetadata {
   coverageStatus: "complete" | "truncated" | "partial";
   potentiallyTruncated: boolean;
   fallbackReason: "database_unavailable" | "database_query_failed" | null;
+  /**
+   * Coverage of the upstream CCLBA snapshot, distinct from this request's
+   * point-in-polygon/query completeness. Unlocated Chicago source rows cannot
+   * enter the point table and therefore must remain visible here.
+   */
+  cclbaSourceCoverage: CclbaSourceCoverage;
 }
 
 export type VacancyFeatureCollection = GeoJSON.FeatureCollection & {
@@ -107,6 +144,102 @@ function isNonnegativeInteger(value: unknown): value is number {
 function isCanonicalIsoTimestamp(value: string): boolean {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
+export function unavailableCclbaSourceCoverage(
+  reason: CclbaSourceCoverageUnavailableReason,
+): CclbaSourceCoverage {
+  return {
+    status: "unavailable",
+    source: "cclba",
+    sourceDatasetId: CCLBA_PUBLIC_DATASET_ID,
+    sourceUrl: CCLBA_PUBLIC_PORTAL_URL,
+    reason,
+  };
+}
+
+export function normalizeCclbaSourceCoverage(
+  value: unknown,
+): CclbaSourceCoverage | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const coverage = value as Record<string, unknown>;
+  if (
+    coverage.source !== "cclba" ||
+    coverage.sourceDatasetId !== CCLBA_PUBLIC_DATASET_ID ||
+    coverage.sourceUrl !== CCLBA_PUBLIC_PORTAL_URL
+  ) {
+    return null;
+  }
+  if (coverage.status === "unavailable") {
+    if (
+      coverage.reason !== "metadata_unavailable" &&
+      coverage.reason !== "snapshot_not_recorded" &&
+      coverage.reason !== "malformed_metadata" &&
+      coverage.reason !== "not_recorded_at_generation"
+    ) {
+      return null;
+    }
+    return unavailableCclbaSourceCoverage(coverage.reason);
+  }
+  if (coverage.status !== "available") return null;
+  if (
+    !isNonnegativeInteger(coverage.publishedCountyTotal) ||
+    !isNonnegativeInteger(coverage.chicagoTotal) ||
+    !isNonnegativeInteger(coverage.locatedChicagoTotal) ||
+    !isNonnegativeInteger(coverage.unlocatedChicagoTotal) ||
+    coverage.chicagoTotal > coverage.publishedCountyTotal ||
+    coverage.locatedChicagoTotal + coverage.unlocatedChicagoTotal !==
+      coverage.chicagoTotal ||
+    typeof coverage.retrievedAt !== "string" ||
+    !isCanonicalIsoTimestamp(coverage.retrievedAt) ||
+    (coverage.sourceAsOf !== null &&
+      (typeof coverage.sourceAsOf !== "string" ||
+        !isCanonicalIsoTimestamp(coverage.sourceAsOf)))
+  ) {
+    return null;
+  }
+  return {
+    status: "available",
+    source: "cclba",
+    sourceDatasetId: CCLBA_PUBLIC_DATASET_ID,
+    sourceUrl: CCLBA_PUBLIC_PORTAL_URL,
+    publishedCountyTotal: coverage.publishedCountyTotal,
+    chicagoTotal: coverage.chicagoTotal,
+    locatedChicagoTotal: coverage.locatedChicagoTotal,
+    unlocatedChicagoTotal: coverage.unlocatedChicagoTotal,
+    sourceAsOf: coverage.sourceAsOf,
+    retrievedAt: coverage.retrievedAt,
+  };
+}
+
+export function cclbaSourceCoverageSummary(
+  coverage: CclbaSourceCoverage | null | undefined,
+): string {
+  if (!coverage) return "Not recorded";
+  if (coverage.status === "unavailable") {
+    return `Unavailable (${coverage.reason})`;
+  }
+  const sourceAsOf = coverage.sourceAsOf ?? "not published by source";
+  return [
+    `${coverage.publishedCountyTotal.toLocaleString("en-US")} published countywide`,
+    `${coverage.chicagoTotal.toLocaleString("en-US")} Chicago`,
+    `${coverage.locatedChicagoTotal.toLocaleString("en-US")} located Chicago`,
+    `${coverage.unlocatedChicagoTotal.toLocaleString("en-US")} unlocated Chicago`,
+    `retrieved ${coverage.retrievedAt}`,
+    `source as-of ${sourceAsOf}`,
+    `dataset ${coverage.sourceDatasetId}`,
+    coverage.sourceUrl,
+  ].join("; ");
+}
+
+function isAbsoluteHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function isVacancyLicenseScreeningMetadata(
@@ -201,6 +334,7 @@ function isVacancyCoverageMetadata(value: unknown): value is VacancyCoverageMeta
   if (!isVacancyLicenseScreeningMetadata(meta.licenseScreening, meta.returnedCount)) {
     return false;
   }
+  if (!normalizeCclbaSourceCoverage(meta.cclbaSourceCoverage)) return false;
 
   if (meta.sourceMode === "database") {
     return (
@@ -246,9 +380,13 @@ function isVacancyEvidenceFeature(feature: GeoJSON.Feature): boolean {
   if (!properties || typeof properties !== "object") return false;
   const sourceDate = properties.sourceRecordDate;
   const refreshedAt = properties.explorerRefreshedAt;
+  const sourceAsOf = properties.sourceAsOf;
+  const sourceRetrievedAt = properties.sourceRetrievedAt;
+  const sourceSnapshotId = properties.sourceSnapshotId;
   const licenseCheckState = properties.licenseCheckState;
   const sourceIsKnown =
     properties.source === "cols" ||
+    properties.source === "cclba" ||
     properties.source === "dpd_vacant" ||
     properties.source === "311_clean_lot" ||
     properties.source === "violations";
@@ -271,6 +409,38 @@ function isVacancyEvidenceFeature(feature: GeoJSON.Feature): boolean {
     ) &&
     ((licenseCheckState === "match" && matches.length > 0) ||
       (licenseCheckState !== "match" && matches.length === 0));
+  const optionalTextFieldsAreCoherent = [
+    properties.recordId,
+    properties.sourceDatasetId,
+    properties.sourceDatasetLabel,
+    properties.sourceSnapshotId,
+    properties.sourceRowId,
+    properties.sourceUrl,
+    properties.ownerJurisdiction,
+    properties.managingOrganization,
+    properties.programName,
+    properties.programKey,
+    properties.offerRound,
+    properties.applicationUse,
+    properties.applicationUrl,
+    properties.propertyStatus,
+    properties.salesStatus,
+    properties.saleOfferingStatus,
+    properties.saleOfferingReason,
+  ].every(
+    (field) =>
+      field === undefined ||
+      field === null ||
+      (typeof field === "string" && field.trim().length > 0),
+  );
+  const sourceSnapshotIsCoherent =
+    sourceSnapshotId === undefined ||
+    sourceSnapshotId === null;
+  const sourceLinksAreCoherent = [properties.sourceUrl, properties.applicationUrl]
+    .every(
+      (value) =>
+        value === undefined || value === null || isAbsoluteHttpUrl(value),
+    );
   return (
     typeof properties.id === "string" &&
     properties.id.trim().length > 0 &&
@@ -289,6 +459,29 @@ function isVacancyEvidenceFeature(feature: GeoJSON.Feature): boolean {
       (typeof sourceDate === "string" && isCanonicalIsoTimestamp(sourceDate))) &&
     (refreshedAt === null ||
       (typeof refreshedAt === "string" && isCanonicalIsoTimestamp(refreshedAt))) &&
+    (sourceAsOf === undefined ||
+      sourceAsOf === null ||
+      (typeof sourceAsOf === "string" && isCanonicalIsoTimestamp(sourceAsOf))) &&
+    (sourceRetrievedAt === undefined ||
+      sourceRetrievedAt === null ||
+      (typeof sourceRetrievedAt === "string" &&
+        isCanonicalIsoTimestamp(sourceRetrievedAt))) &&
+    (properties.pin === undefined ||
+      properties.pin === null ||
+      (typeof properties.pin === "string" && /^\d{14}$/.test(properties.pin))) &&
+    (properties.applicationOpens === undefined ||
+      properties.applicationOpens === null ||
+      (typeof properties.applicationOpens === "string" &&
+        isCanonicalIsoTimestamp(properties.applicationOpens))) &&
+    (properties.applicationDeadline === undefined ||
+      properties.applicationDeadline === null ||
+      (typeof properties.applicationDeadline === "string" &&
+        isCanonicalIsoTimestamp(properties.applicationDeadline))) &&
+    (properties.programContext === undefined ||
+      Array.isArray(properties.programContext)) &&
+    optionalTextFieldsAreCoherent &&
+    sourceSnapshotIsCoherent &&
+    sourceLinksAreCoherent &&
     (licenseCheckState === "match" ||
       licenseCheckState === "no_match" ||
       licenseCheckState === "not_checked_address" ||
@@ -503,6 +696,7 @@ export function vacancyCoverageDisclosure(
   coverage: VacancyCoverageMetadata | null | undefined,
 ): string | null {
   if (!coverage) return null;
+  let requestCoverageNote: string | null = null;
   if (coverage.coverageStatus === "partial") {
     const reason =
       coverage.fallbackReason === "database_query_failed"
@@ -511,10 +705,16 @@ export function vacancyCoverageDisclosure(
     const limitNote = coverage.potentiallyTruncated
       ? ` The fallback also reached its ${coverage.configuredLimit.toLocaleString("en-US")}-record limit.`
       : "";
-    return `Vacancy results are partial: the published static fallback was used because ${reason}. Absence from these results does not establish that no tracked vacancy exists.${limitNote}`;
+    requestCoverageNote = `Vacancy results are partial: the published static fallback was used because ${reason}. Absence from these results does not establish that no tracked vacancy exists.${limitNote}`;
   }
   if (coverage.coverageStatus === "truncated") {
-    return `Vacancy results reached the ${coverage.configuredLimit.toLocaleString("en-US")}-record response limit. Counts and exports may omit additional tracked records.`;
+    requestCoverageNote = `Vacancy results reached the ${coverage.configuredLimit.toLocaleString("en-US")}-record response limit. Counts and exports may omit additional tracked records.`;
   }
-  return null;
+  const sourceCoverage = coverage.cclbaSourceCoverage;
+  const cclbaCoverageNote = sourceCoverage.status === "available"
+    ? sourceCoverage.unlocatedChicagoTotal > 0
+      ? `The latest CCLBA published-property snapshot contained ${sourceCoverage.publishedCountyTotal.toLocaleString("en-US")} countywide records, including ${sourceCoverage.chicagoTotal.toLocaleString("en-US")} in Chicago. ${sourceCoverage.locatedChicagoTotal.toLocaleString("en-US")} Chicago records had usable coordinates; ${sourceCoverage.unlocatedChicagoTotal.toLocaleString("en-US")} could not be tested against this area. Publication and source status are not independent deed proof.`
+      : null
+    : "CCLBA source-coverage metadata is unavailable, so this result cannot quantify published CCLBA records excluded because they lacked usable coordinates.";
+  return [requestCoverageNote, cclbaCoverageNote].filter(Boolean).join(" ") || null;
 }

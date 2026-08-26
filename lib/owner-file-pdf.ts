@@ -11,8 +11,9 @@ import { clerkRecordsUrl, cookViewerUrl } from "./cook-viewer";
  * For a corridor manager's site visit or LIRI meeting: identity, parcel
  * footprint, distress signals (building violations, vacant-building
  * violations, and tax-sale exposure are live; delinquent-tax exposure and
- * Cook County Land Bank inventory stay "not yet available" pending a manual
- * import — matching the DataPendingRow doctrine, never a silent zero),
+ * Cook County Land Bank inventory stay "not yet available" until the owner-file
+ * companion join is wired — matching the DataPendingRow doctrine, never a
+ * silent zero),
  * transfer/business-license context, the current verification record, and
  * outreach history.
  */
@@ -285,7 +286,7 @@ function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: st
     ["Scavenger/annual tax sale exposure", saleExposureValue],
     [
       "Cook County Land Bank inventory",
-      "CCLBA publishes no public API — needs a periodic manual snapshot import.",
+      "CCLBA publishes a public property inventory, but this owner-file view does not yet join it. No row-level result is asserted here.",
     ],
   ];
   for (const [label, value] of distressRows) {

@@ -8,10 +8,11 @@
  * File human layer snapshots onto every verification row — see
  * lib/owner-file.ts), `distressSignals` (Phase 1: `buildingViolationCount`;
  * Phase 2: `vacantBuildingViolationCount` + `scavengerOrAnnualSaleFlag`;
- * `delinquentTaxCount`/`cclbaInventoryFlag` stay `null` pending their
- * manual-import sources), and `latestTaxSaleYear`/`taxSaleSoldCount` (richer
- * copy alongside the sale flag). All flow straight through from
- * fetchOwnerClusters — no extra wiring needed here.
+ * `delinquentTaxCount` stays `null` pending its controlled source import;
+ * `cclbaInventoryFlag` stays `null` until the published CCLBA inventory feed
+ * is joined into this separate owner-file pipeline), and
+ * `latestTaxSaleYear`/`taxSaleSoldCount` (richer copy alongside the sale flag).
+ * All flow straight through from fetchOwnerClusters — no extra wiring needed here.
  *
  * Run against a refresh branch that has the domain migrations (including
  * `db:migrate:distress`) plus parcel / ownership-enrichment / transfer /
