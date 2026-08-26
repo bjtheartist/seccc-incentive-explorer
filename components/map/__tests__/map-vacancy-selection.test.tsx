@@ -17,7 +17,7 @@ const BASE_STATS: AreaStats = {
 };
 
 describe("base-map vacancy selection provenance", () => {
-  it("keeps a published CCLBA PIN and labels the popup as Cook County Land Bank inventory", () => {
+  it("keeps a published CCLBA PIN and labels a source-only popup neutrally", () => {
     const evidence = buildMapVacancySelectionEvidence({
       id: "cclba-52905642",
       source: "cclba",
@@ -49,7 +49,7 @@ describe("base-map vacancy selection provenance", () => {
     expect(html).toContain("PIN");
     expect(html).toContain("16141010090000");
     expect(html).toContain(
-      "Cook County Land Bank Authority Published Property Inventory",
+      "Cook County Land Bank Authority public record",
     );
     expect(html).not.toContain("City-Owned Land Inventory");
     expect(html).not.toContain("311 Vacant/Abandoned Building Complaint");

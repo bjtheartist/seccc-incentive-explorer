@@ -433,7 +433,7 @@ export default function MapLegendPanel({
           ))}
         </div>
         <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
-          City of Chicago + Cook County Land Bank Authority + 311 records · Clusters at low zoom
+          Source-attributed public vacancy records · Coverage varies · Clusters at low zoom
         </p>
 
         {/* Owner Type Filter */}

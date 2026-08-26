@@ -585,6 +585,14 @@ describe("buildDrawnAreaCsv", () => {
     expect(contextualCsv).toContain(
       '"Residential/Community Developer [isIneligible=true; isBeforeApplicationStart=false]"',
     );
+    expect(contextualCsv).toContain(
+      '"Cook County Land Bank Authority public record"',
+    );
+    expect(contextualCsv).not.toContain(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(contextualCsv).not.toContain("epropertyplus-published-properties");
+    expect(contextualCsv).not.toContain("https://public-cclba.epropertyplus.com/");
   });
 
   it("writes one money column per noun and puts each amount only under its own", () => {

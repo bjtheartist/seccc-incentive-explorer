@@ -158,14 +158,23 @@ function absoluteHttpUrlOrNull(value: unknown): string | null {
 
 function fallbackSourceDatasetId(source: unknown): string | null {
   if (source === "cols") return COLS_DATASET_ID;
-  if (source === "cclba") return CCLBA_PUBLIC_DATASET_ID;
   if (source === "dpd_vacant" || source === "311_clean_lot") return "v6vf-nfxy";
   return null;
 }
 
-function fallbackSourceDatasetLabel(source: unknown): string | null {
+function isOfficialCclbaDataset(
+  source: unknown,
+  sourceDatasetId: string | null,
+): boolean {
+  return source === "cclba" && sourceDatasetId === CCLBA_PUBLIC_DATASET_ID;
+}
+
+function fallbackSourceDatasetLabel(
+  source: unknown,
+  sourceDatasetId: string | null,
+): string | null {
   if (source === "cols") return "Chicago City-Owned Land Inventory";
-  if (source === "cclba") {
+  if (isOfficialCclbaDataset(source, sourceDatasetId)) {
     return "Cook County Land Bank Authority Published Property Inventory";
   }
   if (source === "dpd_vacant" || source === "311_clean_lot") {
@@ -175,9 +184,14 @@ function fallbackSourceDatasetLabel(source: unknown): string | null {
   return null;
 }
 
-function fallbackSourceUrl(source: unknown): string | null {
+function fallbackSourceUrl(
+  source: unknown,
+  sourceDatasetId: string | null,
+): string | null {
   if (source === "cols") return COLS_LANDING_URL;
-  if (source === "cclba") return CCLBA_PUBLIC_PORTAL_URL;
+  if (isOfficialCclbaDataset(source, sourceDatasetId)) {
+    return CCLBA_PUBLIC_PORTAL_URL;
+  }
   if (source === "dpd_vacant" || source === "311_clean_lot") {
     return "https://data.cityofchicago.org/resource/v6vf-nfxy.json";
   }
@@ -315,14 +329,15 @@ function enrichFeatureEvidence(
       sourceDatasetId,
       sourceDatasetLabel:
         textOrNull(properties.sourceDatasetLabel) ??
-        fallbackSourceDatasetLabel(source),
+        fallbackSourceDatasetLabel(source, sourceDatasetId),
       // No current vacancy source publishes a row-content revision. Retrieval
       // time remains separate freshness metadata and must not be promoted into
       // snapshot identity, or unchanged rows appear changed after every sync.
       sourceSnapshotId: null,
       sourceRowId,
       sourceUrl:
-        absoluteHttpUrlOrNull(properties.sourceUrl) ?? fallbackSourceUrl(source),
+        absoluteHttpUrlOrNull(properties.sourceUrl) ??
+        fallbackSourceUrl(source, sourceDatasetId),
       sourceAsOf,
       sourceRetrievedAt,
       ownerJurisdiction: textOrNull(properties.ownerJurisdiction),

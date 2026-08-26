@@ -44,6 +44,20 @@ function baseProps() {
 }
 
 describe("MapLegendPanel admin ownership-cluster section", () => {
+  it("does not claim that CCLBA inventory is globally loaded", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={false}
+        ownerClustersVisible={false}
+      />
+    );
+
+    expect(html).toContain("Source-attributed public vacancy records");
+    expect(html).not.toContain("Cook County Land Bank Authority");
+    expect(html).not.toContain("CCLBA inventory");
+  });
+
   it("does not render the ADMIN section for a non-admin viewer", () => {
     const html = renderToStaticMarkup(
       <MapLegendPanel

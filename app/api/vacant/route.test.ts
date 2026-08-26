@@ -446,6 +446,67 @@ describe("GET /api/vacant", () => {
     expect(body.features[0].properties.ownerName).not.toBe("City of Chicago");
   });
 
+  it("does not invent official CCLBA provenance for a pre-migration row", async () => {
+    mockVacancySql([
+      vacantRow({
+        id: "legacy-cclba-row",
+        source: "cclba",
+        property_type: "vacant_land",
+        status: "Listed",
+        source_dataset_id: null,
+        source_url: null,
+      }),
+    ]);
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+    const properties = body.features[0].properties;
+
+    expect(properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: null,
+      sourceDatasetLabel: null,
+      sourceUrl: null,
+    });
+    expect(properties.sourceDatasetId).not.toBe(
+      "epropertyplus-published-properties",
+    );
+    expect(properties.sourceDatasetLabel).not.toBe(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(properties.sourceUrl).not.toBe(
+      "https://public-cclba.epropertyplus.com/",
+    );
+  });
+
+  it("fills known CCLBA provenance only for the explicit official dataset", async () => {
+    mockVacancySql([
+      vacantRow({
+        id: "official-cclba-row",
+        source: "cclba",
+        property_type: "vacant_land",
+        status: "Acquired",
+        source_dataset_id: "epropertyplus-published-properties",
+        source_url: null,
+      }),
+    ]);
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/vacant?bounds=${BOUNDS}&limit=5`),
+    );
+    const body = await response.json();
+
+    expect(body.features[0].properties).toMatchObject({
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceDatasetLabel:
+        "Cook County Land Bank Authority Published Property Inventory",
+      sourceUrl: "https://public-cclba.epropertyplus.com/",
+    });
+  });
+
   it("anchors freshness to Chicago today before the UTC-day rollover", async () => {
     vi.setSystemTime(new Date("2026-08-15T04:38:00.000Z"));
     mockVacancySql([vacantRow()]);
