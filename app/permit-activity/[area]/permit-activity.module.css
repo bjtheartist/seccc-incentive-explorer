@@ -138,6 +138,20 @@
   line-height: 1.6;
 }
 
+.exhibitCrossLink {
+  display: inline-block;
+  margin: 10px 0 0;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.exhibitCrossLink:hover {
+  text-decoration: underline;
+}
+
 .evidenceStrip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

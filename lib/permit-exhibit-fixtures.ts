@@ -20,7 +20,6 @@ import {
   buildPermitSourceRecordUrl,
   formatBoundaryContextLimitNote,
   formatExhibitIdFooter,
-  type PermitExhibitArea,
   type PermitExhibitAreaLocation,
   type PermitExhibitAreaRow,
   type PermitExhibitBoundaryContext,
