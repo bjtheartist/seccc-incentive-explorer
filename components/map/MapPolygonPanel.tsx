@@ -608,7 +608,7 @@ export default function MapPolygonPanel({
       return {
         label: String(p.address || "Unknown Address"),
         value: vacancyCanonicalTypeLabel(p.canonicalType),
-        detail: `${vacancySourceLabel(p.source)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${programContext.length > 0 ? ` · ${programContext.join(" · ")} · Verify current availability and terms.` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
+        detail: `${vacancySourceLabel(p.source, p)} · Source status: ${sourceStatus} · ${sourceDate} · ${vacancyFreshnessLabel(p.freshnessClass)} · ${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}${programContext.length > 0 ? ` · ${programContext.join(" · ")} · Verify current availability and terms.` : ""}${conflict ? ` · Current-license conflict: ${conflict}` : ""}`,
         url: applicationUrl ?? undefined,
       };
     });
@@ -1857,11 +1857,11 @@ export default function MapPolygonPanel({
                               rel="noopener noreferrer"
                               className="text-[8px] text-[#2563EB]/75 hover:underline"
                             >
-                              {vacancySourceLabel(p.source)}
+                              {vacancySourceLabel(p.source, p)}
                             </a>
                           ) : (
                             <span className="text-[8px] text-[#0C1B33]/45">
-                              {vacancySourceLabel(p.source)}
+                              {vacancySourceLabel(p.source, p)}
                             </span>
                           )}
                           {typeof p.status === "string" && p.status.trim() && (

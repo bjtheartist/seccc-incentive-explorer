@@ -52,6 +52,22 @@ describe("drawn-area vacancy presentation", () => {
     );
   });
 
+  it("uses the official inventory label only for a proved official row", () => {
+    expect(
+      vacancySourceLabel("cclba", {
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+        sourceUrl: "https://public-cclba.epropertyplus.com/",
+      }),
+    ).toBe("Cook County Land Bank Authority Published Property Inventory");
+    expect(
+      vacancySourceLabel("cclba", {
+        source: "cclba",
+        sourceDatasetId: "epropertyplus-published-properties",
+      }),
+    ).toBe("Cook County Land Bank Authority public record");
+  });
+
   it("requires both the official dataset id and exact HTTPS portal URL", () => {
     expect(isOfficialCclbaPublishedInventorySource({ source: "cclba" })).toBe(false);
     expect(

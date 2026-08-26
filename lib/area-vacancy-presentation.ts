@@ -91,9 +91,15 @@ export function summarizeAreaVacancyTypes(
   return counts;
 }
 
-export function vacancySourceLabel(source: unknown): string {
+export function vacancySourceLabel(
+  source: unknown,
+  properties?: unknown,
+): string {
   if (source === "cols") return "City-Owned Land Inventory";
   if (source === "cclba") {
+    if (isOfficialCclbaPublishedInventorySource(properties)) {
+      return "Cook County Land Bank Authority Published Property Inventory";
+    }
     return "Cook County Land Bank Authority public record";
   }
   if (source === "dpd_vacant") {

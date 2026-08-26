@@ -43,6 +43,31 @@ describe("drawn-area vacancy map layer", () => {
     expect(html).not.toContain("Cafe <b>");
   });
 
+  it("distinguishes proved official CCLBA inventory from metadata-less records", () => {
+    const official = buildDrawnAreaVacancyPopupHtml({
+      address: "7900 S TEST AVE",
+      source: "cclba",
+      sourceDatasetId: "epropertyplus-published-properties",
+      sourceUrl: "https://public-cclba.epropertyplus.com/",
+      canonicalType: "land",
+      freshnessClass: "unknown_date",
+    });
+    const unknown = buildDrawnAreaVacancyPopupHtml({
+      address: "7902 S TEST AVE",
+      source: "cclba",
+      canonicalType: "land",
+      freshnessClass: "unknown_date",
+    });
+
+    expect(official).toContain(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+    expect(unknown).toContain("Cook County Land Bank Authority public record");
+    expect(unknown).not.toContain(
+      "Cook County Land Bank Authority Published Property Inventory",
+    );
+  });
+
   it.each([
     ["unavailable", "license source was unavailable"],
     ["not_checked_cap", "500-address screening cap"],

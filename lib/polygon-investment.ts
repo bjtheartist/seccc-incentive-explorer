@@ -961,7 +961,7 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
           p.recordId ?? p.id ?? "",
           p.pin ?? "",
           p.address ?? "",
-          vacancySourceLabel(p.source),
+          vacancySourceLabel(p.source, p),
           p.source ?? "",
           p.sourceDatasetId ?? "",
           p.sourceDatasetLabel ?? "",

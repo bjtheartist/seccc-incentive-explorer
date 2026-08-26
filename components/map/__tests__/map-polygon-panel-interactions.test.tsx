@@ -361,7 +361,7 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
     expect(
       screen
         .getByRole("link", {
-          name: "Cook County Land Bank Authority public record",
+          name: "Cook County Land Bank Authority Published Property Inventory",
         })
         .getAttribute("href"),
     ).toBe("https://public-cclba.epropertyplus.com/");

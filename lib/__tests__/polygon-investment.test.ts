@@ -595,6 +595,32 @@ describe("buildDrawnAreaCsv", () => {
     expect(contextualCsv).not.toContain("https://public-cclba.epropertyplus.com/");
   });
 
+  it("uses the official CCLBA label in direct CSV only for proved official rows", () => {
+    const officialCsv = buildDrawnAreaCsv({
+      areaName: "79th corridor",
+      vacancyFeatures: [
+        {
+          ...vacancy[0],
+          properties: {
+            ...vacancy[0].properties,
+            source: "cclba",
+            sourceDatasetId: "epropertyplus-published-properties",
+            sourceDatasetLabel:
+              "Cook County Land Bank Authority Published Property Inventory",
+            sourceUrl: "https://public-cclba.epropertyplus.com/",
+          },
+        },
+      ],
+      investment: null,
+    });
+
+    expect(officialCsv).toContain(
+      '"Cook County Land Bank Authority Published Property Inventory"',
+    );
+    expect(officialCsv).toContain('"epropertyplus-published-properties"');
+    expect(officialCsv).toContain('"https://public-cclba.epropertyplus.com/"');
+  });
+
   it("writes one money column per noun and puts each amount only under its own", () => {
     expect(DRAWN_AREA_INVESTMENT_COLUMNS).toContain("Awarded (grant, $)");
     expect(DRAWN_AREA_INVESTMENT_COLUMNS).toContain("Announced private capital ($)");

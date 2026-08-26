@@ -33,7 +33,7 @@ export function buildMapVacancySelectionEvidence(
     pin: vacancyPin(properties),
     sources: [
       {
-        label: vacancySourceLabel(properties.source),
+        label: vacancySourceLabel(properties.source, properties),
         note: `${sourceRecordDate ? `Source record date ${sourceRecordDate.slice(0, 10)}. ` : "Source record date unavailable. "}Tracked vacancy signals are research leads, not availability listings.`,
       },
     ],
