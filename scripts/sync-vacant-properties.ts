@@ -50,6 +50,8 @@ import {
 import { reconcileVacancyMembership } from "../lib/vacancy-reconciliation";
 import { canonicalizeVacancyZoneMatches } from "../lib/vacancy-zone-matches";
 import {
+  assertStaticFallbackCclbaPublication,
+  normalizeStaticFallbackTimestamp,
   STATIC_FALLBACK_LIMIT,
   STATIC_FALLBACK_TYPE_QUOTAS,
 } from "../lib/vacancy-static-fallback";
@@ -1463,7 +1465,8 @@ async function generateStaticFile() {
       FROM vacant_properties
     ), quota AS (
       SELECT * FROM ranked
-      WHERE (property_type = 'vacant_land' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_land})
+      WHERE source = 'cclba'
+         OR (property_type = 'vacant_land' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_land})
          OR (property_type = 'reported_vacant_lot' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.reported_vacant_lot})
          OR (property_type = 'vacant_building' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_building})
          OR (property_type = 'vacant_storefront' AND type_rank <= ${STATIC_FALLBACK_TYPE_QUOTAS.vacant_storefront})
@@ -1492,6 +1495,7 @@ async function generateStaticFile() {
   `;
 
   const cclbaSourceCoverage = await loadLatestCclbaSourceCoverage();
+  assertStaticFallbackCclbaPublication(rows, cclbaSourceCoverage);
   const generatedAt = new Date().toISOString();
   const geojson: GeoJSON.FeatureCollection & {
     generatedAt: string;
@@ -1583,8 +1587,8 @@ async function loadLatestCclbaSourceCoverage(): Promise<CclbaSourceCoverage> {
       chicagoTotal: Number(row.chicago_total),
       locatedChicagoTotal: Number(row.located_chicago_total),
       unlocatedChicagoTotal: Number(row.unlocated_chicago_total),
-      sourceAsOf: row.source_as_of,
-      retrievedAt: row.source_retrieved_at,
+      sourceAsOf: normalizeStaticFallbackTimestamp(row.source_as_of),
+      retrievedAt: normalizeStaticFallbackTimestamp(row.source_retrieved_at),
     }) ?? unavailableCclbaSourceCoverage("malformed_metadata");
   } catch (error) {
     console.warn(

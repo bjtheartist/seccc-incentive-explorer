@@ -54,4 +54,15 @@ describe("vacancy provenance SQL guards", () => {
     expect(block).toContain("FROM snapshot_published");
     expect(block).toContain("CCLBA source coverage was not published atomically");
   });
+
+  it("keeps every located CCLBA row in the static fallback and checks the export", () => {
+    const start = sync.indexOf("async function generateStaticFile");
+    const end = sync.indexOf("async function loadLatestCclbaSourceCoverage", start);
+    const block = sync.slice(start, end);
+
+    expect(block).toContain("WHERE source = 'cclba'");
+    expect(block).toContain(
+      "assertStaticFallbackCclbaPublication(rows, cclbaSourceCoverage)",
+    );
+  });
 });
