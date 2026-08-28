@@ -178,12 +178,10 @@ vi.mock("@/components/report/ReportZoningMap", () => ({
   default: () => <div data-testid="stub-report-zoning-map" />,
 }));
 
-vi.mock("@/components/report/SiteActivityCard", () => ({
-  SiteActivityCard: () => <div data-testid="stub-site-activity-card" />,
-}));
-
 vi.mock("@/components/report/CrossLinkBanner", () => ({
-  InlineCrossLinkBanner: () => <div data-testid="stub-inline-cross-link" />,
+  InlineCrossLinkBanner: ({ pin }: { pin?: string | null }) => (
+    <div data-testid="stub-inline-cross-link" data-pin={pin ?? ""} />
+  ),
 }));
 
 vi.mock("@/components/report/ReportEmailGate", () => ({
@@ -661,6 +659,28 @@ function sectionWrapperClasses(html: string, anchor: string): string {
 }
 
 describe("live report route renderer (app/report/page.tsx ReportDisplay)", () => {
+  it("removes site activity context and carries the resolved parcel into the permit-analysis CTA", async () => {
+    const report = buildReport({ zoneClass: "B3-2" });
+    const html = await renderReportRoute(report, BASE_WIZARD_STATE, {
+      parcelData: { pin: "20363230080000", addressMatch: "verified" },
+    });
+
+    expect(html).not.toContain("Site activity context");
+    expect(html).toContain('data-testid="stub-inline-cross-link"');
+    expect(html).toContain('data-pin="20363230080000"');
+  });
+
+  it("does not carry a known address-mismatched parcel into permit analysis", async () => {
+    const report = buildReport({ zoneClass: "B3-2" });
+    const html = await renderReportRoute(report, BASE_WIZARD_STATE, {
+      parcelData: { pin: "20363230080000", addressMatch: "mismatch" },
+    });
+
+    expect(html).toContain('data-testid="stub-inline-cross-link"');
+    expect(html).toContain('data-pin=""');
+    expect(html).not.toContain('data-pin="20363230080000"');
+  });
+
   it("renders sections in engine order (report.sections array order)", async () => {
     const report = buildReport({ zoneClass: "B3-2" });
     const html = await renderReportRoute(report, BASE_WIZARD_STATE);

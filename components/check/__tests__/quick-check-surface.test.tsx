@@ -149,22 +149,35 @@ describe("/check — legacy deep links", () => {
 
 // /check no longer mounts a cross-link banner at all: its only hand-offs
 // were the sunset vacant-sites and program-fit-questions links (owner's
-// ruling — the product boundary is discovery, not compliance), and it never
-// had the report's neighborhood-investment-activity hand-off to fall back
-// to. See components/report/CrossLinkBanner.tsx and
+// ruling — the product boundary is discovery, not compliance). See
+// components/report/CrossLinkBanner.tsx and
 // components/check/QuickCheckClient.tsx.
-describe("InlineCrossLinkBanner — investment-activity hand-off (shared component, mounted on /report)", () => {
-  it("routes to neighborhood investment activity, and no longer offers vacant sites or program fit questions", () => {
-    const banner = renderToStaticMarkup(<InlineCrossLinkBanner />);
-    expect(banner).toContain('href="/investment"');
-    expect(banner).toContain("See neighborhood investment activity");
+describe("InlineCrossLinkBanner — permit-activity hand-off (shared component, mounted on /report)", () => {
+  it("carries a resolved parcel PIN into permit activity analysis", () => {
+    const banner = renderToStaticMarkup(
+      <InlineCrossLinkBanner pin="20-36-323-008-0000" />,
+    );
+    expect(banner).toContain('href="/permit-exhibit/20363230080000"');
+    expect(banner).toContain("Run permit activity analysis");
+    expect(banner).not.toContain('href="/investment"');
     expect(banner).not.toContain('href="/qualify"');
     expect(banner).not.toContain('href="/vacancy"');
   });
 
+  it.each([undefined, null, "not-a-pin"])(
+    "falls back to the permit-analysis entry screen when the PIN is %s",
+    (pin) => {
+      const banner = renderToStaticMarkup(<InlineCrossLinkBanner pin={pin} />);
+      expect(banner).toContain('href="/permit-exhibit"');
+      expect(banner).not.toContain('href="/permit-activity"');
+    },
+  );
+
   it("gate finding F5: renders as the primary (blue button) treatment now that it is the card's only action, not the old secondary micro-link", () => {
-    const banner = renderToStaticMarkup(<InlineCrossLinkBanner />);
-    const link = banner.match(/<a[^>]*href="\/investment"[^>]*>/)?.[0] ?? "";
+    const banner = renderToStaticMarkup(
+      <InlineCrossLinkBanner pin="20363230080000" />,
+    );
+    const link = banner.match(/<a[^>]*href="\/permit-exhibit\/20363230080000"[^>]*>/)?.[0] ?? "";
     expect(link).toContain("bg-[#2563EB]");
     expect(link).toContain("text-white");
     expect(link).not.toContain("underline-offset-4");

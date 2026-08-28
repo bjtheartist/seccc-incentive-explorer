@@ -28,7 +28,7 @@ Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
 - `/map` - Interactive incentive map with zone layers, vacant properties, parcels, zoning, presets, and map snapshots.
 - `/programs` - Incentive program directory with level and industry filters.
 - `/locate` - Location finder for sector/zoning fit and area recommendations.
-- `/check` - Address eligibility check flow.
+- `/check` - Retired compatibility route that forwards old links to `/report`.
 - `/faq` - Public FAQ.
 
 ## Architecture

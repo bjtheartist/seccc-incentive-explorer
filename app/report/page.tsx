@@ -192,7 +192,6 @@ import {
   PreparationCostBadge,
   parseDocumentCostLine,
 } from "@/components/report/PreparationCostBadge";
-import { SiteActivityCard } from "@/components/report/SiteActivityCard";
 import { InlineCrossLinkBanner } from "@/components/report/CrossLinkBanner";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
@@ -2044,15 +2043,13 @@ function ReportWizardPage() {
           compareGeoResult={compareGeoResult}
           analyticsSource={reportSource}
         />
-        {hasResolvedAddress && (
-          <SiteActivityCard
-            lat={(report.metadata?.lat ?? wizardState.lat) as number}
-            lon={(report.metadata?.lon ?? wizardState.lon) as number}
-            zoningClass={cityZoning?.zoneClass ?? null}
-            zoningDescription={cityZoning?.zoneType ?? null}
+        {showCrossLinks && (
+          <InlineCrossLinkBanner
+            pin={
+              parcelData?.addressMatch === "mismatch" ? null : parcelData?.pin
+            }
           />
         )}
-        {showCrossLinks && <InlineCrossLinkBanner />}
         {showEmailGate && (
           <ReportEmailGate
             report={report}

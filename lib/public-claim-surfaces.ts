@@ -308,14 +308,9 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
   // lib/survey-engine.ts were fully orphaned (zero living importers,
   // verified before deletion) and deleted with it.
 
-  // ── Quick check / map / shortlist ────────────────────────────────────
-  {
-    id: "quick-check",
-    description: "The /check zero-form address-check surface.",
-    contracts: ["ZoneEvidence"],
-    files: ["components/check/QuickCheckClient.tsx", "lib/vacancy-site-zones.ts"],
-    findings: ["F2"],
-  },
+  // ── Map / shortlist ──────────────────────────────────────────────────
+  // The standalone /check surface was sunset in favor of /report; its
+  // compatibility route now redirects old resolved points into that flow.
   {
     id: "map-panels",
     description: "Map dossier/snapshot/polygon panels and the zone legend.",

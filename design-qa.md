@@ -64,6 +64,7 @@ The blue rectangle visible around the last automated target in some captures is 
 No P3 follow-up is required for this scope.
 
 final result: passed
+
 ---
 
 # Strategic Neighborhood Permit MVP — Final QA
@@ -461,5 +462,35 @@ final result: passed
 ## Follow-up polish
 
 - None required for this change.
+
+final result: passed
+
+---
+
+# Report-tail and Quick Address Check retirement — design QA
+
+## Evidence
+
+- Report reference: `/var/folders/4d/ndgly42d1r10xqn5q1xd_j140000gp/T/TemporaryItems/NSIRD_screencaptureui_GyHSQO/Screenshot 2026-08-27 at 10.11.18 PM.png` at 1862 × 1380.
+- Report implementation: `output/design-qa/cie-report-after-1862x1380.png` at the same 1862 × 1380 viewport.
+- Report combined comparison: `output/design-qa/cie-report-comparison.png`, reference on the left and implementation on the right.
+- Navigation reference: `/var/folders/4d/ndgly42d1r10xqn5q1xd_j140000gp/T/codex-clipboard-f9ef87c5-a07a-4276-88c2-a66d51f82917.png` at 1040 × 578.
+- Navigation implementation: `output/design-qa/cie-menu-after.png` at the same 1040 × 578 viewport.
+- Navigation combined comparison: `output/design-qa/cie-menu-comparison.png`, reference on the left and implementation on the right.
+
+## Findings
+
+- The full Site activity context card is absent from the Site Incentive Analysis tail. The final report now moves directly from report actions to one focused cross-analysis handoff.
+- The replacement CTA preserves the existing primary blue treatment and reads `Run permit activity analysis`; the verified report resolved it to `/permit-exhibit/20352150250000`.
+- The Find Incentives menu retains its approved typography, spacing, border, and dropdown behavior while reducing from three choices to Program Directory and FAQ.
+- `Quick Address Check` is absent from the rendered navigation. Its retired `/check` route redirects a resolved legacy point into `/report` with `instant`, coordinates, address, sector, and saved answer context preserved; malformed links fall back to `/report` entry.
+- The map-render fallback no longer reintroduces the retired pathway and instead links directly to Generate Report.
+- No actionable P0, P1, or P2 visual mismatch remains.
+
+## Interaction and regression evidence
+
+- Desktop browser QA confirmed one permit-analysis CTA, no Site activity context heading, and no Quick Address Check menu item.
+- Browser smoke confirmed `/check?lat=41.74400&lon=-87.57750&address=9133%20S%20Stony%20Island%20Ave` redirects to the equivalent instant Site Incentive Analysis URL.
+- Render-level tests cover the removed report block, parcel PIN propagation, normalized and fallback CTA destinations, retired route behavior, header inventory, and map-fallback destination.
 
 final result: passed

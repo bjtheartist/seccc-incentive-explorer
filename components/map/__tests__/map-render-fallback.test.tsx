@@ -21,8 +21,8 @@ describe("MapRenderFallback", () => {
       const { unmount } = render(<MapRenderFallback reason={reason} onRetry={() => {}} />);
       expect(screen.getByRole("status")).toBeTruthy();
       expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
-      const lookup = screen.getByRole("link", { name: /without the map/i });
-      expect(lookup.getAttribute("href")).toBe("/check");
+      const report = screen.getByRole("link", { name: /without the map/i });
+      expect(report.getAttribute("href")).toBe("/report");
       unmount();
     }
   });

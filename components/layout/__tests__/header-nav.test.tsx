@@ -32,7 +32,6 @@ function render(pathname = "/") {
 
 /** Every approved destination, keyed by its approved label. */
 const APPROVED_ITEMS: Array<[label: string, href: string]> = [
-  ["Quick Address Check", "/check"],
   ["Program Directory", "/programs"],
   ["FAQ", "/faq"],
   ["Vacant Sites", "/vacancy"],
@@ -72,6 +71,11 @@ describe("Header — approved Set-A structure", () => {
     expect(html).not.toContain('href="/corridors"');
     expect(html).not.toContain("Corridor Signals");
     expect(html).not.toContain("Corridor Intelligence");
+  });
+
+  it("does not expose the retired Quick Address Check pathway", () => {
+    expect(html).not.toContain('href="/check"');
+    expect(html).not.toContain("Quick Address Check");
   });
 
   it("marks Public Investment Analysis as a muted beta destination", () => {
