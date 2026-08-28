@@ -29,7 +29,11 @@ export function CaseCardLink({
 
   const currentHref = useCallback(() => {
     if (typeof window === "undefined") return initialHref;
-    return buildVacancyCaseHref(zip, caseKey, new URLSearchParams(window.location.search));
+    return `${buildVacancyCaseHref(
+      zip,
+      caseKey,
+      new URLSearchParams(window.location.search),
+    )}#case-results`;
   }, [caseKey, initialHref, zip]);
 
   const syncHref = useCallback(() => setHref(currentHref()), [currentHref]);

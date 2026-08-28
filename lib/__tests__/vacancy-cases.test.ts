@@ -64,26 +64,31 @@ function rec(overrides: Partial<VacancyCaseRecord>): VacancyCaseRecord {
 }
 
 describe("case metadata + param parsing", () => {
-  it("exposes exactly the five case types, in order, each with copy", () => {
-    expect(CASE_KEYS).toEqual([
-      "public-land",
-      "private-outreach",
-      "ownership-check",
-      "building-review",
-      "tax-title",
+  it("exposes exactly the three case types, in order, each with copy", () => {
+    expect(CASE_KEYS).toEqual(["public-land", "title-holder", "property-review"]);
+    expect(CASE_TYPES.map((type) => type.name)).toEqual([
+      "Find public land",
+      "Identify a title holder",
+      "Investigate a property",
     ]);
+    expect(caseTypeFor("title-holder").definition).toBe(
+      "Select a property, then open CookViewer or the Cook County Assessor by PIN.",
+    );
     for (const key of CASE_KEYS) {
       const type = caseTypeFor(key);
       expect(type.name.length).toBeGreaterThan(0);
       expect(type.definition.length).toBeGreaterThan(0);
       expect(type.caveat.length).toBeGreaterThan(0);
     }
-    expect(CASE_TYPES).toHaveLength(5);
+    expect(CASE_TYPES).toHaveLength(3);
   });
 
-  it("parses ?case= to a known key and falls back to the default otherwise", () => {
-    expect(parseCaseParam("tax-title")).toBe("tax-title");
-    expect(parseCaseParam(["ownership-check"])).toBe("ownership-check");
+  it("parses current ?case= values and normalizes all three legacy values", () => {
+    expect(parseCaseParam("property-review")).toBe("property-review");
+    expect(parseCaseParam("private-outreach")).toBe("title-holder");
+    expect(parseCaseParam("ownership-check")).toBe("property-review");
+    expect(parseCaseParam(["building-review"])).toBe("property-review");
+    expect(parseCaseParam("tax-title")).toBe("property-review");
     expect(parseCaseParam("not-a-case")).toBe(DEFAULT_CASE_KEY);
     expect(parseCaseParam(undefined)).toBe(DEFAULT_CASE_KEY);
     expect(DEFAULT_CASE_KEY).toBe("public-land");
@@ -98,12 +103,12 @@ describe("caseMatches predicates", () => {
     expect(caseMatches("public-land", rec({ universe: "building_report", ownerType: "city_public" }))).toBe(false);
   });
 
-  it("private-outreach = LAND with a known non-government owner", () => {
+  it("title-holder = LAND with a known non-government owner", () => {
     for (const t of ["local_private", "corporate_llc", "out_of_state"] as const) {
-      expect(caseMatches("private-outreach", rec({ universe: "land", ownerType: t }))).toBe(true);
+      expect(caseMatches("title-holder", rec({ universe: "land", ownerType: t }))).toBe(true);
     }
-    expect(caseMatches("private-outreach", rec({ universe: "land", ownerType: "city_public" }))).toBe(false);
-    expect(caseMatches("private-outreach", rec({ universe: "land", ownerType: "unknown" }))).toBe(false);
+    expect(caseMatches("title-holder", rec({ universe: "land", ownerType: "city_public" }))).toBe(false);
+    expect(caseMatches("title-holder", rec({ universe: "land", ownerType: "unknown" }))).toBe(false);
   });
 
   // ── Regression: 311 ownership enrichment (a reported building's legacy
@@ -112,7 +117,7 @@ describe("caseMatches predicates", () => {
   //    STRUCTURE onto the record. Reading only the legacy field discarded that
   //    and filed every reported building under "owner not yet identified". ──
 
-  it("private-outreach reaches a reported BUILDING whose matched parcel resolved a private taxpayer", () => {
+  it("title-holder reaches a reported BUILDING whose matched parcel resolved a private taxpayer", () => {
     for (const structure of ["individual", "entity", "trust"] as const) {
       const record = rec({
         universe: "building_report",
@@ -120,51 +125,45 @@ describe("caseMatches predicates", () => {
         ownerStructure: structure,
         pin: "16143270130000",
       });
-      expect(caseMatches("private-outreach", record), structure).toBe(true);
-      // ...and it is no longer ALSO an ownership follow-up.
-      expect(caseMatches("ownership-check", record), structure).toBe(false);
+      expect(caseMatches("title-holder", record), structure).toBe(true);
+      // Every reported-building record also belongs in the property-review
+      // union, even when its matched taxpayer resolves to private.
+      expect(caseMatches("property-review", record), structure).toBe(true);
     }
   });
 
-  it("private-outreach excludes a reported building whose parcel resolved a GOVERNMENT taxpayer", () => {
+  it("title-holder excludes a reported building whose parcel resolved a GOVERNMENT taxpayer", () => {
     const record = rec({
       universe: "building_report",
       ownerType: "unknown",
       ownerStructure: "government",
     });
-    expect(caseMatches("private-outreach", record)).toBe(false);
-    expect(caseMatches("ownership-check", record)).toBe(false);
+    expect(caseMatches("title-holder", record)).toBe(false);
+    expect(caseMatches("property-review", record)).toBe(true);
     expect(recordSector(record)).toBe("public");
   });
 
-  it("ownership-check = unresolved on BOTH axes, either universe", () => {
-    // Unmatched 311 row: no PIN, no structure -> genuinely not yet identified.
+  it("property-review is the union of unresolved ownership, buildings, and distress signals", () => {
     expect(
       caseMatches(
-        "ownership-check",
-        rec({ universe: "building_report", ownerType: "unknown", ownerStructure: "unresolved" }),
+        "property-review",
+        rec({ universe: "land", ownerType: "unknown", ownerStructure: "unresolved" }),
       ),
     ).toBe(true);
-    // Land with neither axis resolved.
     expect(
-      caseMatches("ownership-check", rec({ universe: "land", ownerType: "unknown", ownerStructure: null })),
+      caseMatches(
+        "property-review",
+        rec({ universe: "building_report", ownerType: "local_private" }),
+      ),
     ).toBe(true);
-    // Either axis resolving takes the record OUT of the follow-up case.
-    expect(caseMatches("ownership-check", rec({ ownerType: "local_private" }))).toBe(false);
+    expect(caseMatches("property-review", rec({ saleYear: 2015 }))).toBe(true);
+    expect(caseMatches("property-review", rec({ violation: true }))).toBe(true);
     expect(
-      caseMatches("ownership-check", rec({ ownerType: "unknown", ownerStructure: "entity" })),
+      caseMatches(
+        "property-review",
+        rec({ ownerType: "local_private", saleYear: null, violation: false }),
+      ),
     ).toBe(false);
-  });
-
-  it("building-review = the reported-building universe", () => {
-    expect(caseMatches("building-review", rec({ universe: "building_report" }))).toBe(true);
-    expect(caseMatches("building-review", rec({ universe: "land" }))).toBe(false);
-  });
-
-  it("tax-title = any distress signal (tax-sale year OR violation)", () => {
-    expect(caseMatches("tax-title", rec({ saleYear: 2015 }))).toBe(true);
-    expect(caseMatches("tax-title", rec({ violation: true }))).toBe(true);
-    expect(caseMatches("tax-title", rec({ saleYear: null, violation: false }))).toBe(false);
   });
 });
 
@@ -197,11 +196,30 @@ describe("deriveCase counts + preview cap", () => {
     const many: VacancyCaseRecord[] = Array.from({ length: 50 }, (_, i) =>
       rec({ id: `m${i}`, universe: "building_report", lat: 41 + i / 1000, lon: -87 - i / 1000 }),
     );
-    const d = deriveCase("building-review", many, 10);
+    const d = deriveCase("property-review", many, 10);
     expect(d.matches).toBe(50);
     expect(d.buildingCount).toBe(50);
     expect(d.mappedTotal).toBe(50);
     expect(d.points).toHaveLength(10); // capped
+  });
+
+  it("counts a record with several property-review signals only once", () => {
+    const overlapping = rec({
+      id: "overlapping-signals",
+      universe: "building_report",
+      ownerType: "unknown",
+      ownerStructure: "unresolved",
+      saleYear: 2015,
+      violation: true,
+      lat: 41.72,
+      lon: -87.56,
+    });
+    const d = deriveCase("property-review", [overlapping]);
+    expect(d.matches).toBe(1);
+    expect(d.landCount).toBe(0);
+    expect(d.buildingCount).toBe(1);
+    expect(d.mappedTotal).toBe(1);
+    expect(d.points).toHaveLength(1);
   });
 
   // ── Regression: the preview took the FIRST `cap` mapped points. The record
@@ -251,7 +269,7 @@ describe("deriveCase counts + preview cap", () => {
         rec({ id: `b${i}`, universe: "building_report", violation: true, lat: 42 + i / 1e4, lon: -87 }),
       ),
     ];
-    const d = deriveCase("tax-title", records, 10);
+    const d = deriveCase("property-review", records, 10);
     expect(d.mappedTotal).toBe(800);
     expect(new Set(d.points.map((p) => p.universe))).toEqual(
       new Set(["land", "building_report"]),
@@ -269,7 +287,7 @@ describe("deriveCase counts + preview cap", () => {
     expect(isLandUniverseTruncated(deriveCaseUniverse(records, null))).toBe(false);
   });
 
-  it("deriveAllCases returns all five in order", () => {
+  it("deriveAllCases returns all three in order", () => {
     const all = deriveAllCases(records);
     expect(all.map((c) => c.key)).toEqual([...CASE_KEYS]);
   });
@@ -309,9 +327,12 @@ describe("buildCaseRecords (real per-ZIP data)", () => {
         expect(c.points.length).toBeLessThanOrEqual(c.mappedTotal);
       }
       const byKey = Object.fromEntries(deriveAllCases(records).map((c) => [c.key, c]));
-      // public-land is land-only; building-review is building-only.
+      // public-land remains land-only; property-review includes every reported
+      // building plus any land record that carries a review signal.
       expect(byKey["public-land"].buildingCount).toBe(0);
-      expect(byKey["building-review"].landCount).toBe(0);
+      expect(byKey["property-review"].buildingCount).toBe(
+        records.filter((record) => record.universe === "building_report").length,
+      );
     }
   });
 
@@ -350,11 +371,11 @@ describe("buildCaseRecords (real per-ZIP data)", () => {
     const publicLand = deriveCase("public-land", records);
     expect(publicLand.landCount).toBe(867);
     expect(publicLand.buildingCount).toBe(0);
-    const buildingReview = deriveCase("building-review", records);
+    const propertyReview = deriveCase("property-review", records);
     // Updated against the 2026-08-12 vacancy-index.json refresh (was 1252
     // against the 2026-07-22 vintage) — a live-source count, expected to
     // drift with each real refresh.
-    expect(buildingReview.buildingCount).toBe(1260);
+    expect(propertyReview.buildingCount).toBe(1260);
   });
 });
 
@@ -364,7 +385,7 @@ describe("buildCaseRecords (real per-ZIP data)", () => {
 // impossible": the workbench published case counts with no denominator on the
 // page, so the only per-ZIP list available to check them against was the All
 // Properties directory file — a DIFFERENT universe (the tracked City-inventory
-// + 311 operational list). On 60624 the private-outreach case correctly reports
+// + 311 operational list). On 60624 the title-holder case correctly reports
 // 1,348 land parcels out of a 2,739-parcel land universe, while the directory
 // file carries 1,339 land rows; benchmarked against the wrong denominator the
 // right answer looks broken. These tests bind the denominator the page now
@@ -412,12 +433,12 @@ describe("case universe denominators", () => {
         expect(isLandUniverseTruncated(universe), `${zip} truncation flagged`).toBe(true);
         expect(universe.land).toBeLessThan(universe.landTotal!);
         expect(byKey["public-land"].landCount).toBeLessThanOrEqual(city);
-        expect(byKey["private-outreach"].landCount).toBeLessThanOrEqual(priv);
+        expect(byKey["title-holder"].landCount).toBeLessThanOrEqual(priv);
       } else {
         expect(isLandUniverseTruncated(universe), `${zip} no false truncation`).toBe(false);
         expect(universe.land, `${zip} land universe`).toBe(landUniverse.total);
         expect(byKey["public-land"].landCount, `${zip} public-land`).toBe(city);
-        expect(byKey["private-outreach"].landCount, `${zip} private land`).toBe(priv);
+        expect(byKey["title-holder"].landCount, `${zip} private land`).toBe(priv);
       }
     });
   }
@@ -429,29 +450,34 @@ describe("reported-building ownership enrichment (committed data)", () => {
   for (const entry of PILOT_ZIPS) {
     const zip = entry.zip;
 
-    it(`${zip}: a reported building with a resolved taxpayer is not an ownership follow-up`, () => {
+    it(`${zip}: every reported building remains in property review after ownership enrichment`, () => {
       const { records } = buildCaseRecords(zip);
       const buildings = records.filter((r) => r.universe === "building_report");
       expect(buildings.length).toBeGreaterThan(0);
       for (const record of buildings) {
-        if (recordSector(record) !== "unclassified") {
-          expect(
-            caseMatches("ownership-check", record),
-            `${zip} ${record.id} resolved sector still in ownership-check`,
-          ).toBe(false);
-        }
+        expect(caseMatches("property-review", record), `${zip} ${record.id}`).toBe(true);
       }
-      // ...and the enrichment actually reaches this ZIP: some reported building
-      // resolves to a private taxpayer, so private-outreach is no longer
-      // structurally land-only.
-      const privateOutreach = deriveCase("private-outreach", records);
-      expect(privateOutreach.buildingCount, `${zip} private buildings`).toBeGreaterThan(0);
+      expect(deriveCase("property-review", records).buildingCount).toBe(buildings.length);
+      // The enrichment still reaches this ZIP: some reported building resolves
+      // to a private taxpayer, so title-holder is not structurally land-only.
+      const titleHolder = deriveCase("title-holder", records);
+      expect(titleHolder.buildingCount, `${zip} private buildings`).toBeGreaterThan(0);
     });
 
-    it(`${zip}: ownership follow-up is exactly the records unresolved on both axes`, () => {
+    it(`${zip}: property review matches the source-separated union once per record`, () => {
       const { records } = buildCaseRecords(zip);
-      const expected = records.filter((r) => recordSector(r) === "unclassified").length;
-      expect(deriveCase("ownership-check", records).matches).toBe(expected);
+      const expectedIds = new Set(
+        records
+          .filter(
+            (record) =>
+              recordSector(record) === "unclassified" ||
+              record.universe === "building_report" ||
+              record.saleYear != null ||
+              record.violation,
+          )
+          .map((record) => record.id),
+      );
+      expect(deriveCase("property-review", records).matches).toBe(expectedIds.size);
     });
   }
 });

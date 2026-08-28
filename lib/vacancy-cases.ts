@@ -65,21 +65,17 @@ export interface VacancyCaseArea {
   needsChecking: string;
 }
 
-/** The five case keys. Stable URL contract (`?case=<key>`) and shared with the
- *  prototype's param names so older shared links keep resolving. */
+/** The three user-facing case keys. Older five-option links are normalized by
+ *  `parseCaseParam`, so previously shared URLs keep opening a useful view. */
 export type CaseKey =
   | "public-land"
-  | "private-outreach"
-  | "ownership-check"
-  | "building-review"
-  | "tax-title";
+  | "title-holder"
+  | "property-review";
 
 export const CASE_KEYS: readonly CaseKey[] = [
   "public-land",
-  "private-outreach",
-  "ownership-check",
-  "building-review",
-  "tax-title",
+  "title-holder",
+  "property-review",
 ] as const;
 
 /** The default active case when `?case=` is absent or unrecognized. */
@@ -97,45 +93,31 @@ export interface CaseType {
   caveat: string;
 }
 
-/** The five case types, in display order (public-land first / default). Copy is
+/** The three case types, in display order (public-land first / default). Copy is
  *  fixed here so it never drifts per-ZIP; only the counts change. */
 export const CASE_TYPES: readonly CaseType[] = [
   {
     key: "public-land",
     chip: "PL",
-    name: "Public-land pathway",
-    definition: "Start with land that has a public disposition pathway.",
+    name: "Find public land",
+    definition: "Start with vacant land that may have a public disposition pathway.",
     caveat: "Vacant land classified as City or public control. Verify current status before relying.",
   },
   {
-    key: "private-outreach",
-    chip: "PO",
-    name: "Private-owner outreach",
-    definition: "Sites where the next step is finding and contacting the record owner.",
+    key: "title-holder",
+    chip: "TH",
+    name: "Identify a title holder",
+    definition: "Select a property, then open CookViewer or the Cook County Assessor by PIN.",
     caveat:
-      "Land uses the reconciled owner type; a reported building uses the taxpayer structure resolved from its matched parcel. Both come from taxpayer records and require verification.",
+      "Land uses the reconciled owner type; a reported building uses the taxpayer structure resolved from its matched parcel. These fields and linked county records are starting points, not proof of current legal title.",
   },
   {
-    key: "ownership-check",
-    chip: "OF",
-    name: "Ownership follow-up",
-    definition: "Sites where the record holder is not yet identified.",
+    key: "property-review",
+    chip: "PR",
+    name: "Investigate a property",
+    definition: "Select a property, then choose an incentive, permit, or market and community analysis.",
     caveat:
-      "Neither the owner type nor the taxpayer structure has resolved for these records. Start with the county parcel record and deed history.",
-  },
-  {
-    key: "building-review",
-    chip: "BC",
-    name: "Building condition review",
-    definition: "Reported vacant buildings that need condition and status checks.",
-    caveat: "Building vacancy comes from resident reports and is unverified.",
-  },
-  {
-    key: "tax-title",
-    chip: "TT",
-    name: "Tax and title review",
-    definition: "Sites with signals worth checking against county tax and title records.",
-    caveat: "Signals are indicators, not determinations. County records are authoritative.",
+      "Includes unresolved owner records, reported vacant buildings, and records with a tax-sale year or matched vacant-building violation. These are signals for verification, not determinations.",
   },
 ] as const;
 
@@ -157,9 +139,12 @@ export function caseTypeFor(key: CaseKey): CaseType {
  *  never select an out-of-range case). */
 export function parseCaseParam(value: string | string[] | undefined): CaseKey {
   const raw = Array.isArray(value) ? value[0] : value;
-  return (CASE_KEYS as readonly string[]).includes(raw ?? "")
-    ? (raw as CaseKey)
-    : DEFAULT_CASE_KEY;
+  if ((CASE_KEYS as readonly string[]).includes(raw ?? "")) return raw as CaseKey;
+  if (raw === "private-outreach") return "title-holder";
+  if (raw === "ownership-check" || raw === "building-review" || raw === "tax-title") {
+    return "property-review";
+  }
+  return DEFAULT_CASE_KEY;
 }
 
 const KNOWN_PRIVATE: ReadonlySet<OwnerType> = new Set<OwnerType>([
@@ -199,32 +184,31 @@ export function recordSector(record: VacancyCaseRecord): OwnerSector {
  *                       carries the City-inventory signal, which is what a
  *                       public disposition pathway actually depends on, and it
  *                       is the same figure deriveLandUniverse publishes.
- *  - private-outreach → LAND with a known non-government owner type (again the
+ *  - title-holder     → LAND with a known non-government owner type (again the
  *                       reconciled figure the report publishes), plus REPORTED
  *                       BUILDINGS whose matched-parcel taxpayer structure reads
- *                       private. Both halves are named in the caveat.
- *  - ownership-check  → records unresolved on BOTH axes (sector
- *                       "unclassified") — the pair the caveat names. Keying on
- *                       the legacy field alone swept in every address-matched
- *                       311 row whose taxpayer had in fact resolved.
- *  - building-review  → the 311 reported-building universe.
- *  - tax-title        → any record carrying a distress signal (a tax-sale year
- *                       on its parcel, or a matched vacant-building violation).
+ *                       private. These are records where a title-holder search
+ *                       has a plausible starting point; the caveat names both
+ *                       evidence fields.
+ *  - property-review  → the union of records unresolved on BOTH ownership
+ *                       axes, all 311 reported buildings, and records carrying
+ *                       a tax-sale year or matched vacant-building violation.
+ *                       The union returns each record once even when it carries
+ *                       more than one review signal.
  */
 export function caseMatches(key: CaseKey, record: VacancyCaseRecord): boolean {
   switch (key) {
     case "public-land":
       return record.universe === "land" && record.ownerType === "city_public";
-    case "private-outreach":
+    case "title-holder":
       return record.universe === "land"
         ? KNOWN_PRIVATE.has(record.ownerType)
         : recordSector(record) === "private";
-    case "ownership-check":
-      return recordSector(record) === "unclassified";
-    case "building-review":
-      return record.universe === "building_report";
-    case "tax-title":
-      return record.saleYear != null || record.violation === true;
+    case "property-review":
+      return recordSector(record) === "unclassified" ||
+        record.universe === "building_report" ||
+        record.saleYear != null ||
+        record.violation === true;
   }
 }
 
@@ -362,7 +346,7 @@ export function deriveCase(
   };
 }
 
-/** Compute all five cases, in CASE_TYPES order. */
+/** Compute all three cases, in CASE_TYPES order. */
 export function deriveAllCases(
   records: readonly VacancyCaseRecord[],
   pointCap: number = CASE_POINT_CAP,

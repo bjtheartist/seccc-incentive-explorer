@@ -46,8 +46,8 @@ describe("vacancy workspace URL state", () => {
     const current = new URLSearchParams(
       "case=public-land&view=map&q=Commercial&universe=land&bounds=-87.6000%2C41.7000%2C-87.5000%2C41.8000",
     );
-    expect(buildVacancyCaseHref("60617", "building-review", current)).toBe(
-      "/vacancy/60617?case=building-review&view=map&q=Commercial&universe=land&bounds=-87.6000%2C41.7000%2C-87.5000%2C41.8000",
+    expect(buildVacancyCaseHref("60617", "property-review", current)).toBe(
+      "/vacancy/60617?case=property-review&view=map&q=Commercial&universe=land&bounds=-87.6000%2C41.7000%2C-87.5000%2C41.8000",
     );
   });
 

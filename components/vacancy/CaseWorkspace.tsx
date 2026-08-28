@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   ExternalLink,
@@ -11,8 +11,13 @@ import {
   X,
 } from "lucide-react";
 import { OWNER_TYPE_COLORS } from "@/lib/owner-classify";
-import { cookViewerUrl, clerkRecordsUrl } from "@/lib/cook-viewer";
-import type { VacancyCaseRecord } from "@/lib/vacancy-cases";
+import {
+  assessorRecordUrl,
+  cookViewerUrl,
+  clerkRecordsUrl,
+  normalizePin14,
+} from "@/lib/cook-viewer";
+import type { CaseKey, VacancyCaseRecord } from "@/lib/vacancy-cases";
 import { PUBLIC_OWNER_TYPE_LABELS } from "@/lib/vacancy-public-labels";
 import { siteReportHref } from "@/lib/vacancy-site-zones";
 import {
@@ -26,11 +31,12 @@ import {
 import CaseWorkspaceMapIsland from "./CaseWorkspaceMapIsland";
 import { PermitEvidencePanel } from "./PermitEvidencePanel";
 
-const PAGE_SIZE = 80;
+const PAGE_SIZE = 15;
 
 interface CaseWorkspaceProps {
   zip: string;
   neighborhood: string;
+  caseKey: CaseKey;
   records: readonly VacancyCaseRecord[];
   boundary: { rings: [number, number][][]; bbox: VacancyWorkspaceBounds } | null;
   centroid: { lat: number; lon: number } | null;
@@ -39,6 +45,8 @@ interface CaseWorkspaceProps {
   initialQuery: string;
   initialBounds: VacancyWorkspaceBounds | null;
 }
+
+const COMMUNIDATA_URL = "https://www.communidata.app/";
 
 function recordKind(record: VacancyCaseRecord): string {
   return record.universe === "land" ? "Land parcel" : "Reported building";
@@ -66,9 +74,63 @@ function ExternalAction({ href, children }: { href: string; children: React.Reac
   );
 }
 
-function SelectedRecord({ record }: { record: VacancyCaseRecord }) {
+function ActionCard({
+  number,
+  title,
+  description,
+  href,
+}: {
+  number: number;
+  title: string;
+  description: string;
+  href: string | null;
+}) {
+  const content = (
+    <>
+      <span className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB]">
+        Option {number}
+      </span>
+      <span className="mt-2 block text-[13px] font-semibold leading-snug text-[#0C1B33]">
+        {title}
+      </span>
+      <span className="mt-1.5 block text-[11px] leading-relaxed text-[#0C1B33]/55">
+        {description}
+      </span>
+      <span className={`mt-3 inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.09em] ${
+        href ? "text-[#2563EB]" : "text-[#0C1B33]/35"
+      }`}>
+        {href ? "Open" : "Unavailable for this record"}
+        {href ? <ExternalLink aria-hidden="true" size={11} /> : null}
+      </span>
+    </>
+  );
+
+  if (!href) {
+    return (
+      <div aria-disabled="true" className="border border-[#0C1B33]/10 bg-[#FAF9F6] p-4 opacity-70">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group border border-[#0C1B33]/12 bg-white p-4 transition-colors hover:border-[#2563EB]/55 hover:bg-[#EAF1FF]/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+    >
+      {content}
+    </a>
+  );
+}
+
+function SelectedRecord({ record, caseKey }: { record: VacancyCaseRecord; caseKey: CaseKey }) {
   const cookViewer = cookViewerUrl(record.pin);
+  const assessor = assessorRecordUrl(record.pin);
   const clerk = clerkRecordsUrl(record.pin);
+  const pin14 = normalizePin14(record.pin);
+  const permitAnalysis = pin14 ? `/permit-exhibit/${encodeURIComponent(pin14)}` : null;
   const report =
     Number.isFinite(record.lat) && Number.isFinite(record.lon)
       ? siteReportHref(record.lat as number, record.lon as number, record.address)
@@ -87,12 +149,22 @@ function SelectedRecord({ record }: { record: VacancyCaseRecord }) {
           <p className="mt-1 text-[11px] text-[#0C1B33]/50">
             {recordKind(record)}{record.pin ? ` · PIN ${record.pin}` : " · No PIN on record"}
           </p>
+          {caseKey === "title-holder" && (cookViewer || assessor) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              {cookViewer ? <ExternalAction href={cookViewer}>CookViewer</ExternalAction> : null}
+              {assessor ? (
+                <ExternalAction href={assessor}>Cook County Assessor</ExternalAction>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {report ? <ExternalAction href={report}>Run site incentive report</ExternalAction> : null}
-          {cookViewer ? <ExternalAction href={cookViewer}>Parcel record</ExternalAction> : null}
-          {clerk ? <ExternalAction href={clerk}>Deed history</ExternalAction> : null}
-        </div>
+        {caseKey === "public-land" ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {report ? <ExternalAction href={report}>Run site incentive report</ExternalAction> : null}
+            {cookViewer ? <ExternalAction href={cookViewer}>Parcel record</ExternalAction> : null}
+            {clerk ? <ExternalAction href={clerk}>Deed history</ExternalAction> : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-px border border-[#0C1B33]/10 bg-[#0C1B33]/10 sm:grid-cols-3">
@@ -119,9 +191,43 @@ function SelectedRecord({ record }: { record: VacancyCaseRecord }) {
         </div>
       </div>
 
-      <div className="mt-5">
-        <PermitEvidencePanel pin={record.pin} />
-      </div>
+      {caseKey === "property-review" ? (
+        <section aria-labelledby="property-review-actions" className="mt-5 border-t border-[#0C1B33]/10 pt-5">
+          <span className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB]">
+            Next step
+          </span>
+          <h4 id="property-review-actions" className="mt-1.5 font-editorial text-[22px] leading-tight text-[#0C1B33]">
+            Choose an analysis
+          </h4>
+          <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-[#0C1B33]/55">
+            Carry this property into the analysis that answers your next question.
+          </p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <ActionCard
+              number={1}
+              title="Run an incentive analysis"
+              description="Review mapped incentive geographies and practical next steps for this address."
+              href={report}
+            />
+            <ActionCard
+              number={2}
+              title="Run permit activity analysis"
+              description="Open the permit activity analysis anchored to this parcel PIN."
+              href={permitAnalysis}
+            />
+            <ActionCard
+              number={3}
+              title="View market and community insights"
+              description="Continue in CommuniData for broader market and community context."
+              href={COMMUNIDATA_URL}
+            />
+          </div>
+        </section>
+      ) : caseKey === "public-land" ? (
+        <div className="mt-5">
+          <PermitEvidencePanel pin={record.pin} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -129,6 +235,7 @@ function SelectedRecord({ record }: { record: VacancyCaseRecord }) {
 export default function CaseWorkspace({
   zip,
   neighborhood,
+  caseKey,
   records,
   boundary,
   centroid,
@@ -167,6 +274,11 @@ export default function CaseWorkspace({
   ).length;
   const landCount = filtered.filter((record) => record.universe === "land").length;
   const buildingCount = filtered.length - landCount;
+
+  useEffect(() => {
+    if (!selectedId || view !== "list") return;
+    detailRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [selectedId, view]);
 
   function changeView(next: VacancyWorkspaceView) {
     setView(next);
@@ -220,14 +332,13 @@ export default function CaseWorkspace({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#2563EB]">
-            Synchronized workspace
+            Property records
           </span>
           <h2 id="case-workspace-title" className="mt-2 font-editorial text-[28px] leading-tight">
-            Review the active case
+            Matching properties
           </h2>
           <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/50">
-            One filtered public-record set across list and map, with map-area changes applied only
-            on confirmation.
+            Search the list or map, then select a record for the relevant property sources and analyses.
           </p>
         </div>
         <div className="inline-flex border border-[#0C1B33]/15 bg-white p-0.5 lg:hidden" aria-label="Workspace view">
@@ -310,7 +421,7 @@ export default function CaseWorkspace({
             </span>
             <span className="text-[10px] text-[#0C1B33]/40">{neighborhood} · {zip}</span>
           </div>
-          <div className="max-h-[620px] overflow-y-auto lg:h-[633px] lg:max-h-none">
+          <div className="lg:h-[633px] lg:overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="px-6 py-12 text-center">
                 <p className="text-[13px] font-medium text-[#0C1B33]">No records match the current filters.</p>
@@ -417,12 +528,12 @@ export default function CaseWorkspace({
 
       {selected ? (
         <div ref={detailRef} className="mt-3 scroll-mt-4">
-          <SelectedRecord record={selected} />
+          <SelectedRecord record={selected} caseKey={caseKey} />
         </div>
       ) : (
         <div className="mt-3 flex items-center gap-2 border border-dashed border-[#0C1B33]/15 px-4 py-3 text-[11px] text-[#0C1B33]/45">
           <Building2 aria-hidden="true" size={14} />
-          Select a list row or map point to review parcel links and matched permit evidence.
+          Select a list row or map point to review the available property sources and analyses.
         </div>
       )}
     </section>

@@ -1,31 +1,41 @@
 import Link from "next/link";
-import { PILOT_ZIPS, getPilotZipEntry } from "@/lib/pilot-zips";
+import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
 import { NeighborhoodSelect } from "@/components/vacancy/NeighborhoodSelect";
 
 /**
  * The consistent sub-navigation header shown on every /vacancy/[zip]* page — one
- * area workspace, five views. The narrative Report leads the navigation, while
- * the ZIP root remains the decision-first Case Workbench ("Workbench").
+ * area workspace with three primary views. Property and opportunity-area routes
+ * remain reachable from contextual links without competing in the top nav.
  * Server component: the active view is passed in, so no client hooks are
  * needed. The neighborhood switcher preserves the current view when switching
- * ZIPs (reuses the pilot-ZIP chip-row pattern from the admin Owner Files page).
- * The nine-pill row is desktop-only (`hidden md:flex`); mobile gets the
- * equivalent NeighborhoodSelect dropdown (`md:hidden`, defect E).
+ * ZIPs. One labeled select is used at every viewport so the page does not begin
+ * with nine competing neighborhood links on desktop and a different control on
+ * mobile.
  */
 
 export type VacancyView = "workbench" | "report" | "areas" | "map" | "directory";
 
 const TABS: { key: VacancyView; label: string; href: (zip: string) => string }[] = [
+  { key: "workbench", label: "Find Sites", href: (z) => `/vacancy/${z}` },
   { key: "report", label: "Report", href: (z) => `/vacancy/${z}/report` },
-  { key: "workbench", label: "Workbench", href: (z) => `/vacancy/${z}` },
-  { key: "directory", label: "All Properties", href: (z) => `/vacancy/${z}/directory` },
   { key: "map", label: "Map", href: (z) => `/vacancy/${z}/map` },
-  { key: "areas", label: "Opportunity Areas", href: (z) => `/vacancy/${z}/areas` },
 ];
 
 export function hrefFor(view: VacancyView, zip: string): string {
-  return (TABS.find((t) => t.key === view) ?? TABS.find((t) => t.key === "workbench")!).href(zip);
+  switch (view) {
+    case "report":
+      return `/vacancy/${zip}/report`;
+    case "areas":
+      return `/vacancy/${zip}/areas`;
+    case "map":
+      return `/vacancy/${zip}/map`;
+    case "directory":
+      return `/vacancy/${zip}/directory`;
+    case "workbench":
+    default:
+      return `/vacancy/${zip}`;
+  }
 }
 
 export function VacancySubNav({ zip, active }: { zip: string; active: VacancyView }) {
@@ -34,8 +44,8 @@ export function VacancySubNav({ zip, active }: { zip: string; active: VacancyVie
 
   return (
     <div className="mb-8 border-b border-[#0C1B33]/10 pb-4">
-      {/* Breadcrumb + neighborhood switcher */}
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+      {/* Breadcrumb + one neighborhood switcher at every viewport. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <nav className="flex items-center gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
           <Link href="/vacancy" className="hover:text-[#2563EB]">
             Chicago Vacant Sites
@@ -43,34 +53,12 @@ export function VacancySubNav({ zip, active }: { zip: string; active: VacancyVie
           <span>/</span>
           <span className="text-[#0C1B33]/80">{neighborhood}</span>
         </nav>
+        <div className="w-full sm:w-64">
+          <NeighborhoodSelect zip={zip} active={active} />
+        </div>
       </div>
 
-      {/* Neighborhood switcher — preserves the active view. Desktop: the full
-          nine-pill row. Mobile: an equivalent labeled <select> (defect E) —
-          nine always-visible pill links don't fit small screens. */}
-      <div className="mb-4 hidden flex-wrap gap-1.5 md:flex">
-        {PILOT_ZIPS.map((e) => {
-          const isActive = e.zip === zip;
-          return (
-            <Link
-              key={e.zip}
-              href={hrefFor(active, e.zip)}
-              className={`px-2.5 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] border transition-colors ${
-                isActive
-                  ? "bg-[#0C1B33] text-white border-[#0C1B33]"
-                  : "bg-white text-[#0C1B33]/55 border-[#0C1B33]/15 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
-              }`}
-            >
-              {e.primaryNeighborhood}
-            </Link>
-          );
-        })}
-      </div>
-      <div className="mb-4 md:hidden">
-        <NeighborhoodSelect zip={zip} active={active} />
-      </div>
-
-      {/* Five-view tabs + Download area PDF */}
+      {/* Three primary views + Download area PDF */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav className="flex flex-wrap gap-x-5 gap-y-2">
           {TABS.map((tab) => {

@@ -1,12 +1,9 @@
 "use client";
 
 /**
- * Mobile neighborhood switcher (defect E) — the nine always-visible pill links
- * in VacancySubNav don't fit small screens. This renders the same nine pilot
- * ZIPs as a single labeled <select> that navigates via hrefFor(active, zip),
- * so switching neighborhoods on mobile preserves the current view exactly like
- * the desktop pill row does. VacancySubNav wraps the pill row in `hidden
- * md:flex` and this component in `md:hidden`.
+ * The single neighborhood switcher used across viewport sizes. It keeps the
+ * current vacancy view when the reader changes ZIPs without presenting nine
+ * competing links above the page task.
  */
 
 import { useRouter } from "next/navigation";
