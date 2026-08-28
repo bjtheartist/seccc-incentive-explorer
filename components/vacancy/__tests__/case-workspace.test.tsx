@@ -1,11 +1,29 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { CaseKey, VacancyCaseRecord } from "@/lib/vacancy-cases";
 
 vi.mock("@/components/vacancy/CaseWorkspaceMapIsland", () => ({
-  default: () => <div data-testid="case-workspace-map" />,
+  default: ({
+    onSelect,
+    onCandidateBounds,
+  }: {
+    onSelect: (id: string) => void;
+    onCandidateBounds: (bounds: [number, number, number, number]) => void;
+  }) => (
+    <div data-testid="case-workspace-map">
+      <button type="button" onClick={() => onSelect("record-1")}>
+        Select record from map
+      </button>
+      <button
+        type="button"
+        onClick={() => onCandidateBounds([-87.6, 41.72, -87.53, 41.78])}
+      >
+        Move map
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/vacancy/PermitEvidencePanel", () => ({
@@ -14,7 +32,30 @@ vi.mock("@/components/vacancy/PermitEvidencePanel", () => ({
 
 import CaseWorkspace from "@/components/vacancy/CaseWorkspace";
 
-afterEach(cleanup);
+const scrollIntoView = vi.fn();
+const originalMatchMedia = window.matchMedia;
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: scrollIntoView,
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  scrollIntoView.mockClear();
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: originalScrollIntoView,
+  });
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: originalMatchMedia,
+  });
+});
 
 function record(
   index: number,
@@ -61,6 +102,48 @@ function renderWorkspace(
 }
 
 describe("CaseWorkspace record disclosure", () => {
+  it("keeps map-origin selections on the map while list selections reveal the details", () => {
+    const records = [record(1, { lat: 41.75823, lon: -87.55234 })];
+    const mapRender = renderWorkspace("public-land", records);
+
+    fireEvent.click(screen.getByRole("button", { name: "Select record from map" }));
+
+    expect(screen.getByRole("heading", { name: "1 TEST AVE" })).toBeTruthy();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    mapRender.unmount();
+    scrollIntoView.mockClear();
+    renderWorkspace("public-land", records);
+
+    fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+  });
+
+  it("keeps desktop list selections beside the map until details are requested", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: true }),
+    });
+    renderWorkspace("public-land", [record(1, { lat: 41.75823, lon: -87.55234 })]);
+
+    fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
+
+    expect(screen.getByRole("heading", { name: "1 TEST AVE" })).toBeTruthy();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("keeps narrow-screen map actions in separate vertical bands", () => {
+    renderWorkspace("public-land", [record(1, { lat: 41.75823, lon: -87.55234 })]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Select record from map" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+
+    expect(screen.getByTestId("case-workspace-search-area").className).toContain("top-3");
+    expect(screen.getByTestId("case-workspace-map-legend").className).toContain("bottom-10");
+    expect(screen.getByTestId("case-workspace-selected-action").className).toContain("bottom-24");
+  });
+
   it("starts with 15 records and reveals the remaining five on request", () => {
     const records = Array.from({ length: 20 }, (_, index) => record(index + 1));
 
