@@ -252,6 +252,7 @@ export default function CaseWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const detailRef = useRef<HTMLDivElement | null>(null);
+  const selectionOriginRef = useRef<"list" | "map" | null>(null);
 
   const updateUrl = useCallback((updates: Record<string, string | null>) => {
     if (typeof window === "undefined") return;
@@ -276,7 +277,9 @@ export default function CaseWorkspace({
   const buildingCount = filtered.length - landCount;
 
   useEffect(() => {
-    if (!selectedId || view !== "list") return;
+    if (!selectedId || selectionOriginRef.current !== "list" || view !== "list") return;
+    const mapVisibleBesideList = window.matchMedia?.("(min-width: 1024px)").matches ?? false;
+    if (mapVisibleBesideList) return;
     detailRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, [selectedId, view]);
 
@@ -316,8 +319,9 @@ export default function CaseWorkspace({
     updateUrl({ bounds: null });
   }
 
-  function selectRecord(id: string) {
+  function selectRecord(id: string, origin: "list" | "map") {
     setCandidateBounds(null);
+    selectionOriginRef.current = origin;
     setSelectedId(id);
   }
 
@@ -444,7 +448,7 @@ export default function CaseWorkspace({
                         <button
                           type="button"
                           aria-pressed={selectedRow}
-                          onClick={() => selectRecord(record.id)}
+                          onClick={() => selectRecord(record.id, "list")}
                           className={`w-full px-4 py-3.5 text-left transition-colors ${
                             selectedRow ? "bg-[#EAF1FF]" : "hover:bg-[#FAF9F6]"
                           }`}
@@ -496,11 +500,12 @@ export default function CaseWorkspace({
             boundary={boundary}
             centroid={centroid}
             committedBounds={bounds}
-            onSelect={selectRecord}
+            onSelect={(id) => selectRecord(id, "map")}
             onCandidateBounds={setCandidateBounds}
           />
           {candidateBounds ? (
             <button
+              data-testid="case-workspace-search-area"
               type="button"
               onClick={commitMapArea}
               className="absolute left-1/2 top-3 z-10 inline-flex -translate-x-1/2 items-center gap-2 border border-[#0C1B33] bg-white px-3 py-2 text-[11px] font-semibold text-[#0C1B33] shadow-sm hover:bg-[#FAF9F6]"
@@ -509,15 +514,19 @@ export default function CaseWorkspace({
               Search this area
             </button>
           ) : null}
-          <div className="pointer-events-none absolute bottom-7 left-3 z-10 flex items-center gap-3 border border-[#0C1B33]/10 bg-white/95 px-2.5 py-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.07em] text-[#0C1B33]/55">
+          <div
+            data-testid="case-workspace-map-legend"
+            className="pointer-events-none absolute bottom-10 left-3 z-10 flex items-center gap-3 border border-[#0C1B33]/10 bg-white/95 px-2.5 py-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.07em] text-[#0C1B33]/55"
+          >
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#0C1B33]" /> Land</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#8A8A8A]" /> Building report</span>
           </div>
           {selected ? (
             <button
+              data-testid="case-workspace-selected-action"
               type="button"
               onClick={() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="absolute bottom-7 right-3 z-10 max-w-[min(300px,calc(100%-24px))] border border-[#0C1B33]/15 bg-white px-3 py-2 text-left shadow-sm"
+              className="absolute bottom-24 right-3 z-10 max-w-[min(300px,calc(100%-24px))] border border-[#0C1B33]/15 bg-white px-3 py-2 text-left shadow-sm"
             >
               <span className="block truncate text-[11px] font-semibold text-[#0C1B33]">{selected.address}</span>
               <span className="mt-0.5 block text-[9px] uppercase tracking-[0.08em] text-[#2563EB]">Review record details ↓</span>
