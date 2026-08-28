@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { CaseKey, VacancyCaseRecord } from "@/lib/vacancy-cases";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { VacancyCaseRecord } from "@/lib/vacancy-cases";
 
 vi.mock("@/components/vacancy/CaseWorkspaceMapIsland", () => ({
   default: ({
@@ -24,10 +24,6 @@ vi.mock("@/components/vacancy/CaseWorkspaceMapIsland", () => ({
       </button>
     </div>
   ),
-}));
-
-vi.mock("@/components/vacancy/PermitEvidencePanel", () => ({
-  PermitEvidencePanel: () => <div data-testid="permit-evidence-panel" />,
 }));
 
 import CaseWorkspace from "@/components/vacancy/CaseWorkspace";
@@ -81,13 +77,9 @@ function record(
 const SUBJECT_PIN = "21-32-211-039-0000";
 const SUBJECT_PIN14 = "21322110390000";
 
-function renderWorkspace(
-  caseKey: CaseKey,
-  records: readonly VacancyCaseRecord[],
-) {
+function renderWorkspace(records: readonly VacancyCaseRecord[]) {
   return render(
     <CaseWorkspace
-      caseKey={caseKey}
       zip="60617"
       neighborhood="South Chicago"
       records={records}
@@ -104,7 +96,7 @@ function renderWorkspace(
 describe("CaseWorkspace record disclosure", () => {
   it("keeps map-origin selections on the map while list selections reveal the details", () => {
     const records = [record(1, { lat: 41.75823, lon: -87.55234 })];
-    const mapRender = renderWorkspace("public-land", records);
+    const mapRender = renderWorkspace(records);
 
     fireEvent.click(screen.getByRole("button", { name: "Select record from map" }));
 
@@ -113,7 +105,7 @@ describe("CaseWorkspace record disclosure", () => {
 
     mapRender.unmount();
     scrollIntoView.mockClear();
-    renderWorkspace("public-land", records);
+    renderWorkspace(records);
 
     fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
 
@@ -125,7 +117,7 @@ describe("CaseWorkspace record disclosure", () => {
       configurable: true,
       value: vi.fn().mockReturnValue({ matches: true }),
     });
-    renderWorkspace("public-land", [record(1, { lat: 41.75823, lon: -87.55234 })]);
+    renderWorkspace([record(1, { lat: 41.75823, lon: -87.55234 })]);
 
     fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
 
@@ -134,7 +126,7 @@ describe("CaseWorkspace record disclosure", () => {
   });
 
   it("keeps narrow-screen map actions in separate vertical bands", () => {
-    renderWorkspace("public-land", [record(1, { lat: 41.75823, lon: -87.55234 })]);
+    renderWorkspace([record(1, { lat: 41.75823, lon: -87.55234 })]);
 
     fireEvent.click(screen.getByRole("button", { name: "Select record from map" }));
     fireEvent.click(screen.getByRole("button", { name: "Move map" }));
@@ -147,7 +139,7 @@ describe("CaseWorkspace record disclosure", () => {
   it("starts with 15 records and reveals the remaining five on request", () => {
     const records = Array.from({ length: 20 }, (_, index) => record(index + 1));
 
-    renderWorkspace("public-land", records);
+    renderWorkspace(records);
 
     expect(screen.getByRole("heading", { name: "Matching properties" })).toBeTruthy();
     expect(screen.getByText("15 TEST AVE")).toBeTruthy();
@@ -160,8 +152,8 @@ describe("CaseWorkspace record disclosure", () => {
     expect(screen.queryByRole("button", { name: /Show .* more/ })).toBeNull();
   });
 
-  it("places CookViewer and Assessor links below the selected address without a second action panel", () => {
-    renderWorkspace("title-holder", [
+  it("combines parcel sources and the three analyses in one selected-record panel", () => {
+    renderWorkspace([
       record(1, {
         pin: SUBJECT_PIN,
         lat: 41.75823,
@@ -172,57 +164,50 @@ describe("CaseWorkspace record disclosure", () => {
     fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
 
     const addressHeading = screen.getByRole("heading", { name: "1 TEST AVE" });
-    const addressBlock = addressHeading.parentElement;
-    expect(addressBlock).toBeTruthy();
+    const parcelLink = screen.getByRole("link", { name: /Parcel record/ });
+    const assessorLink = screen.getByRole("link", { name: /Assessor record/ });
+    const deedLink = screen.getByRole("link", { name: /Deed history/ });
+    const incentiveLink = screen.getByRole("link", { name: /incentive analysis/i });
+    const permitLink = screen.getByRole("link", { name: /permit activity/i });
+    const communiDataLink = screen.getByRole("link", {
+      name: /market and community insights/i,
+    });
 
-    const links = within(addressBlock as HTMLElement).getAllByRole("link");
-    expect(links).toHaveLength(2);
-    const cookViewerLink = within(addressBlock as HTMLElement).getByRole("link", {
-      name: /CookViewer/,
-    });
-    const assessorLink = within(addressBlock as HTMLElement).getByRole("link", {
-      name: /Cook County Assessor/,
-    });
-    expect(cookViewerLink.getAttribute("href")).toBe(
+    expect(screen.getAllByRole("link")).toHaveLength(6);
+    expect(parcelLink.getAttribute("href")).toBe(
       `https://maps.cookcountyil.gov/cookviewer/?pin14=${SUBJECT_PIN14}`,
     );
     expect(assessorLink.getAttribute("href")).toBe(
       `https://www.cookcountyassessoril.gov/pin/${SUBJECT_PIN14}`,
     );
-    expect(addressHeading.compareDocumentPosition(cookViewerLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(addressHeading.compareDocumentPosition(assessorLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByRole("link")).toHaveLength(2);
-    expect(screen.queryByRole("heading", { name: "Check the parcel record" })).toBeNull();
-    expect(screen.queryByText("Official property sources")).toBeNull();
-    expect(screen.queryByText(/Option [12]/)).toBeNull();
-    expect(screen.queryByRole("link", { name: /Clerk|deed history/i })).toBeNull();
-    expect(screen.queryByRole("link", { name: /incentive|permit|CommuniData/i })).toBeNull();
-    expect(screen.queryByTestId("permit-evidence-panel")).toBeNull();
+    expect(deedLink.getAttribute("href")).toBe(
+      `https://crs.cookcountyclerkil.gov/Search/ResultByPin?id1=${SUBJECT_PIN14}`,
+    );
+    expect(incentiveLink.getAttribute("href")).toBe(
+      "/report?instant=true&lat=41.75823&lon=-87.55234&addr=1%20TEST%20AVE",
+    );
+    expect(permitLink.getAttribute("href")).toBe(`/permit-exhibit/${SUBJECT_PIN14}`);
+    expect(communiDataLink.getAttribute("href")).toBe("https://www.communidata.app/");
+
+    const ownerType = screen.getByText("Owner type");
+    const analysisHeading = screen.getByRole("heading", { name: "Choose an analysis" });
+    expect(addressHeading.compareDocumentPosition(parcelLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ownerType.compareDocumentPosition(analysisHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("case-workspace-selected-record").className).toContain(
+      "scroll-mt-24",
+    );
   });
 
-  it("offers exactly three next analyses for a selected property and scopes permits to its PIN", () => {
-    renderWorkspace("property-review", [
-      record(1, {
-        pin: SUBJECT_PIN,
-        lat: 41.75823,
-        lon: -87.55234,
-      }),
-    ]);
+  it("disables coordinate- and PIN-dependent analyses without creating broken links", () => {
+    renderWorkspace([record(1)]);
 
     fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
 
-    const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(3);
-    expect(
-      screen.getByRole("link", { name: /incentive analysis/i }).getAttribute("href"),
-    ).toBe("/report?instant=true&lat=41.75823&lon=-87.55234&addr=1%20TEST%20AVE");
-    expect(
-      screen.getByRole("link", { name: /permit activity/i }).getAttribute("href"),
-    ).toBe(`/permit-exhibit/${SUBJECT_PIN14}`);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: /market and community insights/i }).getAttribute("href"),
     ).toBe("https://www.communidata.app/");
-    expect(screen.queryByRole("link", { name: /CookViewer|Assessor|Clerk|deed history/i })).toBeNull();
-    expect(screen.queryByTestId("permit-evidence-panel")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Parcel|Assessor|Deed|incentive|permit/i })).toBeNull();
+    expect(screen.getAllByText("Unavailable for this record")).toHaveLength(2);
   });
 });

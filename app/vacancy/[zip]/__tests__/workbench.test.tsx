@@ -6,13 +6,12 @@ import type { VacancyCaseRecord } from "@/lib/vacancy-cases";
  * Render coverage for the Find Vacant Sites page (app/vacancy/[zip]/page.tsx).
  * The page is an async Server Component
  * called directly with a fixture record set (buildCaseRecords stubbed) and the
- * client islands stubbed out, so renderToStaticMarkup can inspect the
- * result: three pathway cards with real counts, the selected-pathway summary, the
- * matching-properties server contract, the compact permit-activity next step, the as-of
- * line, and the ?case= switch — with NO owner name anywhere in the output.
+ * client island stubbed out, so renderToStaticMarkup can inspect the unified
+ * inventory contract, methodology disclosure, as-of line, and legacy ?case=
+ * compatibility — with NO owner name anywhere in the output.
  *
  * The workspace itself is a client island, so these assertions check the SERVER
- * CONTRACT: the island receives every active-case record (not a sampled preview),
+ * CONTRACT: the island receives every tracked record (not a case subset or sampled preview),
  * the edition geography, and parsed shareable filter state.
  */
 
@@ -64,31 +63,12 @@ vi.mock("@/lib/vacancy-cases-data", async (importOriginal) => {
   };
 });
 vi.mock("@/components/vacancy/VacancySubNav", () => ({ VacancySubNav: () => null }));
-vi.mock("@/components/vacancy/CopyCaseLink", () => ({ CopyCaseLink: () => null }));
-vi.mock("@/components/vacancy/CaseCardLink", () => ({
-  CaseCardLink: ({
-    initialHref,
-    selected,
-    className,
-    children,
-  }: {
-    initialHref: string;
-    selected: boolean;
-    className: string;
-    children: React.ReactNode;
-  }) => (
-    <a href={initialHref} aria-current={selected ? "true" : undefined} className={className}>
-      {children}
-    </a>
-  ),
-}));
 
 // The synchronized workspace — stubbed to a marker element that echoes the
 // Server Component contract without loading mapbox-gl in Node.
 vi.mock("@/components/vacancy/CaseWorkspace", () => ({
   default: ({
     zip,
-    caseKey,
     records,
     boundary,
     centroid,
@@ -98,7 +78,6 @@ vi.mock("@/components/vacancy/CaseWorkspace", () => ({
     initialBounds,
   }: {
     zip: string;
-    caseKey: string;
     records: readonly { universe: string; lat: number | null; lon: number | null }[];
     boundary: unknown;
     centroid: unknown;
@@ -108,9 +87,9 @@ vi.mock("@/components/vacancy/CaseWorkspace", () => ({
     initialBounds: unknown;
   }) => (
     <div
+      id="case-results"
       data-testid="case-workspace"
       data-zip={zip}
-      data-case={caseKey}
       data-records={records.length}
       data-mapped={records.filter((record) => record.lat != null && record.lon != null).length}
       data-universes={records.map((record) => record.universe).join(",")}
@@ -162,107 +141,50 @@ async function render(search: Record<string, string> = {}) {
 }
 
 describe("Find Vacant Sites page", () => {
-  it("renders the three pathway cards with their real match counts and result anchors", async () => {
-    const html = await render();
-    const pathways = [
-      ["Find public land", "public-land"],
-      ["Identify a title holder", "title-holder"],
-      ["Investigate a property", "property-review"],
-    ] as const;
-    for (const [name, key] of pathways) {
-      expect(html).toContain(name);
-      expect(html).toContain(`href="/vacancy/60617?case=${key}#case-results"`);
-    }
-    // public-land = 3 city_public land; property-review = 2 review-signal land
-    // records + both reported buildings, with each record counted once.
-    expect(html).toContain("3 matching records");
-    expect(html).toContain("4 matching records");
-  });
-
-  it("keeps the page hierarchy focused on choosing one pathway and reviewing its results", async () => {
+  it("renders one record workspace without the overlapping pathway chooser", async () => {
     const html = await render();
     expect(html).toContain("Find vacant sites");
-    expect(html).toContain("Start here");
-    expect(html).toContain("What do you need to do?");
-    expect(html).toContain("Choose one pathway.");
+    expect(html).toContain("Search the tracked public records in one list or map.");
     expect(html).toContain('id="case-results"');
-    expect(html).toContain("Selected pathway");
-    expect(html).not.toContain("Case Workbench");
-    expect(html).not.toContain("Quick paths");
-    expect(html).not.toContain("Build a case in directory");
-  });
-
-  it("defaults the selected pathway to Find public land and summarizes its records", async () => {
-    const html = await render();
-    expect(html).toContain("Selected pathway");
-    expect(html).toContain("Start with vacant land that may have a public disposition pathway.");
-    expect(html).toMatch(/<strong[^>]*>3<\/strong>\s*land parcels/);
-    expect(html).toMatch(/<strong[^>]*>0<\/strong>\s*building reports/);
     expect(html).toContain("Public records as of July 22, 2026");
+    expect(html).not.toContain("What do you need to do?");
+    expect(html).not.toContain("Choose one pathway.");
+    expect(html).not.toContain("Selected pathway");
+    expect(html).not.toContain("Find public land");
+    expect(html).not.toContain("Identify a title holder");
+    expect(html).not.toContain("Investigate a property");
   });
 
-  it("switches the active case from ?case=", async () => {
-    const html = await render({ case: "property-review" });
-    expect(html).toContain(
-      "Select a property, then choose an incentive, permit, or market and community analysis.",
-    );
-    expect(html).toContain('data-records="4"');
-  });
-
-  it.each(["ownership-check", "building-review", "tax-title"])(
-    "normalizes the legacy ?case=%s URL to property review",
-    async (legacyCase) => {
-      const html = await render({ case: legacyCase });
-      expect(html).toContain("Investigate a property");
-      expect(html).toContain('href="/vacancy/60617?case=property-review#case-results"');
-      expect(html).toContain('data-records="4"');
-    },
-  );
-
-  it("normalizes the legacy ?case=private-outreach URL to title holder", async () => {
-    const html = await render({ case: "private-outreach" });
-    expect(html).toContain("Identify a title holder");
-    expect(html).toContain('href="/vacancy/60617?case=title-holder#case-results"');
-    expect(html).toContain('data-case="title-holder"');
-    expect(html).toContain('data-records="2"');
-  });
-
-  it("falls back to the default case for an unknown ?case=", async () => {
-    const html = await render({ case: "not-a-real-case" });
-    expect(html).toContain("Start with vacant land that may have a public disposition pathway.");
-  });
-
-  it("replaces the opportunity-areas next step with permit activity analysis", async () => {
-    const html = await render();
-    expect(html).toContain("Permit activity analysis");
-    expect(html).toContain("Choose a neighborhood");
-    expect(html).toContain('href="/permit-activity"');
-    expect(html).not.toContain("Explore opportunity areas");
-    expect(html).not.toContain('href="/vacancy/60617/areas"');
-  });
-
-  it("hands the workspace every active-case record and the ZIP geography", async () => {
+  it("hands the workspace the full tracked inventory and ZIP geography", async () => {
     const html = await render();
     expect(html).toContain('data-testid="case-workspace"');
     expect(html).toContain('data-zip="60617"');
-    expect(html).toContain('data-case="public-land"');
-    // Public-land matches 3 records. The workspace gets all three; two map.
-    expect(html).toContain('data-records="3"');
-    expect(html).toContain('data-mapped="2"');
-    expect(html).toContain('data-universes="land,land,land"');
+    expect(html).toContain('data-records="8"');
+    expect(html).toContain('data-mapped="7"');
+    expect(html).toContain(
+      'data-universes="land,land,land,land,land,land,building_report,building_report"',
+    );
     expect(html).toContain('data-boundary="yes"');
     expect(html).toContain('data-centroid="yes"');
   });
 
-  it("swaps the workspace records when the active case changes", async () => {
-    const html = await render({ case: "property-review" });
-    expect(html).toContain('data-case="property-review"');
-    expect(html).toContain('data-records="4"');
-    expect(html).toContain('data-mapped="4"');
-    expect(html).toContain('data-universes="land,land,building_report,building_report"');
+  it.each([
+    "public-land",
+    "title-holder",
+    "property-review",
+    "ownership-check",
+    "building-review",
+    "tax-title",
+    "private-outreach",
+    "not-a-real-case",
+  ])("keeps legacy ?case=%s links on the same unified inventory", async (legacyCase) => {
+    const html = await render({ case: legacyCase });
+    expect(html).toContain('id="case-results"');
+    expect(html).toContain('data-records="8"');
+    expect(html).not.toContain("Selected pathway");
   });
 
-  it("does not sample or cap the synchronized active-case record set", async () => {
+  it("does not sample or cap the synchronized record set", async () => {
     const { CASE_POINT_CAP } = await import("@/lib/vacancy-cases");
     const original = records;
     records = Array.from({ length: CASE_POINT_CAP + 25 }, (_, i) =>
@@ -277,9 +199,9 @@ describe("Find Vacant Sites page", () => {
     }
   });
 
-  it("parses shareable workspace state and preserves it across case links", async () => {
+  it("parses shareable workspace state even when an older case parameter is present", async () => {
     const html = await render({
-      case: "public-land",
+      case: "property-review",
       view: "map",
       universe: "land",
       q: "Commercial",
@@ -289,23 +211,14 @@ describe("Find Vacant Sites page", () => {
     expect(html).toContain('data-universe="land"');
     expect(html).toContain('data-query="Commercial"');
     expect(html).toContain('data-bounds="yes"');
-    expect(html).toMatch(
-      /case=property-review&amp;view=map&amp;q=Commercial&amp;universe=land&amp;bounds=[^\"]+#case-results/,
-    );
   });
 
-  // ── Universe denominators (regression: the case counts shipped with no
-  //    denominator on the page, so the only per-ZIP list available to check
-  //    them against was the All Properties directory — a different universe). ──
-
-  it("prints the land and reported-building denominators the case counts sit inside", async () => {
+  it("prints the land and reported-building denominators for the unified inventory", async () => {
     const html = await render();
-    // 6 land + 2 building records in the fixture.
-    expect(html).toContain("How these counts work");
+    expect(html).toContain("How these records work");
     expect(html).toContain(
-      "This pathway is measured against 6 land parcels and 2 reported buildings tracked in this ZIP.",
+      "This inventory contains 6 land parcels and 2 reported buildings tracked in this ZIP.",
     );
-    // ...and names the other per-ZIP list explicitly so the two are not confused.
     expect(html).toContain("All Properties directory");
     expect(html).toContain('href="/vacancy/60617/directory"');
   });
@@ -314,7 +227,7 @@ describe("Find Vacant Sites page", () => {
     const original = landTotal;
     landTotal = 6; // enumerable === total
     try {
-      expect(await render()).not.toContain("so the land counts on this page are a floor");
+      expect(await render()).not.toContain("so the land count is a floor");
       landTotal = 900; // the edition's land universe is larger than what it publishes
       const short = await render();
       expect(short).toContain("This edition publishes 6 of the ZIP’s 900 reconciled land parcels");
@@ -327,10 +240,15 @@ describe("Find Vacant Sites page", () => {
 
   it("carries the anonymization disclaimer and no owner-name field in the output", async () => {
     const html = await render();
-    // The page states the rail explicitly...
     expect(html).toContain("owner TYPE only, never owner names");
-    // ...and never surfaces a taxpayer string or an owner-name label/field.
     expect(html).not.toMatch(/taxpayer/i);
     expect(html).not.toMatch(/owner ?name["'=:]/i);
+  });
+
+  it("removes the separate permit-activity promo now that permit analysis is a record CTA", async () => {
+    const html = await render();
+    expect(html).not.toContain("Development signals");
+    expect(html).not.toContain("Choose a neighborhood");
+    expect(html).not.toContain('href="/permit-activity"');
   });
 });

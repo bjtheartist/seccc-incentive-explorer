@@ -17,7 +17,7 @@ import {
   clerkRecordsUrl,
   normalizePin14,
 } from "@/lib/cook-viewer";
-import type { CaseKey, VacancyCaseRecord } from "@/lib/vacancy-cases";
+import type { VacancyCaseRecord } from "@/lib/vacancy-cases";
 import { PUBLIC_OWNER_TYPE_LABELS } from "@/lib/vacancy-public-labels";
 import { siteReportHref } from "@/lib/vacancy-site-zones";
 import {
@@ -29,14 +29,12 @@ import {
   type VacancyWorkspaceView,
 } from "@/lib/vacancy-workspace";
 import CaseWorkspaceMapIsland from "./CaseWorkspaceMapIsland";
-import { PermitEvidencePanel } from "./PermitEvidencePanel";
 
 const PAGE_SIZE = 15;
 
 interface CaseWorkspaceProps {
   zip: string;
   neighborhood: string;
-  caseKey: CaseKey;
   records: readonly VacancyCaseRecord[];
   boundary: { rings: [number, number][][]; bbox: VacancyWorkspaceBounds } | null;
   centroid: { lat: number; lon: number } | null;
@@ -66,7 +64,7 @@ function ExternalAction({ href, children }: { href: string; children: React.Reac
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#2563EB] hover:underline"
+      className="inline-flex min-h-11 items-center gap-1 py-2 text-[11px] font-medium text-[#2563EB] hover:underline sm:min-h-0 sm:py-0"
     >
       {children}
       <ExternalLink aria-hidden="true" size={12} />
@@ -125,7 +123,7 @@ function ActionCard({
   );
 }
 
-function SelectedRecord({ record, caseKey }: { record: VacancyCaseRecord; caseKey: CaseKey }) {
+function SelectedRecord({ record }: { record: VacancyCaseRecord }) {
   const cookViewer = cookViewerUrl(record.pin);
   const assessor = assessorRecordUrl(record.pin);
   const clerk = clerkRecordsUrl(record.pin);
@@ -149,19 +147,11 @@ function SelectedRecord({ record, caseKey }: { record: VacancyCaseRecord; caseKe
           <p className="mt-1 text-[11px] text-[#0C1B33]/50">
             {recordKind(record)}{record.pin ? ` · PIN ${record.pin}` : " · No PIN on record"}
           </p>
-          {caseKey === "title-holder" && (cookViewer || assessor) ? (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {cookViewer ? <ExternalAction href={cookViewer}>CookViewer</ExternalAction> : null}
-              {assessor ? (
-                <ExternalAction href={assessor}>Cook County Assessor</ExternalAction>
-              ) : null}
-            </div>
-          ) : null}
         </div>
-        {caseKey === "public-land" ? (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {report ? <ExternalAction href={report}>Run site incentive report</ExternalAction> : null}
+        {cookViewer || assessor || clerk ? (
+          <div aria-label="Property sources" className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {cookViewer ? <ExternalAction href={cookViewer}>Parcel record</ExternalAction> : null}
+            {assessor ? <ExternalAction href={assessor}>Assessor record</ExternalAction> : null}
             {clerk ? <ExternalAction href={clerk}>Deed history</ExternalAction> : null}
           </div>
         ) : null}
@@ -191,43 +181,37 @@ function SelectedRecord({ record, caseKey }: { record: VacancyCaseRecord; caseKe
         </div>
       </div>
 
-      {caseKey === "property-review" ? (
-        <section aria-labelledby="property-review-actions" className="mt-5 border-t border-[#0C1B33]/10 pt-5">
-          <span className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB]">
-            Next step
-          </span>
-          <h4 id="property-review-actions" className="mt-1.5 font-editorial text-[22px] leading-tight text-[#0C1B33]">
-            Choose an analysis
-          </h4>
-          <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-[#0C1B33]/55">
-            Carry this property into the analysis that answers your next question.
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <ActionCard
-              number={1}
-              title="Run an incentive analysis"
-              description="Review mapped incentive geographies and practical next steps for this address."
-              href={report}
-            />
-            <ActionCard
-              number={2}
-              title="Run permit activity analysis"
-              description="Open the permit activity analysis anchored to this parcel PIN."
-              href={permitAnalysis}
-            />
-            <ActionCard
-              number={3}
-              title="View market and community insights"
-              description="Continue in CommuniData for broader market and community context."
-              href={COMMUNIDATA_URL}
-            />
-          </div>
-        </section>
-      ) : caseKey === "public-land" ? (
-        <div className="mt-5">
-          <PermitEvidencePanel pin={record.pin} />
+      <section aria-labelledby="record-analysis-actions" className="mt-5 border-t border-[#0C1B33]/10 pt-5">
+        <span className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB]">
+          Next step
+        </span>
+        <h4 id="record-analysis-actions" className="mt-1.5 font-editorial text-[22px] leading-tight text-[#0C1B33]">
+          Choose an analysis
+        </h4>
+        <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-[#0C1B33]/55">
+          Carry this property into the analysis that answers your next question.
+        </p>
+        <div className="mt-4 grid gap-2 md:grid-cols-3">
+          <ActionCard
+            number={1}
+            title="Run an incentive analysis"
+            description="Review mapped incentive geographies and practical next steps for this address."
+            href={report}
+          />
+          <ActionCard
+            number={2}
+            title="Run permit activity analysis"
+            description="Open the permit activity analysis anchored to this parcel PIN."
+            href={permitAnalysis}
+          />
+          <ActionCard
+            number={3}
+            title="View market and community insights"
+            description="Continue in CommuniData for broader market and community context."
+            href={COMMUNIDATA_URL}
+          />
         </div>
-      ) : null}
+      </section>
     </div>
   );
 }
@@ -235,7 +219,6 @@ function SelectedRecord({ record, caseKey }: { record: VacancyCaseRecord; caseKe
 export default function CaseWorkspace({
   zip,
   neighborhood,
-  caseKey,
   records,
   boundary,
   centroid,
@@ -332,7 +315,7 @@ export default function CaseWorkspace({
   ].filter(Boolean);
 
   return (
-    <section aria-labelledby="case-workspace-title" className="mt-8">
+    <section id="case-results" aria-labelledby="case-workspace-title" className="mt-8 scroll-mt-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#2563EB]">
@@ -536,8 +519,8 @@ export default function CaseWorkspace({
       </div>
 
       {selected ? (
-        <div ref={detailRef} className="mt-3 scroll-mt-4">
-          <SelectedRecord record={selected} caseKey={caseKey} />
+        <div ref={detailRef} data-testid="case-workspace-selected-record" className="mt-3 scroll-mt-24">
+          <SelectedRecord record={selected} />
         </div>
       ) : (
         <div className="mt-3 flex items-center gap-2 border border-dashed border-[#0C1B33]/15 px-4 py-3 text-[11px] text-[#0C1B33]/45">

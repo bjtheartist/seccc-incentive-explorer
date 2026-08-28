@@ -122,7 +122,6 @@ No actionable P0, P1, or P2 issue remains.
 - The full repository run reached 4,812 passing tests and surfaced unrelated baseline failures in existing shortlist dependency, investment-integrity, and timeout-heavy guards; the newly registered permit public surface was fixed and its 54-test registry suite passed independently.
 
 final result: passed
-
 # Real Community Investment Route — Evidence-Brief Parity QA
 
 ## Comparison target
@@ -401,5 +400,66 @@ final result: passed
 ## Intentional data-driven differences
 
 The reference illustrates subject-parcel matches. The verified implementation uses a real parcel with zero subject matches and 55 nearby records, so the first viewport advances into S2 instead of showing the reference table. This is the correct truthful state, not a visual regression.
+
+final result: passed
+
+---
+
+# Vacancy selected-record consolidation — design QA
+
+## Evidence
+
+- Source visual truth:
+  - `/var/folders/4d/ndgly42d1r10xqn5q1xd_j140000gp/T/codex-clipboard-eb25689f-e885-45b7-857c-7ee66d7c127f.png` — 1818 × 186 px; selected-record header and source-link treatment.
+  - `/var/folders/4d/ndgly42d1r10xqn5q1xd_j140000gp/T/TemporaryItems/NSIRD_screencaptureui_D0B12F/Screenshot 2026-08-27 at 9.04.39 PM.png` — 1730 × 812 px; owner/evidence row and three-card analysis treatment.
+- Browser-rendered implementation:
+  - `output/design-qa/vacancy-consolidated-desktop-1440x1000.png` — 1440 × 1000 px at a 1440 × 1000 CSS viewport, device density 1.
+  - `output/design-qa/vacancy-consolidated-mobile-390x844.png` — 390 × 844 px at a 390 × 844 CSS viewport, device density 1.
+  - `output/design-qa/vacancy-consolidated-selected-record-1440x1000.png` — focused 1024 × 504 px selected-record region.
+- Normalized comparisons:
+  - `output/design-qa/selected-record-source-vs-implementation.png` — the second source was cropped to its 1638 × 786 px record card and normalized to 1024 × 491 px; the implementation region is 1024 × 504 px. Source is above the navy divider and implementation is below it.
+  - `output/design-qa/record-links-source-vs-implementation.png` — normalized source-link header above the divider and implementation below it.
+- State: ZIP 60617, full tracked inventory, list record selected, selected-record panel scrolled below the sticky header. The desktop comparison used a record with PIN and coordinates so every source and analysis action was available.
+
+## Findings
+
+- No actionable P0, P1, or P2 mismatches remain.
+- The implementation intentionally keeps the source visual's editorial heading, mono eyebrow, thin borders, white/off-white surfaces, owner/evidence split, and three equal analysis cards.
+- The top action row intentionally contains property sources only: Parcel record, Assessor record, and Deed history. The source's duplicate top incentive shortcut now lives only in Option 1 at the bottom, while Assessor record preserves the useful title-holder source from the retired pathway.
+- Content differences between the source and implementation—address, PIN, owner category, and evidence—come from the selected live fixture record and do not change the visual hierarchy.
+
+## Required fidelity surfaces
+
+- Fonts and typography: passed. The implementation reuses the existing `font-editorial`, `font-mono-bureau`, weight, scale, leading, tracking, and wrapping patterns visible in both references.
+- Spacing and layout rhythm: passed. Desktop retains one header row, the one-third/two-thirds evidence row, a single divider, and three aligned cards. Mobile stacks owner/evidence and the three cards without leaving the selected-record surface.
+- Colors and visual tokens: passed. Navy, Explorer blue, muted text opacity, border opacity, and off-white page background use the existing product tokens reflected in the references.
+- Image quality and asset fidelity: passed. The target contains no raster imagery. Existing Lucide external-link icons remain decorative and sharp; no placeholder or recreated visual asset was introduced.
+- Copy and content: passed. The analysis titles, descriptions, option labels, and disclosure language match the selected reference. Source-link labels reflect the consolidated information architecture.
+
+## Responsive and interaction evidence
+
+- At 1440 × 1000, the sticky header bottom was 57 px and the selected-record top was 96 px. The three cards measured 319.3 px each on one row, and document width equaled viewport width.
+- At 390 × 844, the selected-record top was 96.2 px, each source link provided a 44 px tap height, the three cards stacked in one 316 px column, and document width equaled viewport width.
+- Seven focused Playwright scenarios passed across 320, 360, 390, 640, 667, 1280, and 1440 px. They exercised zoom/pan, map/list switching, record selection, sticky-header clearance, source/action counts, card stacking, and horizontal overflow.
+- Browser console error scan returned no errors.
+
+## Comparison history
+
+1. Initial P2: the existing `scroll-mt-4` offset could place the selected-record eyebrow under the 57 px sticky header. Fixed with `scroll-mt-24`; post-fix desktop and mobile captures place the card at approximately 96 px.
+2. Initial P2: the analysis cards switched to three columns at 640 px, compressing the card copy. Fixed by moving the three-column breakpoint from `sm` to `md`; the post-fix 390 px capture and responsive regression show a single-column stack below 768 px.
+3. Initial comparison showed a hover outline on the third card because the browser pointer landed over it after scrolling. The pointer was moved outside the component and the same viewport/state was recaptured; the normalized comparison now shows the neutral default state.
+
+## Implementation checklist
+
+- [x] Remove the three overlapping pathway cards and selected-pathway summary.
+- [x] Pass the full tracked record inventory into one searchable list/map.
+- [x] Preserve old `?case=` URLs as valid entry points to the unified workspace.
+- [x] Combine parcel sources, owner/evidence, and three analyses in one selected-record card.
+- [x] Preserve honest disabled states when PIN or coordinates are unavailable.
+- [x] Verify desktop and mobile layout, interactions, console, and regression coverage.
+
+## Follow-up polish
+
+- None required for this change.
 
 final result: passed
