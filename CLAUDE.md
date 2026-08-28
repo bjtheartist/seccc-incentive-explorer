@@ -87,7 +87,7 @@ The current package scripts cover vacant-property maintenance plus the business 
 - `/programs` — Filterable directory of 24 incentive programs (by government level and industry)
 - `/locate` — Sector-based location finder with zoning compatibility and area recommendations
 - `/map` — Interactive map with zone layers, search bar, census stats
-- `/check` — Address eligibility check flow
+- `/check` — Retired compatibility route that forwards old links to `/report`
 - `/report` — Report generation page
 - `/workspace` — Signed-in workspace for saved projects and reports
 - `/login` — Google sign-in page for workspace features

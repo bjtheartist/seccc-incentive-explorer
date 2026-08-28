@@ -7,7 +7,7 @@
 // alternative — a grey rectangle — reads as "this product is broken";
 // this reads as "here is what happened and what still works."
 //
-// The address lookup does not need the map, so the fallback always
+// The Site Incentive Analysis does not need the map, so the fallback always
 // offers it as the working path.
 
 import { MapPinOff, RotateCcw, Search } from "lucide-react";
@@ -65,11 +65,11 @@ export function MapRenderFallback({
             Try again
           </button>
           <a
-            href="/check"
+            href="/report"
             className="inline-flex min-h-11 items-center gap-2 border border-[#0C1B33]/20 bg-white px-4 py-2 text-[13px] text-[#0C1B33] transition-colors hover:border-[#2563EB] hover:text-[#2563EB]"
           >
             <Search aria-hidden="true" className="h-3.5 w-3.5" />
-            Look up an address without the map
+            Generate a report without the map
           </a>
         </div>
       </div>
