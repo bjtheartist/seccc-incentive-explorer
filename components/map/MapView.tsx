@@ -4601,7 +4601,7 @@ export default function MapView() {
       )}
 
       {/* Search bar */}
-      {loaded && (
+      {loaded && !polygonPanelOpen && (
         <MapSearch
           onResult={handleSearchResult}
           onQueryChange={setSearchQuery}

@@ -103,4 +103,14 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
     expect(clearHandler).toContain("setDrawMode(true)");
     expect(clearHandler).toContain("resetAreaAnalysisWorkstation()");
   });
+
+  it("keeps the global map search from covering the open workstation header", () => {
+    const searchOverlay = sourceBetween(
+      "{/* Search bar */}",
+      "{/* Legend toggle button",
+    );
+
+    expect(searchOverlay).toContain("loaded && !polygonPanelOpen");
+    expect(searchOverlay).toContain("<MapSearch");
+  });
 });
