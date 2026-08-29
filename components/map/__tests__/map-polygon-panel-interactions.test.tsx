@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
 import type { PermitAreaResult } from "@/lib/permit-area";
 
+const generateReportPdfMock = vi.hoisted(() => vi.fn());
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { email: "test@example.com" } }, status: "authenticated" }),
 }));
@@ -11,6 +13,9 @@ vi.mock("@/components/workspace/SaveReportModal", () => ({
   SaveReportModal: ({ reportData }: { reportData: unknown }) => (
     <output data-testid="saved-report-payload">{JSON.stringify(reportData)}</output>
   ),
+}));
+vi.mock("@/lib/pdf-report", () => ({
+  generateReportPdf: generateReportPdfMock,
 }));
 
 import MapPolygonPanel from "@/components/map/MapPolygonPanel";
@@ -169,6 +174,61 @@ const EMPTY_PERMIT_AREA: PermitAreaResult = {
   recordsTruncated: false,
 };
 
+const PERMIT_RECORDS = Array.from({ length: 30 }, (_, index) => ({
+  permitId: `P-${String(index + 1).padStart(3, "0")}`,
+  permitTypeKey: "new_construction" as const,
+  permitTypeLabel: "New Construction",
+  rawPermitType: "PERMIT - NEW CONSTRUCTION",
+  address: `${100 + index} S BUILD WAY`,
+  issueDate: `2026-08-${String((index % 28) + 1).padStart(2, "0")}`,
+  permitStatus: index % 2 === 0 ? "ACTIVE" : "PENDING",
+  permitMilestone: "Issued",
+  workType: "New construction",
+  workDescription: `Construct project ${index + 1}`,
+}));
+
+const PERMIT_AREA_WITH_RECORDS: PermitAreaResult = {
+  ...EMPTY_PERMIT_AREA,
+  sourceRefresh: {
+    asOf: "2026-08-28T00:00:00.000Z",
+    asOfBasis: "latest_queried_row_fetched_at",
+  },
+  totalFilings: 30,
+  distinctAddresses: 30,
+  issueDateSpan: { first: "2026-08-01", latest: "2026-08-28" },
+  typeBreakdown: [
+    {
+      key: "new_construction",
+      label: "New Construction",
+      sourceValue: "PERMIT - NEW CONSTRUCTION",
+      color: "#059669",
+      count: 30,
+    },
+  ],
+  yearBreakdown: [{ year: 2026, count: 30 }],
+  statusBreakdown: [
+    { status: "ACTIVE", count: 15 },
+    { status: "PENDING", count: 15 },
+  ],
+  records: PERMIT_RECORDS,
+  recordsReturned: 30,
+};
+
+const ZERO_COVERAGE: VacancyCoverageMetadata = {
+  ...COVERAGE,
+  freshness: {
+    ...COVERAGE.freshness,
+    returnedCounts: { recent: 0, stale: 0, unknownDate: 0 },
+  },
+  licenseScreening: {
+    ...COVERAGE.licenseScreening,
+    candidateCount: 0,
+    checkedCount: 0,
+    matchedPropertyCount: 0,
+  },
+  returnedCount: 0,
+};
+
 function panel(overrides: Partial<React.ComponentProps<typeof MapPolygonPanel>> = {}) {
   return (
     <MapPolygonPanel
@@ -185,7 +245,10 @@ function panel(overrides: Partial<React.ComponentProps<typeof MapPolygonPanel>> 
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  generateReportPdfMock.mockClear();
+});
 
 describe("MapPolygonPanel vacancy evidence interactions", () => {
   it("cascades freshness and license filters into the displayed map feature set", async () => {
@@ -444,7 +507,7 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
     }
     expect(
       screen.getByText(
-        "Save, email, and CSV export will be available after the vacancy and permit lookups finish.",
+        "Save, email, PDF, and CSV export will be available after the vacancy and permit lookups finish.",
       ),
     ).toBeTruthy();
     expect(screen.queryByTestId("saved-report-payload")).toBeNull();
@@ -473,9 +536,115 @@ describe("MapPolygonPanel vacancy evidence interactions", () => {
     }
     expect(
       screen.getByText(
-        "Save, email, and CSV export are unavailable because the exact boundary provenance could not be created.",
+        "Save, email, PDF, and CSV export are unavailable because the exact boundary provenance could not be created.",
       ),
     ).toBeTruthy();
+  });
+
+  it("keeps a completed zero-result analysis available for every export action", () => {
+    render(
+      panel({
+        results: { type: "FeatureCollection", features: [] },
+        vacancyCoverage: ZERO_COVERAGE,
+        permitArea: EMPTY_PERMIT_AREA,
+      }),
+    );
+
+    for (const name of [
+      "Save Report",
+      "Email This to Me",
+      "Download PDF",
+      "Export Area Data (CSV)",
+    ]) {
+      expect(screen.getByRole("button", { name })).toHaveProperty("disabled", false);
+    }
+  });
+
+  it("labels the email artifact as an Area Analysis", () => {
+    render(panel());
+
+    fireEvent.click(screen.getByRole("button", { name: "Email This to Me" }));
+
+    expect(screen.getByText("Email Area Analysis")).toBeTruthy();
+    expect(screen.queryByText("Email Vacancy Report")).toBeNull();
+  });
+
+  it("carries zero-match permit filters into saved and PDF reports", async () => {
+    render(
+      panel({
+        permitArea: PERMIT_AREA_WITH_RECORDS,
+        permitWorkstationFilters: {
+          query: "no matching permit",
+          type: "all",
+          status: "all",
+          issueYear: "all",
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Report" }));
+    const report = JSON.parse(
+      screen.getByTestId("saved-report-payload").textContent ?? "{}",
+    ) as {
+      sections?: Array<{
+        title?: string;
+        description?: string;
+        items?: Array<{ label?: string; value?: string; detail?: string }>;
+      }>;
+    };
+    const permitContext = report.sections?.find(
+      (section) => section.title === "Permit Filing Context",
+    );
+    const recentRecords = report.sections?.find(
+      (section) => section.title === "Recent Permit Records in Current View",
+    );
+
+    expect(
+      permitContext?.items?.find((item) => item.label === "Active Permit Record Filters")?.value,
+    ).toContain("Search: no matching permit");
+    expect(recentRecords?.description).toContain("0 of 30 recent records");
+    expect(
+      recentRecords?.items?.find((item) => item.label === "Matching Recent Records")?.value,
+    ).toBe("0 of 30");
+    expect(
+      recentRecords?.items?.find((item) => item.label === "Records Included in This Snapshot")?.value,
+    ).toBe("0 of 0");
+
+    fireEvent.click(screen.getByRole("button", { name: "Download PDF" }));
+    await waitFor(() => expect(generateReportPdfMock).toHaveBeenCalledOnce());
+    const pdfReport = generateReportPdfMock.mock.calls[0]?.[0] as typeof report;
+    expect(
+      pdfReport.sections
+        ?.find((section) => section.title === "Permit Filing Context")
+        ?.items?.find((item) => item.label === "Active Permit Record Filters")
+        ?.value,
+    ).toContain("Search: no matching permit");
+  });
+
+  it("discloses the 25-record report snapshot cap while preserving the full filtered count", () => {
+    render(panel({ permitArea: PERMIT_AREA_WITH_RECORDS }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Report" }));
+
+    const report = JSON.parse(
+      screen.getByTestId("saved-report-payload").textContent ?? "{}",
+    ) as {
+      sections?: Array<{
+        title?: string;
+        description?: string;
+        items?: Array<{ label?: string; value?: string; detail?: string }>;
+      }>;
+    };
+    const recentRecords = report.sections?.find(
+      (section) => section.title === "Recent Permit Records in Current View",
+    );
+
+    expect(recentRecords?.description).toContain("includes 25 of those 30");
+    expect(
+      recentRecords?.items?.find((item) => item.label === "Records Included in This Snapshot")?.value,
+    ).toBe("25 of 30");
+    expect(
+      recentRecords?.items?.find((item) => item.label === "Records Included in This Snapshot")?.detail,
+    ).toContain("Export the CSV for all 30 filtered recent records");
   });
 
   it("serializes clean-lot, source-date, freshness and license evidence into the saved report", () => {

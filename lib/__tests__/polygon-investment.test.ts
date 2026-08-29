@@ -664,6 +664,42 @@ describe("buildDrawnAreaCsv", () => {
     expect(publicCsv.toLowerCase()).not.toContain("announced");
   });
 
+  it("exports optional workstation notes, filter labels, and vacancy view counts without treating notes as evidence", () => {
+    const workstationCsv = buildDrawnAreaCsv({
+      areaName: "Practitioner review",
+      practitionerNotes: "  =FOLLOWUP(\"Confirm title holder\")  ",
+      vacancyFeatures: vacancy,
+      vacancyReturnedCountBeforeFilters: 7,
+      vacancyFilterLabels: ["Source: City-owned land", "  Type: land  ", ""],
+      vacancyVisibleCount: 1,
+      investment: null,
+    });
+
+    expect(workstationCsv).toContain('"Section","Practitioner notes"');
+    expect(workstationCsv).toContain(
+      '"Practitioner review","User-authored practitioner note; not source evidence","\'=FOLLOWUP(""Confirm title holder"")"',
+    );
+    expect(workstationCsv).toContain('"Section","Vacancy workstation view"');
+    expect(workstationCsv).toContain(
+      '"Practitioner review","Active workstation filters","Source: City-owned land; Type: land"',
+    );
+    expect(workstationCsv).toContain('"Practitioner review","Records before filters","7"');
+    expect(workstationCsv).toContain('"Practitioner review","Records visible in workstation","1"');
+    expect(workstationCsv).toContain('"Practitioner review","Records exported","1"');
+  });
+
+  it("omits the practitioner-note section when the note is blank", () => {
+    const workstationCsv = buildDrawnAreaCsv({
+      areaName: "Blank note",
+      practitionerNotes: "  \n  ",
+      vacancyFeatures: [],
+      investment: null,
+    });
+
+    expect(workstationCsv).not.toContain('"Section","Practitioner notes"');
+    expect(workstationCsv).not.toContain("User-authored practitioner note");
+  });
+
   it("falls back to a dated default when the name is blank", () => {
     const blank = buildDrawnAreaCsv({ areaName: "   ", vacancyFeatures: [], investment: null });
     expect(blank.startsWith('"Area Name","Drawn area — ')).toBe(true);

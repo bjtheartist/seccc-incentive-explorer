@@ -223,6 +223,25 @@ describe("ReportDisplay public safety", () => {
         returnedCountBeforeFilters: 1,
         selectedFeatures: [{ properties: { recordId: "cols:1" } }],
       },
+      workstation: {
+        activeEvidenceFamily: "vacancy",
+        practitionerNotes: "Confirm the title record before outreach.",
+        vacancyFilters: {
+          query: "79th",
+          freshness: "current_screening",
+          licenseConflict: "all",
+          canonicalType: "land",
+          ownerType: "city_public",
+          zoneKey: "all",
+          source: "cols",
+        },
+        permitFilters: {
+          query: "",
+          type: "all",
+          status: "Issued",
+          issueYear: "2026",
+        },
+      },
     });
     if (!created.ok) throw new Error(created.detail);
     const report = {
@@ -231,9 +250,48 @@ describe("ReportDisplay public safety", () => {
       reportType: "best-location",
       generatedAt: "2026-08-26T12:00:00.000Z",
       summary: "Saved exact-area report.",
-      sections: [],
+      sections: [
+        {
+          title: "Area Snapshot",
+          description: "Saved evidence summary.",
+          items: [{ label: "Vacancy Signals Shown", value: "1" }],
+        },
+        {
+          title: "Incentive Zones in Area",
+          description: "Zone matches among displayed vacancy signals.",
+          items: [{ label: "TIF District", value: "1 signal" }],
+        },
+        {
+          title: "Ownership Breakdown",
+          description: "Ownership context among displayed vacancy signals.",
+          items: [{ label: "Public", value: "1 signal" }],
+        },
+        {
+          title: "Permit Filing Context",
+          description: "Saved geocoded permit filing context.",
+          items: [{ label: "Total Geocoded Filings", value: "2" }],
+        },
+        {
+          title: "Provenance Chain",
+          description: "Boundary and saved evidence provenance.",
+          items: [
+            {
+              label: "Boundary Fingerprint",
+              value: created.scope.scope.fingerprint,
+            },
+          ],
+        },
+      ],
       recommendedActions: [],
       metadata: {},
+      dataSources: [
+        {
+          id: "chicago-open-data",
+          label: "City of Chicago Open Data",
+          description: "Public vacancy and permit records.",
+          url: "https://data.cityofchicago.org/",
+        },
+      ],
       drawnAreaScope: created.scope,
     } as GeneratedReport;
 
@@ -245,7 +303,27 @@ describe("ReportDisplay public safety", () => {
       />,
     );
 
-    expect(html).toContain("Vacancy Spreadsheet — 79th Corridor — Ward 6");
+    expect(html).toContain("Area Analysis — 79th Corridor — Ward 6");
+    expect(html).toContain('aria-label="Saved area evidence"');
+    expect(html).toContain("Overview");
+    expect(html).toContain("Vacancy");
+    expect(html).toContain("Area context");
+    expect(html).toContain("Permit activity");
+    expect(html).toContain("Sources &amp; methods");
+    expect(html).toContain("Context carried by the vacancy records");
+    expect(html).toContain("Saved permit filing context");
+    expect(html).toContain("Saved vacancy view");
+    expect(html).toContain("Search: 79th");
+    expect(html).toContain("Vacancy type: Tracked land signal");
+    expect(html).toContain("Source: City-Owned Land Inventory");
+    expect(html).toContain("Saved permit-record view");
+    expect(html).toContain("Recorded status: Issued");
+    expect(html).toContain("Issue year: 2026");
+    expect(html).toContain("Confirm the title record before outreach.");
+    expect(html).toContain("City of Chicago Open Data");
+    expect(html).not.toContain("Vacancy Spreadsheet");
+    expect(html).not.toContain("min-w-[1140px]");
+    expect(html).not.toContain("<table");
     expect(html).not.toContain("Share Spreadsheet");
     expect(html).toContain("Loading vacancy records");
     expect(html).not.toContain("No tracked vacancy records returned");

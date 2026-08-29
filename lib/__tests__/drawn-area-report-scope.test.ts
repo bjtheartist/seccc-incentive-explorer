@@ -3,12 +3,15 @@ import { type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
 import {
   createDrawnAreaReportScope,
   drawnAreaScopeFingerprint,
+  normalizeDrawnAreaWorkstationSnapshot,
   normalizeDrawnAreaPolygon,
   parseDrawnAreaReportScope,
   recordRefsAtGeneration,
   resolveDrawnAreaReportScope,
   type DrawnAreaReportScope,
+  type DrawnAreaWorkstationSnapshot,
 } from "@/lib/drawn-area-report-scope";
+import { AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH } from "@/lib/area-analysis-workstation";
 import type { PermitAreaResult } from "@/lib/permit-area";
 import { normalizeSavedReport } from "@/lib/report-schema";
 
@@ -110,7 +113,9 @@ const PERMIT_ANALYSIS = {
   recordsTruncated: true,
 } as unknown as PermitAreaResult;
 
-function createValidScope(): DrawnAreaReportScope {
+function createValidScope(
+  workstation?: DrawnAreaWorkstationSnapshot,
+): DrawnAreaReportScope {
   const result = createDrawnAreaReportScope({
     name: "79th Corridor — Ward 6",
     geometry: POLYGON,
@@ -124,6 +129,7 @@ function createValidScope(): DrawnAreaReportScope {
       selectedFeatures: SELECTED_FEATURES,
     },
     permit: { analysis: PERMIT_ANALYSIS, loadFailed: false },
+    workstation,
   });
   if (!result.ok) throw new Error(`${result.reason}: ${result.detail}`);
   return result.scope;
@@ -339,6 +345,154 @@ describe("drawn-area report scope contract", () => {
     });
 
     expect(result).toMatchObject({ ok: false, reason: "invalid-provenance" });
+  });
+
+  it("round-trips and sanitizes a complete workstation snapshot without changing scope version 1", () => {
+    const scope = createValidScope({
+      activeEvidenceFamily: "permits",
+      practitionerNotes: "  Confirm title holder\r\nAsk about site control.  ",
+      vacancyFilters: {
+        query: "  bakery   owner ",
+        freshness: "recent_reports",
+        licenseConflict: "conflicts",
+        canonicalType: "building",
+        ownerType: "corporate_llc",
+        zoneKey: "tif",
+        source: "dpd_vacant",
+      },
+      permitFilters: {
+        query: "  roof   replacement ",
+        type: "key:renovation_alteration",
+        status: "ISSUED",
+        issueYear: "2025",
+      },
+    });
+
+    expect(scope.version).toBe(1);
+    expect(scope.workstation).toEqual({
+      activeEvidenceFamily: "permits",
+      practitionerNotes: "Confirm title holder\nAsk about site control.",
+      vacancyFilters: {
+        query: "bakery owner",
+        freshness: "recent_reports",
+        licenseConflict: "conflicts",
+        canonicalType: "building",
+        ownerType: "corporate_llc",
+        zoneKey: "tif",
+        source: "dpd_vacant",
+      },
+      permitFilters: {
+        query: "roof replacement",
+        type: "key:renovation_alteration",
+        status: "ISSUED",
+        issueYear: "2025",
+      },
+    });
+    expect(parseDrawnAreaReportScope(JSON.parse(JSON.stringify(scope)))).toEqual({
+      ok: true,
+      scope,
+    });
+  });
+
+  it("continues to parse version-1 scopes saved before workstation state existed", () => {
+    const legacyVersionOneScope = JSON.parse(JSON.stringify(createValidScope()));
+    delete legacyVersionOneScope.workstation;
+
+    const parsed = parseDrawnAreaReportScope(legacyVersionOneScope);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.detail);
+    expect(parsed.scope.version).toBe(1);
+    expect(parsed.scope.workstation).toBeUndefined();
+  });
+
+  it.each([
+    [
+      "an unknown evidence family",
+      { activeEvidenceFamily: "scoring" },
+    ],
+    [
+      "a partial filter snapshot",
+      {
+        vacancyFilters: {
+          query: "",
+          freshness: "all",
+          licenseConflict: "all",
+        },
+      },
+    ],
+    [
+      "an unrecognized permit type encoding",
+      {
+        permitFilters: {
+          query: "",
+          type: "javascript:alert(1)",
+          status: "all",
+          issueYear: "all",
+        },
+      },
+    ],
+    ["non-text practitioner notes", { practitionerNotes: { text: "note" } }],
+  ])("rejects workstation state with %s", (_label, patch) => {
+    const scope = JSON.parse(JSON.stringify(createValidScope({
+      activeEvidenceFamily: "overview",
+      vacancyFilters: {
+        query: "",
+        freshness: "all",
+        licenseConflict: "all",
+        canonicalType: "all",
+        ownerType: "all",
+        zoneKey: "all",
+        source: "all",
+      },
+      permitFilters: {
+        query: "",
+        type: "all",
+        status: "all",
+        issueYear: "all",
+      },
+    })));
+    scope.workstation = { ...scope.workstation, ...patch };
+
+    expect(parseDrawnAreaReportScope(scope)).toMatchObject({
+      ok: false,
+      reason: "invalid-workstation",
+    });
+  });
+
+  it("omits blank notes and safely caps overlong notes", () => {
+    const filters = {
+      activeEvidenceFamily: "overview",
+      vacancyFilters: {
+        query: "",
+        freshness: "all",
+        licenseConflict: "all",
+        canonicalType: "all",
+        ownerType: "all",
+        zoneKey: "all",
+        source: "all",
+      },
+      permitFilters: {
+        query: "",
+        type: "all",
+        status: "all",
+        issueYear: "all",
+      },
+    } as const;
+
+    expect(
+      normalizeDrawnAreaWorkstationSnapshot({
+        ...filters,
+        practitionerNotes: " \r\n ",
+      }),
+    ).not.toHaveProperty("practitionerNotes");
+    expect(
+      normalizeDrawnAreaWorkstationSnapshot({
+        ...filters,
+        practitionerNotes: "n".repeat(
+          AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH + 25,
+        ),
+      })?.practitionerNotes,
+    ).toHaveLength(AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH);
   });
 });
 

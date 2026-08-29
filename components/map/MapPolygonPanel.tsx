@@ -3,7 +3,16 @@
 import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { FileText, Loader2, Mail, X } from "lucide-react";
+import {
+  Download,
+  FileDown,
+  FileText,
+  Loader2,
+  Mail,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { GeneratedReport } from "@/lib/report-engine";
@@ -51,7 +60,6 @@ import {
 import type { VacancyFreshnessFilter } from "@/lib/vacancy-evidence";
 import {
   currentLicenseConflictSummary,
-  filterAreaVacancyFeatures,
   isOfficialCclbaPublishedInventorySource,
   licenseScreeningReportItems,
   summarizeAreaVacancyTypes,
@@ -64,6 +72,24 @@ import { createDrawnAreaReportScope } from "@/lib/drawn-area-report-scope";
 import { programContextToText } from "@/lib/vacancy-spreadsheet";
 import { safeVacancyProgramUrl } from "@/lib/vacancy-spreadsheet-scope";
 import { CCLBA_PUBLIC_PORTAL_URL } from "@/lib/vacancy-inventory-sources";
+import {
+  AREA_ANALYSIS_EVIDENCE_FAMILIES,
+  AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH,
+  DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS,
+  DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+  activeAreaPermitFilterLabels,
+  activeAreaVacancyFilterLabels,
+  deriveAreaPermitFacetOptions,
+  deriveAreaVacancyFacetOptions,
+  filterAreaPermitWorkstationRecords,
+  filterAreaVacancyWorkstationFeatures,
+  hasActiveAreaPermitFilters,
+  hasActiveAreaVacancyFilters,
+  normalizeAreaPractitionerNotes,
+  type AreaAnalysisEvidenceFamilyId,
+  type AreaPermitWorkstationFilters,
+  type AreaVacancyWorkstationFilters,
+} from "@/lib/area-analysis-workstation";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -165,6 +191,17 @@ interface MapPolygonPanelProps {
   permitArea?: PermitAreaResult | null;
   /** Test seam for the public polygon permit lookup. */
   permitFetchImpl?: typeof fetch;
+  /** Durable workstation state is owned by MapView so closing is non-destructive. */
+  areaName?: string;
+  onAreaNameChange?: (value: string) => void;
+  practitionerNotes?: string;
+  onPractitionerNotesChange?: (value: string) => void;
+  activeEvidenceFamily?: AreaAnalysisEvidenceFamilyId;
+  onActiveEvidenceFamilyChange?: (value: AreaAnalysisEvidenceFamilyId) => void;
+  vacancyWorkstationFilters?: AreaVacancyWorkstationFilters;
+  onVacancyWorkstationFiltersChange?: (value: AreaVacancyWorkstationFilters) => void;
+  permitWorkstationFilters?: AreaPermitWorkstationFilters;
+  onPermitWorkstationFiltersChange?: (value: AreaPermitWorkstationFilters) => void;
 }
 
 function permitPolygonFromArea(area: DrawnAreaInput): GeoJSON.Polygon | null {
@@ -195,6 +232,16 @@ export default function MapPolygonPanel({
   investmentFetchImpl,
   permitArea = null,
   permitFetchImpl,
+  areaName: controlledAreaName,
+  onAreaNameChange,
+  practitionerNotes: controlledPractitionerNotes,
+  onPractitionerNotesChange,
+  activeEvidenceFamily: controlledActiveEvidenceFamily,
+  onActiveEvidenceFamilyChange,
+  vacancyWorkstationFilters: controlledVacancyFilters,
+  onVacancyWorkstationFiltersChange,
+  permitWorkstationFilters: controlledPermitFilters,
+  onPermitWorkstationFiltersChange,
 }: MapPolygonPanelProps) {
   const { status } = useSession();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -205,10 +252,38 @@ export default function MapPolygonPanel({
   const wasEditingRef = useRef(editing);
   const restoreFocusAfterLoadingRef = useRef(false);
   const allFeatures = results.features;
-  const [freshnessFilter, setFreshnessFilter] =
-    useState<VacancyFreshnessFilter>("current_screening");
-  const [licenseFilter, setLicenseFilter] =
-    useState<VacancyLicenseFilter>("all");
+  const [localAreaName, setLocalAreaName] = useState(() => defaultDrawnAreaName());
+  const [localPractitionerNotes, setLocalPractitionerNotes] = useState("");
+  const [localActiveEvidenceFamily, setLocalActiveEvidenceFamily] =
+    useState<AreaAnalysisEvidenceFamilyId>("overview");
+  const [localVacancyFilters, setLocalVacancyFilters] =
+    useState<AreaVacancyWorkstationFilters>(() => ({
+      ...DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+      freshness: "current_screening",
+    }));
+  const [localPermitFilters, setLocalPermitFilters] =
+    useState<AreaPermitWorkstationFilters>(() => ({
+      ...DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS,
+    }));
+  const areaName = controlledAreaName ?? localAreaName;
+  const practitionerNotes = controlledPractitionerNotes ?? localPractitionerNotes;
+  const activeEvidenceFamily =
+    controlledActiveEvidenceFamily ?? localActiveEvidenceFamily;
+  const vacancyFilters = controlledVacancyFilters ?? localVacancyFilters;
+  const permitFilters = controlledPermitFilters ?? localPermitFilters;
+  const updateAreaName = onAreaNameChange ?? setLocalAreaName;
+  const updatePractitionerNotes =
+    onPractitionerNotesChange ?? setLocalPractitionerNotes;
+  const updateActiveEvidenceFamily =
+    onActiveEvidenceFamilyChange ?? setLocalActiveEvidenceFamily;
+  const updateVacancyFilters =
+    onVacancyWorkstationFiltersChange ?? setLocalVacancyFilters;
+  const updatePermitFilters =
+    onPermitWorkstationFiltersChange ?? setLocalPermitFilters;
+  const freshnessFilter: VacancyFreshnessFilter =
+    vacancyFilters.freshness === "all"
+      ? "all_records"
+      : vacancyFilters.freshness;
   const licenseScreening = vacancyCoverage?.licenseScreening ?? null;
   const licenseMalformedRowCount = licenseScreening?.malformedRowCount ?? 0;
   const licensePartialReasonSummary =
@@ -216,7 +291,9 @@ export default function MapPolygonPanel({
   const licenseFilterAvailable =
     licenseScreening?.status === "available" ||
     licenseScreening?.status === "partial";
-  const effectiveLicenseFilter = licenseFilterAvailable ? licenseFilter : "all";
+  const effectiveLicenseFilter: VacancyLicenseFilter = licenseFilterAvailable
+    ? vacancyFilters.licenseConflict
+    : "all";
   const freshnessFilterLabel =
     freshnessFilter === "current_screening"
       ? "Current screen — public inventory + reports within 3 years"
@@ -229,12 +306,11 @@ export default function MapPolygonPanel({
       : "All signals in this screen";
   const features = useMemo(
     () =>
-      filterAreaVacancyFeatures(
-        allFeatures,
-        freshnessFilter,
-        effectiveLicenseFilter,
-      ),
-    [allFeatures, freshnessFilter, effectiveLicenseFilter],
+      filterAreaVacancyWorkstationFeatures(allFeatures, {
+        ...vacancyFilters,
+        licenseConflict: effectiveLicenseFilter,
+      }),
+    [allFeatures, effectiveLicenseFilter, vacancyFilters],
   );
   useEffect(() => {
     onDisplayedFeaturesChange?.(editing ? [] : features);
@@ -265,6 +341,14 @@ export default function MapPolygonPanel({
     vacancyLoadFailed ||
     vacancyCoverage?.coverageStatus === "partial" ||
     vacancyCoverage?.coverageStatus === "truncated";
+  const vacancyFiltersAreRefined =
+    vacancyFilters.freshness !== "current_screening" ||
+    hasActiveAreaVacancyFilters({
+      ...vacancyFilters,
+      // Freshness is compared to the workstation baseline above. Neutralize it
+      // here so the shared helper can evaluate the remaining controls.
+      freshness: DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS.freshness,
+    });
 
   /* Public, source-backed permit analysis for this exact drawn polygon. */
   const permitPolygon = useMemo(() => permitPolygonFromArea(polygon), [polygon]);
@@ -313,7 +397,38 @@ export default function MapPolygonPanel({
     !!permitPolygon &&
     !permitAnalysis &&
     currentPermitLookup?.status !== "failed";
-  const permitExportAvailable = (permitAnalysis?.totalFilings ?? 0) > 0;
+  const permitRecords = useMemo(
+    () => permitAnalysis?.records ?? [],
+    [permitAnalysis],
+  );
+  const filteredPermitRecords = useMemo(
+    () => filterAreaPermitWorkstationRecords(permitRecords, permitFilters),
+    [permitFilters, permitRecords],
+  );
+  const permitFacetOptions = useMemo(
+    () => deriveAreaPermitFacetOptions(permitRecords),
+    [permitRecords],
+  );
+  const vacancyFacetOptions = useMemo(
+    () => deriveAreaVacancyFacetOptions(allFeatures),
+    [allFeatures],
+  );
+  const vacancyFilterLabels = useMemo(
+    () =>
+      activeAreaVacancyFilterLabels({
+        ...vacancyFilters,
+        licenseConflict: effectiveLicenseFilter,
+      }),
+    [effectiveLicenseFilter, vacancyFilters],
+  );
+  const permitFilterLabels = useMemo(
+    () => activeAreaPermitFilterLabels(permitFilters),
+    [permitFilters],
+  );
+  const normalizedPractitionerNotes = useMemo(
+    () => normalizeAreaPractitionerNotes(practitionerNotes),
+    [practitionerNotes],
+  );
   const recentPermitYears = useMemo(
     () => (permitAnalysis?.yearBreakdown ?? []).slice(0, 6).reverse(),
     [permitAnalysis],
@@ -327,16 +442,10 @@ export default function MapPolygonPanel({
     ...(permitAnalysis?.typeBreakdown ?? []).map((row) => row.count),
   );
 
-  /* ── Ellen's label fix: every drawn area carries a name ──
-     Seeded with a dated default so an export is never anonymous, and editable
-     inline. The name lands in the panel header and in every row and header of
-     the CSV this panel produces. */
-  const [areaName, setAreaName] = useState(() => defaultDrawnAreaName());
-
   /* ── Admin-only community-investment analysis ──
-     Gated twice over: the section renders only when the admin-session probe
-     came back 204 AND the gated dataset actually loaded. A non-admin never
-     triggers the fetch and never sees the section or its CSV rows. */
+     The evidence family renders only after the admin-session probe came back
+     204. Ready data can enter the CSV; pending and failed requests expose only
+     their status, never gated records. A non-admin never triggers the fetch. */
   const [fetchedLayer, setFetchedLayer] = useState<CommunityInvestmentLayerResult | null>(null);
   const [investmentLoadFailed, setInvestmentLoadFailed] = useState(false);
   const layerRequestedRef = useRef(false);
@@ -347,10 +456,14 @@ export default function MapPolygonPanel({
     if (!adminSessionActive || layer || !polygon) return;
     if (layerRequestedRef.current) return;
     layerRequestedRef.current = true;
+    setInvestmentLoadFailed(false);
     let cancelled = false;
     loadInvestmentLayerOnce(investmentFetchImpl)
       .then((result) => {
-        if (!cancelled) setFetchedLayer(result);
+        if (!cancelled) {
+          setInvestmentLoadFailed(false);
+          setFetchedLayer(result);
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -363,14 +476,14 @@ export default function MapPolygonPanel({
     };
   }, [adminSessionActive, layer, polygon, investmentFetchImpl]);
 
-  /**
-   * Derived, never set from an effect body: an admin who has drawn a shape but
-   * has no layer result yet is waiting on the gated fetch. A non-ready result
-   * (unauthorized / unavailable) renders NOTHING at all rather than an
-   * admin-shaped placeholder — the gate stays tight in every failure mode.
-   */
+  /** Derived states keep loading, failure, and a ready zero distinguishable. */
   const investmentPending =
     adminSessionActive && !!polygon && !layer && !investmentLoadFailed;
+  const investmentUnavailable =
+    adminSessionActive &&
+    !!polygon &&
+    (investmentLoadFailed || (!!layer && layer.status !== "ready"));
+  const investmentUnauthorized = layer?.status === "unauthorized";
 
   /** Investment points inside the drawn area — null unless admin AND ready. */
   const investmentSelection = useMemo<InvestmentPointFeature[] | null>(() => {
@@ -393,14 +506,6 @@ export default function MapPolygonPanel({
     () => (investmentSummary ? polygonInvestmentExclusionNotes(investmentSummary.exclusions) : []),
     [investmentSummary],
   );
-
-  /**
-   * Whether the CSV would carry an investment table. `investmentSelection` is
-   * already null for anyone who is not an admin with ready data, so this is
-   * false for every non-admin viewer.
-   */
-  const investmentExportAvailable =
-    adminSessionActive && !!investmentSelection && investmentSelection.length > 0;
 
   /* ── Summary counts: every canonical bucket sums back to displayed total. ── */
   const vacancyTypeCounts = useMemo(
@@ -538,19 +643,34 @@ export default function MapPolygonPanel({
         analysis: permitAnalysis,
         loadFailed: permitLoadFailed,
       },
+      workstation: {
+        activeEvidenceFamily,
+        ...(normalizedPractitionerNotes
+          ? { practitionerNotes: normalizedPractitionerNotes }
+          : {}),
+        vacancyFilters: {
+          ...vacancyFilters,
+          licenseConflict: effectiveLicenseFilter,
+        },
+        permitFilters,
+      },
     });
     return result.ok ? result.scope : null;
   }, [
     allFeatures.length,
+    activeEvidenceFamily,
     areaName,
     effectiveLicenseFilter,
     features,
     freshnessFilter,
+    normalizedPractitionerNotes,
     permitAnalysis,
+    permitFilters,
     permitLoadFailed,
     permitPolygon,
     topCommunityArea,
     vacancyCoverage,
+    vacancyFilters,
     vacancyLoadFailed,
   ]);
 
@@ -618,6 +738,28 @@ export default function MapPolygonPanel({
       value: `${row.count} filing${row.count === 1 ? "" : "s"}`,
       detail: "Exact City permit category count among geocoded filings inside the drawn area.",
     }));
+    const permitRecordItems = filteredPermitRecords.slice(0, 25).map((record) => ({
+      label: record.address || "Address not recorded",
+      value: record.permitTypeLabel,
+      detail: `${record.permitId} · ${formatPermitAreaDate(record.issueDate)} · ${record.permitStatus || "Status not recorded"}${record.workDescription ? ` · ${record.workDescription}` : ""}`,
+    }));
+    const permitRecordSnapshotItems = [
+      {
+        label: "Matching Recent Records",
+        value: `${filteredPermitRecords.length} of ${permitRecords.length}`,
+        detail:
+          "Workstation filters narrow only the recent record-level review set. They do not recalculate the full-polygon permit aggregates.",
+      },
+      {
+        label: "Records Included in This Snapshot",
+        value: `${permitRecordItems.length} of ${filteredPermitRecords.length}`,
+        detail:
+          filteredPermitRecords.length > permitRecordItems.length
+            ? `This report includes the first ${permitRecordItems.length} matching recent records. Export the CSV for all ${filteredPermitRecords.length} filtered recent records.`
+            : "Every matching recent record is included in this report snapshot.",
+      },
+      ...permitRecordItems,
+    ];
 
     const summaryParts = [
       vacancyLoadFailed
@@ -642,6 +784,21 @@ export default function MapPolygonPanel({
       generatedAt: drawnAreaScope?.generatedAt ?? new Date().toISOString(),
       summary: summaryParts.join(" "),
       sections: [
+        ...(normalizedPractitionerNotes
+          ? [
+              {
+                title: "Practitioner Notes",
+                description:
+                  "User-authored context saved with this analysis. It is not source evidence and should be reviewed separately from public records.",
+                items: [
+                  {
+                    label: "Note",
+                    value: normalizedPractitionerNotes,
+                  },
+                ],
+              },
+            ]
+          : []),
         {
           title: "Area Snapshot",
           description: "Source-backed vacancy signals and permit context inside the drawn area.",
@@ -668,6 +825,15 @@ export default function MapPolygonPanel({
                   {
                     label: "License Conflict Filter",
                     value: licenseFilterLabel,
+                  },
+                  {
+                    label: "Active Vacancy View Filters",
+                    value:
+                      vacancyFilterLabels.length > 0
+                        ? vacancyFilterLabels.join("; ")
+                        : "None",
+                    detail:
+                      "These filters apply to the records returned for this area. They do not widen the upstream source query.",
                   },
                   {
                     label: "Tracked Land Signals",
@@ -769,9 +935,27 @@ export default function MapPolygonPanel({
                       permitAnalysis.issueDateSpan?.latest ?? null,
                     ),
                   },
+                  {
+                    label: "Active Permit Record Filters",
+                    value:
+                      permitFilterLabels.length > 0
+                        ? permitFilterLabels.join("; ")
+                        : "None",
+                    detail:
+                      "These filters apply only to the recent record-level review. Full-polygon filing totals and aggregate charts remain unchanged.",
+                  },
                   ...permitTypeItems,
                 ],
               },
+              ...(permitRecords.length > 0 || permitFilterLabels.length > 0
+                ? [
+                    {
+                      title: "Recent Permit Records in Current View",
+                      description: `${filteredPermitRecords.length} of ${permitRecords.length} recent record${permitRecords.length === 1 ? "" : "s"} match the workstation filters. This report snapshot includes ${permitRecordItems.length}${filteredPermitRecords.length > permitRecordItems.length ? ` of those ${filteredPermitRecords.length}` : ""}; the CSV includes every filtered recent record. Full-polygon permit aggregates above remain based on all ${permitAnalysis.totalFilings} geocoded filings.`,
+                      items: permitRecordSnapshotItems,
+                    },
+                  ]
+                : []),
             ]
           : []),
         ...(drawnAreaScope
@@ -903,9 +1087,14 @@ export default function MapPolygonPanel({
     licenseFilterLabel,
     licenseScreening,
     narrative,
+    normalizedPractitionerNotes,
     ownerCounts,
     permitAnalysis,
+    filteredPermitRecords,
+    permitFilterLabels,
+    permitRecords.length,
     permitLoadFailed,
+    vacancyFilterLabels,
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
@@ -956,6 +1145,12 @@ export default function MapPolygonPanel({
     setEmailModalOpen(true);
   }, [drawnAreaScope, loading, permitPending]);
 
+  const handleDownloadPdf = useCallback(async () => {
+    if (!drawnAreaScope || loading || permitPending) return;
+    const { generateReportPdf } = await import("@/lib/pdf-report");
+    generateReportPdf(areaReport);
+  }, [areaReport, drawnAreaScope, loading, permitPending]);
+
   /* ── Export CSV ──
      One file with source-separated vacancy, permit, and gated investment
      tables. Applicant-reported permit cost is never part of this export. */
@@ -965,11 +1160,18 @@ export default function MapPolygonPanel({
       areaName,
       vacancyFeatures: features,
       vacancyReturnedCountBeforeFilters: allFeatures.length,
+      vacancyFilterLabels,
+      vacancyVisibleCount: features.length,
       vacancyFreshnessFilter: freshnessFilter,
       vacancyLicenseFilter: effectiveLicenseFilter,
       vacancyCoverage,
       vacancyLoadFailed,
       permitArea: permitAnalysis,
+      permitRecords: filteredPermitRecords,
+      permitRecordsBeforeFilters: permitRecords.length,
+      permitFilterLabels,
+      permitVisibleCount: filteredPermitRecords.length,
+      practitionerNotes: normalizedPractitionerNotes,
       // The export button also renders on vacancy findings alone, so a 503 on
       // the permit lookup can reach this line. Without the flag the file says
       // "Not attached" — mis-describing a lookup that was attempted and failed
@@ -1005,13 +1207,18 @@ export default function MapPolygonPanel({
     effectiveLicenseFilter,
     features,
     freshnessFilter,
+    filteredPermitRecords,
     investmentSelection,
     investmentSummary,
     loading,
     permitAnalysis,
+    permitFilterLabels,
     permitLoadFailed,
     permitPending,
+    permitRecords.length,
+    normalizedPractitionerNotes,
     vacancyCoverage,
+    vacancyFilterLabels,
     vacancyLoadFailed,
   ]);
 
@@ -1024,48 +1231,80 @@ export default function MapPolygonPanel({
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-[#FAF9F6] backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-[380px] max-h-[68vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-2xl md:shadow-xl">
+    <div
+      data-testid="area-analysis-workstation"
+      className="absolute inset-0 md:top-3 md:bottom-3 md:left-[28%] md:right-3 z-30 bg-[#FAF9F6] border border-[#0C1B33]/10 shadow-2xl flex flex-col overflow-hidden"
+    >
       {/* Mobile drag handle */}
       <div className="md:hidden flex flex-col items-center pt-2 pb-1 bg-white">
         <div className="w-10 h-1 bg-[#0C1B33]/15" />
       </div>
 
       {/* ── Branded Header ── */}
-      <div className="bg-[#0C1B33] px-5 pt-5 pb-4 flex items-start justify-between">
+      <div className="bg-[#0C1B33] px-5 md:px-7 py-4 flex items-start justify-between shrink-0">
         <div>
           <div className="font-mono-bureau text-[9px] tracking-[0.3em] uppercase text-white/35">
-            Area Analysis
+            Area Analysis · Practitioner Workstation
           </div>
-          <div className="font-editorial text-[24px] text-white leading-tight mt-1">
+          <div className="font-editorial text-[24px] md:text-[30px] text-white leading-tight mt-1">
             {areaName.trim() || "Drawn area"}
           </div>
-          {topCommunityArea && !loading && features.length > 0 && (
-            <div className="font-mono-bureau text-[10px] text-white/50 mt-1.5">
-              {topCommunityArea}
-            </div>
-          )}
-          <div className="mt-3 h-[3px] w-10 bg-[#2563EB]" />
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono-bureau text-[9px] tracking-[0.12em] uppercase text-white/50">
+            {topCommunityArea && !loading && <span>{topCommunityArea}</span>}
+            {!loading && !vacancyLoadFailed && (
+              <span>
+                {features.length.toLocaleString("en-US")} vacancy{" "}
+                {features.length === 1 ? "signal" : "signals"} in view
+              </span>
+            )}
+            {!permitPending && permitAnalysis && (
+              <span>{permitAnalysis.totalFilings.toLocaleString("en-US")} permit filings in area</span>
+            )}
+          </div>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onClose(); }}
           className="text-white/35 hover:text-white text-[22px] leading-none transition-colors p-2 -mr-2 -mt-2"
-          title="Close"
+          title="Return to map"
           aria-label="Close area analysis"
         >
           &times;
         </button>
       </div>
 
-      {/* Area name + explicit edit lifecycle */}
-      <div className="px-5 py-3 bg-white border-b border-[#0C1B33]/8">
-        <div className="flex items-center justify-between mb-1.5">
-          <label
-            htmlFor="drawn-area-name"
-            className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30"
-          >
-            Area Name
+      {/* Durable work context: label + user-authored notes + explicit edit lifecycle. */}
+      <div className="px-5 md:px-7 py-3 bg-white border-b border-[#0C1B33]/8 shrink-0">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(300px,1.4fr)_auto] lg:items-end">
+          <label className="block">
+            <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40">
+              Search label
+            </span>
+            <input
+              id="drawn-area-name"
+              aria-label="Area Name"
+              type="text"
+              value={areaName}
+              onChange={(event) => updateAreaName(event.target.value)}
+              placeholder={defaultDrawnAreaName()}
+              maxLength={120}
+              className="mt-1 w-full border border-[#0C1B33]/12 px-3 py-2 text-[16px] md:text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/35 focus-visible:border-[#2563EB]"
+            />
           </label>
-          <div className="flex items-center gap-3">
+          <label className="block">
+            <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40">
+              Practitioner notes · optional
+            </span>
+            <textarea
+              aria-label="Practitioner notes"
+              value={practitionerNotes}
+              onChange={(event) => updatePractitionerNotes(event.target.value)}
+              maxLength={AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH}
+              rows={2}
+              placeholder="Add context for your review or handoff. Notes stay separate from source evidence."
+              className="mt-1 w-full resize-none border border-[#0C1B33]/12 px-3 py-2 text-[16px] md:text-[12px] leading-relaxed text-[#0C1B33] placeholder:text-[#0C1B33]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/35 focus-visible:border-[#2563EB]"
+            />
+          </label>
+          <div className="flex items-center justify-end gap-1">
             {editing ? (
               <>
                 <button
@@ -1102,30 +1341,66 @@ export default function MapPolygonPanel({
                   onClick={onClear}
                   className="min-h-11 px-3 font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#2563EB] hover:text-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/50"
                 >
-                  Clear &amp; Redraw
-                </button>
-              </>
-            )}
+                    Clear &amp; Redraw
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[8px] leading-snug text-[#0C1B33]/40">
+            <span>Label, filters, and notes stay in place if you return to the map.</span>
+            <span>
+              {practitionerNotes.length.toLocaleString("en-US")} / {AREA_ANALYSIS_PRACTITIONER_NOTES_MAX_LENGTH.toLocaleString("en-US")} characters · User-authored, not source evidence
+            </span>
+          </div>
+          <p className="sr-only" role="status" aria-live="polite">
+            {editing
+              ? `Area editing mode. ${editDirty ? "Boundary changed. Choose Done to refresh the analysis or Cancel to restore it." : "Move the boundary, then choose Done to refresh the analysis or Cancel to restore it."}`
+              : "Area boundary locked. Dragging the map will pan without moving the analyzed area."}
+          </p>
         </div>
-        <input
-          id="drawn-area-name"
-          type="text"
-          value={areaName}
-          onChange={(event) => setAreaName(event.target.value)}
-          placeholder={defaultDrawnAreaName()}
-          maxLength={120}
-          className="w-full border border-[#0C1B33]/12 px-2.5 py-2 text-[16px] md:text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/35 focus-visible:border-[#2563EB]"
-        />
-        <p className="text-[8px] text-[#0C1B33]/30 mt-1 leading-snug">
-          Names this area in the panel header, saved report, and every row of the CSV export.
-        </p>
-        <p className="sr-only" role="status" aria-live="polite">
-          {editing
-            ? `Area editing mode. ${editDirty ? "Boundary changed. Choose Done to refresh the analysis or Cancel to restore it." : "Move the boundary, then choose Done to refresh the analysis or Cancel to restore it."}`
-            : "Area boundary locked. Dragging the map will pan without moving the analyzed area."}
-        </p>
-      </div>
+
+      <nav
+        aria-label="Area evidence"
+        className="shrink-0 overflow-x-auto border-b border-[#0C1B33]/10 bg-[#F8FAFC] px-3 md:px-5"
+      >
+        <div className="flex min-w-max items-stretch">
+          {AREA_ANALYSIS_EVIDENCE_FAMILIES.filter(
+            (family) => family.id !== "investment" || adminSessionActive,
+          ).map((family) => {
+            const count =
+              family.id === "vacancy"
+                ? features.length
+                : family.id === "permits"
+                  ? permitAnalysis?.totalFilings
+                  : family.id === "investment"
+                    ? investmentSelection?.length
+                    : undefined;
+            return (
+              <button
+                key={family.id}
+                type="button"
+                aria-current={activeEvidenceFamily === family.id ? "page" : undefined}
+                onClick={() => updateActiveEvidenceFamily(family.id)}
+                className={`border-b-2 px-3 py-3 font-mono-bureau text-[9px] tracking-[0.14em] uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563EB]/40 ${
+                  activeEvidenceFamily === family.id
+                    ? "border-[#2563EB] bg-white text-[#0C1B33]"
+                    : "border-transparent text-[#0C1B33]/45 hover:text-[#0C1B33]"
+                }`}
+              >
+                {family.label}
+                {typeof count === "number" && (
+                  <span className="ml-1.5 text-[#2563EB]">
+                    {count.toLocaleString("en-US")}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[#FAF9F6]">
 
       {editing && (
         <div className="px-5 py-3 bg-[#EFF6FF] border-b border-[#2563EB]/15" role="status">
@@ -1166,7 +1441,7 @@ export default function MapPolygonPanel({
         <>
           {/* ── Empty state ── */}
           {features.length === 0 && (
-            <div className="px-5 py-10 text-center bg-white">
+            <div className={`${activeEvidenceFamily === "overview" ? "" : "hidden"} px-5 md:px-7 py-10 text-center bg-white`}>
               <div className="font-editorial text-[18px] text-[#0C1B33]/45 mb-2">
                 {vacancyLoadFailed
                   ? "Vacancy records unavailable"
@@ -1191,7 +1466,7 @@ export default function MapPolygonPanel({
           )}
 
           {features.length > 0 && vacancyCoverageNote && (
-            <div className="px-5 py-3 bg-[#FFF7ED] border-b border-[#9A3412]/10">
+            <div className={`${activeEvidenceFamily === "overview" ? "" : "hidden"} px-5 md:px-7 py-3 bg-[#FFF7ED] border-b border-[#9A3412]/10`}>
               <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#9A3412]/65 mb-1">
                 Vacancy coverage
               </div>
@@ -1202,27 +1477,63 @@ export default function MapPolygonPanel({
           )}
 
           {allFeatures.length > 0 && (
-            <div className="px-5 py-4 bg-[#F8FAFC] border-b border-[#0C1B33]/8">
-              <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/35 mb-2">
-                Vacancy evidence filters
+            <div className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} px-5 md:px-7 py-5 bg-[#F8FAFC] border-b border-[#0C1B33]/8`}>
+              <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
+                <div>
+                  <div className="font-mono-bureau text-[9px] tracking-[0.22em] uppercase text-[#0C1B33]/45">
+                    Filter returned vacancy evidence
+                  </div>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/45">
+                    Search and facets narrow the {allFeatures.length.toLocaleString("en-US")} records returned for this boundary. They do not expand upstream source coverage.
+                  </p>
+                </div>
+                {vacancyFiltersAreRefined && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateVacancyFilters({
+                        ...DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+                        freshness: "current_screening",
+                      })
+                    }
+                    className="inline-flex min-h-10 items-center gap-1.5 border border-[#0C1B33]/12 bg-white px-3 font-mono-bureau text-[8px] tracking-[0.14em] uppercase text-[#0C1B33]/55 hover:text-[#0C1B33]"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset filters
+                  </button>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                <label className="relative block md:col-span-2 xl:col-span-4">
+                  <span className="sr-only">Search vacancy records</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#0C1B33]/30" />
+                  <input
+                    type="search"
+                    value={vacancyFilters.query}
+                    onChange={(event) =>
+                      updateVacancyFilters({ ...vacancyFilters, query: event.target.value })
+                    }
+                    placeholder="Search address, PIN, owner, source, status, or zone"
+                    className="w-full border border-[#0C1B33]/15 bg-white py-2.5 pl-9 pr-3 text-[16px] text-[#0C1B33] placeholder:text-[#0C1B33]/30 md:text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                  />
+                </label>
                 <label className="block">
                   <span className="sr-only">Vacancy evidence timeframe</span>
                   <select
                     value={freshnessFilter}
                     onChange={(event) =>
-                      setFreshnessFilter(event.target.value as VacancyFreshnessFilter)
+                      updateVacancyFilters({
+                        ...vacancyFilters,
+                        freshness:
+                          event.target.value === "all_records"
+                            ? "all"
+                            : (event.target.value as AreaVacancyWorkstationFilters["freshness"]),
+                      })
                     }
-                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
                   >
-                    <option value="current_screening">
-                      Current screen — public inventory + reports within 3 years
-                    </option>
-                    <option value="recent_reports">Reports within 3 years only</option>
-                    <option value="all_records">
-                      All retained records — 311 source window is 5 years
-                    </option>
+                    <option value="current_screening">Current inventory + recent reports</option>
+                    <option value="recent_reports">Recent reports only</option>
+                    <option value="all_records">All retained records</option>
                   </select>
                 </label>
                 <label className="block">
@@ -1230,15 +1541,47 @@ export default function MapPolygonPanel({
                   <select
                     value={effectiveLicenseFilter}
                     onChange={(event) =>
-                      setLicenseFilter(event.target.value as VacancyLicenseFilter)
+                      updateVacancyFilters({
+                        ...vacancyFilters,
+                        licenseConflict: event.target.value as VacancyLicenseFilter,
+                      })
                     }
                     disabled={!licenseFilterAvailable}
-                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2 text-[16px] md:text-[11px] text-[#0C1B33] disabled:text-[#0C1B33]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                    className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[16px] md:text-[11px] text-[#0C1B33] disabled:text-[#0C1B33]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
                   >
-                    <option value="all">All signals in this screen</option>
-                    <option value="conflicts">Current-license conflicts only</option>
+                    {vacancyFacetOptions.licenseConflicts.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} ({option.count})
+                      </option>
+                    ))}
                   </select>
                 </label>
+                {[
+                  ["Vacancy type filter", "canonicalType", vacancyFacetOptions.canonicalTypes],
+                  ["Owner type filter", "ownerType", vacancyFacetOptions.ownerTypes],
+                  ["Incentive zone filter", "zoneKey", vacancyFacetOptions.zoneKeys],
+                  ["Vacancy source filter", "source", vacancyFacetOptions.sources],
+                ].map(([label, key, options]) => (
+                  <label key={String(key)} className="block">
+                    <span className="sr-only">{String(label)}</span>
+                    <select
+                      value={String(vacancyFilters[key as keyof AreaVacancyWorkstationFilters])}
+                      onChange={(event) =>
+                        updateVacancyFilters({
+                          ...vacancyFilters,
+                          [String(key)]: event.target.value,
+                        })
+                      }
+                      className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                    >
+                      {(options as typeof vacancyFacetOptions.canonicalTypes).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label} ({option.count})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
               </div>
               <div className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/45">
                 Showing {features.length.toLocaleString("en-US")} of {allFeatures.length.toLocaleString("en-US")} returned signals.
@@ -1260,9 +1603,70 @@ export default function MapPolygonPanel({
             </div>
           )}
 
+          {allFeatures.length > 0 && features.length === 0 && (
+            <div
+              data-testid="vacancy-filter-empty-state"
+              className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} border-b border-[#0C1B33]/8 bg-white px-5 py-8 text-center md:px-7`}
+            >
+              <div className="font-editorial text-[18px] text-[#0C1B33]/55">
+                No vacancy signals match these filters
+              </div>
+              <p className="mx-auto mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/45">
+                The boundary returned {allFeatures.length.toLocaleString("en-US")} tracked signal{allFeatures.length === 1 ? "" : "s"}, but none match the current evidence view. Reset or adjust the filters to inspect them. You can still export this zero-match view with its label, notes, and active filters intact.
+              </p>
+            </div>
+          )}
+
+          {vacancyLoadFailed && (
+            <div
+              data-testid="vacancy-unavailable-state"
+              className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} border-b border-[#9A3412]/10 bg-[#FFF7ED] px-5 py-8 text-center md:px-7`}
+            >
+              <div className="font-editorial text-[18px] text-[#0C1B33]/60">
+                Vacancy lookup unavailable
+              </div>
+              <p className="mx-auto mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/50">
+                {VACANCY_LOOKUP_UNAVAILABLE_NOTE} Permit and public-investment evidence may still be available in their own tabs.
+              </p>
+            </div>
+          )}
+
+          {!vacancyLoadFailed && vacancyCoverageIncomplete && (
+            <div
+              data-testid="vacancy-partial-state"
+              className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} border-b border-[#D97706]/15 bg-[#FFF7ED] px-5 py-5 md:px-7`}
+            >
+              <div className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#9A3412]/70">
+                Partial vacancy source coverage
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
+                {vacancyCoverageNote || "The vacancy lookup completed with incomplete source coverage."} Review any returned records as a partial view. An empty or missing row is not evidence that no tracked vacancy exists.
+              </p>
+            </div>
+          )}
+
+          {!vacancyLoadFailed && !vacancyCoverageIncomplete && allFeatures.length === 0 && (
+            <div
+              data-testid="vacancy-clean-zero-state"
+              className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} border-b border-[#0C1B33]/8 bg-white px-5 py-8 text-center md:px-7`}
+            >
+              <div className="font-editorial text-[18px] text-[#0C1B33]/55">
+                No tracked vacancy signals returned
+              </div>
+              <p className="mx-auto mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/45">
+                The vacancy lookup completed successfully with zero returned signals for this boundary. This does not establish that every property is occupied or available. Verify current conditions through the linked public sources.
+              </p>
+              {vacancyCoverageNote && (
+                <p className="mx-auto mt-2 max-w-xl text-[9px] leading-relaxed text-[#0C1B33]/40">
+                  {vacancyCoverageNote}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* ── Narrative Summary ── */}
           {features.length > 0 && narrative && (
-            <div className="px-5 pt-5 pb-4 bg-white border-b border-[#0C1B33]/8">
+            <div className={`${activeEvidenceFamily === "overview" ? "" : "hidden"} px-5 md:px-7 pt-5 pb-4 bg-white border-b border-[#0C1B33]/8`}>
               <div className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/25 mb-2">
                 Executive Snapshot
               </div>
@@ -1274,7 +1678,7 @@ export default function MapPolygonPanel({
 
           {/* ── At a Glance ── */}
           {features.length > 0 && (
-            <div className="px-5 py-4 bg-white">
+            <div className={`${activeEvidenceFamily === "overview" ? "" : "hidden"} px-5 md:px-7 py-4 bg-white`}>
               <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
                 At a Glance
               </div>
@@ -1308,7 +1712,7 @@ export default function MapPolygonPanel({
               </div>
               {zoneCounts.length > 0 && (
                 <div className="mt-2 flex items-center justify-between text-[10px] px-1">
-                  <span className="text-[#0C1B33]/40">Incentive zones covering this area</span>
+                  <span className="text-[#0C1B33]/40">Zone matches among signals shown</span>
                   <span className="font-mono-bureau font-medium text-[#059669]">{zoneCounts.length}</span>
                 </div>
               )}
@@ -1318,15 +1722,13 @@ export default function MapPolygonPanel({
           {/* ── Zone Breakdown ── */}
           {zoneCounts.length > 0 && (
             <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
+              <div className={`${activeEvidenceFamily === "context" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+              <div className={`${activeEvidenceFamily === "context" ? "" : "hidden"} px-5 md:px-7 py-4 bg-white`}>
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1.5">
                   Incentive Zones in Area
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
-                  {vacancyCoverageIncomplete
-                    ? "Returned vacancy records covered by each zone"
-                    : "Properties covered by each zone"}
+                  Displayed vacancy signals with a published zone match. This is not an independent measure of polygon-wide zone coverage.
                 </div>
                 <div className="space-y-1.5">
                   {zoneCounts.map(({ key, count }) => {
@@ -1368,11 +1770,14 @@ export default function MapPolygonPanel({
           {/* ── Ownership Breakdown ── */}
           {ownerCounts.length > 0 && (
             <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
+              <div className={`${activeEvidenceFamily === "context" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+              <div className={`${activeEvidenceFamily === "context" ? "" : "hidden"} px-5 md:px-7 py-4 bg-white`}>
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-2">
                   Ownership Breakdown
                 </div>
+                <p className="mb-3 text-[9px] leading-relaxed text-[#0C1B33]/40">
+                  Ownership classifications among the displayed vacancy signals, not a complete ownership inventory for every parcel inside the boundary.
+                </p>
                 <div className="space-y-1.5">
                   {ownerCounts.map(({ key, count }) => {
                     const color = OWNER_TYPE_COLORS[key] ?? "#9CA3AF";
@@ -1406,11 +1811,34 @@ export default function MapPolygonPanel({
             </>
           )}
 
+          {activeEvidenceFamily === "context" &&
+            zoneCounts.length === 0 &&
+            ownerCounts.length === 0 && (
+              <section
+                data-testid="area-context-empty-state"
+                className="border-y border-[#0C1B33]/8 bg-white px-5 py-10 text-center md:px-7"
+              >
+                <p className="font-mono-bureau text-[9px] uppercase tracking-[0.22em] text-[#2563EB]">
+                  Area context
+                </p>
+                <h2 className="mt-2 font-editorial text-[22px] text-[#0C1B33]">
+                  No mapped context is visible in this view
+                </h2>
+                <p className="mx-auto mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  {vacancyLoadFailed
+                    ? "The vacancy lookup is unavailable, so ownership and incentive-zone context cannot be derived from the returned records. This is a source failure, not evidence that the area has no owners or incentive zones."
+                    : allFeatures.length > 0
+                      ? "The current vacancy filters leave no records with ownership or incentive-zone context. Reset or adjust the vacancy filters to inspect the returned source records."
+                      : "No returned vacancy record carries ownership or incentive-zone context for this boundary. This does not establish that the area has no owners or incentive zones; verify the official parcel and program sources before acting."}
+                </p>
+              </section>
+            )}
+
           {/* Public permit-filing analysis for the exact drawn polygon. */}
           {(permitPending || permitAnalysis || permitLoadFailed) && (
             <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
+              <div className={`${activeEvidenceFamily === "permits" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+              <div className={`${activeEvidenceFamily === "permits" ? "" : "hidden"} px-5 md:px-7 py-5 bg-white`}>
                 <div className="flex items-baseline justify-between mb-1.5">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/60">
                     {PERMIT_AREA_HEADING}
@@ -1464,6 +1892,71 @@ export default function MapPolygonPanel({
                     <div className="font-mono-bureau text-[8px] tracking-[0.08em] uppercase text-[#0C1B33]/45 mb-3">
                       {formatPermitAreaCoverageLabel(permitAnalysis)}
                     </div>
+
+                    {permitRecords.length > 0 && (
+                      <div className="mb-4 border border-[#0C1B33]/10 bg-[#F8FAFC] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/45">
+                              Filter recent record ledger
+                            </div>
+                            <p className="mt-1 text-[8px] leading-relaxed text-[#0C1B33]/40">
+                              These controls apply only to the {permitRecords.length.toLocaleString("en-US")} recent detailed records returned for review. The {permitAnalysis.totalFilings.toLocaleString("en-US")} full-polygon filing total and aggregate charts do not change.
+                            </p>
+                          </div>
+                          {hasActiveAreaPermitFilters(permitFilters) && (
+                            <button
+                              type="button"
+                              onClick={() => updatePermitFilters({ ...DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS })}
+                              className="inline-flex min-h-9 items-center gap-1 border border-[#0C1B33]/12 bg-white px-2.5 font-mono-bureau text-[8px] tracking-[0.12em] uppercase text-[#0C1B33]/55"
+                            >
+                              <RotateCcw className="h-3 w-3" /> Reset
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                          <label className="relative block md:col-span-2 xl:col-span-4">
+                            <span className="sr-only">Search permit records</span>
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#0C1B33]/30" />
+                            <input
+                              type="search"
+                              value={permitFilters.query}
+                              onChange={(event) => updatePermitFilters({ ...permitFilters, query: event.target.value })}
+                              placeholder="Search permit number, address, type, status, or work description"
+                              className="w-full border border-[#0C1B33]/15 bg-white py-2.5 pl-9 pr-3 text-[16px] md:text-[11px] text-[#0C1B33] placeholder:text-[#0C1B33]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                            />
+                          </label>
+                          {[
+                            ["Permit type filter", "type", permitFacetOptions.types],
+                            ["Permit status filter", "status", permitFacetOptions.statuses],
+                            ["Permit issue year filter", "issueYear", permitFacetOptions.issueYears],
+                          ].map(([label, key, options]) => (
+                            <label key={String(key)} className="block">
+                              <span className="sr-only">{String(label)}</span>
+                              <select
+                                value={String(permitFilters[key as keyof AreaPermitWorkstationFilters])}
+                                onChange={(event) =>
+                                  updatePermitFilters({
+                                    ...permitFilters,
+                                    [String(key)]: event.target.value,
+                                  })
+                                }
+                                className="w-full border border-[#0C1B33]/15 bg-white px-2.5 py-2.5 text-[16px] md:text-[11px] text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+                              >
+                                {(options as typeof permitFacetOptions.types).map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label} ({option.count})
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
+                        </div>
+                        <p className="mt-2 font-mono-bureau text-[8px] tracking-[0.08em] uppercase text-[#0C1B33]/45">
+                          {filteredPermitRecords.length.toLocaleString("en-US")} of {permitRecords.length.toLocaleString("en-US")} recent records in view
+                        </p>
+                      </div>
+                    )}
 
                     {permitAnalysis.totalFilings === 0 ? (
                       <p className="text-[11px] text-[#0C1B33]/45 leading-relaxed">
@@ -1585,13 +2078,13 @@ export default function MapPolygonPanel({
                           </details>
                         )}
 
-                        {permitAnalysis.records.length > 0 && (
+                        {permitRecords.length > 0 && (
                           <details className="mt-3 border-t border-[#0C1B33]/8 pt-3">
                             <summary className="cursor-pointer font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/45">
-                              Recent filing records · {Math.min(8, permitAnalysis.records.length)} shown
+                              Recent filing records · {Math.min(25, filteredPermitRecords.length)} of {permitRecords.length} in view
                             </summary>
                             <div className="mt-3 space-y-3">
-                              {permitAnalysis.records.slice(0, 8).map((record) => (
+                              {filteredPermitRecords.slice(0, 25).map((record) => (
                                 <div key={record.permitId} className="border-l-2 border-[#7C3AED]/25 pl-3">
                                   <div className="flex items-baseline justify-between gap-2">
                                     <span className="text-[10px] font-medium text-[#0C1B33]/70 truncate">
@@ -1612,6 +2105,11 @@ export default function MapPolygonPanel({
                                   )}
                                 </div>
                               ))}
+                              {filteredPermitRecords.length === 0 && (
+                                <p className="text-[9px] leading-relaxed text-[#0C1B33]/45">
+                                  No recent permit records match the current record-level filters. Full-polygon aggregates remain visible above.
+                                </p>
+                              )}
                             </div>
                             {permitAnalysis.recordsTruncated && (
                               <p className="text-[8px] text-[#0C1B33]/30 leading-snug mt-2">
@@ -1650,13 +2148,13 @@ export default function MapPolygonPanel({
           )}
 
           {/* ── ADMIN — Community investment in this area ──
-               Gated on the /api/owner-file/session probe (adminSessionActive)
-               AND on the gated dataset having loaded. An unauthenticated viewer
-               renders none of this: no heading, no figures, no CSV rows. */}
-          {adminSessionActive && (investmentPending || investmentSummary) && (
+               Gated on the /api/owner-file/session probe. An authenticated admin
+               sees a ready, loading, or failed state; a non-admin sees none of
+               this heading, status, data, or CSV content. */}
+          {adminSessionActive && !!polygon && (
             <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
+              <div className={`${activeEvidenceFamily === "investment" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+              <div className={`${activeEvidenceFamily === "investment" ? "" : "hidden"} px-5 md:px-7 py-5 bg-white`}>
                 <div className="flex items-baseline justify-between mb-1.5">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0E7490]/60">
                     {POLYGON_INVESTMENT_HEADING}
@@ -1675,6 +2173,25 @@ export default function MapPolygonPanel({
                   </div>
                 )}
 
+                {investmentUnavailable && (
+                  <div
+                    data-testid="investment-unavailable-state"
+                    className="border border-[#9A3412]/15 bg-[#FFF7ED] px-4 py-4"
+                    role="status"
+                  >
+                    <div className="font-editorial text-[17px] text-[#0C1B33]/65">
+                      {investmentUnauthorized
+                        ? "Public investment access unavailable"
+                        : "Public investment lookup unavailable"}
+                    </div>
+                    <p className="mt-1.5 text-[10px] leading-relaxed text-[#0C1B33]/50">
+                      {investmentUnauthorized
+                        ? "The gated data request could not be authorized. This is an access failure, not a zero result. Refresh your signed-in session before relying on this evidence family."
+                        : "The public investment lookup did not complete. This is a source failure, not evidence that the area has no sited investment records. Vacancy and permit evidence remain available in their own tabs."}
+                    </p>
+                  </div>
+                )}
+
                 {investmentSummary && (
                   <>
                     <p className="text-[9px] text-[#0C1B33]/40 leading-snug mb-3">
@@ -1682,9 +2199,14 @@ export default function MapPolygonPanel({
                     </p>
 
                     {investmentMoneyBuckets.length === 0 ? (
-                      <p className="text-[11px] text-[#0C1B33]/45 leading-relaxed">
-                        {POLYGON_INVESTMENT_EMPTY_NOTE}
-                      </p>
+                      <div data-testid="investment-clean-zero-state">
+                        <div className="font-editorial text-[17px] text-[#0C1B33]/60">
+                          No sited investment records returned
+                        </div>
+                        <p className="mt-1.5 text-[11px] text-[#0C1B33]/45 leading-relaxed">
+                          The lookup completed successfully. {POLYGON_INVESTMENT_EMPTY_NOTE} This does not establish that no public or private investment has occurred inside the boundary.
+                        </p>
+                      </div>
                     ) : (
                       <div className="space-y-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
                         {investmentMoneyBuckets.map((bucket) => (
@@ -1781,14 +2303,14 @@ export default function MapPolygonPanel({
           {/* ── Property List ── */}
           {features.length > 0 && (
             <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
+              <div className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+              <div className={`${activeEvidenceFamily === "vacancy" ? "" : "hidden"} px-5 md:px-7 py-5 bg-white`}>
                 <div className="flex items-baseline justify-between mb-0.5">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50">
                     Tracked vacancy signals
                   </div>
                   <span className="font-mono-bureau text-[9px] text-[#0C1B33]/30">
-                    {features.length} signals total
+                    {features.length.toLocaleString("en-US")} {features.length === 1 ? "signal" : "signals"} total
                   </span>
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
@@ -1939,56 +2461,81 @@ export default function MapPolygonPanel({
             </>
           )}
 
-          {/* Source-separated report actions. Save/email are available for
-              vacancy or permit findings; gated investment remains CSV-only. */}
-          {(features.length > 0 || permitExportAvailable || investmentExportAvailable) && (
-            <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
-                {(features.length > 0 || permitExportAvailable) && (
-                  <div className="grid grid-cols-1 gap-2 mb-2">
-                    <button
-                      onClick={handleSaveReport}
-                      disabled={loading || permitPending || !drawnAreaScope}
-                      aria-busy={loading || permitPending}
-                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      Save Report
-                    </button>
-                    <button
-                      onClick={handleEmailReport}
-                      disabled={loading || permitPending || !drawnAreaScope}
-                      aria-busy={loading || permitPending}
-                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      Email This to Me
-                    </button>
-                    {(loading || permitPending || !drawnAreaScope) && (
-                      <p role="status" className="text-[9px] leading-snug text-[#0C1B33]/45">
-                        {loading || permitPending
-                          ? "Save, email, and CSV export will be available after the vacancy and permit lookups finish."
-                          : "Save, email, and CSV export are unavailable because the exact boundary provenance could not be created."}
-                      </p>
-                    )}
-                  </div>
-                )}
-                <button
-                  onClick={handleExportCsv}
-                  disabled={loading || permitPending || !drawnAreaScope}
-                  aria-busy={loading || permitPending}
-                  className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          <section className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} border-y border-[#0C1B33]/8 bg-white px-5 py-6 md:px-7`}>
+            <p className="font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+              Sources and methods
+            </p>
+            <h2 className="mt-2 font-editorial text-[26px] leading-tight text-[#0C1B33]">
+              Keep every evidence family traceable.
+            </h2>
+            <p className="mt-2 max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/50">
+              The workstation keeps vacancy, ownership context, incentive-zone matches, permit filings, and gated investment records separate because they answer different questions and have different coverage limits. Nothing here establishes availability, title, zoning approval, or completed construction.
+            </p>
+            <div className="mt-5 grid gap-px border border-[#0C1B33]/8 bg-[#0C1B33]/8 md:grid-cols-2">
+              {[
+                {
+                  label: "Vacancy and boundary records",
+                  detail: vacancyCoverageNote || "City of Chicago public records returned for the exact drawn polygon.",
+                  url: "https://data.cityofchicago.org/",
+                },
+                ...(hasOfficialCclbaPublishedInventory
+                  ? [{
+                      label: "Cook County Land Bank published inventory",
+                      detail: "Published inventory context only. Confirm current availability and disposition terms with CCLBA.",
+                      url: CCLBA_PUBLIC_PORTAL_URL,
+                    }]
+                  : []),
+                {
+                  label: "Ownership context",
+                  detail: "Cook County Assessor context attached to returned vacancy records. Verify title and deed history separately.",
+                  url: "https://www.cookcountyassessor.com/",
+                },
+                ...(licenseScreening
+                  ? [{
+                      label: "Current-license conflict screen",
+                      detail: `City business-license screening status: ${licenseScreening.status}. A match is a conflict signal; no match is not proof of vacancy.`,
+                      url: "https://data.cityofchicago.org/Community-Economic-Development/Business-Licenses/r5kz-chrr",
+                    }]
+                  : []),
+                ...(permitAnalysis
+                  ? [{
+                      label: "Building permit filings",
+                      detail: `${formatPermitAreaCoverageLabel(permitAnalysis)} Located filings only; filings do not prove work started or finished.`,
+                      url: permitAnalysis.source.url,
+                    }]
+                  : []),
+              ].map((source) => (
+                <a
+                  key={source.label}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group min-w-0 bg-[#FAF9F6] px-4 py-4 hover:bg-white"
                 >
-                  Export Area Data (CSV)
-                </button>
+                  <span className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#2563EB] group-hover:underline">
+                    {source.label} ↗
+                  </span>
+                  <span className="mt-2 block text-[10px] leading-relaxed text-[#0C1B33]/50">
+                    {source.detail}
+                  </span>
+                </a>
+              ))}
+            </div>
+            {drawnAreaScope && (
+              <div className="mt-4 border-l-2 border-[#2563EB]/25 pl-3">
+                <p className="font-mono-bureau text-[8px] uppercase tracking-[0.16em] text-[#0C1B33]/40">
+                  Exact-boundary provenance
+                </p>
+                <p className="mt-1 break-all text-[9px] leading-relaxed text-[#0C1B33]/45">
+                  Point in saved polygon · {drawnAreaScope.scope.fingerprint} · {drawnAreaScope.provenance.vacancy.selectedCount.toLocaleString("en-US")} generation-time vacancy record reference{drawnAreaScope.provenance.vacancy.selectedCount === 1 ? "" : "s"}
+                </p>
               </div>
-            </>
-          )}
+            )}
+          </section>
 
           {/* ── Follow-Up Resources ── */}
-          <div className="mx-5 h-px bg-[#0C1B33]/8" />
-          <div className="px-5 py-4 bg-white">
+          <div className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+          <div className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} px-5 md:px-7 py-5 bg-white`}>
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
               Next Steps &amp; Resources
             </div>
@@ -2016,8 +2563,8 @@ export default function MapPolygonPanel({
           </div>
 
           {/* ── Footer ── */}
-          <div className="mx-5 h-px bg-[#0C1B33]/8" />
-          <div className="px-5 py-3 bg-white">
+          <div className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} mx-5 md:mx-7 h-px bg-[#0C1B33]/8`} />
+          <div className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} px-5 md:px-7 py-3 bg-white`}>
             <Link
               href="/programs"
               className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/50 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
@@ -2027,13 +2574,75 @@ export default function MapPolygonPanel({
           </div>
 
           {/* ── Attribution ── */}
-          <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
+          <div className={`${activeEvidenceFamily === "sources" ? "" : "hidden"} px-5 md:px-7 py-4 bg-[#F5F5F0] border-t border-[#0C1B33]/6`}>
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
               Data: source-attributed public records and Cook County Assessor context. Source coverage varies by query and deployment; review each row&apos;s source and the report provenance before treating an inventory as loaded or complete. Vacancy signals may lag current conditions. An issued, unexpired exact-address license is a conflict signal, not proof of occupancy; no match is not proof a site is unoccupied. Permit filings do not prove work started or finished. Always verify source records and site conditions.
             </p>
           </div>
+
+          {/* A completed exact-boundary analysis remains exportable even when
+              the current filters produce a valid zero. Keeping the actions
+              after the evidence means the Sources tab is read before export.
+              Gated investment data stays CSV-only; public report actions never
+              expose it. */}
+          <div className="sticky bottom-0 z-10 border-t border-[#0C1B33]/10 bg-white/95 px-5 py-3 shadow-[0_-8px_24px_rgba(12,27,51,0.08)] backdrop-blur md:px-7">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/40">
+                Export the current evidence view
+              </p>
+              <p className="text-[8px] text-[#0C1B33]/35">
+                Label, active filters, and optional notes travel with the output.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              <button
+                onClick={handleSaveReport}
+                disabled={loading || permitPending || !drawnAreaScope}
+                aria-busy={loading || permitPending}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 bg-[#2563EB] px-3 py-2.5 text-center font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Save Report
+              </button>
+              <button
+                onClick={handleEmailReport}
+                disabled={loading || permitPending || !drawnAreaScope}
+                aria-busy={loading || permitPending}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 border border-[#2563EB]/30 px-3 py-2.5 text-center font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB] transition-colors hover:bg-[#2563EB]/5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Email This to Me
+              </button>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={loading || permitPending || !drawnAreaScope}
+                aria-busy={loading || permitPending}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 border border-[#0C1B33]/15 px-3 py-2.5 text-center font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/70 transition-colors hover:bg-[#0C1B33]/5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Download PDF
+              </button>
+              <button
+                onClick={handleExportCsv}
+                disabled={loading || permitPending || !drawnAreaScope}
+                aria-busy={loading || permitPending}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 bg-[#0C1B33] px-3 py-2.5 text-center font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-white transition-colors hover:bg-[#0C1B33]/80 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Area Data (CSV)
+              </button>
+              {(loading || permitPending || !drawnAreaScope) && (
+                <p role="status" className="col-span-full text-[9px] leading-snug text-[#0C1B33]/45">
+                  {loading || permitPending
+                    ? "Save, email, PDF, and CSV export will be available after the vacancy and permit lookups finish."
+                    : "Save, email, PDF, and CSV export are unavailable because the exact boundary provenance could not be created."}
+                </p>
+              )}
+            </div>
+          </div>
         </>
       )}
+      </div>
       {saveModalOpen && drawnAreaScope && !loading && !permitPending && (
         <SaveReportModal
           reportData={areaReport}
@@ -2101,7 +2710,7 @@ function AreaEmailReportModal({
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#0C1B33]/8">
           <div>
             <p className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-2">
-              Email Vacancy Report
+              Email Area Analysis
             </p>
             <h3 className="font-editorial text-2xl text-[#0C1B33] leading-tight">
               Send this area report to yourself.

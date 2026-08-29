@@ -323,7 +323,7 @@ describe("MapPolygonPanel — admin gating", () => {
     expect(html).toContain("300 S State St");
   });
 
-  it("renders nothing when the admin session is active but the gated data is unauthorized", () => {
+  it("shows an access-failure state without exposing gated records when the request is unauthorized", () => {
     const html = renderToStaticMarkup(
       <MapPolygonPanel
         {...baseProps()}
@@ -331,7 +331,9 @@ describe("MapPolygonPanel — admin gating", () => {
         investmentLayer={{ ...LAYER, status: "unauthorized", pointFeatures: [] }}
       />,
     );
-    expect(html).not.toContain("Community investment in this area");
+    expect(html).toContain("Community investment in this area");
+    expect(html).toContain("Public investment access unavailable");
+    expect(html).toContain("access failure, not a zero result");
     expect(html).not.toContain("Riverline Phase II");
   });
 
@@ -445,6 +447,8 @@ describe("MapPolygonPanel — investment aggregation rendering", () => {
       />,
     );
     expect(empty).toContain("Community investment in this area");
+    expect(empty).toContain("No sited investment records returned");
+    expect(empty).toContain("The lookup completed successfully");
     expect(empty).toContain("No sited community-investment records fall inside this area.");
     expect(empty).not.toContain("$1,200,000,000");
   });
@@ -464,13 +468,14 @@ describe("MapPolygonPanel — CSV export availability", () => {
       />,
     );
     expect(html).toContain("Export Area Data (CSV)");
-    // Save/Email build a vacancy report, so they stay hidden with no vacancies.
-    expect(html).not.toContain("Save Report");
-    expect(html).not.toContain("Email This to Me");
+    // The public report can preserve a valid zero-result view; gated investment
+    // records still travel only in the admin CSV.
+    expect(html).toContain("Save Report");
+    expect(html).toContain("Email This to Me");
     expect(html).toContain("No tracked vacancy signals returned");
   });
 
-  it("still offers nothing to a non-admin with no vacancies (unchanged behavior)", () => {
+  it("keeps a valid zero-result analysis exportable for a non-admin", () => {
     const html = renderToStaticMarkup(
       <MapPolygonPanel
         {...baseProps()}
@@ -480,11 +485,12 @@ describe("MapPolygonPanel — CSV export availability", () => {
         investmentLayer={LAYER}
       />,
     );
-    expect(html).not.toContain("Export Area Data (CSV)");
-    expect(html).not.toContain("Save Report");
+    expect(html).toContain("Export Area Data (CSV)");
+    expect(html).toContain("Save Report");
+    expect(html).toContain("Download PDF");
   });
 
-  it("hides the export for an admin whose area holds no investment records either", () => {
+  it("keeps a valid zero-result analysis exportable when no gated records match", () => {
     const html = renderToStaticMarkup(
       <MapPolygonPanel
         {...baseProps()}
@@ -494,7 +500,8 @@ describe("MapPolygonPanel — CSV export availability", () => {
         investmentLayer={{ ...LAYER, pointFeatures: [] }}
       />,
     );
-    expect(html).not.toContain("Export Area Data (CSV)");
+    expect(html).toContain("Export Area Data (CSV)");
+    expect(html).toContain("Save Report");
   });
 
   it("keeps the full action set when the area holds vacancies", () => {

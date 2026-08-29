@@ -90,4 +90,17 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
 
     expect(cleanup).toContain("polygonVacancyRequests.cancel()");
   });
+
+  it("starts a fresh polygon draw after Clear & Redraw", () => {
+    const clearHandler = sourceBetween(
+      "onClear={() => {",
+      "        />",
+      source.indexOf("{/* Polygon analysis panel */"),
+    );
+
+    expect(clearHandler).toContain('draw.changeMode("draw_polygon")');
+    expect(clearHandler).toContain("drawModeRef.current = true");
+    expect(clearHandler).toContain("setDrawMode(true)");
+    expect(clearHandler).toContain("resetAreaAnalysisWorkstation()");
+  });
 });

@@ -1,12 +1,28 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReportDisplay } from "@/components/report/ReportDisplay";
 import { createDrawnAreaReportScope } from "@/lib/drawn-area-report-scope";
 import { unavailableCclbaSourceCoverage, type VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import {
+  PERMIT_AREA_DATA_WINDOW_LABEL,
+  PERMIT_AREA_PORTAL_URL,
+  PERMIT_AREA_SOURCE_LABEL,
+  PERMIT_AREA_SOURCE_URL,
+  type PermitAreaResult,
+} from "@/lib/permit-area";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { INITIAL_WIZARD_STATE } from "@/lib/report-wizard-config";
+
+const { downloadCsvMock } = vi.hoisted(() => ({
+  downloadCsvMock: vi.fn(),
+}));
+
+vi.mock("@/lib/vacancy-spreadsheet", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/vacancy-spreadsheet")>();
+  return { ...actual, downloadCsv: downloadCsvMock };
+});
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ status: "authenticated", data: { user: { email: "test@example.com" } } }),
@@ -100,6 +116,100 @@ const CURRENT_NO_MATCH: GeoJSON.Feature = {
   },
 };
 
+const PERMIT_MONTHS = Array.from({ length: 36 }, (_, index) => {
+  const month = new Date(Date.UTC(2023, 8 + index, 1))
+    .toISOString()
+    .slice(0, 7);
+  return {
+    month,
+    count: month === "2025-07" || month === "2026-08" ? 1 : 0,
+  };
+});
+
+const CURRENT_PERMIT_ANALYSIS: PermitAreaResult = {
+  status: "ready",
+  source: {
+    label: PERMIT_AREA_SOURCE_LABEL,
+    url: PERMIT_AREA_SOURCE_URL,
+    portalUrl: PERMIT_AREA_PORTAL_URL,
+  },
+  dataWindow: PERMIT_AREA_DATA_WINDOW_LABEL,
+  sourceRefresh: {
+    asOf: "2026-08-28T00:00:00.000Z",
+    asOfBasis: "latest_queried_row_fetched_at",
+  },
+  locatedRecordsOnly: true,
+  totalFilings: 2,
+  distinctAddresses: 2,
+  issueDateSpan: { first: "2025-07-01", latest: "2026-08-04" },
+  rollingPulse: {
+    asOf: "2026-08-04",
+    current: {
+      start: "2025-08-05",
+      end: "2026-08-04",
+      filings: 1,
+      distinctAddresses: 1,
+      addressedFilings: 1,
+    },
+    previous: {
+      start: "2024-08-05",
+      end: "2025-08-04",
+      filings: 1,
+      distinctAddresses: 1,
+      addressedFilings: 1,
+    },
+    changeCount: 0,
+    changePercent: 0,
+  },
+  monthlyBreakdown: PERMIT_MONTHS,
+  topAddresses: [{ address: "100 S TARGET ST", count: 1 }],
+  typeBreakdown: [
+    {
+      key: null,
+      label: "Not recorded",
+      sourceValue: "Not recorded",
+      color: "#64748B",
+      count: 2,
+    },
+  ],
+  yearBreakdown: [
+    { year: 2026, count: 1 },
+    { year: 2025, count: 1 },
+  ],
+  statusBreakdown: [
+    { status: "Issued", count: 1 },
+    { status: "Pending", count: 1 },
+  ],
+  records: [
+    {
+      permitId: "PERMIT-TARGET",
+      permitTypeKey: null,
+      permitTypeLabel: "Not recorded",
+      rawPermitType: null,
+      address: "100 S TARGET ST",
+      issueDate: "2026-08-04",
+      permitStatus: "Issued",
+      permitMilestone: null,
+      workType: null,
+      workDescription: "Target storefront work",
+    },
+    {
+      permitId: "PERMIT-DROP",
+      permitTypeKey: null,
+      permitTypeLabel: "Not recorded",
+      rawPermitType: null,
+      address: "200 S DROP ST",
+      issueDate: "2025-07-01",
+      permitStatus: "Pending",
+      permitMilestone: null,
+      workType: null,
+      workDescription: "Unrelated work",
+    },
+  ],
+  recordsReturned: 2,
+  recordsTruncated: false,
+};
+
 function conflictsReport(): GeneratedReport {
   const created = createDrawnAreaReportScope({
     name: "79th Corridor — Ward 6",
@@ -128,13 +238,401 @@ function conflictsReport(): GeneratedReport {
   };
 }
 
+function savedWorkstationReport(): GeneratedReport {
+  const created = createDrawnAreaReportScope({
+    name: "79th saved field scan",
+    geometry: POLYGON,
+    generatedAt: "2026-08-26T12:00:00.000Z",
+    vacancy: {
+      loadFailed: false,
+      coverage: {
+        ...COMPLETE_META,
+        returnedCount: 2,
+        freshness: {
+          ...COMPLETE_META.freshness,
+          returnedCounts: { recent: 0, stale: 0, unknownDate: 2 },
+        },
+        licenseScreening: {
+          ...COMPLETE_META.licenseScreening,
+          candidateCount: 2,
+          checkedCount: 2,
+          matchedPropertyCount: 0,
+        },
+      },
+      freshnessFilter: "current_screening",
+      licenseFilter: "all",
+      returnedCountBeforeFilters: 2,
+      selectedFeatures: [{ properties: { recordId: "cols:keep" } }],
+    },
+    permit: { analysis: CURRENT_PERMIT_ANALYSIS },
+    workstation: {
+      activeEvidenceFamily: "permits",
+      practitionerNotes: "Call the block club first.",
+      vacancyFilters: {
+        query: "KEEP",
+        freshness: "current_screening",
+        licenseConflict: "all",
+        canonicalType: "land",
+        ownerType: "all",
+        zoneKey: "all",
+        source: "cols",
+      },
+      permitFilters: {
+        query: "TARGET",
+        type: "all",
+        status: "Issued",
+        issueYear: "2026",
+      },
+    },
+  });
+  if (!created.ok) throw new Error(created.detail);
+
+  return {
+    title: "Area Analysis Report — 79th saved field scan",
+    subtitle: "Drawn-area public-record vacancy signals and permit context",
+    reportType: "best-location",
+    generatedAt: created.scope.generatedAt,
+    summary: "Saved exact-area workstation report.",
+    sections: [
+      {
+        title: "Area Snapshot",
+        description: "Saved evidence summary.",
+        items: [{ label: "Vacancy Signals Shown", value: "1" }],
+      },
+      {
+        title: "Practitioner Notes",
+        description: "User-authored context.",
+        items: [
+          {
+            label: "User-authored note",
+            value: "Call the block club first.",
+          },
+        ],
+      },
+      {
+        title: "Permit Filing Context",
+        description: "Saved full-polygon permit summary.",
+        items: [{ label: "Total Geocoded Filings", value: "2" }],
+      },
+      {
+        title: "Recent Permit Records in Current View",
+        description: "Saved filtered permit records.",
+        items: [{ label: "PERMIT-TARGET", value: "100 S TARGET ST" }],
+      },
+      {
+        title: "Provenance Chain",
+        description: "Boundary provenance.",
+        items: [
+          {
+            label: "Boundary Fingerprint",
+            value: created.scope.scope.fingerprint,
+          },
+        ],
+      },
+    ],
+    recommendedActions: [],
+    metadata: {},
+    drawnAreaScope: created.scope,
+  };
+}
+
 afterEach(() => {
   cleanup();
+  downloadCsvMock.mockReset();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("ReportDisplay drawn-area vacancy fidelity", () => {
+  it("rebuilds a saved area CSV from both current polygon feeds while preserving the saved workstation view", async () => {
+    const currentKeep: GeoJSON.Feature = {
+      ...CURRENT_NO_MATCH,
+      properties: {
+        ...CURRENT_NO_MATCH.properties,
+        id: "keep",
+        recordId: "cols:keep",
+        address: "100 S KEEP ST",
+      },
+    };
+    const currentDrop: GeoJSON.Feature = {
+      ...CURRENT_NO_MATCH,
+      properties: {
+        ...CURRENT_NO_MATCH.properties,
+        id: "drop",
+        recordId: "cols:drop",
+        address: "200 S DROP ST",
+      },
+    };
+    const currentCoverage: VacancyCoverageMetadata = {
+      ...COMPLETE_META,
+      returnedCount: 2,
+      freshness: {
+        ...COMPLETE_META.freshness,
+        returnedCounts: { recent: 0, stale: 0, unknownDate: 2 },
+      },
+      licenseScreening: {
+        ...COMPLETE_META.licenseScreening,
+        candidateCount: 2,
+        checkedCount: 2,
+        matchedPropertyCount: 0,
+      },
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({
+            type: "FeatureCollection",
+            features: [currentKeep, currentDrop],
+            meta: currentCoverage,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response(JSON.stringify(CURRENT_PERMIT_ANALYSIS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={savedWorkstationReport()}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    const downloadButton = screen.getByRole("button", { name: "Download CSV" });
+    await waitFor(() => expect(downloadButton).toHaveProperty("disabled", false));
+    expect(
+      screen.getByRole("heading", {
+        name: "Area Analysis — 79th saved field scan",
+      }),
+    ).toBeTruthy();
+
+    const permitCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).startsWith("/api/permit-area?"),
+    );
+    expect(permitCall).toBeDefined();
+    const permitUrl = new URL(String(permitCall?.[0]), "http://localhost");
+    expect(JSON.parse(permitUrl.searchParams.get("polygon") ?? "null")).toEqual(
+      POLYGON,
+    );
+
+    fireEvent.click(downloadButton);
+    await waitFor(() => expect(downloadCsvMock).toHaveBeenCalledTimes(1));
+
+    const [csv, filename] = downloadCsvMock.mock.calls[0] as [string, string];
+    expect(filename).toMatch(
+      /^area-report-79th-saved-field-scan-\d{4}-\d{2}-\d{2}\.csv$/,
+    );
+    expect(csv).toContain('"Area Name","79th saved field scan"');
+    expect(csv).toContain('"Section","Boundary provenance"');
+    expect(csv).toContain('"Section","Practitioner notes"');
+    expect(csv).toContain("Call the block club first.");
+    expect(csv).toContain(
+      '"79th saved field scan","Active workstation filters","Search: KEEP; Evidence: Current inventory and recent reports; Vacancy type: Tracked land signal; Source: City-Owned Land Inventory"',
+    );
+    expect(csv).toContain('"79th saved field scan","cols:keep"');
+    expect(csv).not.toContain('"79th saved field scan","cols:drop"');
+    expect(csv).toContain(
+      '"79th saved field scan","Active workstation filters","Search: TARGET; Recorded status: Issued; Issue year: 2026"',
+    );
+    expect(csv).toContain(
+      '"79th saved field scan","Geocoded permit filings","2"',
+    );
+    expect(csv).toContain(
+      '"79th saved field scan","Recent records before filters","2"',
+    );
+    expect(csv).toContain(
+      '"79th saved field scan","Recent records exported","1"',
+    );
+    expect(csv).toContain('"79th saved field scan","PERMIT-TARGET"');
+    expect(csv).not.toContain('"79th saved field scan","PERMIT-DROP"');
+
+    expect(screen.getAllByText("Call the block club first.")).toHaveLength(1);
+    expect(
+      screen
+        .getByText("Recent Permit Records in Current View")
+        .closest("section")?.id,
+    ).toBe("saved-area-permits");
+  });
+
+  it("exports an explicit unavailable permit disclosure after a saved-polygon permit refresh fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const currentCoverage: VacancyCoverageMetadata = {
+      ...COMPLETE_META,
+      returnedCount: 1,
+      licenseScreening: {
+        ...COMPLETE_META.licenseScreening,
+        matchedPropertyCount: 0,
+      },
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({
+            type: "FeatureCollection",
+            features: [
+              {
+                ...CURRENT_NO_MATCH,
+                properties: {
+                  ...CURRENT_NO_MATCH.properties,
+                  id: "keep",
+                  recordId: "cols:keep",
+                  address: "100 S KEEP ST",
+                },
+              },
+            ],
+            meta: currentCoverage,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response("unavailable", { status: 503 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={savedWorkstationReport()}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    await screen.findByText(/Current permit records could not be refreshed/);
+    const downloadButton = screen.getByRole("button", { name: "Download CSV" });
+    await waitFor(() => expect(downloadButton).toHaveProperty("disabled", false));
+    fireEvent.click(downloadButton);
+    await waitFor(() => expect(downloadCsvMock).toHaveBeenCalledTimes(1));
+
+    const [csv] = downloadCsvMock.mock.calls[0] as [string, string];
+    expect(csv).toContain('"Section","Permit coverage"');
+    expect(csv).toContain(
+      '"79th saved field scan","Coverage status","Unavailable"',
+    );
+    expect(csv).not.toContain(
+      '"79th saved field scan","Geocoded permit filings","0"',
+    );
+  });
+
+  it("distinguishes a saved-filter zero from a source-level zero", async () => {
+    const currentCoverage: VacancyCoverageMetadata = {
+      ...COMPLETE_META,
+      licenseScreening: {
+        ...COMPLETE_META.licenseScreening,
+        matchedPropertyCount: 0,
+      },
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({
+            type: "FeatureCollection",
+            features: [CURRENT_NO_MATCH],
+            meta: currentCoverage,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response(JSON.stringify(CURRENT_PERMIT_ANALYSIS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={savedWorkstationReport()}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "No vacancy signals match the saved filters. The current source refresh returned 1 record inside this area before the saved evidence and workstation filters.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "No tracked vacancy records returned for this saved area.",
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps the existing vacancy-only CSV contract for community-area reports", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?communityArea=")) {
+        return new Response(
+          JSON.stringify({
+            type: "FeatureCollection",
+            features: [CURRENT_NO_MATCH],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const report: GeneratedReport = {
+      title: "Vacancy Analysis",
+      subtitle: "Community-area public-record signals",
+      reportType: "best-location",
+      generatedAt: "2026-08-26T12:00:00.000Z",
+      summary: "Community-area vacancy report.",
+      sections: [],
+      recommendedActions: [],
+      metadata: {},
+    };
+
+    render(
+      <ReportDisplay
+        report={report}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    const downloadButtons = screen.getAllByRole("button", {
+      name: "Download CSV",
+    });
+    await waitFor(() =>
+      expect(downloadButtons[0]).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(downloadButtons[0]);
+    await waitFor(() => expect(downloadCsvMock).toHaveBeenCalledTimes(1));
+
+    const [csv, filename] = downloadCsvMock.mock.calls[0] as [string, string];
+    expect(filename).toMatch(
+      /^vacant-properties-chatham-\d{4}-\d{2}-\d{2}\.csv$/,
+    );
+    expect(csv).toContain("Record ID");
+    expect(csv).toContain("cols:current-no-match");
+    expect(csv).not.toContain('"Area Name","Chatham"');
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).startsWith("/api/permit-area?"),
+      ),
+    ).toBe(false);
+  });
+
   it("fails closed when a conflict-only polygon refresh has partial license screening", async () => {
     const partialResponse = {
       type: "FeatureCollection",
@@ -150,11 +648,18 @@ describe("ReportDisplay drawn-area vacancy fidelity", () => {
         },
       },
     };
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify(partialResponse), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(
+        JSON.stringify(
+          String(input).startsWith("/api/permit-area?")
+            ? CURRENT_PERMIT_ANALYSIS
+            : partialResponse,
+        ),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 

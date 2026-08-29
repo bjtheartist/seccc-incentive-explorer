@@ -615,6 +615,60 @@ describe("permit area client", () => {
   });
 });
 
+describe("drawn-area permit workstation CSV", () => {
+  it("exports a filtered recent-record subset while keeping full-polygon aggregates unchanged", () => {
+    const secondRecord: PermitAreaResult["records"][number] = {
+      ...RESULT.records[0],
+      permitId: "200067890",
+      address: "456 W TEST ST",
+      permitTypeLabel: "Easy Permit Process",
+      rawPermitType: "EASY PERMIT PROCESS",
+    };
+    const fullPolygonResult: PermitAreaResult = {
+      ...RESULT,
+      totalFilings: 2,
+      distinctAddresses: 2,
+      typeBreakdown: [
+        {
+          ...RESULT.typeBreakdown[0],
+          label: "Easy Permit Process",
+          sourceValue: "EASY PERMIT PROCESS",
+          count: 2,
+        },
+      ],
+      records: [RESULT.records[0], secondRecord],
+      recordsReturned: 2,
+    };
+
+    const csv = buildDrawnAreaCsv({
+      areaName: "Filtered permits",
+      vacancyFeatures: [],
+      permitArea: fullPolygonResult,
+      permitRecords: [secondRecord],
+      permitRecordsBeforeFilters: 2,
+      permitFilterLabels: ["Type: Easy Permit Process", "Status: Issued"],
+      permitVisibleCount: 1,
+      investment: null,
+    });
+
+    expect(csv).toContain('"Filtered permits","Geocoded permit filings","2"');
+    expect(csv).toContain(
+      '"Filtered permits","EASY PERMIT PROCESS","Easy Permit Process","Unmapped","2"',
+    );
+    expect(csv).toContain(
+      '"Filtered permits","Active workstation filters","Type: Easy Permit Process; Status: Issued"',
+    );
+    expect(csv).toContain('"Filtered permits","Recent records before filters","2"');
+    expect(csv).toContain('"Filtered permits","Recent records visible in workstation","1"');
+    expect(csv).toContain('"Filtered permits","Recent records exported","1"');
+    expect(csv).toContain("aggregate summary and type-breakdown tables remain full-polygon results");
+    expect(csv).toContain('"Filtered permits","200067890","456 W TEST ST"');
+
+    const recordTable = csv.slice(csv.indexOf('"Section","Recent permit filing records"'));
+    expect(recordTable).not.toContain('"100012345"');
+  });
+});
+
 describe("analysis picker copy honesty (audit F1, 2026-08-24)", () => {
   it("the permit-activity picker card never claims construction value — the API pins reported_cost OUT of the query", async () => {
     const { REPORT_TYPE_OPTIONS } = await import("@/lib/report-wizard-config");

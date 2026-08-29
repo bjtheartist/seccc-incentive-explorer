@@ -54,6 +54,7 @@ import {
   formatPermitAreaCoverageLabel,
   PERMIT_AREA_ACTIVITY_NOTE,
   PERMIT_AREA_COVERAGE_NOTE,
+  type PermitAreaRecord,
   type PermitAreaResult,
 } from "@/lib/permit-area";
 import {
@@ -691,6 +692,12 @@ function csvRow(values: readonly unknown[]): string {
   return values.map(csvCell).join(",");
 }
 
+function csvFilterLabelSummary(labels: readonly string[] | undefined): string | null {
+  if (labels === undefined) return null;
+  const normalized = labels.map((label) => label.trim()).filter(Boolean);
+  return normalized.length > 0 ? normalized.join("; ") : "None";
+}
+
 /** Vacancy-table columns, after the leading "Area Name". */
 export const DRAWN_AREA_VACANCY_COLUMNS = [
   "Record ID",
@@ -790,6 +797,11 @@ export const DRAWN_AREA_INVESTMENT_COLUMNS: readonly string[] = [
 export interface DrawnAreaCsvInput {
   /** The user-editable area label. Lands on the title line AND every data row. */
   areaName: string;
+  /**
+   * Optional analyst-authored context. Blank notes are omitted entirely and a
+   * nonblank note is explicitly separated from the source evidence tables.
+   */
+  practitionerNotes?: string;
   /** Exact saved-boundary identity carried into this export. */
   scopeProvenance?: {
     fingerprint: string;
@@ -801,6 +813,10 @@ export interface DrawnAreaCsvInput {
   vacancyFeatures: readonly GeoJSON.Feature[];
   /** Returned feature count before user-selected evidence filters. */
   vacancyReturnedCountBeforeFilters?: number;
+  /** Human-readable labels for the active vacancy workstation filters. */
+  vacancyFilterLabels?: readonly string[];
+  /** Number of vacancy records visible in the workstation at export time. */
+  vacancyVisibleCount?: number;
   vacancyFreshnessFilter?: VacancyFreshnessFilter;
   vacancyLicenseFilter?: VacancyLicenseFilter;
   /** Source coverage returned with the scoped vacancy features. */
@@ -809,6 +825,17 @@ export interface DrawnAreaCsvInput {
   vacancyLoadFailed?: boolean;
   /** Source-backed permit analysis for the same polygon, or null when unavailable. */
   permitArea?: PermitAreaResult | null;
+  /**
+   * Optional filtered subset of `permitArea.records` for the record table.
+   * Full-polygon permit aggregates always continue to come from `permitArea`.
+   */
+  permitRecords?: readonly PermitAreaRecord[];
+  /** Returned recent-record count before workstation filters were applied. */
+  permitRecordsBeforeFilters?: number;
+  /** Human-readable labels for the active permit workstation filters. */
+  permitFilterLabels?: readonly string[];
+  /** Number of recent permit records visible in the workstation at export time. */
+  permitVisibleCount?: number;
   /**
    * HTTP, timeout or malformed-response failure on the permit lookup. Separates
    * "we asked and could not get an answer" from "no analysis was attached",
@@ -851,6 +878,9 @@ export interface DrawnAreaCsvInput {
  */
 export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
   const areaName = input.areaName.trim() || defaultDrawnAreaName();
+  const practitionerNotes = input.practitionerNotes?.trim() ?? "";
+  const vacancyFilterSummary = csvFilterLabelSummary(input.vacancyFilterLabels);
+  const permitFilterSummary = csvFilterLabelSummary(input.permitFilterLabels);
   const lines: string[] = [];
 
   lines.push(csvRow(["Area Name", areaName]));
@@ -862,6 +892,18 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
     lines.push(csvRow([areaName, "Selection method", input.scopeProvenance.selectionMethod]));
     lines.push(csvRow([areaName, "Scope generated at", input.scopeProvenance.generatedAt]));
     lines.push(csvRow([areaName, "Manifest selected count", input.scopeProvenance.manifestSelectedCount]));
+    lines.push("");
+  }
+  if (practitionerNotes) {
+    lines.push(csvRow(["Section", "Practitioner notes"]));
+    lines.push(csvRow(["Area Name", "Authorship", "Notes"]));
+    lines.push(
+      csvRow([
+        areaName,
+        "User-authored practitioner note; not source evidence",
+        practitionerNotes,
+      ]),
+    );
     lines.push("");
   }
   const vacancyDisclosure = input.vacancyLoadFailed
@@ -938,6 +980,33 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
     lines.push("");
   }
 
+  const hasVacancyWorkstationView =
+    vacancyFilterSummary !== null ||
+    input.vacancyVisibleCount !== undefined;
+  if (hasVacancyWorkstationView) {
+    lines.push(csvRow(["Section", "Vacancy workstation view"]));
+    lines.push(csvRow(["Area Name", "Metric", "Value"]));
+    if (vacancyFilterSummary !== null) {
+      lines.push(csvRow([areaName, "Active workstation filters", vacancyFilterSummary]));
+    }
+    lines.push(
+      csvRow([
+        areaName,
+        "Records before filters",
+        input.vacancyReturnedCountBeforeFilters ?? input.vacancyFeatures.length,
+      ]),
+    );
+    lines.push(
+      csvRow([
+        areaName,
+        "Records visible in workstation",
+        input.vacancyVisibleCount ?? input.vacancyFeatures.length,
+      ]),
+    );
+    lines.push(csvRow([areaName, "Records exported", input.vacancyFeatures.length]));
+    lines.push("");
+  }
+
   if (!input.vacancyLoadFailed) {
     lines.push(csvRow(["Section", "Vacancy"]));
     lines.push(csvRow(["Area Name", ...DRAWN_AREA_VACANCY_COLUMNS]));
@@ -1009,6 +1078,12 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
 
   if (input.permitArea) {
     const permitArea = input.permitArea;
+    const permitRecords = input.permitRecords ?? permitArea.records;
+    const hasPermitWorkstationView =
+      permitFilterSummary !== null ||
+      input.permitRecords !== undefined ||
+      input.permitRecordsBeforeFilters !== undefined ||
+      input.permitVisibleCount !== undefined;
     lines.push("");
     lines.push(csvRow(["Section", "Permit filing summary"]));
     lines.push(csvRow(["Area Name", "Metric", "Value"]));
@@ -1037,17 +1112,36 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
       );
     }
 
-    if (permitArea.recordsTruncated) {
+    if (permitArea.recordsTruncated || hasPermitWorkstationView) {
       lines.push("");
       lines.push(csvRow(["Section", "Recent permit record coverage"]));
       lines.push(csvRow(["Area Name", "Metric", "Value"]));
-      lines.push(csvRow([areaName, "Recent records exported", permitArea.recordsReturned]));
+      if (permitFilterSummary !== null) {
+        lines.push(csvRow([areaName, "Active workstation filters", permitFilterSummary]));
+      }
+      lines.push(
+        csvRow([
+          areaName,
+          "Recent records before filters",
+          input.permitRecordsBeforeFilters ?? permitArea.recordsReturned,
+        ]),
+      );
+      lines.push(
+        csvRow([
+          areaName,
+          "Recent records visible in workstation",
+          input.permitVisibleCount ?? permitRecords.length,
+        ]),
+      );
+      lines.push(csvRow([areaName, "Recent records exported", permitRecords.length]));
       lines.push(csvRow([areaName, "Total geocoded filings", permitArea.totalFilings]));
       lines.push(
         csvRow([
           areaName,
           "Coverage note",
-          `The recent-record table contains the ${permitArea.recordsReturned} most recent filing record${permitArea.recordsReturned === 1 ? "" : "s"}. Aggregate summary and type-breakdown tables use all ${permitArea.totalFilings} geocoded filings in the area.`,
+          hasPermitWorkstationView
+            ? `Workstation filters apply only to the ${input.permitRecordsBeforeFilters ?? permitArea.recordsReturned} recent filing record${(input.permitRecordsBeforeFilters ?? permitArea.recordsReturned) === 1 ? "" : "s"} returned for record-level review. The aggregate summary and type-breakdown tables remain full-polygon results based on all ${permitArea.totalFilings} geocoded filings and are not recalculated by these filters.`
+            : `The recent-record table contains the ${permitArea.recordsReturned} most recent filing record${permitArea.recordsReturned === 1 ? "" : "s"}. Aggregate summary and type-breakdown tables use all ${permitArea.totalFilings} geocoded filings in the area.`,
         ]),
       );
     }
@@ -1055,7 +1149,7 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
     lines.push("");
     lines.push(csvRow(["Section", "Recent permit filing records"]));
     lines.push(csvRow(["Area Name", ...DRAWN_AREA_PERMIT_COLUMNS]));
-    for (const record of permitArea.records) {
+    for (const record of permitRecords) {
       lines.push(
         csvRow([
           areaName,

@@ -57,6 +57,21 @@ import {
 } from "@/lib/vacancy-spreadsheet";
 import { filterAreaVacancyFeatures } from "@/lib/area-vacancy-presentation";
 import {
+  activeAreaPermitFilterLabels,
+  activeAreaVacancyFilterLabels,
+  filterAreaPermitWorkstationRecords,
+  filterAreaVacancyWorkstationFeatures,
+} from "@/lib/area-analysis-workstation";
+import {
+  fetchPermitArea,
+  formatPermitAreaCoverageLabel,
+  type PermitAreaResult,
+} from "@/lib/permit-area";
+import {
+  buildDrawnAreaCsv,
+  drawnAreaFilenameSlug,
+} from "@/lib/polygon-investment";
+import {
   assessDrawnAreaRecordDriftComparability,
   compareDrawnAreaRecordManifest,
   hasCompleteCurrentDrawnAreaSelection,
@@ -150,6 +165,63 @@ const fadeIn = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.4, ease: "easeOut" as const },
 };
+
+function SavedAreaEvidenceSection({
+  section,
+  eyebrow,
+}: {
+  section: ReportSection;
+  eyebrow: string;
+}) {
+  return (
+    <div className="border border-[#0C1B33]/10 bg-white">
+      <div className="border-b border-[#0C1B33]/8 px-5 py-5 sm:px-6">
+        <p className="mb-2 font-mono-bureau text-[8px] uppercase tracking-[0.22em] text-[#2563EB]">
+          {eyebrow}
+        </p>
+        <h3 className="font-editorial text-2xl leading-tight text-[#0C1B33]">
+          {section.title}
+        </h3>
+        {section.description && (
+          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/50">
+            {section.description}
+          </p>
+        )}
+      </div>
+      <dl className="grid grid-cols-1 gap-px bg-[#0C1B33]/8 sm:grid-cols-2">
+        {section.items.map((item, index) => (
+          <div
+            key={`${item.label}-${index}`}
+            className="min-w-0 bg-[#FAF9F6] px-5 py-4 sm:px-6"
+          >
+            <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/35">
+              {item.label}
+            </dt>
+            <dd className="mt-1 break-words text-[15px] font-medium text-[#0C1B33]/80">
+              {item.value}
+            </dd>
+            {item.detail && (
+              <p className="mt-2 break-words text-[12px] leading-relaxed text-[#0C1B33]/50">
+                {item.detail}
+              </p>
+            )}
+            {item.url && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB] hover:underline"
+              >
+                Review source
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 // ─── Report Display ──────────────────────────────────────────────────
 
@@ -246,9 +318,20 @@ export function ReportDisplay({
     useRef<VacancyCoverageMetadata | null>(null);
   const [vacancySpreadsheetError, setVacancySpreadsheetError] =
     useState<string | null>(null);
+  const [savedAreaPermitAnalysis, setSavedAreaPermitAnalysis] =
+    useState<PermitAreaResult | null>(null);
+  const [savedAreaPermitError, setSavedAreaPermitError] =
+    useState<string | null>(null);
+  const [isLoadingSavedAreaPermit, setIsLoadingSavedAreaPermit] =
+    useState(false);
+  const [savedAreaVisibleVacancyCount, setSavedAreaVisibleVacancyCount] =
+    useState(24);
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
+  useEffect(() => {
+    setSavedAreaVisibleVacancyCount(24);
+  }, [report.generatedAt, report.title]);
   const supportSection = useMemo(
     () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
     [report.sections],
@@ -575,12 +658,54 @@ export function ReportDisplay({
   const vacancySpreadsheetDisplayName =
     vacancySpreadsheetScope.status === "ready" &&
     vacancySpreadsheetScope.kind === "drawn-area"
-      ? report.title.trim() || vacancySpreadsheetScope.label
+      ? vacancySpreadsheetScope.label
       : vacancySpreadsheetLocale;
   const vacancySpreadsheetRequestPath =
     vacancySpreadsheetScope.status === "ready"
       ? vacancySpreadsheetScope.requestPath
       : "";
+
+  useEffect(() => {
+    if (
+      compact ||
+      vacancySpreadsheetScope.status !== "ready" ||
+      vacancySpreadsheetScope.kind !== "drawn-area"
+    ) {
+      setSavedAreaPermitAnalysis(null);
+      setSavedAreaPermitError(null);
+      setIsLoadingSavedAreaPermit(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSavedAreaPermitAnalysis(null);
+    setSavedAreaPermitError(null);
+    setIsLoadingSavedAreaPermit(true);
+
+    fetchPermitArea(vacancySpreadsheetScope.drawnArea.scope.geometry, {
+      signal: controller.signal,
+    })
+      .then((analysis) => {
+        if (!controller.signal.aborted) {
+          setSavedAreaPermitAnalysis(analysis);
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        console.error("[report] saved-area permit refresh failed:", error);
+        setSavedAreaPermitAnalysis(null);
+        setSavedAreaPermitError(
+          "Current permit records could not be refreshed. The saved report remains visible, but the CSV will mark current permit coverage unavailable rather than report zero filings.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoadingSavedAreaPermit(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [compact, vacancySpreadsheetScope]);
 
   const vacancyFeaturesForScope = useCallback(
     (features: VacancySpreadsheetFeature[]): VacancySpreadsheetFeature[] => {
@@ -591,10 +716,16 @@ export function ReportDisplay({
         return features;
       }
       const filters = vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters;
-      return filterAreaVacancyFeatures(
+      const evidencePolicyFeatures = filterAreaVacancyFeatures(
         features as GeoJSON.Feature[],
         filters.freshness,
         filters.license,
+      ) as VacancySpreadsheetFeature[];
+      const workstation = vacancySpreadsheetScope.drawnArea.workstation;
+      if (!workstation) return evidencePolicyFeatures;
+      return filterAreaVacancyWorkstationFeatures(
+        evidencePolicyFeatures as GeoJSON.Feature[],
+        workstation.vacancyFilters,
       ) as VacancySpreadsheetFeature[];
     },
     [vacancySpreadsheetScope],
@@ -697,57 +828,74 @@ export function ReportDisplay({
         );
       }
 
-      const csvProvenance =
+      if (
         vacancySpreadsheetScope.status === "ready" &&
         vacancySpreadsheetScope.kind === "drawn-area"
-          ? {
-              scopeFingerprint:
-                vacancySpreadsheetScope.drawnArea.scope.fingerprint,
+      ) {
+        const drawnArea = vacancySpreadsheetScope.drawnArea;
+        const workstation = drawnArea.workstation;
+        const permitFilters = workstation?.permitFilters;
+        const permitRecords = savedAreaPermitAnalysis
+          ? permitFilters
+            ? filterAreaPermitWorkstationRecords(
+                savedAreaPermitAnalysis.records,
+                permitFilters,
+              )
+            : savedAreaPermitAnalysis.records
+          : [];
+        const vacancyFilterLabels = workstation
+          ? activeAreaVacancyFilterLabels(workstation.vacancyFilters)
+          : [];
+        const permitFilterLabels = permitFilters
+          ? activeAreaPermitFilterLabels(permitFilters)
+          : [];
+
+        downloadCsv(
+          buildDrawnAreaCsv({
+            areaName: vacancySpreadsheetDisplayName,
+            practitionerNotes: workstation?.practitionerNotes,
+            scopeProvenance: {
+              fingerprint: drawnArea.scope.fingerprint,
               selectionMethod: "point_in_saved_polygon",
-              scopeGeneratedAt: vacancySpreadsheetScope.drawnArea.generatedAt,
-              generationFreshnessFilter:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
-                  .freshness,
-              generationLicenseFilter:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
-                  .license,
-              generationManifestSelectedCount:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy
-                  .selectedCount,
-              generationCoverageStatus:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.status,
-              generationLicenseScreeningStatus:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.licenseScreeningStatus,
-              generationSourcePath:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.source
-                  ?.path,
-              generationFallbackReason:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.fallbackReason,
-              generationCclbaSourceCoverage:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.cclbaSourceCoverage,
-              currentCoverageStatus:
-                vacancySpreadsheetCoverageRef.current?.coverageStatus,
-              currentLicenseScreeningStatus:
-                vacancySpreadsheetCoverageRef.current?.licenseScreening.status,
-              currentSourcePath:
-                vacancySpreadsheetCoverageRef.current?.sourcePath,
-              currentFallbackReason:
-                vacancySpreadsheetCoverageRef.current?.fallbackReason,
-              currentCclbaSourceCoverage:
-                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
-            }
-          : {
-              selectionMethod: "community_area_boundary",
-              currentCclbaSourceCoverage:
-                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
-            };
+              generatedAt: drawnArea.generatedAt,
+              manifestSelectedCount:
+                drawnArea.provenance.vacancy.selectedCount,
+            },
+            vacancyFeatures: features as GeoJSON.Feature[],
+            vacancyReturnedCountBeforeFilters:
+              vacancySpreadsheetCoverageRef.current?.returnedCount ??
+              drawnArea.provenance.vacancy.returnedCountBeforeFilters ??
+              features.length,
+            vacancyFilterLabels,
+            vacancyVisibleCount: features.length,
+            vacancyFreshnessFilter:
+              drawnArea.provenance.vacancy.filters.freshness,
+            vacancyLicenseFilter:
+              drawnArea.provenance.vacancy.filters.license,
+            vacancyCoverage: vacancySpreadsheetCoverageRef.current,
+            permitArea: savedAreaPermitAnalysis,
+            permitRecords,
+            permitRecordsBeforeFilters:
+              savedAreaPermitAnalysis?.records.length,
+            permitFilterLabels,
+            permitVisibleCount: savedAreaPermitAnalysis
+              ? permitRecords.length
+              : undefined,
+            permitLoadFailed: savedAreaPermitError !== null,
+            investment: null,
+          }),
+          `area-report-${drawnAreaFilenameSlug(vacancySpreadsheetDisplayName)}-${new Date().toISOString().slice(0, 10)}.csv`,
+        );
+        return;
+      }
+
       downloadCsv(
-        buildVacancySpreadsheetCsv(features, csvProvenance),
-        `vacant-properties-${slugifyFilePart(vacancySpreadsheetDisplayName)}-${new Date().toISOString().slice(0, 10)}.csv`
+        buildVacancySpreadsheetCsv(features, {
+          selectionMethod: "community_area_boundary",
+          currentCclbaSourceCoverage:
+            vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
+        }),
+        `vacant-properties-${slugifyFilePart(vacancySpreadsheetDisplayName)}-${new Date().toISOString().slice(0, 10)}.csv`,
       );
     } catch (err) {
       console.error("[report] vacancy spreadsheet export failed:", err);
@@ -760,6 +908,8 @@ export function ReportDisplay({
     vacancySpreadsheetDisplayName,
     vacancySpreadsheetRequestPath,
     vacancySpreadsheetScope,
+    savedAreaPermitAnalysis,
+    savedAreaPermitError,
   ]);
 
   const vacancySpreadsheetStats = useMemo(() => {
@@ -826,6 +976,10 @@ export function ReportDisplay({
     const responsePending =
       isLoadingVacancySpreadsheet ||
       (vacancySpreadsheetFeatures === null && !vacancySpreadsheetError);
+    const permitResponsePending =
+      isDrawnArea &&
+      (isLoadingSavedAreaPermit ||
+        (savedAreaPermitAnalysis === null && savedAreaPermitError === null));
     const currentLicenseConflictScreeningIncomplete =
       isDrawnArea &&
       vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters.license ===
@@ -842,7 +996,20 @@ export function ReportDisplay({
       !isDrawnArea ||
       (vacancySpreadsheetFeatures !== null &&
         !vacancySpreadsheetError &&
-        !currentSelectionIncomplete);
+        !currentSelectionIncomplete &&
+        !permitResponsePending);
+    const currentVacancyReturnedCount = isDrawnArea
+      ? vacancySpreadsheetCoverageRef.current?.returnedCount ?? null
+      : null;
+    const vacancyEmptyStateMessage = currentLicenseConflictScreeningIncomplete
+      ? "No conflict rows were returned, but current license screening is incomplete and cannot establish a clean zero."
+      : currentSelectionIncomplete
+        ? "No rows were returned, but current coverage is incomplete and cannot establish a clean zero."
+        : isDrawnArea &&
+            currentVacancyReturnedCount !== null &&
+            currentVacancyReturnedCount > 0
+          ? `No vacancy signals match the saved filters. The current source refresh returned ${currentVacancyReturnedCount.toLocaleString("en-US")} record${currentVacancyReturnedCount === 1 ? "" : "s"} inside this area before the saved evidence and workstation filters.`
+          : `No tracked vacancy records returned for this ${isDrawnArea ? "saved area" : "locale"}.`;
     const spreadsheetCount = (count: number, loadingLabel: string): string => {
       if (responsePending) return loadingLabel;
       if (vacancySpreadsheetError) return "Unavailable";
@@ -851,6 +1018,754 @@ export function ReportDisplay({
       }
       return count.toLocaleString("en-US");
     };
+
+    if (isDrawnArea && vacancySpreadsheetScope.status === "ready") {
+      const areaSnapshotSection = report.sections.find(
+        (section) => section.title === "Area Snapshot",
+      );
+      const vacancySections = report.sections.filter(
+        (section) => section.title === "Priority Properties",
+      );
+      const contextSections = report.sections.filter((section) =>
+        ["Incentive Zones in Area", "Ownership Breakdown"].includes(
+          section.title,
+        ),
+      );
+      const permitSections = report.sections.filter((section) =>
+        [
+          "Permit Filing Context",
+          "Recent Permit Records in Current View",
+        ].includes(section.title),
+      );
+      const provenanceSections = report.sections.filter(
+        (section) => section.title === "Provenance Chain",
+      );
+      const recognizedSectionTitles = new Set([
+        "Area Snapshot",
+        "Priority Properties",
+        "Incentive Zones in Area",
+        "Ownership Breakdown",
+        "Permit Filing Context",
+        "Recent Permit Records in Current View",
+        "Practitioner Notes",
+        "Provenance Chain",
+      ]);
+      const additionalSections = report.sections.filter(
+        (section) => !recognizedSectionTitles.has(section.title),
+      );
+      const permitProvenance =
+        vacancySpreadsheetScope.drawnArea.provenance.permit;
+      const showPermitEvidence =
+        permitSections.length > 0 || permitProvenance.status !== "not_attached";
+      // The stored scope name remains the exact area label for CSV/provenance.
+      // A workspace rename, however, is the authoritative document heading.
+      // Strip only the generated title prefix so an untouched report still
+      // reads "Area Analysis — <label>" without contaminating export rows.
+      const savedAreaName = (
+        report.title.trim() || vacancySpreadsheetDisplayName
+      ).replace(/^Area Analysis Report\s*[—-]\s*/i, "");
+      const visibleFeatures = features.slice(0, savedAreaVisibleVacancyCount);
+      const remainingFeatureCount = Math.max(
+        0,
+        features.length - visibleFeatures.length,
+      );
+      const currentCoverage = vacancySpreadsheetCoverageRef.current;
+      const savedWorkstation = vacancySpreadsheetScope.drawnArea.workstation;
+      const savedVacancyFilterLabels = savedWorkstation
+        ? activeAreaVacancyFilterLabels(savedWorkstation.vacancyFilters)
+        : [];
+      const savedPermitFilterLabels = savedWorkstation
+        ? activeAreaPermitFilterLabels(savedWorkstation.permitFilters)
+        : [];
+
+      return (
+        <motion.div {...fadeIn}>
+          <div className="min-h-screen overflow-x-hidden bg-[#F5F5F0] px-2 py-4 print:bg-white sm:px-6 sm:py-8">
+            <div className="mx-auto max-w-[1180px] overflow-hidden bg-white shadow-xl print:shadow-none">
+              <header className="bg-[#0C1B33] px-5 pb-10 pt-12 sm:px-12 md:px-16">
+                <p className="mb-5 font-mono-bureau text-[9px] uppercase tracking-[0.35em] text-white/40">
+                  Saved Area Analysis · Read-only workstation
+                </p>
+                <h1 className="mb-3 font-editorial text-3xl leading-tight text-white sm:text-4xl lg:text-[42px]">
+                  Area Analysis — {savedAreaName}
+                </h1>
+                <p className="max-w-3xl text-[15px] leading-relaxed text-white/55">
+                  Review each evidence family separately, then use the source
+                  links and exports to continue verification. This saved view
+                  does not turn public records into an availability, ownership,
+                  zoning, or permit determination.
+                </p>
+                <div className="mt-6 h-[3px] w-10 bg-white/30" />
+              </header>
+
+              <div className="flex flex-wrap gap-x-8 gap-y-3 border-b border-[#0C1B33]/8 px-5 py-5 sm:px-12 md:px-16">
+                <div>
+                  <span className="mb-0.5 block font-mono-bureau text-[8px] uppercase tracking-[0.25em] text-[#0C1B33]/30">
+                    Saved
+                  </span>
+                  <span className="text-[13px] text-[#0C1B33]">
+                    {formattedDate}
+                  </span>
+                </div>
+                <div>
+                  <span className="mb-0.5 block font-mono-bureau text-[8px] uppercase tracking-[0.25em] text-[#0C1B33]/30">
+                    Scope
+                  </span>
+                  <span className="text-[13px] text-[#0C1B33]">
+                    Exact saved polygon
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="mb-0.5 block font-mono-bureau text-[8px] uppercase tracking-[0.25em] text-[#0C1B33]/30">
+                    Boundary fingerprint
+                  </span>
+                  <span className="block break-all font-mono-bureau text-[11px] text-[#0C1B33]/65">
+                    {vacancySpreadsheetScope.drawnArea.scope.fingerprint}
+                  </span>
+                </div>
+              </div>
+
+              <nav
+                aria-label="Saved area evidence"
+                className="sticky top-0 z-10 border-b border-[#0C1B33]/10 bg-white/95 px-5 py-3 backdrop-blur print:static sm:px-12 md:px-16"
+              >
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {[
+                    ["Overview", "saved-area-overview"],
+                    ["Vacancy", "saved-area-vacancy"],
+                    ...(contextSections.length > 0
+                      ? [["Area context", "saved-area-context"]]
+                      : []),
+                    ...(showPermitEvidence
+                      ? [["Permit activity", "saved-area-permits"]]
+                      : []),
+                    ["Sources & methods", "saved-area-sources"],
+                  ].map(([label, anchor]) => (
+                    <a
+                      key={anchor}
+                      href={`#${anchor}`}
+                      className="font-mono-bureau text-[9px] uppercase tracking-[0.16em] text-[#0C1B33]/55 transition-colors hover:text-[#2563EB]"
+                    >
+                      {label}
+                    </a>
+                  ))}
+                </div>
+              </nav>
+
+              <main className="space-y-12 px-5 py-10 sm:px-12 md:px-16">
+                <section
+                  id="saved-area-overview"
+                  className="scroll-mt-20 space-y-6"
+                >
+                  <div>
+                    <p className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+                      01 · Overview
+                    </p>
+                    <h2 className="font-editorial text-3xl text-[#0C1B33]">
+                      What this saved area contains
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-[#0C1B33]/55">
+                      {report.summary}
+                    </p>
+                  </div>
+
+                  <div className="border border-[#2563EB]/15 bg-[#EFF6FF] px-4 py-4">
+                    <p className="mb-2 font-mono-bureau text-[8px] uppercase tracking-[0.2em] text-[#2563EB]">
+                      Saved boundary and current refresh
+                    </p>
+                    <p className="text-[12px] leading-relaxed text-[#0C1B33]/65">
+                      Vacancy records are re-queried inside the exact polygon
+                      saved with this report, then filtered under the saved
+                      evidence policy. The saved record manifest is retained so
+                      additions and removals can be disclosed when the two
+                      source snapshots are comparable.
+                    </p>
+                    {drawnAreaRecordDrift && (
+                      <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
+                        Generation manifest: {drawnAreaRecordDrift.saved.toLocaleString("en-US")} records. Current polygon result: {drawnAreaRecordDrift.current.toLocaleString("en-US")} ({drawnAreaRecordDrift.added.toLocaleString("en-US")} added, {drawnAreaRecordDrift.removed.toLocaleString("en-US")} removed, {drawnAreaRecordDrift.changedSnapshots.toLocaleString("en-US")} source snapshot changed since save, {drawnAreaRecordDrift.snapshotsNotComparable.toLocaleString("en-US")} shared-record snapshot comparison unavailable).
+                      </p>
+                    )}
+                    {!responsePending &&
+                      !drawnAreaRecordDrift &&
+                      drawnAreaRecordDriftComparability?.status ===
+                        "unavailable" && (
+                        <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
+                          {drawnAreaRecordDriftComparability.detail}
+                        </p>
+                      )}
+                  </div>
+
+                  {savedWorkstation && (
+                    <div className="grid gap-px bg-[#0C1B33]/8 sm:grid-cols-2">
+                      <div className="min-w-0 bg-[#FAF9F6] px-4 py-4">
+                        <p className="mb-2 font-mono-bureau text-[8px] uppercase tracking-[0.2em] text-[#0C1B33]/35">
+                          Saved vacancy view
+                        </p>
+                        <p className="break-words text-[12px] leading-relaxed text-[#0C1B33]/65">
+                          {savedVacancyFilterLabels.length > 0
+                            ? savedVacancyFilterLabels.join(" · ")
+                            : "No additional vacancy filters"}
+                        </p>
+                      </div>
+                      <div className="min-w-0 bg-[#FAF9F6] px-4 py-4">
+                        <p className="mb-2 font-mono-bureau text-[8px] uppercase tracking-[0.2em] text-[#0C1B33]/35">
+                          Saved permit-record view
+                        </p>
+                        <p className="break-words text-[12px] leading-relaxed text-[#0C1B33]/65">
+                          {savedPermitFilterLabels.length > 0
+                            ? savedPermitFilterLabels.join(" · ")
+                            : "No permit-record filters"}
+                        </p>
+                      </div>
+                      {savedWorkstation.practitionerNotes && (
+                        <div className="min-w-0 bg-[#FFFDF8] px-4 py-4 sm:col-span-2">
+                          <p className="mb-2 font-mono-bureau text-[8px] uppercase tracking-[0.2em] text-[#0C1B33]/35">
+                            Practitioner notes · user-authored
+                          </p>
+                          <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-[#0C1B33]/65">
+                            {savedWorkstation.practitionerNotes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-px bg-[#0C1B33]/8 sm:grid-cols-4">
+                    {[
+                      [
+                        "Vacancy signals",
+                        spreadsheetCount(vacancySpreadsheetStats.total, "Loading"),
+                      ],
+                      [
+                        "Vacant land",
+                        spreadsheetCount(vacancySpreadsheetStats.land, "..."),
+                      ],
+                      [
+                        "Buildings",
+                        spreadsheetCount(vacancySpreadsheetStats.buildings, "..."),
+                      ],
+                      [
+                        "Public ownership",
+                        spreadsheetCount(
+                          vacancySpreadsheetStats.publicOwnership,
+                          "...",
+                        ),
+                      ],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0 bg-[#FAF9F6] px-4 py-4">
+                        <span className="mb-1 block font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/30">
+                          {label}
+                        </span>
+                        <span className="break-words font-mono-bureau text-[17px] text-[#0C1B33]/75">
+                          {value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {areaSnapshotSection && (
+                    <SavedAreaEvidenceSection
+                      section={areaSnapshotSection}
+                      eyebrow="Saved snapshot"
+                    />
+                  )}
+                  {additionalSections.map((section) => (
+                    <SavedAreaEvidenceSection
+                      key={section.id ?? section.title}
+                      section={section}
+                      eyebrow="Saved report detail"
+                    />
+                  ))}
+                </section>
+
+                <section
+                  id="saved-area-vacancy"
+                  className="scroll-mt-20 space-y-6"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+                        02 · Vacancy
+                      </p>
+                      <h2 className="font-editorial text-3xl text-[#0C1B33]">
+                        Tracked public-record vacancy signals
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/50">
+                        These are current records returned inside the saved
+                        polygon under the report&apos;s saved evidence and
+                        workstation filters. They are signals for follow-up, not
+                        a complete inventory of vacant or available property.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleVacancySpreadsheetExport}
+                      disabled={
+                        isLoadingVacancySpreadsheet ||
+                        permitResponsePending ||
+                        isExportingVacancySpreadsheet ||
+                        !canExportVacancySpreadsheet
+                      }
+                      className="inline-flex w-full items-center justify-center gap-2 bg-[#0C1B33] px-6 py-3 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#0C1B33]/80 disabled:cursor-default disabled:opacity-50 sm:w-auto"
+                    >
+                      {isLoadingVacancySpreadsheet ||
+                      permitResponsePending ||
+                      isExportingVacancySpreadsheet ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5" />
+                      )}
+                      Download CSV
+                    </button>
+                  </div>
+
+                  {vacancySpreadsheetError && (
+                    <div className="border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+                      {vacancySpreadsheetError} No zero-record claim is being
+                      made.
+                    </div>
+                  )}
+
+                  {responsePending ? (
+                    <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] px-5 py-10 text-center text-[13px] text-[#0C1B33]/40">
+                      <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+                      Loading vacancy records...
+                    </div>
+                  ) : vacancySpreadsheetError ? null : features.length > 0 ? (
+                    <div className="space-y-3">
+                      {visibleFeatures.map((feature, rowIndex) => {
+                        const property = feature.properties ?? {};
+                        const programName =
+                          typeof property.programName === "string" &&
+                          property.programName.trim()
+                            ? property.programName.trim()
+                            : null;
+                        const managingOrganization =
+                          typeof property.managingOrganization === "string" &&
+                          property.managingOrganization.trim()
+                            ? property.managingOrganization.trim()
+                            : null;
+                        const applicationUrl = safeVacancyProgramUrl(
+                          property.applicationUrl,
+                        );
+                        const sourceContext = programContextToText(
+                          property.programContext,
+                        );
+                        const sourceStatus =
+                          typeof property.status === "string" &&
+                          property.status.trim()
+                            ? property.status.trim()
+                            : "Not recorded";
+                        const sourceLabel = String(
+                          property.sourceDatasetLabel ??
+                            property.source ??
+                            "Source not recorded",
+                        );
+                        const sourceRecordDate =
+                          typeof property.sourceRecordDate === "string" &&
+                          property.sourceRecordDate
+                            ? property.sourceRecordDate.slice(0, 10)
+                            : "Not recorded";
+                        const freshnessClass = String(
+                          property.freshnessClass ?? "Not classified",
+                        ).replaceAll("_", " ");
+                        const licenseCheckState = String(
+                          property.licenseCheckState ?? "Not recorded",
+                        ).replaceAll("_", " ");
+                        const hasSourceFollowUp = Boolean(
+                          sourceContext ||
+                            applicationUrl ||
+                            (typeof property.sourceUrl === "string" &&
+                              property.sourceUrl),
+                        );
+                        const squareFeet = Number(property.squareFeet ?? 0);
+
+                        return (
+                          <article
+                            key={`${property.recordId ?? property.address ?? "property"}-${rowIndex}`}
+                            className="min-w-0 border border-[#0C1B33]/10 bg-white px-5 py-5 sm:px-6"
+                          >
+                            <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="min-w-0">
+                                <p className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/35">
+                                  {property.propertyType === "vacant_land"
+                                    ? "Tracked land signal"
+                                    : property.propertyType === "vacant_building"
+                                      ? "Tracked building signal"
+                                      : "Tracked vacancy signal"}
+                                </p>
+                                <h3 className="mt-1 break-words font-editorial text-2xl text-[#0C1B33]">
+                                  {String(property.address ?? "Unknown address")}
+                                </h3>
+                                <p className="mt-2 break-words text-[12px] leading-relaxed text-[#0C1B33]/50">
+                                  Source: {sourceLabel} · Source status: {sourceStatus}
+                                  {` · Source record date: ${sourceRecordDate}`}
+                                  {` · Evidence classification: ${freshnessClass}`}
+                                  {` · License screen: ${licenseCheckState}`}
+                                  {programName ? ` · ${programName}` : ""}
+                                  {managingOrganization
+                                    ? ` · Managed by ${managingOrganization}`
+                                    : ""}
+                                </p>
+                              </div>
+                              <a
+                                href={buildIncentiveAnalysisUrl(feature)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex shrink-0 items-center justify-center gap-1.5 border border-[#2563EB]/25 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB] transition-colors hover:border-[#2563EB]/45 hover:bg-[#2563EB]/5"
+                              >
+                                <ArrowRight className="h-3 w-3" />
+                                Run incentive analysis
+                              </a>
+                            </div>
+
+                            <dl className="mt-5 grid grid-cols-2 gap-px bg-[#0C1B33]/8 lg:grid-cols-4">
+                              {[
+                                ["Ward", String(property.ward ?? "Not recorded")],
+                                [
+                                  "Community area",
+                                  String(property.communityArea ?? "Not recorded"),
+                                ],
+                                [
+                                  "Zoning",
+                                  String(property.zoningClass ?? "Not recorded"),
+                                ],
+                                [
+                                  "Recorded square feet",
+                                  squareFeet > 0
+                                    ? squareFeet.toLocaleString("en-US")
+                                    : "Not recorded",
+                                ],
+                              ].map(([label, value]) => (
+                                <div key={label} className="min-w-0 bg-[#FAF9F6] px-3 py-3">
+                                  <dt className="font-mono-bureau text-[7px] uppercase tracking-[0.16em] text-[#0C1B33]/30">
+                                    {label}
+                                  </dt>
+                                  <dd className="mt-1 break-words text-[12px] text-[#0C1B33]/65">
+                                    {value}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+
+                            <div className="mt-4 grid min-w-0 gap-3 text-[12px] leading-relaxed text-[#0C1B33]/50 sm:grid-cols-2">
+                              <div className="min-w-0 break-words">
+                                <span className="font-medium text-[#0C1B33]/70">
+                                  Ownership context:
+                                </span>{" "}
+                                {String(property.ownerName ?? "Owner not recorded")}
+                                {property.ownerType
+                                  ? ` · ${String(property.ownerType)}`
+                                  : ""}
+                              </div>
+                              <div className="min-w-0 break-words">
+                                <span className="font-medium text-[#0C1B33]/70">
+                                  Incentive-zone matches:
+                                </span>{" "}
+                                {zoneMatchesToText(property.zoneMatches) ||
+                                  "No matches recorded"}
+                              </div>
+                            </div>
+
+                            {hasSourceFollowUp && (
+                              <div className="mt-4 min-w-0 border-t border-[#0C1B33]/8 pt-4 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                                {sourceContext && (
+                                  <p className="break-words">
+                                    Published program context: {sourceContext}.
+                                    Verify current availability and terms.
+                                  </p>
+                                )}
+                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                                  {typeof property.sourceUrl === "string" &&
+                                    property.sourceUrl && (
+                                      <a
+                                        href={property.sourceUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 break-words text-[#2563EB] hover:underline"
+                                      >
+                                        {String(
+                                          property.sourceDatasetLabel ??
+                                            property.source ??
+                                            "Source record",
+                                        )}
+                                        <ExternalLink className="h-3 w-3 shrink-0" />
+                                      </a>
+                                    )}
+                                  {applicationUrl && (
+                                    <a
+                                      href={applicationUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
+                                    >
+                                      Review published program record
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+
+                      {remainingFeatureCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSavedAreaVisibleVacancyCount((count) => count + 24)
+                          }
+                          className="w-full border border-[#0C1B33]/15 bg-[#FAF9F6] px-5 py-3 font-mono-bureau text-[9px] uppercase tracking-[0.16em] text-[#0C1B33]/60 transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
+                        >
+                          Load 24 more · {remainingFeatureCount.toLocaleString("en-US")} remaining
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] px-5 py-10 text-center text-[13px] leading-relaxed text-[#0C1B33]/45">
+                      {vacancyEmptyStateMessage}
+                    </div>
+                  )}
+
+                  {vacancySections.map((section) => (
+                    <SavedAreaEvidenceSection
+                      key={section.title}
+                      section={section}
+                      eyebrow="Generation-time vacancy shortlist"
+                    />
+                  ))}
+                </section>
+
+                {contextSections.length > 0 && (
+                  <section
+                    id="saved-area-context"
+                    className="scroll-mt-20 space-y-6"
+                  >
+                    <div>
+                      <p className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+                        03 · Area context
+                      </p>
+                      <h2 className="font-editorial text-3xl text-[#0C1B33]">
+                        Context carried by the vacancy records
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/50">
+                        Zone and ownership counts below are attributes of the
+                        displayed vacancy signals. They do not measure complete
+                        polygon-wide zone coverage or every owner in the area.
+                      </p>
+                    </div>
+                    {contextSections.map((section) => (
+                      <SavedAreaEvidenceSection
+                        key={section.title}
+                        section={section}
+                        eyebrow="Vacancy-record context"
+                      />
+                    ))}
+                  </section>
+                )}
+
+                {showPermitEvidence && (
+                  <section
+                    id="saved-area-permits"
+                    className="scroll-mt-20 space-y-6"
+                  >
+                    <div>
+                      <p className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+                        {contextSections.length > 0 ? "04" : "03"} · Permit activity
+                      </p>
+                      <h2 className="font-editorial text-3xl text-[#0C1B33]">
+                        Saved permit filing context
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/50">
+                        Permit figures are the source-separated, geocoded filing
+                        context attached when this report was saved. A filing
+                        does not prove construction started, finished, or remains
+                        active.
+                      </p>
+                    </div>
+                    {isLoadingSavedAreaPermit && (
+                      <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] px-5 py-4 text-[13px] leading-relaxed text-[#0C1B33]/50">
+                        Refreshing current permit records for the saved polygon...
+                      </div>
+                    )}
+                    {savedAreaPermitError && (
+                      <div className="border border-amber-200 bg-amber-50 px-5 py-4 text-[13px] leading-relaxed text-amber-900/75">
+                        {savedAreaPermitError}
+                      </div>
+                    )}
+                    {permitSections.length > 0 ? (
+                      permitSections.map((section) => (
+                        <SavedAreaEvidenceSection
+                          key={section.title}
+                          section={section}
+                          eyebrow="Saved permit evidence"
+                        />
+                      ))
+                    ) : (
+                      <div className="border border-amber-200 bg-amber-50 px-5 py-4 text-[13px] leading-relaxed text-amber-900/75">
+                        Permit evidence was unavailable when this report was
+                        saved. No zero-activity claim is being made.
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                <section
+                  id="saved-area-sources"
+                  className="scroll-mt-20 space-y-6"
+                >
+                  <div>
+                    <p className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.24em] text-[#2563EB]">
+                      {showPermitEvidence
+                        ? contextSections.length > 0
+                          ? "05"
+                          : "04"
+                        : contextSections.length > 0
+                          ? "04"
+                          : "03"}{" "}
+                      · Sources & methods
+                    </p>
+                    <h2 className="font-editorial text-3xl text-[#0C1B33]">
+                      Verify the evidence at its source
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/50">
+                      Source families remain separate throughout this report.
+                      Refresh and coverage dates describe the Explorer&apos;s
+                      retrieval, not a guarantee that every upstream record is
+                      current or complete.
+                    </p>
+                  </div>
+
+                  {provenanceSections.map((section) => (
+                    <SavedAreaEvidenceSection
+                      key={section.title}
+                      section={section}
+                      eyebrow="Boundary provenance"
+                    />
+                  ))}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {report.dataSources?.map((source) => (
+                      <article
+                        key={source.id}
+                        className="min-w-0 border border-[#0C1B33]/10 bg-white px-5 py-5"
+                      >
+                        <p className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/30">
+                          Public source
+                        </p>
+                        <h3 className="mt-2 break-words text-[15px] font-medium text-[#0C1B33]/80">
+                          {source.label}
+                        </h3>
+                        <p className="mt-2 break-words text-[12px] leading-relaxed text-[#0C1B33]/50">
+                          {source.description}
+                        </p>
+                        {source.url && (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB] hover:underline"
+                          >
+                            Open source
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+
+                  <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] px-5 py-4 text-[12px] leading-relaxed text-[#0C1B33]/55">
+                    <span className="font-medium text-[#0C1B33]/75">
+                      Current vacancy refresh:
+                    </span>{" "}
+                    {currentCoverage
+                      ? `${currentCoverage.coverageStatus} coverage from ${currentCoverage.sourcePath}. ${currentCoverage.returnedCount.toLocaleString("en-US")} record${currentCoverage.returnedCount === 1 ? "" : "s"} returned before saved display filters; license screening ${currentCoverage.licenseScreening.status}.`
+                      : "Coverage metadata is unavailable until the exact-polygon refresh completes."}
+                  </div>
+                  <div className="border border-[#0C1B33]/10 bg-[#FAF9F6] px-5 py-4 text-[12px] leading-relaxed text-[#0C1B33]/55">
+                    <span className="font-medium text-[#0C1B33]/75">
+                      Current permit refresh:
+                    </span>{" "}
+                    {savedAreaPermitAnalysis
+                      ? `${formatPermitAreaCoverageLabel(savedAreaPermitAnalysis)}. ${savedAreaPermitAnalysis.records.length.toLocaleString("en-US")} recent record${savedAreaPermitAnalysis.records.length === 1 ? "" : "s"} returned for record-level filtering; full-polygon aggregates cover ${savedAreaPermitAnalysis.totalFilings.toLocaleString("en-US")} geocoded filing${savedAreaPermitAnalysis.totalFilings === 1 ? "" : "s"}.`
+                      : savedAreaPermitError
+                        ? "Unavailable. The CSV identifies this failed lookup explicitly and does not report zero permit activity."
+                        : "Refreshing current records for the exact saved polygon."}
+                  </div>
+                </section>
+              </main>
+            </div>
+
+            <div className="mx-auto mt-8 max-w-[1180px] print:hidden">
+              <div className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
+                <button
+                  onClick={handlePrint}
+                  className="inline-flex w-full items-center justify-center gap-2 bg-[#0C1B33] px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white shadow-md transition-colors hover:bg-[#0C1B33]/80 sm:w-auto"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={handleSaveReport}
+                  className="inline-flex w-full items-center justify-center gap-2 bg-[#2563EB] px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white shadow-md transition-colors hover:bg-[#1d4ed8] sm:w-auto"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Save Report
+                </button>
+                <StartPreparationPacketButton
+                  report={report}
+                  wizardState={reportWizardState}
+                  source={`${analyticsSource}_area_actions`}
+                  className="w-full px-8 py-3.5 shadow-md sm:w-auto"
+                />
+                <button
+                  onClick={handleEmailReportClick}
+                  className="inline-flex w-full items-center justify-center gap-2 border border-[#2563EB]/30 bg-white px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#2563EB] shadow-md transition-colors hover:border-[#2563EB]/50 hover:bg-[#2563EB]/5 sm:w-auto"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Email This to Me
+                </button>
+                <button
+                  onClick={onStartOver}
+                  className="inline-flex w-full items-center justify-center gap-2 border border-[#0C1B33]/15 bg-white px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33]/60 shadow-md transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33] sm:w-auto"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  New Search
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {downloadGateOpen && (
+            <DownloadGateModal
+              reportAddress={report.metadata?.address}
+              reportTitle={report.title}
+              onDownload={handleDownloadAfterCapture}
+              onClose={() => setDownloadGateOpen(false)}
+            />
+          )}
+          {emailDialogOpen && (
+            <EmailReportModal
+              report={report}
+              onClose={() => setEmailDialogOpen(false)}
+              onSent={() =>
+                trackEvent(
+                  "report_emailed",
+                  reportAnalyticsPayload(report, "report_email_modal"),
+                )
+              }
+            />
+          )}
+          {saveModalOpen && (
+            <SaveReportModal
+              reportData={report}
+              wizardState={reportWizardState}
+              onClose={() => setSaveModalOpen(false)}
+            />
+          )}
+        </motion.div>
+      );
+    }
 
     return (
       <motion.div {...fadeIn}>
@@ -1124,11 +2039,7 @@ export function ReportDisplay({
                     ) : (
                       <tr>
                         <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          {currentLicenseConflictScreeningIncomplete
-                            ? "No conflict rows were returned, but current license screening is incomplete and cannot establish a clean zero."
-                            : currentSelectionIncomplete
-                              ? "No rows were returned, but current coverage is incomplete and cannot establish a clean zero."
-                            : `No tracked vacancy records returned for this ${isDrawnArea ? "saved area" : "locale"}.`}
+                          {vacancyEmptyStateMessage}
                         </td>
                       </tr>
                     )}

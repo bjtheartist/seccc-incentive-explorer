@@ -213,9 +213,10 @@ function render(
 describe("MapPolygonPanel permit analysis", () => {
   it("renders source-honest permit analysis without a score or cost total", () => {
     const html = render();
+    const permitStart = html.indexOf("Permit filings in this area");
     const permitSection = html.slice(
-      html.indexOf("Permit filings in this area"),
-      html.indexOf("Export Area Data (CSV)"),
+      permitStart,
+      html.indexOf("Sources and methods", permitStart),
     );
     expect(html).toContain("Permit filings in this area");
     expect(html).toContain("Public record");
@@ -279,8 +280,10 @@ describe("MapPolygonPanel permit analysis", () => {
       recordsTruncated: false,
     });
     expect(html).toContain("No geocoded permit filings fall inside this shape");
-    expect(html).not.toContain("Save Report");
-    expect(html).not.toContain("Export Area Data (CSV)");
+    expect(html).toContain("Save Report");
+    expect(html).toContain("Email This to Me");
+    expect(html).toContain("Download PDF");
+    expect(html).toContain("Export Area Data (CSV)");
     // A source-backed zero must not borrow the lookup-failure copy or its retry.
     expect(html).not.toContain("not evidence that the area has no permits");
     expect(html).not.toContain("Retry permit lookup");

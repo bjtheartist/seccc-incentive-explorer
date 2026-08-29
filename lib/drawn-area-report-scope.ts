@@ -1,5 +1,12 @@
 import type { VacancyLicenseFilter } from "@/lib/area-vacancy-presentation";
 import {
+  AREA_ANALYSIS_EVIDENCE_FAMILY_IDS,
+  normalizeAreaPractitionerNotes,
+  type AreaAnalysisEvidenceFamilyId,
+  type AreaPermitWorkstationFilters,
+  type AreaVacancyWorkstationFilters,
+} from "@/lib/area-analysis-workstation";
+import {
   normalizeCclbaSourceCoverage,
   unavailableCclbaSourceCoverage,
   type CclbaSourceCoverage,
@@ -22,6 +29,7 @@ export const DRAWN_AREA_REPORT_MAX_RINGS = 20;
 export const DRAWN_AREA_REPORT_MAX_POSITIONS = 5_000;
 export const DRAWN_AREA_REPORT_MAX_RECORD_REFS = 10_000;
 export const DRAWN_AREA_REPORT_MAX_NAME_LENGTH = 200;
+export const DRAWN_AREA_REPORT_MAX_FILTER_VALUE_LENGTH = 500;
 
 export type DrawnAreaVacancySourceMode = "database" | "static_fallback";
 export type DrawnAreaVacancySourcePath =
@@ -109,6 +117,18 @@ export interface DrawnAreaPermitProvenance {
   coverage: DrawnAreaPermitCoverageProvenance | null;
 }
 
+/**
+ * Optional user-authored workstation state captured with the exact-area report.
+ * It is deliberately separate from source provenance: filters and notes describe
+ * the saved view, not the underlying public records.
+ */
+export interface DrawnAreaWorkstationSnapshot {
+  activeEvidenceFamily: AreaAnalysisEvidenceFamilyId;
+  practitionerNotes?: string;
+  vacancyFilters: AreaVacancyWorkstationFilters;
+  permitFilters: AreaPermitWorkstationFilters;
+}
+
 export interface DrawnAreaReportScope {
   version: typeof DRAWN_AREA_REPORT_SCOPE_VERSION;
   kind: "drawn-area";
@@ -127,6 +147,8 @@ export interface DrawnAreaReportScope {
     vacancy: DrawnAreaVacancyProvenance;
     permit: DrawnAreaPermitProvenance;
   };
+  /** Absent on version-1 reports saved before the workstation was introduced. */
+  workstation?: DrawnAreaWorkstationSnapshot;
 }
 
 export type DrawnAreaReportScopeFailureReason =
@@ -138,7 +160,8 @@ export type DrawnAreaReportScopeFailureReason =
   | "invalid-polygon"
   | "invalid-fingerprint"
   | "invalid-provenance"
-  | "invalid-record-manifest";
+  | "invalid-record-manifest"
+  | "invalid-workstation";
 
 export interface DrawnAreaReportScopeSuccess {
   ok: true;
@@ -182,6 +205,7 @@ export interface CreateDrawnAreaReportScopeInput {
     analysis?: PermitAreaResult | null;
     loadFailed?: boolean;
   };
+  workstation?: DrawnAreaWorkstationSnapshot;
 }
 
 type Position = [number, number];
@@ -651,6 +675,134 @@ function normalizePermitProvenance(
   return { status: "ready", source, coverage };
 }
 
+function normalizeWorkstationQuery(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (normalized.length > DRAWN_AREA_REPORT_MAX_FILTER_VALUE_LENGTH) return null;
+  return normalized;
+}
+
+function normalizeWorkstationFacetValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (
+    !normalized ||
+    normalized.length > DRAWN_AREA_REPORT_MAX_FILTER_VALUE_LENGTH ||
+    /[\u0000-\u001f\u007f]/.test(normalized)
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
+function normalizeWorkstationVacancyFilters(
+  value: unknown,
+): AreaVacancyWorkstationFilters | null {
+  if (!isPlainObject(value)) return null;
+  const query = normalizeWorkstationQuery(value.query);
+  const ownerType = normalizeWorkstationFacetValue(value.ownerType);
+  const zoneKey = normalizeWorkstationFacetValue(value.zoneKey);
+  const source = normalizeWorkstationFacetValue(value.source);
+  if (
+    query === null ||
+    (value.freshness !== "all" &&
+      value.freshness !== "current_screening" &&
+      value.freshness !== "recent_reports") ||
+    (value.licenseConflict !== "all" &&
+      value.licenseConflict !== "conflicts") ||
+    (value.canonicalType !== "all" &&
+      value.canonicalType !== "land" &&
+      value.canonicalType !== "building" &&
+      value.canonicalType !== "storefront" &&
+      value.canonicalType !== "other") ||
+    !ownerType ||
+    !zoneKey ||
+    !source
+  ) {
+    return null;
+  }
+  return {
+    query,
+    freshness: value.freshness,
+    licenseConflict: value.licenseConflict,
+    canonicalType: value.canonicalType,
+    ownerType,
+    zoneKey,
+    source,
+  };
+}
+
+function normalizeWorkstationPermitType(value: unknown): string | null {
+  const normalized = normalizeWorkstationFacetValue(value);
+  if (!normalized) return null;
+  if (normalized === "all") return normalized;
+  if (/^key:[a-z0-9_]+$/.test(normalized)) return normalized;
+  if (normalized.startsWith("raw:") && normalized.slice(4).trim()) {
+    return `raw:${normalized.slice(4).trim()}`;
+  }
+  return null;
+}
+
+function normalizeWorkstationPermitFilters(
+  value: unknown,
+): AreaPermitWorkstationFilters | null {
+  if (!isPlainObject(value)) return null;
+  const query = normalizeWorkstationQuery(value.query);
+  const type = normalizeWorkstationPermitType(value.type);
+  const status = normalizeWorkstationFacetValue(value.status);
+  const issueYear = normalizeWorkstationFacetValue(value.issueYear);
+  if (
+    query === null ||
+    !type ||
+    !status ||
+    !issueYear ||
+    (issueYear !== "all" &&
+      issueYear !== "unknown" &&
+      !/^\d{4}$/.test(issueYear))
+  ) {
+    return null;
+  }
+  return { query, type, status, issueYear };
+}
+
+/** Validate and sanitize a workstation snapshot read from persisted JSON. */
+export function normalizeDrawnAreaWorkstationSnapshot(
+  value: unknown,
+): DrawnAreaWorkstationSnapshot | null {
+  if (!isPlainObject(value)) return null;
+  if (
+    typeof value.activeEvidenceFamily !== "string" ||
+    !AREA_ANALYSIS_EVIDENCE_FAMILY_IDS.includes(
+      value.activeEvidenceFamily as AreaAnalysisEvidenceFamilyId,
+    )
+  ) {
+    return null;
+  }
+  const vacancyFilters = normalizeWorkstationVacancyFilters(
+    value.vacancyFilters,
+  );
+  const permitFilters = normalizeWorkstationPermitFilters(value.permitFilters);
+  if (!vacancyFilters || !permitFilters) return null;
+
+  const hasPractitionerNotes = Object.prototype.hasOwnProperty.call(
+    value,
+    "practitionerNotes",
+  );
+  if (hasPractitionerNotes && typeof value.practitionerNotes !== "string") {
+    return null;
+  }
+  const practitionerNotes = normalizeAreaPractitionerNotes(
+    value.practitionerNotes,
+  );
+  return {
+    activeEvidenceFamily:
+      value.activeEvidenceFamily as AreaAnalysisEvidenceFamilyId,
+    ...(practitionerNotes ? { practitionerNotes } : {}),
+    vacancyFilters,
+    permitFilters,
+  };
+}
+
 /** Validate untrusted/persisted JSON and return a sanitized contract. */
 export function parseDrawnAreaReportScope(
   value: unknown,
@@ -711,6 +863,16 @@ export function parseDrawnAreaReportScope(
       "Drawn-area source, coverage, filter, or record-manifest provenance is malformed.",
     );
   }
+  const workstation =
+    value.workstation === undefined
+      ? undefined
+      : normalizeDrawnAreaWorkstationSnapshot(value.workstation);
+  if (value.workstation !== undefined && !workstation) {
+    return fail(
+      "invalid-workstation",
+      "Drawn-area workstation evidence family, notes, or filters are malformed.",
+    );
+  }
 
   return {
     ok: true,
@@ -721,6 +883,7 @@ export function parseDrawnAreaReportScope(
       name,
       generatedAt: value.generatedAt,
       provenance: { vacancy, permit },
+      ...(workstation ? { workstation } : {}),
     },
   };
 }
@@ -836,6 +999,7 @@ export function createDrawnAreaReportScope(
     name: input.name,
     generatedAt: input.generatedAt,
     provenance: { vacancy, permit },
+    ...(input.workstation ? { workstation: input.workstation } : {}),
   });
 }
 

@@ -201,6 +201,14 @@ import {
   fetchDrawnAreaVacancy,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+import { defaultDrawnAreaName } from "@/lib/polygon-investment";
+import {
+  DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS,
+  DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+  type AreaAnalysisEvidenceFamilyId,
+  type AreaPermitWorkstationFilters,
+  type AreaVacancyWorkstationFilters,
+} from "@/lib/area-analysis-workstation";
 
 const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 30_000;
 
@@ -645,6 +653,29 @@ export default function MapView() {
   const [polygonGeometry, setPolygonGeometry] = useState<GeoJSON.Polygon | null>(null);
   const [polygonLoading, setPolygonLoading] = useState(false);
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
+  const [areaAnalysisName, setAreaAnalysisName] = useState(() => defaultDrawnAreaName());
+  const [areaAnalysisNotes, setAreaAnalysisNotes] = useState("");
+  const [areaAnalysisEvidenceFamily, setAreaAnalysisEvidenceFamily] =
+    useState<AreaAnalysisEvidenceFamilyId>("overview");
+  const [areaAnalysisVacancyFilters, setAreaAnalysisVacancyFilters] =
+    useState<AreaVacancyWorkstationFilters>(() => ({
+      ...DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+      freshness: "current_screening",
+    }));
+  const [areaAnalysisPermitFilters, setAreaAnalysisPermitFilters] =
+    useState<AreaPermitWorkstationFilters>(() => ({
+      ...DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS,
+    }));
+  const resetAreaAnalysisWorkstation = useCallback(() => {
+    setAreaAnalysisName(defaultDrawnAreaName());
+    setAreaAnalysisNotes("");
+    setAreaAnalysisEvidenceFamily("overview");
+    setAreaAnalysisVacancyFilters({
+      ...DEFAULT_AREA_VACANCY_WORKSTATION_FILTERS,
+      freshness: "current_screening",
+    });
+    setAreaAnalysisPermitFilters({ ...DEFAULT_AREA_PERMIT_WORKSTATION_FILTERS });
+  }, []);
   const polygonVacancyRequests = useMemo(
     () => createDrawnAreaVacancyRequestLifecycle(),
     [],
@@ -4768,6 +4799,7 @@ export default function MapView() {
             setPolygonGeometry(null);
             setPolygonLoading(false);
             setPolygonPanelOpen(false);
+            resetAreaAnalysisWorkstation();
             setSnapshotOpen(false);
             draw.changeMode("draw_polygon");
             drawModeRef.current = true;
@@ -4788,6 +4820,16 @@ export default function MapView() {
           editing={polygonEditing}
           editDirty={polygonEditDirty}
           adminSessionActive={adminSessionActive}
+          areaName={areaAnalysisName}
+          onAreaNameChange={setAreaAnalysisName}
+          practitionerNotes={areaAnalysisNotes}
+          onPractitionerNotesChange={setAreaAnalysisNotes}
+          activeEvidenceFamily={areaAnalysisEvidenceFamily}
+          onActiveEvidenceFamilyChange={setAreaAnalysisEvidenceFamily}
+          vacancyWorkstationFilters={areaAnalysisVacancyFilters}
+          onVacancyWorkstationFiltersChange={setAreaAnalysisVacancyFilters}
+          permitWorkstationFilters={areaAnalysisPermitFilters}
+          onPermitWorkstationFiltersChange={setAreaAnalysisPermitFilters}
           onEdit={beginPolygonEdit}
           onEditDone={finishPolygonEdit}
           onEditCancel={cancelPolygonEdit}
@@ -4800,7 +4842,8 @@ export default function MapView() {
             polygonVacancyRequests.cancel();
             polygonEditingRef.current = false;
             polygonGeometryRef.current = null;
-            drawRef.current?.deleteAll();
+            const draw = drawRef.current;
+            draw?.deleteAll();
             if (mapRef.current) setAnalyzedPolygon(mapRef.current, null);
             setPolygonEditing(false);
             setPolygonEditDirty(false);
@@ -4810,8 +4853,15 @@ export default function MapView() {
             setPolygonGeometry(null);
             setPolygonLoading(false);
             setPolygonPanelOpen(false);
-            drawModeRef.current = false;
-            setDrawMode(false);
+            resetAreaAnalysisWorkstation();
+            if (draw) {
+              draw.changeMode("draw_polygon");
+              drawModeRef.current = true;
+              setDrawMode(true);
+            } else {
+              drawModeRef.current = false;
+              setDrawMode(false);
+            }
           }}
         />
       )}
@@ -4883,6 +4933,7 @@ export default function MapView() {
               setPolygonGeometry(null);
               setPolygonLoading(false);
               setPolygonPanelOpen(false);
+              resetAreaAnalysisWorkstation();
               draw.changeMode("draw_polygon");
               drawModeRef.current = true;
               setDrawMode(true);
