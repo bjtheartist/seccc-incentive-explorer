@@ -74,6 +74,45 @@ concrete: populating real `costSignals` values on any specific program
 each program's actual published fee terms, not a code change — evidenced
 in its own row and in the "Remainder" note below.
 
+## Fork-unification round (drawn-area rendering) — 2026-08-29
+
+Separate initiative from the persona spec v2 work above (that work's own
+INTENTIONAL-DIFF(a-d) classes don't apply here — this section borrows this
+doc's table/evidence STYLE for a different doctrine: "SHARED COMPONENTS
+ONLY across the two report forks" for drawn-area rendering). Logged here
+per that doctrine's own requirement that a fork divergence never be closed
+in silence.
+
+**Problem.** Commit 78ea06f added a byte-identical 309-line block to BOTH
+`app/report/page.tsx`'s local `ReportDisplay` and the exported
+`components/report/ReportDisplay.tsx` (the plain vacancy-spreadsheet
+render for a drawn-area report). Commit aa387b1 then added ~1,021 more
+lines — the "area analysis workstation," a read-only saved-area evidence
+view — to `components/report/ReportDisplay.tsx` ONLY, re-diverging the
+forks exactly as the doctrine forbids.
+
+**Ruling: parity by construction (the spec's default), not a pinned
+intentional diff.** The alternative — pinning the workstation as a
+workspace-fork-only difference — would have required evidence that the
+live in-page fork (`app/report/page.tsx`) must not show the workstation
+because it depends on state the live path lacks. The opposite is true:
+concrete evidence shows the live fork could never have reached that branch
+in the first place, which is why unifying is free of behavior change.
+
+| Evidence | Detail |
+|---|---|
+| `drawnAreaScope` origin | `GeneratedReport.drawnAreaScope` (lib/report-engine.ts) is populated ONLY by `components/map/MapPolygonPanel.tsx`'s client-side `createDrawnAreaReportScope()` call (lib/drawn-area-report-scope.ts) — the ONLY caller in the repo. |
+| How a drawn-area report reaches a viewer | `MapPolygonPanel.tsx`'s own actions (Save/Email/Download PDF/Export CSV) either open `SaveReportModal`/`EmailReportModal` in place or hit `/api/saved-reports`, landing the report in the workspace. None of them navigate to `/report` with the in-memory `areaReport`. |
+| `app/report/page.tsx`'s own report sources | `ReportWizardPage`'s `report` state is set only by `generateReportRemote()` (server call for the address/neighborhood wizard, instant mode, and corridor mode) — grep confirms ZERO references to `drawnAreaScope` anywhere in `app/report/page.tsx` before this round. `generateReportRemote()` never attaches `drawnAreaScope`. |
+| Consequence | `resolveVacancySpreadsheetScope(report, wizardState).status === "ready" && kind === "drawn-area"` was structurally unreachable in the live fork. The workstation branch, if ported in, was dead code there — behavior-neutral to add, and it closes the doctrine gap instead of leaving a documented loophole in the fork-fence guard. |
+| What actually changed | Both forks now call the SAME `useVacancySpreadsheetSection` hook (components/report/useVacancySpreadsheetSection.ts) and render the SAME `VacancySpreadsheetSection` component (components/report/VacancySpreadsheetSection.tsx), which contains the workstation branch. `app/report/page.tsx` gains the ability to show it if a future change ever lets a drawn-area report reach that route — today, still unreachable, so no observable behavior changed. |
+| Pinning test | `lib/__tests__/fork-parity-guard.test.ts` — "fork parity: drawn-area surfaces are shared components only" — asserts both fork files import the shared module(s) and neither locally re-declares the shared component's own rendered copy (signature set read live from the shared file, not hand-maintained). |
+
+| Deliverable | Locus | Verification | Status |
+|---|---|---|---|
+| Twin 309-line block (78ea06f) + workstation 1,021-line block (aa387b1) unified into one shared render surface | `components/report/VacancySpreadsheetSection.tsx` (JSX: workstation branch, plain vacancy-spreadsheet table, "unavailable" scope banner, `SavedAreaEvidenceSection`) + `components/report/useVacancySpreadsheetSection.ts` (all state/effects/handlers: fetch, permit refresh, CSV export, drift comparison) | `components/report/__tests__/drawn-area-vacancy-report.test.tsx`, `components/report/__tests__/public-report-display.test.tsx` (both unmodified, still green — the extraction is a pure relocation behind the same call signature both tests already exercised), `app/report/__tests__/report-page-live-renderer.test.tsx` (ordinal `useState` arrays regenerated same-commit) | PASS |
+| Fork-fence guard (recurrence prevention) | `lib/source-guard/fork-parity.ts` | `lib/__tests__/fork-parity-guard.test.ts` | PASS |
+
 ## What shipped (Tier 1 — v1 spec, complete)
 
 | Deliverable | Locus | Verification |

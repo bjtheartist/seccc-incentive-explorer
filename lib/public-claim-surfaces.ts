@@ -103,6 +103,25 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["components/report/ReasonChips.tsx"],
   },
   {
+    // Fork-unification round: newly extracted from the report-live-route /
+    // report-saved-fork forks above (both already registered) into its own
+    // shared file — not a pre-existing unaudited gap, so it belongs here,
+    // not in PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS. Its distinguishing
+    // safety property is the hand-authored screening/disclaimer prose ("does
+    // not turn public records into an availability, ownership, zoning, or
+    // permit determination," the workstation's evidence-family framing,
+    // record-drift disclosure copy) — reviewed-copy, not PublicProgramView:
+    // it never imports the internal Program catalog or program-public DTO
+    // (its "programName"/"programContext" fields come from vacancy/vacant-
+    // property records, a different data domain), and its zone-match
+    // display (zoneMatchesToText) formats already-resolved data rather than
+    // performing v1/v2 zone-evidence resolution itself.
+    id: "vacancy-spreadsheet-section",
+    description: "Drawn-area / vacancy-spreadsheet report surface (plain table, saved-area read-only workstation, unavailable-scope banner), shared by both report forks.",
+    contracts: ["reviewed-copy"],
+    files: ["components/report/VacancySpreadsheetSection.tsx"],
+  },
+  {
     id: "corridor-investment-chart",
     description: "Supporter persona's corridor small-business-lending-by-year chart (real FFIEC CRA series), shared by both report forks.",
     contracts: ["PublicProgramView"],
