@@ -1459,3 +1459,125 @@ export function VacancySpreadsheetSection({
     </motion.div>
   );
 }
+
+/**
+ * The legacy mid-report vacancy-spreadsheet summary card: locale-level
+ * stats + a CSV export button, shown inline within the main report body
+ * (below the persona chrome, above the Verdict Card) for reports that
+ * carry a community-area vacancy locale but aren't rendering the full
+ * VacancySpreadsheetSection view (i.e. `compact` reports and persona
+ * boards never show it; the full-page view above pre-empts it otherwise).
+ *
+ * Gate-review finding (2026-08-29): this predates commit 78ea06f — the
+ * 309-line block that commit added was never the ONLY duplicate; this
+ * card was already byte-identical between both forks before that commit,
+ * which is why the original 309-line count missed it. Extracted here so
+ * the fork-fence guard's signature scan (drawn from this file's own
+ * source) covers it too.
+ */
+export function VacancySpreadsheetSummaryCard({
+  compact,
+  showPersonaView,
+  vacancy,
+}: {
+  compact?: boolean;
+  showPersonaView: boolean;
+  vacancy: VacancySpreadsheetSectionData;
+}) {
+  const {
+    vacancySpreadsheetLocale,
+    vacancySpreadsheetStats,
+    vacancySpreadsheetError,
+    isLoadingVacancySpreadsheet,
+    isExportingVacancySpreadsheet,
+    handleVacancySpreadsheetExport,
+  } = vacancy;
+
+  if (compact || showPersonaView || !vacancySpreadsheetLocale) return null;
+
+  return (
+    <div className="mb-12 border border-[#0C1B33]/8 bg-[#FAF9F6] p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+        <div className="min-w-0">
+          <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
+            Vacancy Spreadsheet
+          </div>
+          <h2 className="font-editorial text-[24px] text-[#0C1B33] mb-2">
+            Vacant properties in {vacancySpreadsheetLocale}
+          </h2>
+          <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed max-w-prose">
+            This vacancy report pulls the locale-level property spreadsheet so the analysis can move from summary findings to specific sites that may need review, outreach, or follow-up.
+          </p>
+        </div>
+        <button
+          onClick={handleVacancySpreadsheetExport}
+          disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+          className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
+        >
+          {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <FileText className="w-3.5 h-3.5" />
+          )}
+          Download CSV
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mt-6">
+        {[
+          ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
+          ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
+          ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
+          ["Public ownership", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.publicOwnership.toLocaleString()],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-white px-4 py-3">
+            <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
+              {label}
+            </span>
+            <span className="font-mono-bureau text-[16px] text-[#0C1B33]/70">
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {vacancySpreadsheetError && (
+        <p className="mt-4 text-[12px] text-red-600/70">
+          {vacancySpreadsheetError}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The legacy bottom-CTA-row "Vacancy Spreadsheet" download button —
+ * another pre-78ea06f duplicate found in the same gate-review pass as
+ * VacancySpreadsheetSummaryCard above. Deliberately just this one button,
+ * not the whole CTA row it sits in: the surrounding Save/Email/Share/New
+ * Search buttons are generic report-anatomy shared by every report type
+ * (not vacancy/drawn-area-specific), out of this component's scope.
+ */
+export function VacancySpreadsheetCsvCtaButton({
+  vacancy,
+}: {
+  vacancy: VacancySpreadsheetSectionData;
+}) {
+  const { vacancySpreadsheetLocale, isExportingVacancySpreadsheet, handleVacancySpreadsheetExport } = vacancy;
+  if (!vacancySpreadsheetLocale) return null;
+
+  return (
+    <button
+      onClick={handleVacancySpreadsheetExport}
+      disabled={isExportingVacancySpreadsheet}
+      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
+    >
+      {isExportingVacancySpreadsheet ? (
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+      ) : (
+        <FileText className="w-3.5 h-3.5" />
+      )}
+      Vacancy Spreadsheet
+    </button>
+  );
+}

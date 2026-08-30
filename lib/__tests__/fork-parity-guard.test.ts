@@ -28,6 +28,14 @@ describe("fork parity: drawn-area surfaces are shared components only — real c
     expect(signatures.size).toBeGreaterThan(20);
   });
 
+  it("the signature set covers the LEGACY mid-report vacancy-spreadsheet summary card (gate-review finding, 2026-08-29: this card predates commit 78ea06f and was originally missed by the fork-fence extraction — VacancySpreadsheetSummaryCard's own 'locale-level property spreadsheet' sentence must be a live signature, so pasting this card's copy back into a fork file turns the guard red)", () => {
+    expect(
+      [...signatures].some((s) =>
+        s.includes("locale-level property spreadsheet"),
+      ),
+    ).toBe(true);
+  });
+
   it.each(FORK_FILE_PATHS)("%s imports the shared drawn-area module(s) and carries none of their signature copy locally", (relPath) => {
     const sourceFile = forkSourceFiles.find((f) => f.getFilePath().endsWith(relPath));
     if (!sourceFile) throw new Error(`Fork file not found in project: ${relPath}`);
