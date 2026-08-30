@@ -198,6 +198,34 @@ describe("CaseWorkspace record disclosure", () => {
     );
   });
 
+  it("lays out the three analysis cards in one row at the tablet+ breakpoint and stacks them below it (vitest mirror of tests/e2e/vacancy-workbench-map.spec.ts's 'one consolidated surface' geometry check, which asserts the SAME cards share one y-position at >=768px and stack with a shared x at mobile — that box-geometry assertion needs a real browser layout engine and stays e2e-only; what a jsdom test CAN pin, and what this asserts, is the single Tailwind class both behaviors actually come from)", () => {
+    renderWorkspace([
+      record(1, {
+        pin: SUBJECT_PIN,
+        lat: 41.75823,
+        lon: -87.55234,
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /1 TEST AVE/ }));
+
+    // Same selector tests/e2e/vacancy-workbench-map.spec.ts uses via
+    // document.querySelectorAll('[aria-labelledby="record-analysis-actions"] .grid > *')
+    // to read back the three cards' rendered boxes.
+    const grid = document.querySelector('[aria-labelledby="record-analysis-actions"] .grid');
+    expect(grid).not.toBeNull();
+    // Base (mobile, <768px): implicit single column — Tailwind's bare
+    // `grid` sets one column per row unless overridden by a breakpoint
+    // variant, which is exactly what makes the mobile e2e case stack the
+    // three cards with a shared x. `md:grid-cols-3` is the breakpoint
+    // variant that switches them into one row at >=768px — the desktop
+    // e2e case's shared-y assertion. If either class is dropped, that
+    // breakpoint's e2e layout check regresses.
+    expect(grid!.className).toContain("grid");
+    expect(grid!.className).toContain("md:grid-cols-3");
+    expect(grid!.children).toHaveLength(3);
+  });
+
   it("disables coordinate- and PIN-dependent analyses without creating broken links", () => {
     renderWorkspace([record(1)]);
 

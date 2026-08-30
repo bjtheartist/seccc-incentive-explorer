@@ -164,6 +164,15 @@ export default function CaseWorkspaceMap({
   const onCandidateBoundsRef = useRef(onCandidateBounds);
   const resizingRef = useRef(false);
   const [loaded, setLoaded] = useState(false);
+  // Hardening round: tests/e2e/vacancy-workbench-map.spec.ts reads control
+  // geometry (legend/selected-action vs. Mapbox's own logo/attribution
+  // controls, which mapbox-gl repositions on resize) right after view-toggle
+  // and record-select interactions. Those measurements raced mapbox's own
+  // internal settle timing under CI runner load. Mirrors mapbox's "idle"
+  // event into the DOM (resets on any camera/resize-affecting event, so
+  // it's an honest "settled right now") so the spec can wait on a real
+  // signal instead of a fixed sleep.
+  const [mapIdle, setMapIdle] = useState(false);
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
   const [visibility, setVisibility] = useState<InfrastructureLayerVisibility>(() =>
     loadStoredInfrastructureLayerVisibility(),
@@ -220,6 +229,12 @@ export default function CaseWorkspaceMap({
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-left");
     mapRef.current = map;
+
+    // See the mapIdle state doc comment above.
+    map.on("movestart", () => setMapIdle(false));
+    map.on("zoomstart", () => setMapIdle(false));
+    map.on("resize", () => setMapIdle(false));
+    map.on("idle", () => setMapIdle(true));
     // Mobile List mode mounts this map inside `display:none`. Mapbox otherwise
     // keeps its 400x300 fallback canvas after the user switches to Map. Observe
     // the real container so every List/Map toggle produces an exact canvas fit.
@@ -588,7 +603,12 @@ export default function CaseWorkspaceMap({
 
   return (
     <div className="relative h-full min-h-[480px] w-full bg-[#F0F1EE]">
-      <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />
+      <div
+        ref={containerRef}
+        data-map-idle={mapIdle}
+        className="absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      />
       <div className="pointer-events-auto absolute right-3 top-3 z-10 hidden max-h-[calc(100%-1.5rem)] w-[228px] overflow-y-auto border border-[#0C1B33]/15 bg-white/95 px-3 py-2.5 backdrop-blur-sm md:block">
         <InfrastructureLayerControls visibility={visibility} onToggle={toggleLayer} />
       </div>

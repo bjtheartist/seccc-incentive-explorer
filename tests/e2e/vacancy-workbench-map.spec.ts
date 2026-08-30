@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForMapIdle } from "./map-ready";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
@@ -75,6 +76,10 @@ for (const width of [320, 360, 640, 667]) {
     const selectedAction = page.getByTestId("case-workspace-selected-action");
     await expect(legend).toBeVisible();
     await expect(selectedAction).toBeVisible();
+    // The list->map toggle just resized the (previously display:none) map
+    // container; mapbox repositions its own logo/attribution controls on
+    // resize. Wait for that to fully settle before reading anyone's geometry.
+    await waitForMapIdle(page);
 
     const legendBox = await legend.boundingBox();
     const selectedBox = await selectedAction.boundingBox();
@@ -117,8 +122,18 @@ test("desktop vacancy map actions clear Mapbox bottom controls", async ({ page }
   await expect(page.getByTestId("case-workspace-map-layers")).toBeVisible();
   await page.locator("section[aria-labelledby='case-workspace-title'] ul button").first().click();
 
-  const legendBox = await page.getByTestId("case-workspace-map-legend").boundingBox();
-  const selectedBox = await page.getByTestId("case-workspace-selected-action").boundingBox();
+  const legend = page.getByTestId("case-workspace-map-legend");
+  const selectedAction = page.getByTestId("case-workspace-selected-action");
+  await expect(legend).toBeVisible();
+  await expect(selectedAction).toBeVisible();
+  // Selecting that record just moved the map camera to it; wait for the
+  // resulting pan/zoom (and mapbox's own control repositioning) to settle
+  // before reading anyone's geometry — same discipline as the width-
+  // parametrized test above.
+  await waitForMapIdle(page);
+
+  const legendBox = await legend.boundingBox();
+  const selectedBox = await selectedAction.boundingBox();
   const mapboxLogoBox = await page.locator(".mapboxgl-ctrl-logo").boundingBox();
   const mapboxAttributionBox = await page.locator(".mapboxgl-ctrl-attrib").boundingBox();
   expect(legendBox).not.toBeNull();
@@ -165,7 +180,11 @@ for (const viewport of [
       .locator("section[aria-labelledby='case-workspace-title'] ul button")
       .filter({ hasText: "20261090420000" })
       .first();
-    await expect(row).toBeVisible();
+    // Same text-filtered-list readiness signal as the record-count check
+    // just above (the filtered row rendering is what we're actually
+    // waiting on) — align to the suite's standard 10s timeout instead of
+    // Playwright's 5s default, which this raced under CI runner load.
+    await expect(row).toBeVisible({ timeout: 10000 });
     await row.click();
 
     const selectedRecord = page.getByTestId("case-workspace-selected-record");
