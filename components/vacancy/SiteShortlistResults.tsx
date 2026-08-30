@@ -74,7 +74,7 @@ import {
 } from "@/lib/shortlist-zoning-filter";
 import { DISTRICT_FILTER_DISCLAIMER } from "@/lib/zoning-districts";
 import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
-import SiteShortlistMap from "./SiteShortlistMap";
+import SiteShortlistMap from "./SiteShortlistMapIsland";
 import {
   ParcelDossierDialog,
   type ParcelDossierRecord,
