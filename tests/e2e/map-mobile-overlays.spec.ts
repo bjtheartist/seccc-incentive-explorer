@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { waitForMapIdle } from "./map-ready";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
@@ -36,8 +37,13 @@ async function openMapOnPhone(page: Page) {
   // Against production over the network with SwiftShader WebGL the search
   // control can take ~35s to mount; local builds take a few seconds.
   await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 90000 });
-  // Let the map settle before tapping (tiles + interaction handlers).
-  await page.waitForTimeout(2500);
+  // Let the map settle before tapping — a real mapbox "idle" readiness
+  // signal (components/map/MapView.tsx's data-map-idle) instead of a fixed
+  // sleep. A tap computed against a map that's still loading tiles/settling
+  // its initial camera can land on the wrong feature (or none), which is
+  // exactly what made this flaky under CI runner load: the same pixel
+  // sometimes resolves a different geographic point depending on timing.
+  await waitForMapIdle(page, 30000);
 }
 
 test("tapping the map on a phone opens the location dossier fully below the search bar", async ({

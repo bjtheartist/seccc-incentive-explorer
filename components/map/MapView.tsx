@@ -217,6 +217,14 @@ export default function MapView() {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Hardening round: e2e (tests/e2e/map-mobile-overlays.spec.ts) previously
+  // waited a flat 2500ms before tapping the map, hoping tiles + interaction
+  // handlers had settled — a magic number that flaked under CI runner load.
+  // This mirrors mapbox's own "idle" event (fires once ALL pending style/
+  // tile/camera work is done) into the DOM so the test can wait on a real
+  // signal instead. Resets on any camera-affecting event so it's an honest
+  // "settled right now", not just "was idle once at some point".
+  const [mapIdle, setMapIdle] = useState(false);
   const [mapFailure, setMapFailure] = useState<MapFailureReason | null>(null);
   const [zoneVisible, setZoneVisible] = useState<Record<string, boolean>>(
     () => Object.fromEntries(ZONE_KEYS.map((k) => [k, false]))
@@ -1202,6 +1210,12 @@ export default function MapView() {
 
     map.addControl(new mapboxgl.NavigationControl(), "bottom-right");
     mapRef.current = map;
+
+    // See the mapIdle state doc comment above.
+    map.on("movestart", () => setMapIdle(false));
+    map.on("zoomstart", () => setMapIdle(false));
+    map.on("resize", () => setMapIdle(false));
+    map.on("idle", () => setMapIdle(true));
 
     // Mobile only: a second quick tap (a habitual double-tap, or a retry
     // after a tap that felt like it did nothing) must not also zoom the map.
@@ -4578,7 +4592,12 @@ export default function MapView() {
     <div className="relative w-full h-[calc(100vh-56px)] supports-[height:100dvh]:h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {mapFailure && <MapRenderFallback reason={mapFailure} />}
       {/* Map container */}
-      <div ref={containerRef} data-tour="map-canvas" className="absolute inset-0 w-full h-full" />
+      <div
+        ref={containerRef}
+        data-tour="map-canvas"
+        data-map-idle={mapIdle}
+        className="absolute inset-0 w-full h-full"
+      />
 
       {/* Map tile loading overlay */}
       {!loaded && (
