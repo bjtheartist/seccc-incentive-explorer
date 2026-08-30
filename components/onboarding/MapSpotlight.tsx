@@ -27,6 +27,60 @@ function prefersReducedMotion() {
 /** How long a tour start waits for the map to finish mounting its controls. */
 const ANCHOR_READY_TIMEOUT_MS = 20000;
 
+/** How long the tour waits for the map to become genuinely idle (mapbox's
+ *  own tiles/style/camera work all settled — see components/map/MapView.tsx's
+ *  data-map-idle) before spending the anchor-mount budget below. Bounded and
+ *  generous — much larger than the anchor window itself — because on a slow
+ *  enough runner or real device, tiles can still be loading well past 20s;
+ *  that is "the map is still booting", not "the search anchor is missing",
+ *  and the two must not be measured by the same clock. */
+const MAP_IDLE_TIMEOUT_MS = 60000;
+
+/** How long to wait, when nothing with a data-map-idle attribute has ever
+ *  been seen in the DOM, before concluding this render has no MapView
+ *  mounted at all (a non-map context, or a test rendering MapSpotlight in
+ *  isolation) rather than "MapView's chunk just hasn't mounted yet." A real
+ *  /map page's MapView container renders synchronously once its dynamic
+ *  import resolves — a lazy-loaded JS chunk, not something gated on network
+ *  tile data — so this only needs to outlast that, not tile loading itself
+ *  (data-map-idle's own generous MAP_IDLE_TIMEOUT_MS above covers that). */
+const MAP_IDLE_CONTAINER_DETECT_MS = 2000;
+
+/**
+ * Resolves TRUE once `[data-map-idle="true"]` is found, or FALSE after
+ * `timeoutMs` without ever finding it that way. If no element carrying a
+ * data-map-idle attribute (any value) has appeared at all within
+ * MAP_IDLE_CONTAINER_DETECT_MS, this context has no MapView mounted —
+ * resolves TRUE immediately so startTour falls straight through to its
+ * existing waitForAnchor behavior unchanged, instead of waiting out the
+ * full timeout for a signal that will never arrive.
+ */
+function waitForMapIdle(timeoutMs: number): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const startedAt = Date.now();
+    let sawContainer = false;
+    const check = () => {
+      const container = document.querySelector<HTMLElement>("[data-map-idle]");
+      if (container) {
+        sawContainer = true;
+        if (container.getAttribute("data-map-idle") === "true") {
+          resolve(true);
+          return;
+        }
+      } else if (!sawContainer && Date.now() - startedAt >= MAP_IDLE_CONTAINER_DETECT_MS) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - startedAt >= timeoutMs) {
+        resolve(false);
+        return;
+      }
+      window.setTimeout(check, 250);
+    };
+    check();
+  });
+}
+
 /**
  * Resolves TRUE once the selector exists with layout, or FALSE after the
  * timeout without ever finding it that way. The map's search control (and
@@ -96,7 +150,20 @@ export function MapSpotlight() {
       const { driver } = await import("driver.js");
 
       // After the import (so a failed chunk still fails fast into the catch
-      // below), hold the start until the map's first anchor has mounted.
+      // below), hold the start until the map itself is genuinely idle —
+      // see waitForMapIdle's doc comment. Only once the app is otherwise
+      // ready does the anchor window mean what it is supposed to mean
+      // ("the search anchor specifically is missing"), not "the map is
+      // still loading tiles under load." Bails the same defensive way a
+      // missing anchor does below.
+      const mapIdle = await waitForMapIdle(MAP_IDLE_TIMEOUT_MS);
+      if (!mapIdle) {
+        driverRef.current = null;
+        startingRef.current = false;
+        return;
+      }
+
+      // Hold the start until the map's first anchor has mounted.
       const anchorReady = await waitForAnchor(MAP_TOUR_STEPS[0].selector, ANCHOR_READY_TIMEOUT_MS);
       if (!anchorReady) {
         // The map's first tour anchor never mounted within the wait window.
