@@ -6,7 +6,7 @@ import { ZONING_CATEGORIES } from "@/lib/constants";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-interface ReportZoningMapProps {
+export interface ReportZoningMapProps {
   lat?: number | null;
   lon?: number | null;
   address?: string;

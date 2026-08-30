@@ -2,7 +2,8 @@
  * Hardening round, Track B item 3 — "GUARD EXTENSION: node: schemes."
  *
  * lib/__tests__/no-internal-catalog-in-client-bundle.test.ts already proves
- * no "use client" file can statically reach node:fs (or bare "fs") — but
+ * no "use client" file can reach node:fs (or bare "fs") through a
+ * bundler-visible edge — but
  * that check is hard-coded to exactly those two specifiers. This guard
  * generalizes the SAME import-graph walk (shared via
  * lib/source-guard/client-bundle-import-graph.ts) to ANY node:* built-in —
@@ -72,6 +73,24 @@ describe("client-transitive node:* builtin guard — synthetic self-test (proves
     expect(chain).not.toBeNull();
   });
 
+  it("catches a DIRECT literal dynamic import of node:crypto", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const clientFile = project.createSourceFile(
+      "/components/DynamicBad.tsx",
+      `"use client";\nexport async function load() { return import("node:crypto"); }`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).not.toBeNull();
+  });
+
+  it("catches a no-substitution template dynamic import of node:crypto", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const clientFile = project.createSourceFile(
+      "/components/TemplateDynamicBad.tsx",
+      `"use client";\nexport async function load() { return import(\`node:crypto\`); }`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).not.toBeNull();
+  });
+
   it("catches a TRANSITIVE node:crypto import — the exact shape of PermitExhibitAccessGate.tsx -> lib/shortlist-access.ts", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     project.createSourceFile(
@@ -100,6 +119,67 @@ describe("client-transitive node:* builtin guard — synthetic self-test (proves
     const chain = findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier);
     expect(chain).not.toBeNull();
     expect(chain).toContain("/lib/permit-exhibit.ts");
+  });
+
+  it("catches a node:* import behind an await import() boundary", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { readFile } from "node:fs/promises";\nexport async function load() { return readFile("x"); }`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/DynamicTransitiveBad.tsx",
+      `"use client";\nexport async function load() { return import("../lib/server-only"); }`,
+    );
+    const chain = findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier);
+    expect(chain).not.toBeNull();
+    expect(chain).toContain("/lib/server-only.ts");
+  });
+
+  it("catches local import()/require() targets wrapped in templates, parentheses, and `as const`", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { createHmac } from "node:crypto";\nexport const sign = createHmac;`,
+    );
+    for (const [fileName, expression] of [
+      ["TemplateImport.tsx", "import(`../lib/server-only`)"],
+      ["WrappedImport.tsx", "import((\"../lib/server-only\" as const))"],
+      ["TemplateRequire.tsx", "require(`../lib/server-only`)"],
+      ["WrappedRequire.tsx", "require((\"../lib/server-only\" as const))"],
+    ] as const) {
+      const clientFile = project.createSourceFile(
+        `/components/${fileName}`,
+        `"use client";\nexport function load() { return ${expression}; }`,
+      );
+      expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier), fileName).not.toBeNull();
+    }
+  });
+
+  it("catches a node:* import behind Next's dynamic(() => import()) shape", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { createHmac } from "node:crypto";\nexport default function Panel() { return createHmac("sha256", "k"); }`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/DynamicPanelBad.tsx",
+      `"use client";\nconst Panel = dynamic(() => import("../lib/server-only"));\nexport default Panel;`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).not.toBeNull();
+  });
+
+  it("ignores a nonliteral import expression because its runtime target cannot be resolved statically", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { createHmac } from "node:crypto";\nexport const sign = createHmac;`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/RuntimePath.tsx",
+      `"use client";\nexport async function load(path: string) { return import(path); }`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).toBeNull();
   });
 
   it("catches node:path as a third example of the generalized `node:` prefix rule (not hard-coded to fs/crypto)", () => {
@@ -149,11 +229,58 @@ describe("client-transitive node:* builtin guard — synthetic self-test (proves
     expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).toBeNull();
   });
 
+  it("does NOT follow an inline type-only re-export from a runtime-reachable barrel", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { createHmac } from "node:crypto";\nexport interface Secret { id: string }\nexport const sign = createHmac;`,
+    );
+    project.createSourceFile(
+      "/lib/barrel.ts",
+      `export const marker = "safe";\nexport { type Secret } from "./server-only";`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/TypeBarrelGood.tsx",
+      `"use client";\nimport { marker } from "../lib/barrel";\nexport default marker;`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).toBeNull();
+  });
+
+  it("still follows a mixed type/value re-export", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/lib/server-only.ts",
+      `import { createHmac } from "node:crypto";\nexport interface Secret { id: string }\nexport const sign = createHmac;`,
+    );
+    project.createSourceFile(
+      "/lib/barrel.ts",
+      `export { type Secret, sign } from "./server-only";`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/TypeBarrelBad.tsx",
+      `"use client";\nimport { sign } from "../lib/barrel";\nexport default sign;`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).not.toBeNull();
+  });
+
   it("does NOT flag a bare npm package whose name happens to contain 'node' or 'path' as a substring (the `node:` check is a prefix match, not a substring match)", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const clientFile = project.createSourceFile(
       "/components/Good3.tsx",
       `"use client";\nimport { thing } from "some-node-thing";\nimport other from "react-path-utils";\nexport default function C() { return [thing, other]; }`,
+    );
+    expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).toBeNull();
+  });
+
+  it("does NOT recurse into a resolved node_modules declaration file", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile(
+      "/node_modules/fake-package/index.d.ts",
+      `import { ServerResponse } from "node:http";\nexport declare const response: ServerResponse;`,
+    );
+    const clientFile = project.createSourceFile(
+      "/components/PackageGood.tsx",
+      `"use client";\nimport { response } from "../node_modules/fake-package";\nexport default response;`,
     );
     expect(findPathToMatchingSpecifier(clientFile, isNodeBuiltinSpecifier)).toBeNull();
   });
@@ -180,7 +307,7 @@ describe("client-transitive node:* builtin guard — real codebase scan", () => 
           .map((o) => `  ${o.root}\n    -> ${o.chain.join("\n    -> ")}`)
           .join("\n");
         throw new Error(
-          `${offenders.length} client component(s) can reach a node:* built-in through the static import graph:\n${report}\n` +
+          `${offenders.length} client component(s) can reach a node:* built-in through the bundler-visible import graph:\n${report}\n` +
             `Fix: move the node-builtin-touching logic into a server-only Route Handler or Server Component and pass ` +
             `the result down as plain data/props (see components/permit-exhibit/PermitExhibitEntryForm.tsx), or carry a ` +
             `local literal copy of the one value actually needed (see PermitExhibitAccessGate.tsx + ` +

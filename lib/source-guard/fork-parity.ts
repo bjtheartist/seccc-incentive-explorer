@@ -1,6 +1,6 @@
 /**
- * lib/source-guard/fork-parity.ts — fork parity: drawn-area surfaces are
- * shared components only.
+ * lib/source-guard/fork-parity.ts — fork parity: duplicated report concerns
+ * are shared components only.
  *
  * Doctrine (persona spec v2, binding, re-affirmed by the fork-unification
  * hardening round): app/report/page.tsx's local `ReportDisplay` and the
@@ -21,7 +21,10 @@
  * distinctive rendered copy. The signature set is read live from the
  * shared component file itself (never hand-maintained as a parallel list),
  * so it can't go stale — if the shared component's copy changes, the
- * signatures the guard checks for change with it automatically.
+ * signatures the guard checks for change with it automatically. The generic
+ * Download / Save / Email / Share controls use the same doctrine below: both
+ * forks must render one shared component and may not restore the old local
+ * action copy or vacancy predicate.
  */
 import { Node, Project, type SourceFile } from "ts-morph";
 
@@ -45,6 +48,22 @@ export const SHARED_DRAWN_AREA_MODULE_PATHS = [
 export const SHARED_DRAWN_AREA_MODULE_SPECIFIERS = [
   "@/components/report/VacancySpreadsheetSection",
   "@/components/report/useVacancySpreadsheetSection",
+] as const;
+
+/** Generic report actions both report-renderer forks must render through. */
+export const SHARED_REPORT_ACTION_MODULE_SPECIFIER =
+  "@/components/report/ReportActionButtons";
+export const SHARED_REPORT_ACTION_COMPONENT_NAME = "ReportActionButtons";
+
+/** Runtime copy that belongs only in the shared generic action component. */
+export const REPORT_ACTION_RUNTIME_SIGNATURES = [
+  "Download PDF",
+  "Save Report",
+  "Save to Workspace",
+  "Email This to Me",
+  "Email Report",
+  "Link Copied!",
+  "Share Report",
 ] as const;
 
 /**
@@ -154,6 +173,16 @@ export interface ForkParityViolation {
   detail: string;
 }
 
+export interface ReportActionForkParityViolation {
+  filePath: string;
+  kind:
+    | "missing-shared-action-import"
+    | "missing-shared-action-render"
+    | "local-action-copy"
+    | "local-vacancy-predicate";
+  detail: string;
+}
+
 /**
  * Does this fork file import EVERY shared drawn-area module — not just
  * one? A fork could drop the renderer import while keeping the hook (stop
@@ -200,6 +229,87 @@ export function checkForkFileParity(
         detail: `Fork file locally declares shared-component copy verbatim: ${JSON.stringify(text.slice(0, 80))}`,
       });
     }
+  }
+
+  return violations;
+}
+
+function importsSharedReportActionComponent(sourceFile: SourceFile): boolean {
+  return sourceFile.getImportDeclarations().some((declaration) => {
+    if (declaration.getModuleSpecifierValue() !== SHARED_REPORT_ACTION_MODULE_SPECIFIER) {
+      return false;
+    }
+    return declaration
+      .getNamedImports()
+      .some((namedImport) => namedImport.getName() === SHARED_REPORT_ACTION_COMPONENT_NAME);
+  });
+}
+
+function rendersSharedReportActionComponent(sourceFile: SourceFile): boolean {
+  return sourceFile.getDescendants().some((node) => {
+    if (Node.isJsxElement(node)) {
+      return node.getOpeningElement().getTagNameNode().getText() === SHARED_REPORT_ACTION_COMPONENT_NAME;
+    }
+    return (
+      Node.isJsxSelfClosingElement(node) &&
+      node.getTagNameNode().getText() === SHARED_REPORT_ACTION_COMPONENT_NAME
+    );
+  });
+}
+
+function declaresLocalVacancyPredicate(sourceFile: SourceFile): boolean {
+  return sourceFile.getDescendants().some((node) => {
+    if (Node.isVariableDeclaration(node) || Node.isFunctionDeclaration(node)) {
+      return node.getName() === "isVacancyReport";
+    }
+    return false;
+  });
+}
+
+/**
+ * Generic report action recurrence guard. The live/shared and saved forks must
+ * delegate the complete action-label and share-gating contract to one shared
+ * component instead of locally rebuilding any part of it.
+ */
+export function checkReportActionForkParity(
+  forkSourceFile: SourceFile,
+): ReportActionForkParityViolation[] {
+  const violations: ReportActionForkParityViolation[] = [];
+  const filePath = forkSourceFile.getFilePath();
+
+  if (!importsSharedReportActionComponent(forkSourceFile)) {
+    violations.push({
+      filePath,
+      kind: "missing-shared-action-import",
+      detail: `Fork file does not import ${SHARED_REPORT_ACTION_COMPONENT_NAME} from ${SHARED_REPORT_ACTION_MODULE_SPECIFIER}.`,
+    });
+  }
+
+  if (!rendersSharedReportActionComponent(forkSourceFile)) {
+    violations.push({
+      filePath,
+      kind: "missing-shared-action-render",
+      detail: `Fork file does not render <${SHARED_REPORT_ACTION_COMPONENT_NAME} />.`,
+    });
+  }
+
+  const runtimeStrings = new Set(collectRuntimeStrings(forkSourceFile));
+  for (const signature of REPORT_ACTION_RUNTIME_SIGNATURES) {
+    if (runtimeStrings.has(signature)) {
+      violations.push({
+        filePath,
+        kind: "local-action-copy",
+        detail: `Fork file locally declares shared report-action copy: ${JSON.stringify(signature)}.`,
+      });
+    }
+  }
+
+  if (declaresLocalVacancyPredicate(forkSourceFile)) {
+    violations.push({
+      filePath,
+      kind: "local-vacancy-predicate",
+      detail: "Fork file locally declares isVacancyReport instead of using the shared action policy.",
+    });
   }
 
   return violations;

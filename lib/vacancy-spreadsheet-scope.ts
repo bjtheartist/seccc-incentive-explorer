@@ -6,6 +6,7 @@ import {
 } from "@/lib/drawn-area-report-scope";
 import { drawnAreaVacancyRequestPath } from "@/lib/drawn-area-vacancy";
 import type { VacancyCoverageMetadata } from "@/lib/drawn-area-vacancy";
+import { isVacancyReport } from "@/lib/report-action-policy";
 
 export type VacancySpreadsheetScope =
   | {
@@ -29,14 +30,6 @@ export type VacancySpreadsheetScope =
       detail: string;
     }
   | { status: "none" };
-
-function isVacancyReport(report: GeneratedReport): boolean {
-  return (
-    report.reportType === "dev-feasibility" ||
-    report.reportType === "best-location" ||
-    report.title.toLowerCase().includes("vacancy")
-  );
-}
 
 /**
  * Resolve the exact geography used by the vacancy spreadsheet/report export.
