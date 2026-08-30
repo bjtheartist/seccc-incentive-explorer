@@ -154,12 +154,19 @@ export interface ForkParityViolation {
   detail: string;
 }
 
-/** Does this fork file import at least one of the shared drawn-area modules? */
-function importsSharedDrawnAreaModule(sourceFile: SourceFile): boolean {
-  return sourceFile.getImportDeclarations().some((decl) => {
-    const specifier = decl.getModuleSpecifierValue();
-    return (SHARED_DRAWN_AREA_MODULE_SPECIFIERS as readonly string[]).includes(specifier);
-  });
+/**
+ * Does this fork file import EVERY shared drawn-area module — not just
+ * one? A fork could drop the renderer import while keeping the hook (stop
+ * calling `VacancySpreadsheetSection`, implement different JSX with no
+ * exact signature string carried over) and still pass an `.some()` check;
+ * only requiring every entry closes that loophole (Codex review finding on
+ * the first version of this guard).
+ */
+function importsAllSharedDrawnAreaModules(sourceFile: SourceFile): boolean {
+  const imported = new Set(
+    sourceFile.getImportDeclarations().map((decl) => decl.getModuleSpecifierValue()),
+  );
+  return SHARED_DRAWN_AREA_MODULE_SPECIFIERS.every((specifier) => imported.has(specifier));
 }
 
 /**
@@ -174,12 +181,12 @@ export function checkForkFileParity(
   const violations: ForkParityViolation[] = [];
   const filePath = forkSourceFile.getFilePath();
 
-  if (!importsSharedDrawnAreaModule(forkSourceFile)) {
+  if (!importsAllSharedDrawnAreaModules(forkSourceFile)) {
     violations.push({
       filePath,
       kind: "missing-shared-import",
       detail:
-        "Fork file does not import any of the shared drawn-area modules " +
+        "Fork file does not import every shared drawn-area module " +
         `(${SHARED_DRAWN_AREA_MODULE_SPECIFIERS.join(", ")}).`,
     });
   }

@@ -90,14 +90,32 @@ describe("fork parity guard — synthetic self-tests (scanner mechanics, in-memo
     expect(violations.some((v) => v.kind === "missing-shared-import")).toBe(true);
   });
 
-  it("checkForkFileParity is GREEN for a fork file that imports the shared module and carries none of its signature text", () => {
+  it("checkForkFileParity flags a fork file that imports the shared HOOK but dropped the shared RENDERER import (partial-import regression: a fork could stop rendering VacancySpreadsheetSection, keep the hook, and implement different JSX with no exact signature string carried over — an .some() check would miss this)", () => {
+    const project = inMemoryProject();
+    const fork = project.createSourceFile(
+      "fork.tsx",
+      [
+        `import { useVacancySpreadsheetSection } from "@/components/report/useVacancySpreadsheetSection";`,
+        `export function Fork() {`,
+        `  const vacancy = useVacancySpreadsheetSection(report, wizardState, compact);`,
+        `  return <div>{vacancy.vacancySpreadsheetLocale}</div>;`,
+        `}`,
+      ].join("\n"),
+    );
+    const violations = checkForkFileParity(fork, new Set(["irrelevant signature text over thirty chars long"]));
+    expect(violations.some((v) => v.kind === "missing-shared-import")).toBe(true);
+  });
+
+  it("checkForkFileParity is GREEN for a fork file that imports EVERY shared module and carries none of the signature text", () => {
     const project = inMemoryProject();
     const fork = project.createSourceFile(
       "fork.tsx",
       [
         `import { VacancySpreadsheetSection } from "@/components/report/VacancySpreadsheetSection";`,
+        `import { useVacancySpreadsheetSection } from "@/components/report/useVacancySpreadsheetSection";`,
         `export function Fork() {`,
-        `  return <VacancySpreadsheetSection />;`,
+        `  const vacancy = useVacancySpreadsheetSection(report, wizardState, compact);`,
+        `  return <VacancySpreadsheetSection vacancy={vacancy} />;`,
         `}`,
       ].join("\n"),
     );
