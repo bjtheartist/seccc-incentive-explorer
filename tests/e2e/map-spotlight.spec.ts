@@ -88,6 +88,16 @@ test("the replay button restarts the tour even after it was skipped", async ({ p
   }, RESOLVED_SITEWIDE);
   await page.goto(`${baseURL}/map`);
 
+  // components/onboarding/MapSpotlight.tsx's own `startTour()` already holds
+  // an AUTO-START run until the map's first tour anchor (map-search) has
+  // mounted (its `waitForAnchor` helper) — but this is a MANUAL replay via
+  // the button, not an auto-start, and driver.js's own per-step
+  // `waitForElement: 1500` + `skipMissingElement: true` means clicking
+  // before that anchor exists can skip step one entirely under CI runner
+  // load, landing the popover on step two or three instead. Wait for the
+  // same anchor the app itself gates on before triggering the replay, so
+  // this test is asserting the replay mechanism, not racing map mount.
+  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
   await page.getByRole("button", { name: "How to use this map" }).click();
   const popover = page.locator(".cie-driver-popover");
   await expect(popover).toBeVisible({ timeout: 30000 });
@@ -102,6 +112,11 @@ test.describe("mobile map tour", () => {
   }) => {
     await openMapAsReturningVisitor(page);
 
+    // Same anchor-readiness wait as the replay test above — the mobile
+    // layout's different mount order made this race more often than the
+    // desktop auto-start test just above, which relies solely on the app's
+    // own internal `waitForAnchor` gate.
+    await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
     const popover = page.locator(".cie-driver-popover");
     await expect(popover).toBeVisible({ timeout: 30000 });
     await expect(popover.locator(".driver-popover-title")).toHaveText("Start with an address");
