@@ -85,6 +85,12 @@ async function dbParcel(
   lon: number | null,
   pin: string | null,
 ): Promise<ParcelData | null> {
+  // Production intentionally keeps the parcels table empty. A configured
+  // DATABASE_URL alone therefore must not trigger a guaranteed miss (or an
+  // old-schema error) before every CookViewer lookup. Refresh/dev branches
+  // with a migrated, populated parcels table opt in explicitly.
+  if (process.env.PARCEL_DB_LOOKUPS_ENABLED !== "true") return null;
+
   const sql = getSQL();
   if (!sql) return null;
   try {
@@ -440,14 +446,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // v4: v3 entries predate the address guard and can carry wrong-parcel
-  // resolutions for geocoded points — never serve them again.
+  // v5: keep DB-first and CookViewer-only caches separate so opting a
+  // populated refresh/dev branch into the parcels table cannot consume a
+  // CookViewer result cached by the default production source mode. v4
+  // entries also predate this explicit source contract.
   const requestedKeyPart = requested
     ? `:a:${requested.toUpperCase().replace(/\s+/g, " ")}`
     : "";
+  const parcelSourceMode =
+    process.env.PARCEL_DB_LOOKUPS_ENABLED === "true" ? "db-first" : "cookviewer";
   const cacheKey = pin
-    ? `parcel:v4:pin:${pin}`
-    : `parcel:v4:${roundCoord(lat!)}:${roundCoord(lon!)}${requestedKeyPart}`;
+    ? `parcel:v5:${parcelSourceMode}:pin:${pin}`
+    : `parcel:v5:${parcelSourceMode}:${roundCoord(lat!)}:${roundCoord(lon!)}${requestedKeyPart}`;
 
   const result = await cached<ResolvedParcel | null>(cacheKey, 2592000, async () =>
     pin ? resolveByPin(pin) : resolveByPoint(lat!, lon!, requested),

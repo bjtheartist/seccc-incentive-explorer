@@ -36,7 +36,7 @@ Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
 - Framework: Next.js 16 App Router, React 19, TypeScript strict mode.
 - Styling/UI: Tailwind CSS 4, shadcn/Radix primitives, Framer Motion, lucide-react.
 - Mapping/geospatial: Mapbox GL, Mapbox Draw, Turf.js, optional PostGIS via Neon.
-- Data access: DB-first where configured, static-file fallback when `DATABASE_URL` is absent.
+- Data access: DB-first where configured, with source-specific fallbacks and explicit opt-ins for intentionally offline datasets.
 - Caching: optional Upstash Redis plus in-memory GeoJSON caching and HTTP cache headers.
 - Reports: jsPDF generation with optional Resend email delivery.
 - Validation/tests: Zod schemas, Vitest unit tests, Playwright E2E tests.
@@ -45,7 +45,8 @@ Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
 
 The app is designed to keep working without production services:
 
-- If `DATABASE_URL` is configured, API routes can query Neon/PostGIS for businesses, programs, zones, census data, parcels, stats, assets, stacking rules, and vacant properties.
+- If `DATABASE_URL` is configured, API routes can query Neon/PostGIS for businesses, programs, zones, census data, stats, assets, stacking rules, and vacant properties.
+- `/api/parcel` uses CookViewer by default. Set `PARCEL_DB_LOOKUPS_ENABLED=true` only in an environment whose Neon `parcels` table has been migrated and populated; production intentionally does not store that parcel snapshot.
 - If the DB is unavailable or not configured, user-facing flows fall back to static JSON/GeoJSON in `public/data/`.
 - `/api/zones/check` returns zone membership from PostGIS when available; client-side Turf.js handles static fallback checks.
 - Map zone layers load through `/api/zones/geojson/[key]` first and fall back to `public/data/zones/*.geojson`.
@@ -57,6 +58,8 @@ npm install
 npm run dev
 npm run lint
 npm run test
+npm run test:e2e          # full Chromium regression suite
+npm run test:e2e:browsers # focused Mobile Safari/WebKit + Firefox smoke
 npm run build
 ```
 
@@ -82,6 +85,7 @@ These DB scripts require `DATABASE_URL`.
 ```bash
 NEXT_PUBLIC_MAPBOX_TOKEN=...
 DATABASE_URL=...
+PARCEL_DB_LOOKUPS_ENABLED=true # only for a migrated, populated parcels table
 AUTH_SECRET=...
 NEXTAUTH_URL=...
 GOOGLE_CLIENT_ID=...

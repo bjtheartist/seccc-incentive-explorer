@@ -100,3 +100,59 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    # A focused second engine lane: five Mobile Safari/WebKit checks and
+    # three lightweight Firefox checks. It runs beside, not inside, the
+    # existing 28-test Chromium gate.
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright's WebKit and Firefox
+        run: npx playwright install --with-deps webkit firefox
+
+      - name: Build
+        run: npm run build -- --webpack
+
+      - name: Start server
+        run: npm run start &
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/ -o /dev/null; then
+              echo "Server is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not respond on :3000 within 60s" >&2
+          exit 1
+
+      - name: Run focused WebKit and Firefox smoke tests
+        run: npm run test:e2e:browsers
+
+      - name: Upload cross-browser report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-cross-browser
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

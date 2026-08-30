@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getSQLMock, sqlMock } = vi.hoisted(() => ({
+const { cachedMock, getSQLMock, sqlMock } = vi.hoisted(() => ({
+  cachedMock: vi.fn(),
   getSQLMock: vi.fn(),
   sqlMock: vi.fn(),
 }));
@@ -9,18 +10,28 @@ const { getSQLMock, sqlMock } = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({ getSQL: getSQLMock }));
 vi.mock("@/lib/redis", () => ({
   roundCoord: (value: number) => value,
-  cached: async (_key: string, _ttl: number, loader: () => Promise<unknown>) => loader(),
+  cached: cachedMock,
 }));
 
 import { GET } from "./route";
 
 beforeEach(() => {
+  vi.stubEnv("PARCEL_DB_LOOKUPS_ENABLED", "false");
+  cachedMock
+    .mockReset()
+    .mockImplementation(async (_key: string, _ttl: number, loader: () => Promise<unknown>) =>
+      loader(),
+    );
   getSQLMock.mockReset().mockReturnValue(sqlMock);
   sqlMock.mockReset();
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }),
   );
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("GET /api/parcel", () => {
@@ -33,6 +44,7 @@ describe("GET /api/parcel", () => {
   });
 
   it("uses an exact PIN query when a clicked parcel supplies one", async () => {
+    vi.stubEnv("PARCEL_DB_LOOKUPS_ENABLED", "true");
     sqlMock
       .mockResolvedValueOnce([
         {
@@ -74,11 +86,14 @@ describe("GET /api/parcel", () => {
     expect(parcelQuery).toContain("WHERE pin =");
     expect(parcelQuery).not.toContain("ST_DWithin");
     expect(sqlMock.mock.calls[0].slice(1)).toContain("20123456789012");
+    expect(cachedMock.mock.calls[0][0]).toBe(
+      "parcel:v5:db-first:pin:20123456789012",
+    );
     expect(response.headers.get("cache-control")).toContain("s-maxage=300");
   });
 
-  it("reads the current Cook County parcel service schema when the DB misses", async () => {
-    sqlMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+  it("uses CookViewer directly when the intentionally empty parcel DB source is not enabled", async () => {
+    sqlMock.mockResolvedValue([]);
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url.includes("parcel_current_beta/FeatureServer/0/query")) {
@@ -138,6 +153,12 @@ describe("GET /api/parcel", () => {
       .find((url) => url.includes("parcel_current_beta/FeatureServer/0/query"));
     expect(countyUrl).toContain("LANDSF%2CBLDGSQFT%2CBLDGAGE");
     expect(countyUrl).not.toContain("MapServer%2F44");
+    const sqlQueries = sqlMock.mock.calls.map((call) => String(call[0]));
+    expect(sqlQueries.some((query) => query.includes("FROM parcels"))).toBe(false);
+    expect(sqlQueries.some((query) => query.includes("FROM parcel_space_measurements"))).toBe(true);
+    expect(cachedMock.mock.calls[0][0]).toBe(
+      "parcel:v5:cookviewer:pin:20363230080000",
+    );
   });
 
   /* ── Address guard ──
@@ -195,6 +216,28 @@ describe("GET /api/parcel", () => {
     vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
   }
+
+  it("falls back to CookViewer when an explicitly enabled parcel DB has schema drift", async () => {
+    vi.stubEnv("PARCEL_DB_LOOKUPS_ENABLED", "true");
+    sqlMock
+      .mockRejectedValueOnce(
+        Object.assign(new Error('column "zip" does not exist'), { code: "42703" }),
+      )
+      .mockResolvedValueOnce([]);
+    stubCookViewer({ containment: [cottageGroveAttributes] });
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/parcel?pin=25023150220000"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.pin).toBe("25023150220000");
+    expect(body.addressMatch).toBe("pin");
+    expect(cachedMock.mock.calls[0][0]).toBe(
+      "parcel:v5:db-first:pin:25023150220000",
+    );
+  });
 
   it("marks a point resolution 'verified' when the parcel's published address matches the requested one", async () => {
     sqlMock.mockResolvedValue([]);
