@@ -74,6 +74,59 @@ concrete: populating real `costSignals` values on any specific program
 each program's actual published fee terms, not a code change — evidenced
 in its own row and in the "Remainder" note below.
 
+## Fork-unification round (drawn-area rendering) — 2026-08-29
+
+Separate initiative from the persona spec v2 work above (that work's own
+INTENTIONAL-DIFF(a-d) classes don't apply here — this section borrows this
+doc's table/evidence STYLE for a different doctrine: "SHARED COMPONENTS
+ONLY across the two report forks" for drawn-area rendering). Logged here
+per that doctrine's own requirement that a fork divergence never be closed
+in silence.
+
+**Problem.** Commit 78ea06f added a byte-identical 309-line block to BOTH
+`app/report/page.tsx`'s local `ReportDisplay` and the exported
+`components/report/ReportDisplay.tsx` (the plain vacancy-spreadsheet
+render for a drawn-area report). Commit aa387b1 then added ~1,021 more
+lines — the "area analysis workstation," a read-only saved-area evidence
+view — to `components/report/ReportDisplay.tsx` ONLY, re-diverging the
+forks exactly as the doctrine forbids.
+
+**Ruling: parity by construction (the spec's default), not a pinned
+intentional diff.** The alternative — pinning the workstation as a
+workspace-fork-only difference — would have required evidence that the
+live in-page fork (`app/report/page.tsx`) must not show the workstation
+because it depends on state the live path lacks. The opposite is true:
+concrete evidence shows the live fork could never have reached that branch
+in the first place, which is why unifying is free of behavior change.
+
+| Evidence | Detail |
+|---|---|
+| `drawnAreaScope` origin | `GeneratedReport.drawnAreaScope` (lib/report-engine.ts) is populated ONLY by `components/map/MapPolygonPanel.tsx`'s client-side `createDrawnAreaReportScope()` call (lib/drawn-area-report-scope.ts) — the ONLY caller in the repo. |
+| How a drawn-area report reaches a viewer | `MapPolygonPanel.tsx`'s own actions (Save/Email/Download PDF/Export CSV) either open `SaveReportModal`/`EmailReportModal` in place or hit `/api/saved-reports`, landing the report in the workspace. None of them navigate to `/report` with the in-memory `areaReport`. |
+| `app/report/page.tsx`'s own report sources | `ReportWizardPage`'s `report` state is set only by `generateReportRemote()` (server call for the address/neighborhood wizard, instant mode, and corridor mode) — grep confirms ZERO references to `drawnAreaScope` anywhere in `app/report/page.tsx` before this round. `generateReportRemote()` never attaches `drawnAreaScope`. |
+| Consequence | `resolveVacancySpreadsheetScope(report, wizardState).status === "ready" && kind === "drawn-area"` was structurally unreachable in the live fork. The workstation branch, if ported in, was dead code there — behavior-neutral to add, and it closes the doctrine gap instead of leaving a documented loophole in the fork-fence guard. |
+| What actually changed | Both forks now call the SAME `useVacancySpreadsheetSection` hook (components/report/useVacancySpreadsheetSection.ts) and render the SAME `VacancySpreadsheetSection` component (components/report/VacancySpreadsheetSection.tsx), which contains the workstation branch. `app/report/page.tsx` gains the ability to show it if a future change ever lets a drawn-area report reach that route — today, still unreachable, so no observable behavior changed. |
+| Pinning test | `lib/__tests__/fork-parity-guard.test.ts` — "fork parity: drawn-area surfaces are shared components only" — asserts both fork files import the shared module(s) and neither locally re-declares the shared component's own rendered copy (signature set read live from the shared file, not hand-maintained). |
+
+| Deliverable | Locus | Verification | Status |
+|---|---|---|---|
+| Twin 309-line block (78ea06f) + workstation 1,021-line block (aa387b1) unified into one shared render surface | `components/report/VacancySpreadsheetSection.tsx` (JSX: workstation branch, plain vacancy-spreadsheet table, "unavailable" scope banner, `SavedAreaEvidenceSection`) + `components/report/useVacancySpreadsheetSection.ts` (all state/effects/handlers: fetch, permit refresh, CSV export, drift comparison) | `components/report/__tests__/drawn-area-vacancy-report.test.tsx`, `components/report/__tests__/public-report-display.test.tsx` (both unmodified, still green — the extraction is a pure relocation behind the same call signature both tests already exercised), `app/report/__tests__/report-page-live-renderer.test.tsx` (ordinal `useState` arrays regenerated same-commit) | PASS |
+| Fork-fence guard (recurrence prevention) | `lib/source-guard/fork-parity.ts` | `lib/__tests__/fork-parity-guard.test.ts` | PASS |
+
+**Gate-review round 2 (2026-08-29): a SECOND, older duplicate found and closed.**
+Independent coordinator review confirmed the round-1 work above, then found one MEDIUM finding: the mid-report "Vacant properties in {locale}" summary card (a locale-level stats card + CSV button shown inline in the main report body) and the bottom-CTA-row "Vacancy Spreadsheet" download button were STILL byte-identical between the two forks — both predate commit 78ea06f (the 309-line count the original audit used never saw them, since they were never touched by that commit) and were invisible to the fork-fence guard (the guard's signature set is read from `VacancySpreadsheetSection.tsx`'s own source; this region wasn't in that file yet).
+
+| Evidence | Detail |
+|---|---|
+| Predates 78ea06f | `git show 78ea06f` touches this card's `["City / public", ...]` → `["Public ownership", ...]` label only (one line) — the surrounding card was already present, already identical, before that commit. |
+| Byte-identical (confirmed via diff) | Both the summary card (14-line JSX region) and the CTA button (13-line JSX region) diffed byte-for-byte identical between `app/report/page.tsx` and `components/report/ReportDisplay.tsx` before this fix. |
+
+Fix: extracted both into new named exports of `components/report/VacancySpreadsheetSection.tsx` — `VacancySpreadsheetSummaryCard` (owns its own `compact`/`showPersonaView`/`vacancySpreadsheetLocale` gating, returns `null` otherwise) and `VacancySpreadsheetCsvCtaButton` (returns `null` when there's no locale). Both forks now call these instead of declaring the JSX locally. No new `useState` calls (pure render functions taking `vacancy` as a prop), so no ordinal-array change was needed this round. The guard's signature set picked up the new region automatically (it reads live from the shared file) — verified with a real injection (pasting the summary card's "locale-level property spreadsheet" sentence into `app/report/page.tsx` turned `lib/__tests__/fork-parity-guard.test.ts` red; reverted after confirming), plus a dedicated regression test asserting that sentence stays in the signature set.
+
+**Closure check (coordinator's own bar):** re-running the `>40`-char substantial-line set-intersection between the two fork files after this fix: common unique lines dropped from 511 to 492 overall; vacancy/drawn-area-keyword-matching common lines dropped from 18 to 11. The remaining 11 are NOT duplicated rendering — they're two categories:
+1. **Correct, intended wiring** (7 lines): both forks calling the SAME shared hook/components identically — `import`/`const vacancy = useVacancySpreadsheetSection(...)`/the destructure/`if (vacancySpreadsheetLocale && !compact) {`/`<DrawnAreaScopeUnavailableBanner .../>`/`<VacancySpreadsheetCsvCtaButton .../>`. Two files correctly delegating to one shared implementation necessarily look identical at the call site — that is the goal of unification, not a violation of it.
+2. **Pre-existing generic report-anatomy commons, out of scope** (4 lines): `isVacancyReport`'s 3-line definition and the `{isVacancyReport ? "Save Report" : "Save to Workspace"}` / `{isVacancyReport ? "Email This to Me" : "Email Report"}` / `{reportWizardState && !isDrawnAreaReport && (` lines are single-line report-type-aware label/gating facets embedded in the fully generic Save/Email/Share buttons every report type renders (not vacancy-spreadsheet rendering). Extracting them would mean refactoring that shared, non-vacancy-specific button trio — out of this track's scope per the coordinator's own "generic report-anatomy commons... out of scope" line. Flagged here rather than silently dropped; a future pass could still unify `isVacancyReport`'s definition into the shared hook if judged worthwhile.
+
 ## What shipped (Tier 1 — v1 spec, complete)
 
 | Deliverable | Locus | Verification |

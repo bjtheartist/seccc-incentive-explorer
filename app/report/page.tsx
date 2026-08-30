@@ -112,27 +112,17 @@ import {
   VerdictCard,
 } from "@/components/report/ExecutiveSummarySection";
 import {
-  buildIncentiveAnalysisUrl,
   buildTableCsv,
-  buildVacancySpreadsheetCsv,
   downloadCsv,
-  programContextToText,
   slugifyFilePart,
-  zoneMatchesToText,
-  type VacancySpreadsheetFeature,
 } from "@/lib/vacancy-spreadsheet";
-import { filterAreaVacancyFeatures } from "@/lib/area-vacancy-presentation";
+import { useVacancySpreadsheetSection } from "@/components/report/useVacancySpreadsheetSection";
 import {
-  assessDrawnAreaRecordDriftComparability,
-  compareDrawnAreaRecordManifest,
-  hasCompleteCurrentDrawnAreaSelection,
-  resolveVacancySpreadsheetScope,
-  safeVacancyProgramUrl,
-} from "@/lib/vacancy-spreadsheet-scope";
-import {
-  parseDrawnAreaVacancyResponse,
-  type VacancyCoverageMetadata,
-} from "@/lib/drawn-area-vacancy";
+  DrawnAreaScopeUnavailableBanner,
+  VacancySpreadsheetCsvCtaButton,
+  VacancySpreadsheetSection,
+  VacancySpreadsheetSummaryCard,
+} from "@/components/report/VacancySpreadsheetSection";
 import {
   AnchorCards,
   ComparisonBar,
@@ -3714,16 +3704,8 @@ function ReportDisplay({
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [isExportingVacancySpreadsheet, setIsExportingVacancySpreadsheet] =
-    useState(false);
-  const [isLoadingVacancySpreadsheet, setIsLoadingVacancySpreadsheet] =
-    useState(false);
-  const [vacancySpreadsheetFeatures, setVacancySpreadsheetFeatures] =
-    useState<VacancySpreadsheetFeature[] | null>(null);
-  const vacancySpreadsheetCoverageRef =
-    useRef<VacancyCoverageMetadata | null>(null);
-  const [vacancySpreadsheetError, setVacancySpreadsheetError] =
-    useState<string | null>(null);
+  const vacancy = useVacancySpreadsheetSection(report, reportWizardState, compact);
+  const { vacancySpreadsheetScope, isDrawnAreaReport, vacancySpreadsheetLocale } = vacancy;
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
@@ -3990,6 +3972,44 @@ function ReportDisplay({
   // The Brief (spec v2 item 5): one state slot for the two-question ask +
   // open/closed, so this only adds ONE ordinal useState slot.
   const [briefState, setBriefState] = useState<BriefUiState>(DEFAULT_BRIEF_UI_STATE);
+
+  /* ── Admin-only ownership context (screen-only; never PDF/email — see
+        components/report/AdminOwnershipPanel.tsx). Probes the Owner Files
+        admin session once, then loads the private per-parcel geo export for
+        this report's ZIP only when the probe confirms an admin session. ── */
+  const reportZip = useMemo(() => extractReportZipCode(report), [report]);
+  const [adminOwnershipStatus, setAdminOwnershipStatus] = useState<AdminOwnershipPanelStatus>("idle");
+  const [adminOwnershipMatch, setAdminOwnershipMatch] = useState<OwnerFileReportMatch | null>(null);
+  const [adminOwnershipTopClusters, setAdminOwnershipTopClusters] = useState<OwnerFileReportTopCluster[]>([]);
+
+  useEffect(() => {
+    if (compact || !reportZip) {
+      setAdminOwnershipStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchAdminOwnershipContext({
+      zip: reportZip,
+      address: report.metadata?.address,
+      signal: controller.signal,
+      onAdminConfirmed: () => setAdminOwnershipStatus("loading"),
+    })
+      .then((result) => {
+        setAdminOwnershipMatch(result.match);
+        setAdminOwnershipTopClusters(result.topClusters);
+        setAdminOwnershipStatus(result.status);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("[report] admin ownership context load failed:", err);
+        setAdminOwnershipStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [compact, reportZip, report.metadata?.address]);
+
   // sm_ params (additive, spec v2 item 5): a link carrying sm_stage/
   // sm_priority opens straight into the brief, skipping the ask — the
   // Brief becomes a genuinely shareable URL, not only an in-page action.
@@ -4134,285 +4154,6 @@ function ReportDisplay({
     report.reportType === "dev-feasibility" ||
     report.reportType === "best-location" ||
     report.title.toLowerCase().includes("vacancy");
-  const vacancySpreadsheetScope = useMemo(
-    () => resolveVacancySpreadsheetScope(report, reportWizardState),
-    [report, reportWizardState],
-  );
-  const isDrawnAreaReport =
-    (vacancySpreadsheetScope.status === "ready" &&
-      vacancySpreadsheetScope.kind === "drawn-area") ||
-    vacancySpreadsheetScope.status === "unavailable";
-  const vacancySpreadsheetLocale =
-    vacancySpreadsheetScope.status === "ready"
-      ? vacancySpreadsheetScope.label
-      : "";
-  const vacancySpreadsheetDisplayName =
-    vacancySpreadsheetScope.status === "ready" &&
-    vacancySpreadsheetScope.kind === "drawn-area"
-      ? report.title.trim() || vacancySpreadsheetScope.label
-      : vacancySpreadsheetLocale;
-  const vacancySpreadsheetRequestPath =
-    vacancySpreadsheetScope.status === "ready"
-      ? vacancySpreadsheetScope.requestPath
-      : "";
-
-  const vacancyFeaturesForScope = useCallback(
-    (features: VacancySpreadsheetFeature[]): VacancySpreadsheetFeature[] => {
-      if (
-        vacancySpreadsheetScope.status !== "ready" ||
-        vacancySpreadsheetScope.kind !== "drawn-area"
-      ) {
-        return features;
-      }
-      const filters = vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters;
-      return filterAreaVacancyFeatures(
-        features as GeoJSON.Feature[],
-        filters.freshness,
-        filters.license,
-      ) as VacancySpreadsheetFeature[];
-    },
-    [vacancySpreadsheetScope],
-  );
-  const vacancyPayloadForScope = useCallback(
-    (value: unknown): {
-      features: VacancySpreadsheetFeature[];
-      coverage: VacancyCoverageMetadata | null;
-    } => {
-      if (
-        vacancySpreadsheetScope.status === "ready" &&
-        vacancySpreadsheetScope.kind === "drawn-area"
-      ) {
-        const parsed = parseDrawnAreaVacancyResponse(value);
-        if (!parsed) throw new Error("Malformed drawn-area vacancy response");
-        return {
-          features: vacancyFeaturesForScope(parsed.features),
-          coverage: parsed.meta,
-        };
-      }
-      const collection = value as { features?: VacancySpreadsheetFeature[] };
-      return {
-        features: vacancyFeaturesForScope(collection.features ?? []),
-        coverage: null,
-      };
-    },
-    [vacancyFeaturesForScope, vacancySpreadsheetScope],
-  );
-
-  useEffect(() => {
-    if (compact || !vacancySpreadsheetRequestPath) {
-      setVacancySpreadsheetFeatures(null);
-      vacancySpreadsheetCoverageRef.current = null;
-      setVacancySpreadsheetError(null);
-      setIsLoadingVacancySpreadsheet(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    setVacancySpreadsheetFeatures(null);
-    vacancySpreadsheetCoverageRef.current = null;
-
-    async function loadVacancySpreadsheet() {
-      setIsLoadingVacancySpreadsheet(true);
-      setVacancySpreadsheetError(null);
-      try {
-        const res = await fetch(vacancySpreadsheetRequestPath, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error("Vacancy spreadsheet unavailable");
-
-        const data: unknown = await res.json();
-        const payload = vacancyPayloadForScope(data);
-        vacancySpreadsheetCoverageRef.current = payload.coverage;
-        setVacancySpreadsheetFeatures(payload.features);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("[report] vacancy spreadsheet load failed:", err);
-        setVacancySpreadsheetFeatures(null);
-        vacancySpreadsheetCoverageRef.current = null;
-        setVacancySpreadsheetError("Vacancy spreadsheet could not be loaded.");
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoadingVacancySpreadsheet(false);
-        }
-      }
-    }
-
-    loadVacancySpreadsheet();
-
-    return () => controller.abort();
-  }, [compact, vacancyPayloadForScope, vacancySpreadsheetRequestPath]);
-
-  /* ── Admin-only ownership context (screen-only; never PDF/email — see
-        components/report/AdminOwnershipPanel.tsx). Probes the Owner Files
-        admin session once, then loads the private per-parcel geo export for
-        this report's ZIP only when the probe confirms an admin session. ── */
-  const reportZip = useMemo(() => extractReportZipCode(report), [report]);
-  const [adminOwnershipStatus, setAdminOwnershipStatus] = useState<AdminOwnershipPanelStatus>("idle");
-  const [adminOwnershipMatch, setAdminOwnershipMatch] = useState<OwnerFileReportMatch | null>(null);
-  const [adminOwnershipTopClusters, setAdminOwnershipTopClusters] = useState<OwnerFileReportTopCluster[]>([]);
-
-  useEffect(() => {
-    if (compact || !reportZip) {
-      setAdminOwnershipStatus("idle");
-      return;
-    }
-
-    const controller = new AbortController();
-
-    fetchAdminOwnershipContext({
-      zip: reportZip,
-      address: report.metadata?.address,
-      signal: controller.signal,
-      onAdminConfirmed: () => setAdminOwnershipStatus("loading"),
-    })
-      .then((result) => {
-        setAdminOwnershipMatch(result.match);
-        setAdminOwnershipTopClusters(result.topClusters);
-        setAdminOwnershipStatus(result.status);
-      })
-      .catch((err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("[report] admin ownership context load failed:", err);
-        setAdminOwnershipStatus("error");
-      });
-
-    return () => controller.abort();
-  }, [compact, reportZip, report.metadata?.address]);
-
-  const handleVacancySpreadsheetExport = useCallback(async () => {
-    if (!vacancySpreadsheetRequestPath) return;
-
-    setIsExportingVacancySpreadsheet(true);
-    try {
-      let features = vacancySpreadsheetFeatures;
-      if (!features) {
-        const res = await fetch(vacancySpreadsheetRequestPath);
-        if (!res.ok) throw new Error("Vacancy export failed");
-
-        const data: unknown = await res.json();
-        const payload = vacancyPayloadForScope(data);
-        features = payload.features;
-        vacancySpreadsheetCoverageRef.current = payload.coverage;
-        setVacancySpreadsheetFeatures(features);
-      }
-      if (
-        vacancySpreadsheetScope.status === "ready" &&
-        vacancySpreadsheetScope.kind === "drawn-area" &&
-        !hasCompleteCurrentDrawnAreaSelection(
-          vacancySpreadsheetScope.drawnArea,
-          vacancySpreadsheetCoverageRef.current,
-        )
-      ) {
-        throw new Error(
-          "Incomplete drawn-area vacancy selection cannot be exported as a complete spreadsheet",
-        );
-      }
-
-      const csvProvenance =
-        vacancySpreadsheetScope.status === "ready" &&
-        vacancySpreadsheetScope.kind === "drawn-area"
-          ? {
-              scopeFingerprint:
-                vacancySpreadsheetScope.drawnArea.scope.fingerprint,
-              selectionMethod: "point_in_saved_polygon",
-              scopeGeneratedAt: vacancySpreadsheetScope.drawnArea.generatedAt,
-              generationFreshnessFilter:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
-                  .freshness,
-              generationLicenseFilter:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters
-                  .license,
-              generationManifestSelectedCount:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy
-                  .selectedCount,
-              generationCoverageStatus:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.status,
-              generationLicenseScreeningStatus:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.licenseScreeningStatus,
-              generationSourcePath:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.source
-                  ?.path,
-              generationFallbackReason:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.fallbackReason,
-              generationCclbaSourceCoverage:
-                vacancySpreadsheetScope.drawnArea.provenance.vacancy.coverage
-                  ?.cclbaSourceCoverage,
-              currentCoverageStatus:
-                vacancySpreadsheetCoverageRef.current?.coverageStatus,
-              currentLicenseScreeningStatus:
-                vacancySpreadsheetCoverageRef.current?.licenseScreening.status,
-              currentSourcePath:
-                vacancySpreadsheetCoverageRef.current?.sourcePath,
-              currentFallbackReason:
-                vacancySpreadsheetCoverageRef.current?.fallbackReason,
-              currentCclbaSourceCoverage:
-                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
-            }
-          : {
-              selectionMethod: "community_area_boundary",
-              currentCclbaSourceCoverage:
-                vacancySpreadsheetCoverageRef.current?.cclbaSourceCoverage,
-            };
-      downloadCsv(
-        buildVacancySpreadsheetCsv(features, csvProvenance),
-        `vacant-properties-${slugifyFilePart(vacancySpreadsheetDisplayName)}-${new Date().toISOString().slice(0, 10)}.csv`
-      );
-    } catch (err) {
-      console.error("[report] vacancy spreadsheet export failed:", err);
-    } finally {
-      setIsExportingVacancySpreadsheet(false);
-    }
-  }, [
-    vacancyPayloadForScope,
-    vacancySpreadsheetFeatures,
-    vacancySpreadsheetDisplayName,
-    vacancySpreadsheetRequestPath,
-    vacancySpreadsheetScope,
-  ]);
-
-  const vacancySpreadsheetStats = useMemo(() => {
-    const features = vacancySpreadsheetFeatures ?? [];
-    return {
-      total: features.length,
-      land: features.filter((feature) => feature.properties?.propertyType === "vacant_land").length,
-      buildings: features.filter((feature) => feature.properties?.propertyType === "vacant_building").length,
-      publicOwnership: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
-    };
-  }, [vacancySpreadsheetFeatures]);
-  const drawnAreaRecordDrift = useMemo(() => {
-    if (
-      vacancySpreadsheetScope.status !== "ready" ||
-      vacancySpreadsheetScope.kind !== "drawn-area" ||
-      !vacancySpreadsheetFeatures
-    ) {
-      return null;
-    }
-    const comparability = assessDrawnAreaRecordDriftComparability(
-      vacancySpreadsheetScope.drawnArea,
-      vacancySpreadsheetCoverageRef.current,
-    );
-    if (comparability.status !== "comparable") return null;
-    return compareDrawnAreaRecordManifest(
-      vacancySpreadsheetScope.drawnArea,
-      vacancySpreadsheetFeatures,
-    );
-  }, [vacancySpreadsheetFeatures, vacancySpreadsheetScope]);
-  const drawnAreaRecordDriftComparability = useMemo(() => {
-    if (
-      vacancySpreadsheetScope.status !== "ready" ||
-      vacancySpreadsheetScope.kind !== "drawn-area" ||
-      !vacancySpreadsheetFeatures
-    ) {
-      return null;
-    }
-    return assessDrawnAreaRecordDriftComparability(
-      vacancySpreadsheetScope.drawnArea,
-      vacancySpreadsheetCoverageRef.current,
-    );
-  }, [vacancySpreadsheetFeatures, vacancySpreadsheetScope]);
   const ownerOperatorSection = useMemo(
     () =>
       report.sections.find(
@@ -4430,440 +4171,35 @@ function ReportDisplay({
   }, [ownerOperatorSection, report.metadata?.corridorId, report.metadata?.corridorLabel]);
 
   if (vacancySpreadsheetLocale && !compact) {
-    const features = vacancySpreadsheetFeatures ?? [];
-    const isDrawnArea =
-      vacancySpreadsheetScope.status === "ready" &&
-      vacancySpreadsheetScope.kind === "drawn-area";
-    const responsePending =
-      isLoadingVacancySpreadsheet ||
-      (vacancySpreadsheetFeatures === null && !vacancySpreadsheetError);
-    const currentLicenseConflictScreeningIncomplete =
-      isDrawnArea &&
-      vacancySpreadsheetScope.drawnArea.provenance.vacancy.filters.license ===
-        "conflicts" &&
-      vacancySpreadsheetCoverageRef.current?.licenseScreening.status !==
-        "available";
-    const currentSelectionIncomplete =
-      isDrawnArea &&
-      !hasCompleteCurrentDrawnAreaSelection(
-        vacancySpreadsheetScope.drawnArea,
-        vacancySpreadsheetCoverageRef.current,
-      );
-    const canExportVacancySpreadsheet =
-      !isDrawnArea ||
-      (vacancySpreadsheetFeatures !== null &&
-        !vacancySpreadsheetError &&
-        !currentSelectionIncomplete);
-    const spreadsheetCount = (count: number, loadingLabel: string): string => {
-      if (responsePending) return loadingLabel;
-      if (vacancySpreadsheetError) return "Unavailable";
-      if (currentSelectionIncomplete) {
-        return count > 0 ? `${count.toLocaleString("en-US")}+` : "Incomplete";
-      }
-      return count.toLocaleString("en-US");
-    };
-
     return (
-      <motion.div {...fadeIn}>
-        <div className="min-h-screen bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white">
-          <div className="mx-auto max-w-[1180px] bg-white shadow-xl print:shadow-none">
-            <div className="bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
-              <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/40 mb-5">
-                Chicago Site Incentive Map
-              </p>
-              <h1 className="font-editorial text-3xl sm:text-4xl lg:text-[42px] text-white leading-tight mb-3">
-                Vacancy Spreadsheet — {vacancySpreadsheetDisplayName}
-              </h1>
-              <p className="text-white/50 text-[15px] leading-relaxed max-w-xl mb-6">
-                {isDrawnArea
-                  ? "Tracked vacancy-record addresses and site context inside the exact boundary saved with this report."
-                  : "Tracked vacancy-record addresses and site context for the selected Chicago community area."}
-              </p>
-              <div className="w-10 h-[3px] bg-white/30" />
-            </div>
-
-            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-8 gap-y-3">
-              <div>
-                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Date
-                </span>
-                <span className="text-[#0C1B33] text-[13px]">
-                  {formattedDate}
-                </span>
-              </div>
-              <div>
-                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Output
-                </span>
-                <span className="text-[#0C1B33] text-[13px]">
-                  Vacancy Record Spreadsheet
-                </span>
-              </div>
-              <div>
-                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  {isDrawnArea ? "Saved area" : "Locale"}
-                </span>
-                <span className="text-[#0C1B33] text-[13px]">
-                  {vacancySpreadsheetDisplayName}
-                </span>
-              </div>
-            </div>
-
-            <div className="px-5 sm:px-12 md:px-16 py-10">
-              {isDrawnArea && vacancySpreadsheetScope.status === "ready" && (
-                <div className="border border-[#2563EB]/15 bg-[#EFF6FF] px-4 py-4 mb-8">
-                  <p className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#2563EB] mb-2">
-                    Provenance chain
-                  </p>
-                  <p className="text-[12px] leading-relaxed text-[#0C1B33]/65">
-                    Exact saved polygon · fingerprint {vacancySpreadsheetScope.drawnArea.scope.fingerprint} · saved {vacancySpreadsheetScope.drawnArea.generatedAt} · current results filtered under the saved evidence policy.
-                  </p>
-                  {drawnAreaRecordDrift && (
-                    <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
-                      Generation manifest: {drawnAreaRecordDrift.saved.toLocaleString("en-US")} records. Current polygon result: {drawnAreaRecordDrift.current.toLocaleString("en-US")} ({drawnAreaRecordDrift.added.toLocaleString("en-US")} added, {drawnAreaRecordDrift.removed.toLocaleString("en-US")} removed, {drawnAreaRecordDrift.changedSnapshots.toLocaleString("en-US")} source snapshot changed since save, {drawnAreaRecordDrift.snapshotsNotComparable.toLocaleString("en-US")} shared-record snapshot comparison unavailable).
-                    </p>
-                  )}
-                  {!responsePending &&
-                    !drawnAreaRecordDrift &&
-                    drawnAreaRecordDriftComparability?.status === "unavailable" && (
-                      <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/50">
-                        {drawnAreaRecordDriftComparability.detail}
-                      </p>
-                    )}
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mb-8">
-                {[
-                  ["Records", spreadsheetCount(vacancySpreadsheetStats.total, "Loading")],
-                  ["Vacant land", spreadsheetCount(vacancySpreadsheetStats.land, "...")],
-                  ["Buildings", spreadsheetCount(vacancySpreadsheetStats.buildings, "...")],
-                  ["Public ownership", spreadsheetCount(vacancySpreadsheetStats.publicOwnership, "...")],
-                ].map(([label, value]) => (
-                  <div key={label} className="bg-[#FAF9F6] px-4 py-4">
-                    <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
-                      {label}
-                    </span>
-                    <span className="font-mono-bureau text-[17px] text-[#0C1B33]/75">
-                      {value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
-                <div>
-                  <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33] mb-2">
-                    Tracked Vacancy Addresses
-                  </h2>
-                  <p className="text-[#0C1B33]/40 text-[13px] leading-relaxed max-w-2xl">
-                    Download the CSV to share, filter, or continue analysis in a spreadsheet tool.
-                  </p>
-                </div>
-                <button
-                  onClick={handleVacancySpreadsheetExport}
-                  disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
-                  className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-6 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
-                >
-                  {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FileText className="w-3.5 h-3.5" />
-                  )}
-                  Download CSV
-                </button>
-              </div>
-
-              {vacancySpreadsheetError && (
-                <div className="border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 mb-5">
-                  {vacancySpreadsheetError}
-                </div>
-              )}
-
-              <div className="border border-[#0C1B33]/8 overflow-x-auto">
-                <table className="w-full min-w-[1140px] text-left text-[12px]">
-                  <thead className="bg-[#0C1B33]/[0.03]">
-                    <tr>
-                      {[
-                        "Address",
-                        "Type",
-                        "Ward",
-                        "Community Area",
-                        "Zoning",
-                        "Sq Ft",
-                        "Owner",
-                        "Owner Type",
-                        "Source status / context",
-                        "Zones",
-                        "Source",
-                        "Action",
-                      ].map((heading) => (
-                        <th
-                          key={heading}
-                          className="px-3 py-3 font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35"
-                        >
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#0C1B33]/5">
-                    {responsePending ? (
-                      <tr>
-                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          Loading vacancy records...
-                        </td>
-                      </tr>
-                    ) : vacancySpreadsheetError ? (
-                      <tr>
-                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          Vacancy records are unavailable. No zero-record claim is being made.
-                        </td>
-                      </tr>
-                    ) : features.length > 0 ? (
-                      features.map((feature, rowIndex) => {
-                        const property = feature.properties ?? {};
-                        const programName =
-                          typeof property.programName === "string" && property.programName.trim()
-                            ? property.programName.trim()
-                            : null;
-                        const managingOrganization =
-                          typeof property.managingOrganization === "string" && property.managingOrganization.trim()
-                            ? property.managingOrganization.trim()
-                            : null;
-                        const applicationUrl = safeVacancyProgramUrl(property.applicationUrl);
-                        const sourceContext = programContextToText(property.programContext);
-                        const sourceStatus =
-                          typeof property.status === "string" && property.status.trim()
-                            ? property.status.trim()
-                            : null;
-                        return (
-                          <tr key={`${property.address ?? "property"}-${rowIndex}`} className="hover:bg-[#FAF9F6]">
-                            <td className="px-3 py-3 text-[#0C1B33]/75 font-medium">
-                              {String(property.address ?? "Unknown address")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/50">
-                              {property.propertyType === "vacant_land" ? "Land" : property.propertyType === "vacant_building" ? "Building" : String(property.propertyType ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45">
-                              {String(property.ward ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45">
-                              {String(property.communityArea ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45">
-                              {String(property.zoningClass ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45">
-                              {Number(property.squareFeet ?? 0).toLocaleString()}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[220px] truncate">
-                              {String(property.ownerName ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45">
-                              {String(property.ownerType ?? "")}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[240px]">
-                              {sourceStatus || programName || managingOrganization || sourceContext || applicationUrl ? (
-                                <div className="space-y-1">
-                                  {sourceStatus && (
-                                    <div>Source status: {sourceStatus}</div>
-                                  )}
-                                  {programName && <div>{programName}</div>}
-                                  {managingOrganization && (
-                                    <div className="text-[#0C1B33]/35">
-                                      Managed by {managingOrganization}
-                                    </div>
-                                  )}
-                                  {sourceContext && (
-                                    <div className="text-[#0C1B33]/35 break-words">
-                                      {sourceContext}
-                                    </div>
-                                  )}
-                                  {(programName || managingOrganization || sourceContext || applicationUrl) && (
-                                    <div className="text-[#0C1B33]/35">
-                                      Published context; verify current availability and terms.
-                                    </div>
-                                  )}
-                                  {applicationUrl && (
-                                    <a
-                                      href={applicationUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
-                                    >
-                                      Review published program record
-                                      <ExternalLink className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[260px] truncate">
-                              {zoneMatchesToText(property.zoneMatches)}
-                            </td>
-                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[220px]">
-                              {typeof property.sourceUrl === "string" && property.sourceUrl ? (
-                                <a
-                                  href={property.sourceUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"
-                                >
-                                  {String(property.sourceDatasetLabel ?? property.source ?? "Source record")}
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              ) : (
-                                String(property.sourceDatasetLabel ?? property.source ?? "")
-                              )}
-                            </td>
-                            <td className="px-3 py-3">
-                              <a
-                                href={buildIncentiveAnalysisUrl(feature)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 whitespace-nowrap border border-[#2563EB]/25 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB] transition-colors hover:bg-[#2563EB]/5 hover:border-[#2563EB]/45"
-                              >
-                                <ArrowRight className="w-3 h-3" />
-                                Run Analysis
-                              </a>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={12} className="px-3 py-8 text-center text-[#0C1B33]/35">
-                          {currentLicenseConflictScreeningIncomplete
-                            ? "No conflict rows were returned, but current license screening is incomplete and cannot establish a clean zero."
-                            : currentSelectionIncomplete
-                              ? "No rows were returned, but current coverage is incomplete and cannot establish a clean zero."
-                            : `No tracked vacancy records returned for this ${isDrawnArea ? "saved area" : "locale"}.`}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="mx-auto max-w-[1180px] print:hidden mt-8">
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={handleVacancySpreadsheetExport}
-                disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
-              >
-                {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FileText className="w-3.5 h-3.5" />
-                )}
-                Download CSV
-              </button>
-              <button
-                onClick={handleSaveReport}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                Save Report
-              </button>
-              <StartPreparationPacketButton
-                report={report}
-                wizardState={reportWizardState}
-                source={`${analyticsSource}_vacancy_actions`}
-                className="w-full sm:w-auto px-8 py-3.5 shadow-md"
-              />
-              <button
-                onClick={handleEmailReportClick}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                Email This to Me
-              </button>
-              {reportWizardState && !isDrawnAreaReport && (
-                <button
-                  onClick={handleShareReport}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-                >
-                  {linkCopied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      Link Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-3.5 h-3.5" />
-                      Share Spreadsheet
-                    </>
-                  )}
-                </button>
-              )}
-              {!compact && onCompare && !compareMode && (
-                <button
-                  onClick={onCompare}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  Compare Neighborhoods
-                </button>
-              )}
-              <button
-                onClick={onStartOver}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                New Search
-              </button>
-            </div>
-
-            {compareMode && !compareGeoResult && (
-              <div className="mt-5 mx-auto max-w-md">
-                <label className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-2">
-                  Enter a neighborhood or address to compare
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={compareAddressInput || ""}
-                    onChange={(e) => setCompareAddressInput?.(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") onCompareGeocode?.(); }}
-                    placeholder="e.g. 200 N LaSalle St, Chicago"
-                    className="flex-1 px-4 py-3 bg-white border border-[#0C1B33]/15 text-[13px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#0C1B33]/30 font-mono-bureau"
-                  />
-                  <button
-                    onClick={onCompareGeocode}
-                    disabled={compareGeocoding || !compareAddressInput?.trim()}
-                    className="px-5 py-3 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#0C1B33]/80 transition-colors disabled:opacity-30 cursor-pointer"
-                  >
-                    {compareGeocoding ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Search className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        {emailDialogOpen && (
-          <EmailReportModal
-            report={report}
-            onClose={() => setEmailDialogOpen(false)}
-            onSent={() => trackEvent("report_emailed", reportAnalyticsPayload(report, "report_email_modal"))}
-          />
-        )}
-        {saveModalOpen && (
-          <SaveReportModal
-            reportData={report}
-            wizardState={reportWizardState}
-            onClose={() => setSaveModalOpen(false)}
-          />
-        )}
-      </motion.div>
+      <VacancySpreadsheetSection
+        report={report}
+        reportWizardState={reportWizardState}
+        compact={compact}
+        analyticsSource={analyticsSource}
+        formattedDate={formattedDate}
+        onStartOver={onStartOver}
+        onCompare={onCompare}
+        compareMode={compareMode}
+        compareAddressInput={compareAddressInput}
+        setCompareAddressInput={setCompareAddressInput}
+        compareGeocoding={compareGeocoding}
+        onCompareGeocode={onCompareGeocode}
+        compareGeoResult={compareGeoResult}
+        handleShareReport={handleShareReport}
+        handleSaveReport={handleSaveReport}
+        handlePrint={handlePrint}
+        handleDownloadAfterCapture={handleDownloadAfterCapture}
+        handleEmailReportClick={handleEmailReportClick}
+        linkCopied={linkCopied}
+        downloadGateOpen={downloadGateOpen}
+        setDownloadGateOpen={setDownloadGateOpen}
+        emailDialogOpen={emailDialogOpen}
+        setEmailDialogOpen={setEmailDialogOpen}
+        saveModalOpen={saveModalOpen}
+        setSaveModalOpen={setSaveModalOpen}
+        vacancy={vacancy}
+      />
     );
   }
 
@@ -4909,13 +4245,7 @@ function ReportDisplay({
           </div>
           )}
 
-          {vacancySpreadsheetScope.status === "unavailable" && (
-            <div className="mx-5 sm:mx-12 md:mx-16 mt-6 border border-amber-300/60 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-[#0C1B33]/70">
-              {vacancySpreadsheetScope.reason === "malformed-scope"
-                ? "This drawn-area report contains an invalid saved boundary or provenance contract. The stored summary is shown below, but no boundary re-query or CSV can be recreated safely. Redraw the area to create a new exact-scope report."
-                : "This legacy drawn-area report did not save its boundary. The stored report is shown below, but a full boundary CSV cannot be recreated honestly. Redraw the area to create a new exact-scope report."}
-            </div>
-          )}
+          <DrawnAreaScopeUnavailableBanner scope={vacancySpreadsheetScope} />
 
           {/* Refine value preview (audit RF6/WU5/BM1): explain what
               refining unlocks — goal-based organization, action plan, and gap checklist —
@@ -5178,59 +4508,11 @@ function ReportDisplay({
               </div>
             )}
 
-            {!compact && !showPersonaView && vacancySpreadsheetLocale && (
-              <div className="mb-12 border border-[#0C1B33]/8 bg-[#FAF9F6] p-5 sm:p-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
-                  <div className="min-w-0">
-                    <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
-                      Vacancy Spreadsheet
-                    </div>
-                    <h2 className="font-editorial text-[24px] text-[#0C1B33] mb-2">
-                      Vacant properties in {vacancySpreadsheetLocale}
-                    </h2>
-                    <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed max-w-prose">
-                      This vacancy report pulls the locale-level property spreadsheet so the analysis can move from summary findings to specific sites that may need review, outreach, or follow-up.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleVacancySpreadsheetExport}
-                    disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
-                    className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
-                  >
-                    {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <FileText className="w-3.5 h-3.5" />
-                    )}
-                    Download CSV
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mt-6">
-                  {[
-                    ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
-                    ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
-                    ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
-                    ["Public ownership", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.publicOwnership.toLocaleString()],
-                  ].map(([label, value]) => (
-                    <div key={label} className="bg-white px-4 py-3">
-                      <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
-                        {label}
-                      </span>
-                      <span className="font-mono-bureau text-[16px] text-[#0C1B33]/70">
-                        {value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {vacancySpreadsheetError && (
-                  <p className="mt-4 text-[12px] text-red-600/70">
-                    {vacancySpreadsheetError}
-                  </p>
-                )}
-              </div>
-            )}
+            <VacancySpreadsheetSummaryCard
+              compact={compact}
+              showPersonaView={showPersonaView}
+              vacancy={vacancy}
+            />
 
             {/* ── Verdict Card ── */}
             {!showPersonaView && report.verdict && (
@@ -6058,20 +5340,7 @@ function ReportDisplay({
               <Mail className="w-3.5 h-3.5" />
               {isVacancyReport ? "Email This to Me" : "Email Report"}
             </button>
-            {vacancySpreadsheetLocale && (
-              <button
-                onClick={handleVacancySpreadsheetExport}
-                disabled={isExportingVacancySpreadsheet}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
-              >
-                {isExportingVacancySpreadsheet ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FileText className="w-3.5 h-3.5" />
-                )}
-                Vacancy Spreadsheet
-              </button>
-            )}
+            <VacancySpreadsheetCsvCtaButton vacancy={vacancy} />
             {reportWizardState && !isDrawnAreaReport && (
               <button
                 onClick={handleShareReport}
