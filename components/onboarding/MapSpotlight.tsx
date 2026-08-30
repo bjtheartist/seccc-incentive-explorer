@@ -28,24 +28,36 @@ function prefersReducedMotion() {
 const ANCHOR_READY_TIMEOUT_MS = 20000;
 
 /**
- * Resolves once the selector exists with layout, or after the timeout. The
- * map's search control (and the legend beside it) only mounts once tiles are
- * up, which can outlast any fixed pre-start delay on a slow connection —
- * live verification caught the auto-start racing the map load and skipping
- * straight to the always-in-DOM canvas step. Gating on the first anchor keeps
- * the run starting at step one; on timeout the tour still drives and
- * `skipMissingElement` degrades it gracefully.
+ * Resolves TRUE once the selector exists with layout, or FALSE after the
+ * timeout without ever finding it that way. The map's search control (and
+ * the legend beside it) only mounts once tiles are up, which can outlast
+ * any fixed pre-start delay on a slow connection — live verification caught
+ * the auto-start racing the map load and skipping straight to the
+ * always-in-DOM canvas step.
+ *
+ * Hardening round: this used to resolve unconditionally on timeout too,
+ * with the comment "the tour still drives and skipMissingElement degrades
+ * it gracefully." Live measurement under real CI-runner-level contention
+ * (6 concurrent tabs sharing one machine, reproducing the class of load a
+ * slow real device can also hit) showed that "degrade gracefully" is not
+ * graceful at all: skipMissingElement doesn't wait quietly, it CASCADES —
+ * drive() calls into driver.js immediately, the search anchor is still
+ * absent, so step 1 is skipped, and the run opens on step 2 or 3 with no
+ * indication anything went wrong. The caller now gets told which way this
+ * resolved, so it can choose not to start a tour it already knows would be
+ * broken, rather than caller-blind "proceed anyway."
  */
-function waitForAnchor(selector: string, timeoutMs: number) {
-  return new Promise<void>((resolve) => {
+function waitForAnchor(selector: string, timeoutMs: number): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
     const startedAt = Date.now();
     const check = () => {
       const element = document.querySelector<HTMLElement>(selector);
-      if (
-        (element && element.getBoundingClientRect().height > 0) ||
-        Date.now() - startedAt >= timeoutMs
-      ) {
-        resolve();
+      if (element && element.getBoundingClientRect().height > 0) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - startedAt >= timeoutMs) {
+        resolve(false);
         return;
       }
       window.setTimeout(check, 250);
@@ -85,7 +97,22 @@ export function MapSpotlight() {
 
       // After the import (so a failed chunk still fails fast into the catch
       // below), hold the start until the map's first anchor has mounted.
-      await waitForAnchor(MAP_TOUR_STEPS[0].selector, ANCHOR_READY_TIMEOUT_MS);
+      const anchorReady = await waitForAnchor(MAP_TOUR_STEPS[0].selector, ANCHOR_READY_TIMEOUT_MS);
+      if (!anchorReady) {
+        // The map's first tour anchor never mounted within the wait window.
+        // Starting anyway would let driver.js's own skipMissingElement
+        // cascade straight to whichever LATER step happens to be ready,
+        // opening the run on step two or three with no indication anything
+        // was wrong — precisely what this gate exists to prevent (see
+        // waitForAnchor's doc comment). Bail the same defensive way a
+        // failed driver.js import does below: no outcome recorded, so a
+        // later trigger (another page load's auto-start, or the persistent
+        // replay button) gets a fresh, unraced attempt instead of this one
+        // silently standing in as "shown".
+        driverRef.current = null;
+        startingRef.current = false;
+        return;
+      }
 
       const releaseRun = () => {
         driverRef.current = null;
