@@ -29,13 +29,14 @@ async function openMapAsReturningVisitor(page: Page) {
 test("auto-starts at the search step once the map has mounted, and completes to a preference", async ({
   page,
 }) => {
+  test.setTimeout(150000);
   await openMapAsReturningVisitor(page);
 
   // The tour holds its start until the map's search control mounts (tiles
   // up), so the first visible popover must be step one — never a mid-tour
   // step that skipped past still-loading anchors.
   const popover = page.locator(".cie-driver-popover");
-  await expect(popover).toBeVisible({ timeout: 30000 });
+  await expect(popover).toBeVisible({ timeout: 75000 });
   await expect(popover.locator(".driver-popover-title")).toHaveText("Start with an address");
   await expect(popover.locator(".driver-popover-progress-text")).toHaveText("Step 1 of 4");
   await expect(page.locator('[data-tour="map-search"]')).toHaveClass(/driver-active-element/);
@@ -79,6 +80,7 @@ test("stays silent for a first-time visitor — the sitewide welcome owns that v
 });
 
 test("the replay button restarts the tour even after it was skipped", async ({ page }) => {
+  test.setTimeout(150000);
   await page.addInitScript((sitewide) => {
     window.localStorage.setItem("cie:first-visit-guide", sitewide);
     window.localStorage.setItem(
@@ -97,10 +99,10 @@ test("the replay button restarts the tour even after it was skipped", async ({ p
   // load, landing the popover on step two or three instead. Wait for the
   // same anchor the app itself gates on before triggering the replay, so
   // this test is asserting the replay mechanism, not racing map mount.
-  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 60000 });
   await page.getByRole("button", { name: "How to use this map" }).click();
   const popover = page.locator(".cie-driver-popover");
-  await expect(popover).toBeVisible({ timeout: 30000 });
+  await expect(popover).toBeVisible({ timeout: 15000 });
   await expect(popover.locator(".driver-popover-title")).toHaveText("Start with an address");
 });
 
@@ -110,15 +112,16 @@ test.describe("mobile map tour", () => {
   test("skips the closed legend's presets stop and keeps popovers inside the viewport", async ({
     page,
   }) => {
+    test.setTimeout(150000);
     await openMapAsReturningVisitor(page);
 
     // Same anchor-readiness wait as the replay test above — the mobile
     // layout's different mount order made this race more often than the
     // desktop auto-start test just above, which relies solely on the app's
     // own internal `waitForAnchor` gate.
-    await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 60000 });
     const popover = page.locator(".cie-driver-popover");
-    await expect(popover).toBeVisible({ timeout: 30000 });
+    await expect(popover).toBeVisible({ timeout: 15000 });
     await expect(popover.locator(".driver-popover-title")).toHaveText("Start with an address");
 
     // The legend starts closed on a phone, so its presets stop is skipped and

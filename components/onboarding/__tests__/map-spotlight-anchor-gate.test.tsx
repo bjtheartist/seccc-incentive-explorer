@@ -12,7 +12,7 @@
  * Live measurement (6 concurrent Chromium tabs sharing one machine,
  * reproducing the class of contention a slow real device or a busy CI
  * runner can also hit) showed the OLD `waitForAnchor` resolving
- * unconditionally on its 20s timeout, then `drive()` proceeding anyway:
+ * unconditionally on its timeout, then `drive()` proceeding anyway:
  * driver.js's own `skipMissingElement` cascade-skips straight past the
  * absent search-step anchor to whichever later step happens to be ready,
  * so the tour's very first popover silently lands on step two or three.
@@ -29,8 +29,8 @@
  * amount of wall-clock time to resolve before `waitForAnchor` is even
  * CALLED — fake-time budget spent advancing the clock before that happens
  * is wasted (nothing is scheduled yet to advance), so a single fixed
- * "auto-start delay + 20s timeout" budget starting from render() could run
- * out before waitForAnchor's OWN 20s countdown (which only starts once
+ * "auto-start delay + anchor timeout" budget starting from render() could run
+ * out before waitForAnchor's OWN countdown (which only starts once
  * IT is actually invoked) finishes. The negative test's `drive` was
  * therefore never actually reached one way or the other within budget —
  * it "passed" by simply not having gotten far enough to fail, in EITHER
@@ -141,10 +141,10 @@ describe("MapSpotlight — anchor-mount gate (hardening round)", () => {
 
       // [data-tour="map-search"] is never added to the DOM in this test —
       // wait for waitForAnchor to actually start looking for it, THEN
-      // spend its full 20s timeout budget (plus margin) confirming it
+      // spend its full 60s timeout budget (plus margin) confirming it
       // keeps not finding it.
       await advanceUntilAnchorCheckStarts(querySelectorSpy);
-      await advanceFor(20500);
+      await advanceFor(60500);
 
       // Proves the async chain actually ran far enough to matter — not
       // just that the budget expired before anything happened.
@@ -178,4 +178,16 @@ describe("MapSpotlight — anchor-mount gate (hardening round)", () => {
     },
     30000,
   );
+
+  it("cancels a pending anchor wait when the map page unmounts", async () => {
+    window.localStorage.setItem("cie:first-visit-guide", RESOLVED_SITEWIDE);
+    const rendered = render(<MapSpotlight />);
+
+    await advanceUntilAnchorCheckStarts(querySelectorSpy);
+    rendered.unmount();
+    mountSearchAnchor();
+    await advanceFor(300);
+
+    expect(drive).not.toHaveBeenCalled();
+  });
 });

@@ -40,7 +40,7 @@ jobs:
     # builds and boots the whole app plus a real Chromium, which is a lot
     # slower than the vitest/lint/tsc steps above. Runs in parallel with
     # `verify` (no `needs:`), not after it.
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       # Map pages (Mapbox GL) and any route that reads live data need these
       # at build/runtime. NEXT_PUBLIC_MAPBOX_TOKEN is a client-exposed

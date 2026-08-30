@@ -24,12 +24,15 @@ function prefersReducedMotion() {
   }
 }
 
-/** How long a tour start waits for the map to finish mounting its controls. */
-const ANCHOR_READY_TIMEOUT_MS = 20000;
+/** How long a tour start waits for the map to finish mounting its controls.
+ * Real mobile/CI traces can cross 20 seconds while Mapbox initializes its
+ * layers, so keep waiting in the background instead of abandoning a valid
+ * first visit just before the search control becomes usable. */
+const ANCHOR_READY_TIMEOUT_MS = 60000;
 
 /**
  * Resolves TRUE once the selector exists with layout, or FALSE after the
- * timeout without ever finding it that way. The map's search control (and
+ * timeout or page unmount. The map's search control (and
  * the legend beside it) only mounts once tiles are up, which can outlast
  * any fixed pre-start delay on a slow connection — live verification caught
  * the auto-start racing the map load and skipping straight to the
@@ -47,10 +50,18 @@ const ANCHOR_READY_TIMEOUT_MS = 20000;
  * resolved, so it can choose not to start a tour it already knows would be
  * broken, rather than caller-blind "proceed anyway."
  */
-function waitForAnchor(selector: string, timeoutMs: number): Promise<boolean> {
+function waitForAnchor(
+  selector: string,
+  timeoutMs: number,
+  isCancelled: () => boolean,
+): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const startedAt = Date.now();
     const check = () => {
+      if (isCancelled()) {
+        resolve(false);
+        return;
+      }
       const element = document.querySelector<HTMLElement>(selector);
       if (element && element.getBoundingClientRect().height > 0) {
         resolve(true);
@@ -79,6 +90,15 @@ export function MapSpotlight() {
   const startingRef = useRef(false);
   const outcomeRecordedRef = useRef(false);
   const autoStartHandledRef = useRef(false);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      driverRef.current?.destroy();
+    };
+  }, []);
 
   const recordOutcome = useCallback((status: "completed" | "skipped") => {
     if (outcomeRecordedRef.current) return;
@@ -97,9 +117,14 @@ export function MapSpotlight() {
 
       // After the import (so a failed chunk still fails fast into the catch
       // below), hold the start until the map's first anchor has mounted.
-      const anchorReady = await waitForAnchor(MAP_TOUR_STEPS[0].selector, ANCHOR_READY_TIMEOUT_MS);
+      const anchorReady = await waitForAnchor(
+        MAP_TOUR_STEPS[0].selector,
+        ANCHOR_READY_TIMEOUT_MS,
+        () => !mountedRef.current,
+      );
       if (!anchorReady) {
-        // The map's first tour anchor never mounted within the wait window.
+        // The first anchor never mounted within the wait window, or this
+        // page instance unmounted while it was waiting.
         // Starting anyway would let driver.js's own skipMissingElement
         // cascade straight to whichever LATER step happens to be ready,
         // opening the run on step two or three with no indication anything
@@ -218,13 +243,6 @@ export function MapSpotlight() {
     window.addEventListener(MAP_GUIDE_OPEN_EVENT, replay);
     return () => window.removeEventListener(MAP_GUIDE_OPEN_EVENT, replay);
   }, [startTour]);
-
-  useEffect(
-    () => () => {
-      driverRef.current?.destroy();
-    },
-    [],
-  );
 
   return null;
 }

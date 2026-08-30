@@ -22,6 +22,10 @@ export default defineConfig({
     {
       name: "chromium",
       testIgnore: crossBrowserSmokeFiles,
+      // Mapbox/WebGL startup is resource-heavy. A single worker reduces
+      // contention between the map-tour and vacancy-map regression files;
+      // retries remain enabled for genuine browser timing variance.
+      workers: 1,
       use: { browserName: "chromium" },
     },
     {
