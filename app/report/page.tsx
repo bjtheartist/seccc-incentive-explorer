@@ -17,8 +17,6 @@ import {
   Printer,
   AlertCircle,
   ExternalLink,
-  Mail,
-  Link2,
 } from "lucide-react";
 import {
   REPORT_TYPE_OPTIONS,
@@ -95,6 +93,7 @@ async function generateReportRemote(
   return (await res.json()) as GeneratedReport;
 }
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import { ReportActionButtons } from "@/components/report/ReportActionButtons";
 import { StartHereCard } from "@/components/report/StartHereCard";
 import { ActionRoadmapSection } from "@/components/report/ActionRoadmapSection";
 import {
@@ -201,7 +200,6 @@ import type {
 import { ConciergePageContextBridge } from "@/components/concierge/SiteConciergeProvider";
 import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
-import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
 import {
   INSTANT_MODE_COORDINATE_ERROR_MESSAGE,
@@ -235,7 +233,7 @@ import type {
   CommunityAsset,
   Stats,
 } from "@/lib/types";
-import ReportZoningMap from "@/components/report/ReportZoningMap";
+import ReportZoningMap from "@/components/report/ReportZoningMapIsland";
 import { cachedFetch } from "@/lib/fetch-cache";
 import {
   fetchZoningLookup,
@@ -4029,7 +4027,8 @@ function ReportDisplay({
     setDownloadGateOpen(true);
   };
 
-  const handleDownloadAfterCapture = () => {
+  const handleDownloadAfterCapture = async () => {
+    const { generateReportPdf } = await import("@/lib/pdf-report");
     generateReportPdf(report);
     trackEvent(
       "report_pdf_downloaded",
@@ -4150,10 +4149,6 @@ function ReportDisplay({
     "program-explorer": "Program Explorer Report",
     "developer-analysis": "Developer Analysis Report",
   };
-  const isVacancyReport =
-    report.reportType === "dev-feasibility" ||
-    report.reportType === "best-location" ||
-    report.title.toLowerCase().includes("vacancy");
   const ownerOperatorSection = useMemo(
     () =>
       report.sections.find(
@@ -5313,52 +5308,25 @@ function ReportDisplay({
         {/* ── Action Buttons (outside the document) ── */}
         <div className={`report-actions mx-auto max-w-[850px] print:hidden mt-8 ${compact ? "hidden" : ""}`}>
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={handlePrint}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Download PDF
-            </button>
-            <button
-              onClick={handleSaveReport}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              {isVacancyReport ? "Save Report" : "Save to Workspace"}
-            </button>
-            <StartPreparationPacketButton
+            <ReportActionButtons
               report={report}
               wizardState={reportWizardState}
-              source={`${analyticsSource}_report_actions`}
-              className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+              isDrawnAreaReport={isDrawnAreaReport}
+              linkCopied={linkCopied}
+              onDownload={handlePrint}
+              onSave={handleSaveReport}
+              onEmail={handleEmailReportClick}
+              onShare={handleShareReport}
+              afterSave={(
+                <StartPreparationPacketButton
+                  report={report}
+                  wizardState={reportWizardState}
+                  source={`${analyticsSource}_report_actions`}
+                  className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+                />
+              )}
+              afterEmail={<VacancySpreadsheetCsvCtaButton vacancy={vacancy} />}
             />
-            <button
-              onClick={handleEmailReportClick}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              {isVacancyReport ? "Email This to Me" : "Email Report"}
-            </button>
-            <VacancySpreadsheetCsvCtaButton vacancy={vacancy} />
-            {reportWizardState && !isDrawnAreaReport && (
-              <button
-                onClick={handleShareReport}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-              >
-                {linkCopied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    Link Copied!
-                  </>
-                ) : (
-                  <>
-                    <Link2 className="w-3.5 h-3.5" />
-                    Share Report
-                  </>
-                )}
-              </button>
-            )}
             {/* The Brief (spec v2 item 5): a one-page, forwardable summary
                 — only offered on a real persona lens (it reads the lensed
                 programs/contacts the same way Contact Sheet does). */}

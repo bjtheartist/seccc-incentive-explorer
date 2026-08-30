@@ -69,6 +69,18 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     findings: ["F13"],
   },
   {
+    id: "report-action-controls",
+    description: "Shared Download, Save, Email, and Share controls for live, shared, and saved reports, including report-type labels and Share gating.",
+    contracts: ["reviewed-copy"],
+    files: ["components/report/ReportActionButtons.tsx"],
+  },
+  {
+    id: "report-zoning-map-island",
+    description: "The fixed-height lazy-loading boundary around the report zoning map, shared by both report renderers.",
+    contracts: ["ZoneEvidence", "reviewed-copy"],
+    files: ["components/report/ReportZoningMapIsland.tsx"],
+  },
+  {
     id: "report-pdf",
     description: "The current generated-report PDF export pipeline.",
     contracts: ["PublicProgramView", "ZoneEvidence", "reviewed-copy"],

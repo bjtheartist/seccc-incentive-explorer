@@ -12,10 +12,14 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildForkParityProject,
+  checkReportActionForkParity,
   checkForkFileParity,
   collectDrawnAreaSignatures,
   FORK_FILE_PATHS,
+  REPORT_ACTION_RUNTIME_SIGNATURES,
   SHARED_DRAWN_AREA_MODULE_SPECIFIERS,
+  SHARED_REPORT_ACTION_COMPONENT_NAME,
+  SHARED_REPORT_ACTION_MODULE_SPECIFIER,
 } from "../source-guard/fork-parity";
 
 const ROOT_DIR = path.resolve(__dirname, "../..");
@@ -165,5 +169,63 @@ describe("fork parity guard — synthetic self-tests (scanner mechanics, in-memo
     expect(SHARED_DRAWN_AREA_MODULE_SPECIFIERS).toContain(
       "@/components/report/useVacancySpreadsheetSection",
     );
+  });
+});
+
+describe("fork parity: generic report actions are shared by construction", () => {
+  const { project, forkSourceFiles } = buildForkParityProject(ROOT_DIR);
+
+  it.each(FORK_FILE_PATHS)("%s imports and renders the shared generic action component without local action copy", (relPath) => {
+    const sourceFile = forkSourceFiles.find((file) => file.getFilePath().endsWith(relPath));
+    if (!sourceFile) throw new Error(`Fork file not found in project: ${relPath}`);
+
+    expect(checkReportActionForkParity(sourceFile)).toEqual([]);
+  });
+
+  it("the vacancy spreadsheet scope imports the neutral vacancy predicate instead of declaring another copy", () => {
+    const sourceFile = project.addSourceFileAtPath(
+      `${ROOT_DIR}/lib/vacancy-spreadsheet-scope.ts`,
+    );
+    const policyImport = sourceFile
+      .getImportDeclarations()
+      .find((declaration) => declaration.getModuleSpecifierValue() === "@/lib/report-action-policy");
+
+    expect(
+      policyImport?.getNamedImports().some((namedImport) => namedImport.getName() === "isVacancyReport"),
+    ).toBe(true);
+    expect(sourceFile.getFunction("isVacancyReport")).toBeUndefined();
+    expect(
+      sourceFile.getVariableDeclarations().some((declaration) => declaration.getName() === "isVacancyReport"),
+    ).toBe(false);
+  });
+
+  it("turns red when a fork locally restores generic action copy or the vacancy predicate", () => {
+    const syntheticProject = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = syntheticProject.createSourceFile(
+      "fork.tsx",
+      [
+        `import { ${SHARED_REPORT_ACTION_COMPONENT_NAME} } from "${SHARED_REPORT_ACTION_MODULE_SPECIFIER}";`,
+        `const isVacancyReport = report.title.includes("vacancy");`,
+        `export function Fork() {`,
+        `  return <><${SHARED_REPORT_ACTION_COMPONENT_NAME} /><button>${REPORT_ACTION_RUNTIME_SIGNATURES[1]}</button></>;`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const violations = checkReportActionForkParity(sourceFile);
+    expect(violations.some((violation) => violation.kind === "local-action-copy")).toBe(true);
+    expect(violations.some((violation) => violation.kind === "local-vacancy-predicate")).toBe(true);
+  });
+
+  it("turns red when a fork drops the shared generic action component", () => {
+    const syntheticProject = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = syntheticProject.createSourceFile(
+      "fork.tsx",
+      `export function Fork() { return <div>Unrelated report content</div>; }`,
+    );
+
+    const violations = checkReportActionForkParity(sourceFile);
+    expect(violations.some((violation) => violation.kind === "missing-shared-action-import")).toBe(true);
+    expect(violations.some((violation) => violation.kind === "missing-shared-action-render")).toBe(true);
   });
 });

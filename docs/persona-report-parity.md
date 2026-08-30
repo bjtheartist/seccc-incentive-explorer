@@ -127,6 +127,17 @@ Fix: extracted both into new named exports of `components/report/VacancySpreadsh
 1. **Correct, intended wiring** (7 lines): both forks calling the SAME shared hook/components identically — `import`/`const vacancy = useVacancySpreadsheetSection(...)`/the destructure/`if (vacancySpreadsheetLocale && !compact) {`/`<DrawnAreaScopeUnavailableBanner .../>`/`<VacancySpreadsheetCsvCtaButton .../>`. Two files correctly delegating to one shared implementation necessarily look identical at the call site — that is the goal of unification, not a violation of it.
 2. **Pre-existing generic report-anatomy commons, out of scope** (4 lines): `isVacancyReport`'s 3-line definition and the `{isVacancyReport ? "Save Report" : "Save to Workspace"}` / `{isVacancyReport ? "Email This to Me" : "Email Report"}` / `{reportWizardState && !isDrawnAreaReport && (` lines are single-line report-type-aware label/gating facets embedded in the fully generic Save/Email/Share buttons every report type renders (not vacancy-spreadsheet rendering). Extracting them would mean refactoring that shared, non-vacancy-specific button trio — out of this track's scope per the coordinator's own "generic report-anatomy commons... out of scope" line. Flagged here rather than silently dropped; a future pass could still unify `isVacancyReport`'s definition into the shared hook if judged worthwhile.
 
+**Follow-up round (generic report actions) — closed 2026-08-29.** The four
+generic commons named immediately above are no longer open. Both report forks
+now render `components/report/ReportActionButtons.tsx`, which owns Download,
+Save, Email, and Share presentation as well as the report-type labels and Share
+visibility contract. `lib/report-action-policy.ts` is the single vacancy-report
+classification source, reused by both the shared action component and
+`lib/vacancy-spreadsheet-scope.ts`. The fork fence now fails if either renderer
+drops the shared component, restores any of the retired local action copy, or
+redeclares `isVacancyReport`; component tests pin label choice, Share gating,
+copied state, click handling, and the renderer-specific slot order.
+
 ## What shipped (Tier 1 — v1 spec, complete)
 
 | Deliverable | Locus | Verification |
