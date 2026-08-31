@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+
+const { trackEventMock } = vi.hoisted(() => ({ trackEventMock: vi.fn() }));
+vi.mock("@/lib/analytics-events", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics-events")>()),
+  trackEvent: trackEventMock,
+}));
+
 import {
   LocationSnapshotPanel,
   WhatsNotablePanel,
@@ -7,6 +17,11 @@ import {
 } from "@/components/report/LookingOverview";
 import { CONFIRMED_PROGRAMS_SECTION_TITLE, SECTION_IDS } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
+
+afterEach(() => {
+  cleanup();
+  trackEventMock.mockReset();
+});
 
 function reportFixture(): GeneratedReport {
   return {
@@ -76,16 +91,57 @@ describe("WhatsNotablePanel (gate finding 9/10)", () => {
 });
 
 describe("ExploreByInterestPanel (gate finding 9/10)", () => {
-  it("renders the three real persona-switch links and the full-picture line", () => {
-    const html = renderToStaticMarkup(<ExploreByInterestPanel report={reportFixture()} />);
+  it("renders the three real persona-switch controls and the full-picture line", () => {
+    const html = renderToStaticMarkup(
+      <ExploreByInterestPanel report={reportFixture()} onSelectPersona={() => {}} />,
+    );
     expect(html).toContain("I own a business");
     expect(html).toContain("I support businesses");
     expect(html).toContain("I develop property");
     expect(html).toContain('data-testid="full-picture-line"');
     expect(html).toContain("Every program, zone, and detail at this address");
-    expect(html).toContain("persona=starting");
-    expect(html).toContain("persona=supporter");
-    expect(html).toContain("persona=developer");
-    expect(html).toContain("persona=all");
+  });
+
+  it("switches the lens in-page: every control calls onSelectPersona with its own PersonaId", () => {
+    const onSelectPersona = vi.fn();
+    render(<ExploreByInterestPanel report={reportFixture()} onSelectPersona={onSelectPersona} />);
+    const chips = [
+      ["I own a business", "starting"],
+      ["I support businesses", "supporter"],
+      ["I develop property", "developer"],
+    ] as const;
+    for (const [label, persona] of chips) {
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      expect(onSelectPersona).toHaveBeenLastCalledWith(persona);
+    }
+    fireEvent.click(screen.getByTestId("full-picture-line"));
+    expect(onSelectPersona).toHaveBeenLastCalledWith("all");
+    expect(onSelectPersona).toHaveBeenCalledTimes(chips.length + 1);
+  });
+
+  it("mirrors the persona_chip_selected event PersonaChips fires from its own click handler", () => {
+    render(<ExploreByInterestPanel report={reportFixture()} onSelectPersona={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "I develop property" }));
+    expect(trackEventMock).toHaveBeenCalledWith(
+      "persona_chip_selected",
+      expect.objectContaining({
+        source: "looking_explore_by_interest",
+        address: "7939 S Cottage Grove Ave",
+        metadata: expect.objectContaining({ persona: "developer" }),
+      }),
+    );
+  });
+
+  // REGRESSION (the "refined report reverts to its pre-refine snapshot" bug):
+  // these controls were once raw `<a href="?persona=…">` anchors. A real
+  // navigation remounts the page, which regenerates the report from stale URL
+  // params and throws the refine away. Nothing on this board may become a
+  // persona link again.
+  it("renders NO anchor carrying a persona URL param", () => {
+    const html = renderToStaticMarkup(
+      <ExploreByInterestPanel report={reportFixture()} onSelectPersona={() => {}} />,
+    );
+    expect(html).not.toMatch(/<a\b[^>]*href="[^"]*persona=/);
+    expect(html).not.toContain("persona=");
   });
 });

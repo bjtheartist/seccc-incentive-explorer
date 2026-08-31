@@ -1354,6 +1354,7 @@ export function ReportDisplay({
                 {renderGuidepostBand(3)}
                 <ExploreByInterestPanel
                   report={report}
+                  onSelectPersona={handlePersonaSelect}
                   sectionNumber="04"
                   fullPictureSectionNumber="05"
                 />

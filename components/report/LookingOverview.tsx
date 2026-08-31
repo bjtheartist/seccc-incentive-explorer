@@ -13,13 +13,37 @@ import {
 } from "@/lib/report-looking-overview";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { PersonaReportSection } from "@/components/report/PersonaReportChrome";
-import { visiblePersonaProgramItems } from "@/lib/report-personas";
+import { trackEvent } from "@/lib/analytics-events";
+import type { PersonaId } from "@/lib/personas";
+import { personaSelectionEvent, visiblePersonaProgramItems } from "@/lib/report-personas";
 
-function personaHref(persona: string): string {
-  if (typeof window === "undefined") return `?persona=${persona}`;
-  const url = new URL(window.location.href);
-  url.searchParams.set("persona", persona);
-  return url.pathname + url.search;
+/**
+ * Switch the in-page lens the way PersonaChips does. These were once real
+ * anchors to `?persona=…`; that full navigation remounted the page, which
+ * regenerated the report from stale URL params and reverted a refined report
+ * to its pre-refine snapshot. PersonaChips fires `persona_chip_selected` from
+ * its own click handler rather than from the shared parent handler, so this
+ * board mirrors the event with a `source` naming its own surface.
+ */
+function selectPersona(
+  report: GeneratedReport,
+  next: PersonaId,
+  onSelectPersona: (next: PersonaId) => void,
+): void {
+  const event = personaSelectionEvent("looking", next, report);
+  if (event) {
+    trackEvent("persona_chip_selected", {
+      reportType: event.reportType,
+      source: "looking_explore_by_interest",
+      address: report.metadata?.address ?? null,
+      metadata: {
+        persona: event.persona,
+        matchedProgramsBefore: event.matchedProgramsBefore,
+        matchedProgramsAfter: event.matchedProgramsAfter,
+      },
+    });
+  }
+  onSelectPersona(next);
 }
 
 /**
@@ -102,11 +126,14 @@ export function WhatsNotablePanel({
 
 /** PART 03 — "Explore by interest" + the full-picture line. */
 export function ExploreByInterestPanel({
-  report: _lensed,
+  report,
+  onSelectPersona,
   sectionNumber,
   fullPictureSectionNumber,
 }: {
   report: GeneratedReport;
+  /** Same handler the PersonaChips row uses — an in-page lens change. */
+  onSelectPersona: (next: PersonaId) => void;
   sectionNumber?: string;
   fullPictureSectionNumber?: string;
 }) {
@@ -114,26 +141,28 @@ export function ExploreByInterestPanel({
     <div data-testid="explore-by-interest" className="mt-3">
       <div className="flex flex-wrap gap-2">
         {EXPLORE_BY_INTEREST_OPTIONS.map((option) => (
-          <a
+          <button
             key={option.persona}
-            href={personaHref(option.persona)}
-            className="font-mono-bureau text-[10px] tracking-[0.08em] uppercase text-[#0C1B33]/60 border border-[#0C1B33]/15 px-3 py-2 hover:border-[#2563EB]/40 hover:text-[#2563EB] transition-colors"
+            type="button"
+            onClick={() => selectPersona(report, option.persona, onSelectPersona)}
+            className="font-mono-bureau text-[10px] tracking-[0.08em] uppercase text-[#0C1B33]/60 border border-[#0C1B33]/15 px-3 py-2 hover:border-[#2563EB]/40 hover:text-[#2563EB] transition-colors cursor-pointer"
           >
             {option.label}
-          </a>
+          </button>
         ))}
       </div>
     </div>
   );
   const fullPicture = (
-      <a
-        href={personaHref("all")}
+      <button
+        type="button"
+        onClick={() => selectPersona(report, "all", onSelectPersona)}
         data-testid="full-picture-line"
-        className="flex items-center gap-1.5 border border-[#D8DDE6] bg-white px-3.5 py-2.5 text-[12.5px] text-[#5A6478] hover:border-[#2563EB] hover:text-[#2563EB]"
+        className="flex items-center gap-1.5 border border-[#D8DDE6] bg-white px-3.5 py-2.5 text-[12.5px] text-[#5A6478] hover:border-[#2563EB] hover:text-[#2563EB] cursor-pointer"
       >
         <span aria-hidden="true">&#9656;</span>
         Every program, zone, and detail at this address
-      </a>
+      </button>
   );
   if (!sectionNumber || !fullPictureSectionNumber) {
     return <div className="space-y-4">{interests}{fullPicture}</div>;

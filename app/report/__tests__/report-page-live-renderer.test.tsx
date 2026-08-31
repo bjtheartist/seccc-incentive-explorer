@@ -1353,6 +1353,11 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).toContain("I support businesses");
       expect(html).toContain("I develop property");
       expect(html).toContain('data-testid="full-picture-line"');
+      // The board switches the lens in place. These were once `?persona=`
+      // anchors, and the navigation they caused regenerated the report from
+      // stale URL params — reverting a refined report.
+      expect(html).toContain('<button type="button" data-testid="full-picture-line"');
+      expect(html).not.toMatch(/<a\b[^>]*href="[^"]*persona=/);
     });
 
     it("renders no program-card section or Also-line for looking; the snapshot alone carries up to three names", async () => {
