@@ -873,10 +873,19 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
         match[1].replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/&[a-z]+;/g, ""),
       );
 
+    // Owner ruling (Billy, 2026-08-31): persona lenses cap at FOUR canonical
+    // sections (lib/report-personas.ts PERSONA_SECTION_ORDER), so these
+    // inventories shrank by exactly the buckets the cap dropped —
+    // logisticsAccess, civicRepresentation and zoning everywhere, plus
+    // neighborhoodContext off developer. The remaining headings that are not
+    // canonical ReportSections (Funding windows / Incentive horizon /
+    // Document readiness / Contact sheet) are bespoke board mounts and do
+    // not count against the cap. "All" is exempt and untouched — see the
+    // kitchen-sink test at the end of this describe.
     it.each([
-      ["starting", ["Site facts", "Logistics access", "Civic representation", "Zoning", "Programs for your goal", "Funding windows", "Document readiness", "Financing resources", "Contact sheet"]],
-      ["supporter", ["Neighborhood context", "Civic representation", "Zoning", "Programs for the goal", "Document readiness", "Financing resources", "Contact sheet"]],
-      ["developer", ["Site facts & county records", "Logistics access", "Civic representation", "Zoning & district family", "Neighborhood context", "Capital-relevant programs", "Incentive horizon", "Financing resources", "Contact sheet"]],
+      ["starting", ["Site facts", "Programs for your goal", "Funding windows", "Document readiness", "Financing resources", "Contact sheet"]],
+      ["supporter", ["Neighborhood context", "Programs for the goal", "Document readiness", "Financing resources", "Contact sheet"]],
+      ["developer", ["Site facts & county records", "Capital-relevant programs", "Incentive horizon", "Financing resources", "Contact sheet"]],
       ["looking", ["Location snapshot", "Civic representation", "What’s notable", "Explore by interest", "The full picture"]],
     ] as const)("renders exactly the %s board section inventory, in order", async (persona, expected) => {
       const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });

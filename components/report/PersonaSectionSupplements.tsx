@@ -96,7 +96,19 @@ export function PersonaProgramSupplements({
   return null;
 }
 
+/**
+ * The Contact Sheet is always the LAST numbered section on a persona board,
+ * so its number is the board's own section count. Owner ruling 2026-08-31
+ * (the four-section cap in lib/report-personas.ts PERSONA_SECTION_ORDER)
+ * shortened every board, so these follow it down:
+ *   owner (starting/growing): site facts, programs, funding windows,
+ *     document readiness, financing → contact sheet is 06
+ *   supporter: neighborhood context, programs, document readiness,
+ *     financing → contact sheet is 05
+ *   developer: site facts, programs, incentive horizon, financing →
+ *     contact sheet is 05
+ */
 export function personaContactSectionNumber(persona: PersonaId): string {
-  if (persona === "supporter") return "07";
-  return "09";
+  if (persona === "starting" || persona === "growing") return "06";
+  return "05";
 }
