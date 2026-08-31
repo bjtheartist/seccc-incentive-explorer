@@ -4,7 +4,9 @@ import { join } from "path";
 import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
+  BUCKET_PART,
   guidepostPartForSection,
+  PERSONA_SECTION_ORDER,
   personaSummaryProgramNames,
   personaEmptyProgramsDescription,
   personaSelectionEvent,
@@ -82,6 +84,31 @@ function reportFixture(): GeneratedReport {
       { tier: "start-gathering", programId: "tif", label: "TIF", description: "" },
     ],
     metadata: { address: "9101 S Commercial Ave" },
+  };
+}
+
+/** A report carrying one section for every canonical bucket the persona
+ *  lens knows about. Hoisted to module scope (it was declared inside the
+ *  "Gate finding 19" describe) so the owner-ruling 2026-08-31 cap guard can
+ *  reuse the SAME fixture the title-override suite already exercises. */
+function multiSectionReport(): GeneratedReport {
+  return {
+    ...reportFixture(),
+    sections: [
+      { id: SECTION_IDS.siteFacts, title: "Site Facts", description: "", items: [] },
+      { id: SECTION_IDS.logisticsAccess, title: "Logistics Access", description: "", items: [] },
+      { id: SECTION_IDS.civicRepresentation, title: "Civic Representation", description: "", items: [] },
+      { id: SECTION_IDS.zoningUseStartingPoint, title: "Zoning & Use Starting Point", description: "", items: [] },
+      { id: SECTION_IDS.neighborhoodEconomicContext, title: "Neighborhood Economic Context", description: "", items: [] },
+      { id: SECTION_IDS.documentReadinessChecklist, title: "Document Readiness Checklist", description: "", items: [] },
+      { id: CAPITAL_PARTNER_SECTION_ID, title: CAPITAL_PARTNER_SECTION_TITLE, description: "", items: [] },
+      {
+        id: CONFIRMED_PROGRAMS_SECTION_ID,
+        title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+        description: "",
+        items: [{ label: "TIF", value: "", programId: "tif" }],
+      },
+    ],
   };
 }
 
@@ -172,9 +199,25 @@ describe("applyPersonaLens", () => {
     const lensed = applyPersonaLens(report, "starting").report;
     expect(lensed.sections.find((section) => section.id === SECTION_IDS.siteFacts)?.items)
       .toEqual([{ label: "Property PIN", value: "20-01" }]);
+    // Owner ruling 2026-08-31 (four-section cap): the zoning bucket is off
+    // every persona's lens inventory, so the whole section — ZBA diagnostic
+    // included — no longer reaches a lensed board at all. This test's claim
+    // (the ZBA source diagnostic is not persona-board material) therefore
+    // holds a fortiori; the per-item zoning filter in asPersonaBoardFacts
+    // stays in place for the "all"/direct-caller path.
     expect(
-      lensed.sections.find((section) => section.id === SECTION_IDS.zoningUseStartingPoint)?.items,
-    ).toEqual([{ label: "City Zoning Classification", value: "B3-2" }]);
+      lensed.sections.find((section) => section.id === SECTION_IDS.zoningUseStartingPoint),
+    ).toBeUndefined();
+    // ...and nothing was deleted: "All" still carries the full zoning
+    // section, ZBA line and all.
+    expect(
+      applyPersonaLens(report, "all").report.sections.find(
+        (section) => section.id === SECTION_IDS.zoningUseStartingPoint,
+      )?.items,
+    ).toEqual([
+      { label: "City Zoning Classification", value: "B3-2" },
+      { label: "City ZBA Case Source", value: "No intersecting record" },
+    ]);
   });
 
   it("hard filter: visible = persona-tagged ∪ pinned overlays; canonical lead notes never become persona blocks", () => {
@@ -302,23 +345,26 @@ describe("applyPersonaLens", () => {
     const titles = lensed.sections.map((s) => s.title);
     // Exactly one combined disclosure.
     expect(titles.filter((t) => t === ALSO_AT_ADDRESS_TITLE)).toHaveLength(1);
-    // Round-2 board law: neighborhood precedes programs in PART 01 and all
-    // canonical program tiers merge into the board's single program section.
-    expect(titles).toEqual([
-      "Neighborhood context",
-      "Capital-relevant programs",
-      ALSO_AT_ADDRESS_TITLE,
-    ]);
+    // Board law: all canonical program tiers merge into the board's single
+    // program section. Owner ruling 2026-08-31 (four-section cap):
+    // "neighborhoodContext" is off the developer inventory now (it survives
+    // only on supporter), so the Neighborhood Economic Context section that
+    // used to lead this list is no longer on the developer lens — it is
+    // still in the canonical report, asserted below.
+    expect(titles).toEqual(["Capital-relevant programs", ALSO_AT_ADDRESS_TITLE]);
+    expect(
+      applyPersonaLens(refined, "all").report.sections.map((s) => s.id),
+    ).toContain(SECTION_IDS.neighborhoodEconomicContext);
 
     // Goal-matched tier: persona-tag filtered as before (federalOZ matches
     // developer, sbif does not).
-    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual([
+    expect(lensed.sections[0].items.map((i) => i.programId)).toEqual([
       "federalOZ",
       "highUnemployment",
     ]);
     // Fully-demoted TIF is not goal-matched, so it is NOT rescued by
     // matching "developer" and joins SBIF behind the one Also-line.
-    const also = lensed.sections[2];
+    const also = lensed.sections[1];
     expect(also.collapsedByPersona).toBe(true);
     expect(also.items.map((i) => i.programId)).toEqual(["sbif", "tif"]);
 
@@ -566,27 +612,6 @@ describe("persona tags stay in sync with the static dataset", () => {
 });
 
 describe("Gate finding 19: per-persona section titles", () => {
-  function multiSectionReport(): GeneratedReport {
-    return {
-      ...reportFixture(),
-      sections: [
-        { id: SECTION_IDS.siteFacts, title: "Site Facts", description: "", items: [] },
-        { id: SECTION_IDS.logisticsAccess, title: "Logistics Access", description: "", items: [] },
-        { id: SECTION_IDS.civicRepresentation, title: "Civic Representation", description: "", items: [] },
-        { id: SECTION_IDS.zoningUseStartingPoint, title: "Zoning & Use Starting Point", description: "", items: [] },
-        { id: SECTION_IDS.neighborhoodEconomicContext, title: "Neighborhood Economic Context", description: "", items: [] },
-        { id: SECTION_IDS.documentReadinessChecklist, title: "Document Readiness Checklist", description: "", items: [] },
-        { id: CAPITAL_PARTNER_SECTION_ID, title: CAPITAL_PARTNER_SECTION_TITLE, description: "", items: [] },
-        {
-          id: CONFIRMED_PROGRAMS_SECTION_ID,
-          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
-          description: "",
-          items: [{ label: "TIF", value: "", programId: "tif" }],
-        },
-      ],
-    };
-  }
-
   it("id-keyed state (TOC anchors, expand/collapse) survives a title override — the exact ruling this whole finding is built on", () => {
     // The SAME section, the SAME id, rendered under two personas whose
     // board titles for it genuinely differ (owner: "Site facts", developer:
@@ -646,13 +671,20 @@ describe("Gate finding 19: per-persona section titles", () => {
     const titleById = (report: GeneratedReport, id: string) =>
       report.sections.find((s) => s.id === id)?.title;
 
+    // Owner ruling 2026-08-31 (four-section cap) trimmed the lens
+    // inventories, so a board section that is no longer in this persona's
+    // PERSONA_SECTION_ORDER never reaches the title override at all — it is
+    // gone from the LENS (still whole in "All"). The `toBeUndefined()`
+    // lines below record exactly which R5 board sections the cap removed;
+    // the surviving strings are still the exact R5 board strings.
+
     // R5OwnerFinal (starting AND growing both render this board — the
     // "Business owner" chip group).
     for (const lensed of [owner, growing]) {
       expect(titleById(lensed, SECTION_IDS.siteFacts)).toBe("Site facts");
-      expect(titleById(lensed, SECTION_IDS.logisticsAccess)).toBe("Logistics access");
-      expect(titleById(lensed, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
-      expect(titleById(lensed, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
+      expect(titleById(lensed, SECTION_IDS.logisticsAccess)).toBeUndefined(); // capped out
+      expect(titleById(lensed, SECTION_IDS.civicRepresentation)).toBeUndefined(); // capped out
+      expect(titleById(lensed, SECTION_IDS.zoningUseStartingPoint)).toBeUndefined(); // capped out
       expect(titleById(lensed, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for your goal");
       expect(titleById(lensed, SECTION_IDS.documentReadinessChecklist)).toBeUndefined();
       expect(titleById(lensed, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
@@ -660,20 +692,32 @@ describe("Gate finding 19: per-persona section titles", () => {
 
     // R5DeveloperFinal
     expect(titleById(developer, SECTION_IDS.siteFacts)).toBe("Site facts & county records");
-    expect(titleById(developer, SECTION_IDS.logisticsAccess)).toBe("Logistics access");
-    expect(titleById(developer, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
-    expect(titleById(developer, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning & district family");
-    expect(titleById(developer, SECTION_IDS.neighborhoodEconomicContext)).toBe("Neighborhood context");
+    expect(titleById(developer, SECTION_IDS.logisticsAccess)).toBeUndefined(); // capped out
+    expect(titleById(developer, SECTION_IDS.civicRepresentation)).toBeUndefined(); // capped out
+    expect(titleById(developer, SECTION_IDS.zoningUseStartingPoint)).toBeUndefined(); // capped out
+    expect(titleById(developer, SECTION_IDS.neighborhoodEconomicContext)).toBeUndefined(); // capped out (supporter keeps it)
     expect(titleById(developer, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Capital-relevant programs");
     expect(titleById(developer, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
 
     // R5SupporterFinal
     expect(titleById(supporter, SECTION_IDS.neighborhoodEconomicContext)).toBe("Neighborhood context");
-    expect(titleById(supporter, SECTION_IDS.civicRepresentation)).toBe("Civic representation");
-    expect(titleById(supporter, SECTION_IDS.zoningUseStartingPoint)).toBe("Zoning");
+    expect(titleById(supporter, SECTION_IDS.civicRepresentation)).toBeUndefined(); // capped out
+    expect(titleById(supporter, SECTION_IDS.zoningUseStartingPoint)).toBeUndefined(); // capped out
     expect(titleById(supporter, CONFIRMED_PROGRAMS_SECTION_ID)).toBe("Programs for the goal");
     expect(titleById(supporter, SECTION_IDS.documentReadinessChecklist)).toBeUndefined();
     expect(titleById(supporter, CAPITAL_PARTNER_SECTION_ID)).toBe("Financing resources");
+
+    // Nothing was deleted from the record: every section the cap removed
+    // above is still present, under its canonical title, on "All".
+    const all = applyPersonaLens(multiSectionReport(), "all").report;
+    for (const id of [
+      SECTION_IDS.logisticsAccess,
+      SECTION_IDS.civicRepresentation,
+      SECTION_IDS.zoningUseStartingPoint,
+      SECTION_IDS.neighborhoodEconomicContext,
+    ]) {
+      expect(titleById(all, id), `All view still carries ${id}`).toBeDefined();
+    }
 
     // R5LookingFinal — only Civic Representation is a generic section on
     // this board; Location snapshot/What's notable/Explore by interest/The
@@ -709,21 +753,101 @@ describe("Gate finding 19: per-persona section titles", () => {
     for (const persona of ["starting", "growing", "developer"] as const) {
       const { report: lensed } = applyPersonaLens(legacyReport, persona);
       const siteFacts = lensed.sections.find((s) => s.description === "site-facts-marker")!;
-      const logistics = lensed.sections.find((s) => s.description === "logistics-marker")!;
       expect(siteFacts.id, `${persona} site facts id`).toBeUndefined(); // genuinely legacy — no id
-      expect(logistics.id, `${persona} logistics id`).toBeUndefined();
-      // Titles really did get renamed (proves the override actually ran
+      // The title really did get renamed (proves the override actually ran
       // against this id-less fixture, not a no-op).
       expect(siteFacts.title, `${persona} site facts title`).not.toBe("Site Facts");
-      expect(logistics.title, `${persona} logistics title`).not.toBe("Logistics Access");
       // ...but PART 01 placement survives regardless (the actual claim
-      // this finding is about), whether or not this persona's board
-      // happens to rename these two sections.
+      // this finding is about).
       expect(guidepostPartForSection(siteFacts, persona), `${persona} site facts PART`).toBe(1);
-      expect(guidepostPartForSection(logistics, persona), `${persona} logistics PART`).toBe(1);
+      // Owner ruling 2026-08-31 (four-section cap): "logisticsAccess" is on
+      // no persona's lens inventory any more, so the legacy Logistics
+      // Access section leaves the LENS entirely — which is why this test
+      // no longer asserts a renamed-and-still-PART-01 logistics section.
+      expect(
+        lensed.sections.some((s) => s.description === "logistics-marker"),
+        `${persona} logistics off the capped lens`,
+      ).toBe(false);
     }
 
     const supporter = applyPersonaLens(legacyReport, "supporter").report;
     expect(supporter.sections).toHaveLength(0);
+
+    // The cap narrows the LENS, never the record: "all" still carries both
+    // legacy sections byte-for-byte (the transparency-floor escape hatch).
+    expect(applyPersonaLens(legacyReport, "all").report.sections).toEqual(legacySections);
+  });
+});
+
+// Owner ruling (Billy, 2026-08-31), binding: no persona-lensed report may
+// render more than FOUR canonical sections, and those four must still
+// populate all three guidepost parts — the PART 01 / PART 02 / PART 03
+// anatomy is unchanged, it just stops being padded. "All" is explicitly
+// EXEMPT: it is the full record and the transparency-floor escape hatch.
+// Every owner ruling gets an enforcing test; this is that test.
+describe("Owner ruling 2026-08-31: persona lenses cap at four canonical sections", () => {
+  const REAL_PERSONAS = PERSONA_CHIPS.map((chip) => chip.id).filter(
+    (id): id is Exclude<PersonaId, "all"> => id !== "all",
+  );
+
+  /** multiSectionReport() carries one section for every canonical bucket
+   *  except the PART 03 support-organizations section; reportFixture()
+   *  already carries the real one, so borrow it rather than hand-rolling a
+   *  new fixture shape for this suite. */
+  function boardInventoryReport(): GeneratedReport {
+    const supportOrganizations = reportFixture().sections.find(
+      (section) => section.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+    )!;
+    return {
+      ...multiSectionReport(),
+      sections: [...multiSectionReport().sections, supportOrganizations],
+    };
+  }
+
+  it("every persona's lens inventory lists at most four canonical buckets", () => {
+    expect(REAL_PERSONAS.length).toBeGreaterThan(0);
+    for (const persona of REAL_PERSONAS) {
+      expect(PERSONA_SECTION_ORDER[persona], `${persona} has a lens inventory`).toBeDefined();
+      expect(
+        PERSONA_SECTION_ORDER[persona].length,
+        `${persona} lens inventory: ${PERSONA_SECTION_ORDER[persona].join(", ")}`,
+      ).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("every capped inventory still populates all three guidepost parts ('looking' excepted — its board is the bespoke LookingOverview mount)", () => {
+    for (const persona of REAL_PERSONAS) {
+      if (persona === "looking") continue;
+      const parts = new Set(
+        PERSONA_SECTION_ORDER[persona].map((bucket) => BUCKET_PART[bucket]),
+      );
+      expect(
+        [...parts].sort(),
+        `${persona} guidepost parts from: ${PERSONA_SECTION_ORDER[persona].join(", ")}`,
+      ).toEqual([1, 2, 3]);
+    }
+  });
+
+  it("render level: a real lensed report never carries more than four canonical sections (the collapsed 'Also at this address' disclosure excluded)", () => {
+    for (const persona of REAL_PERSONAS) {
+      const { report: lensed } = applyPersonaLens(boardInventoryReport(), persona);
+      const canonical = lensed.sections.filter(
+        (section) => !section.collapsedByPersona && section.title !== ALSO_AT_ADDRESS_TITLE,
+      );
+      expect(
+        canonical.length,
+        `${persona} rendered sections: ${canonical.map((s) => s.title).join(" | ")}`,
+      ).toBeLessThanOrEqual(4);
+      // Non-vacuous: the fixture genuinely offers more buckets than the cap
+      // allows, so an uncapped lens would exceed four here.
+      expect(boardInventoryReport().sections.length).toBeGreaterThan(4);
+    }
+  });
+
+  it("the 'All' view is exempt — it keeps the full, uncapped record (the escape hatch the cap depends on)", () => {
+    const report = boardInventoryReport();
+    const { report: all } = applyPersonaLens(report, "all");
+    expect(all).toBe(report);
+    expect(all.sections.length).toBeGreaterThan(4);
   });
 });

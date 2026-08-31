@@ -42,6 +42,20 @@ collapsed "Also at this address" section. It reads the already-lensed
 report, never the canonical report, and does not promote a fill program
 into the visible card set.
 
+**Owner ruling (Billy, 2026-08-31): persona lenses cap at 4 canonical
+sections spanning all three guidepost parts; All view exempt (it is the
+full-record escape hatch).** The 3-part guidepost anatomy (PART 01 Site &
+Standing / PART 02 Capital & Programs / PART 03 Partners & Next Steps) is
+unchanged and still binding — every capped lens must populate all three.
+Enforced by `lib/__tests__/report-personas.test.ts` ("Owner ruling
+2026-08-31: persona lenses cap at four canonical sections"). Dropped from
+lens inventories: logisticsAccess, civicRepresentation, zoning (all
+personas), neighborhoodContext (non-supporter). Nothing is deleted from
+the canonical report — every dropped bucket still renders in full on
+"All", one gesture away. Board rows below that name those sections
+describe the canonical report and the "All" view; they no longer describe
+a persona board.
+
 **Updated under the gate review (2026-08-22/23), status contract amended
 under gate round 2's RULING (2026-08-23).** The gate review's full 22-
 finding pass is closed out, and gate round 2 closed a further seven items

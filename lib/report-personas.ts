@@ -280,7 +280,9 @@ export type SectionBucketKey =
   | "organizations"
   | "rest";
 
-const BUCKET_PART: Record<SectionBucketKey, GuidepostPart> = {
+/** Exported for the owner ruling 2026-08-31 cap guard, which has to prove
+ *  each capped lens inventory still spans all three guidepost parts. */
+export const BUCKET_PART: Record<SectionBucketKey, GuidepostPart> = {
   siteFacts: 1,
   logisticsAccess: 1,
   civicRepresentation: 1,
@@ -342,16 +344,31 @@ function sectionBucketKey(section: ReportSection): SectionBucketKey {
  *  always carries the ALSO_AT_ADDRESS disclosure right behind it (same
  *  bucket — see sectionBucketKey), so the collapsed line never drifts away
  *  from the list it collapsed. */
-const PERSONA_SECTION_ORDER: Record<Exclude<PersonaId, "all">, SectionBucketKey[]> = {
+export const PERSONA_SECTION_ORDER: Record<Exclude<PersonaId, "all">, SectionBucketKey[]> = {
   // Round-2 render-truth audit: these are closed inventories copied from the
   // R5 Final boards, not preference weights over a kitchen-sink section list.
   // Bespoke board sections (executive summary, charts, document readiness,
   // contact sheet, and the looking overview) mount in the shared UI
   // components; this list covers only canonical ReportSection buckets.
-  starting: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
-  growing: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
-  supporter: ["neighborhoodContext", "civicRepresentation", "zoning", "programs", "financing", "organizations"],
-  developer: ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning", "neighborhoodContext", "programs", "financing", "organizations"],
+  //
+  // OWNER RULING 2026-08-31 (binding): no persona-lensed report may render
+  // more than FOUR canonical sections, and the four must still span all
+  // three guidepost parts — the PART 01 Site & Standing / PART 02 Capital &
+  // Programs / PART 03 Partners & Next Steps anatomy stays whole, it just
+  // stops being padded. The "All" (full record) view is explicitly EXEMPT:
+  // it remains the complete report and the transparency-floor escape hatch
+  // ("full record one gesture away"). Buckets dropped from the lens
+  // inventories here — logisticsAccess, civicRepresentation, and zoning for
+  // every persona, plus neighborhoodContext for every persona except
+  // supporter — are NOT deleted from the canonical report; every one of
+  // them still renders in full on All. This is a lens narrowing, not a
+  // generator change, exactly like the hard relevance filter above.
+  // Enforced by lib/__tests__/report-personas.test.ts ("Owner ruling
+  // 2026-08-31: persona lenses cap at four canonical sections").
+  starting: ["siteFacts", "programs", "financing", "organizations"],
+  growing: ["siteFacts", "programs", "financing", "organizations"],
+  supporter: ["neighborhoodContext", "programs", "financing", "organizations"],
+  developer: ["siteFacts", "programs", "financing", "organizations"],
   looking: ["civicRepresentation"],
 };
 
@@ -461,31 +478,40 @@ function reorderSectionsForPersona(sections: ReportSection[], persona: PersonaId
  *     rendered text ("CONTACT SHEET") regardless of the source string's
  *     casing, so the board's lowercase "Contact sheet" vs the component's
  *     "Contact Sheet" is not a visible mismatch this map could fix anyway.
+ *
+ * Owner ruling 2026-08-31 (the four-section cap above): an override only
+ * ever fires for a bucket the persona's PERSONA_SECTION_ORDER still admits
+ * — `applyPersonaSectionTitles` runs on the already-lensed list, and
+ * `sectionBelongsOnPersonaBoard` dropped the other sections one step
+ * earlier — so the cap left some of this map unreachable. Removed here:
+ * `logisticsAccess` and `zoning`, the two buckets now in NO persona's
+ * order at all. Deliberately kept: the `civicRepresentation` and
+ * `neighborhoodContext` entries, whose buckets are still live for
+ * "looking" and "supporter" respectively; this map is read per persona AND
+ * per bucket, and pruning a live bucket persona-by-persona would turn one
+ * board-inventory decision into a second, duplicate source of truth. Also
+ * untouched: `documentReadiness`, already inert before this ruling (that
+ * bucket has never been in a PERSONA_SECTION_ORDER array) and pinned as
+ * such by an existing test.
  */
 const PERSONA_SECTION_TITLE_OVERRIDES: Partial<Record<Exclude<PersonaId, "all">, Partial<Record<SectionBucketKey, string>>>> = {
   starting: {
     siteFacts: "Site facts",
-    logisticsAccess: "Logistics access",
     civicRepresentation: "Civic representation",
-    zoning: "Zoning",
     programs: "Programs for your goal",
     documentReadiness: "Document readiness",
     financing: "Financing resources",
   },
   growing: {
     siteFacts: "Site facts",
-    logisticsAccess: "Logistics access",
     civicRepresentation: "Civic representation",
-    zoning: "Zoning",
     programs: "Programs for your goal",
     documentReadiness: "Document readiness",
     financing: "Financing resources",
   },
   developer: {
     siteFacts: "Site facts & county records",
-    logisticsAccess: "Logistics access",
     civicRepresentation: "Civic representation",
-    zoning: "Zoning & district family",
     neighborhoodContext: "Neighborhood context",
     programs: "Capital-relevant programs",
     financing: "Financing resources",
@@ -493,7 +519,6 @@ const PERSONA_SECTION_TITLE_OVERRIDES: Partial<Record<Exclude<PersonaId, "all">,
   supporter: {
     neighborhoodContext: "Neighborhood context",
     civicRepresentation: "Civic representation",
-    zoning: "Zoning",
     programs: "Programs for the goal",
     documentReadiness: "Document readiness",
     financing: "Financing resources",
