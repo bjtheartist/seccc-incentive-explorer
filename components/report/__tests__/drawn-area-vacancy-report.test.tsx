@@ -12,7 +12,7 @@ import {
   PERMIT_AREA_SOURCE_URL,
   type PermitAreaResult,
 } from "@/lib/permit-area";
-import type { GeneratedReport } from "@/lib/report-engine";
+import { SECTION_IDS, type GeneratedReport } from "@/lib/report-engine";
 import { INITIAL_WIZARD_STATE } from "@/lib/report-wizard-config";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
@@ -699,3 +699,204 @@ describe("ReportDisplay drawn-area vacancy fidelity", () => {
     }
   });
 });
+
+/**
+ * R3: both of VacancySpreadsheetSection's action rows used to be
+ * hand-rebuilt copies of the controls ReportActionButtons owns — including
+ * its seven copy strings and an inline re-implementation of the share gate
+ * that lib/report-action-policy.ts owns. They now render the shared
+ * component. These tests pin the two rows' EXISTING behavior, which the
+ * consolidation had to preserve exactly: the workstation row has never had
+ * a Share control, and the spreadsheet row's says "Share Spreadsheet".
+ */
+describe("vacancy action rows render through the shared ReportActionButtons", () => {
+  it("the drawn-area workstation row keeps its generic controls and still has NO share button", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({ type: "FeatureCollection", features: [CURRENT_NO_MATCH] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response(JSON.stringify(CURRENT_PERMIT_ANALYSIS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={savedWorkstationReport()}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Download PDF" })).toBeTruthy(),
+    );
+    // The vacancy policy's labels — the ones this row used to hardcode.
+    expect(screen.getByRole("button", { name: "Save Report" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Email This to Me" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "New Search" }).length).toBeGreaterThan(0);
+    // A drawn-area report is not shareable, and this row has never offered it.
+    expect(screen.queryByRole("button", { name: "Share Report" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Share Spreadsheet" })).toBeNull();
+  });
+
+  it("the community-area spreadsheet row leads with the CSV export and labels its share control 'Share Spreadsheet'", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?communityArea=")) {
+        return new Response(
+          JSON.stringify({ type: "FeatureCollection", features: [CURRENT_NO_MATCH] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={{
+          title: "Vacancy Analysis",
+          subtitle: "Community-area public-record signals",
+          reportType: "best-location",
+          generatedAt: "2026-08-26T12:00:00.000Z",
+          summary: "Community-area vacancy report.",
+          sections: [],
+          recommendedActions: [],
+          metadata: {},
+        }}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Download CSV" }).length).toBeGreaterThan(0),
+    );
+    expect(screen.getAllByRole("button", { name: "Save Report" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Email This to Me" }).length).toBeGreaterThan(0);
+    // The share control keeps this row's own wording, not the report wording.
+    expect(screen.getAllByRole("button", { name: "Share Spreadsheet" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Share Report" })).toBeNull();
+  });
+
+});
+
+/**
+ * R3: the drawn-area section dispatch matched literal English titles while
+ * persona lenses rename titles at lens time — so a lensed report's sections
+ * silently fell out of their slots and reappeared under the generic "Saved
+ * report detail" eyebrow at the bottom of the page. The slots are id-first
+ * now; a section whose title has been renamed but whose stable id survives
+ * must still land where it belongs.
+ */
+describe("drawn-area section dispatch is id-first", () => {
+  function renameTitles(report: GeneratedReport, ids: Record<string, string>): GeneratedReport {
+    return {
+      ...report,
+      sections: report.sections.map((section) => ({
+        ...section,
+        id: ids[section.title],
+        // A persona lens rewrites the title; the id is what survives.
+        title: `Lensed · ${section.title}`,
+      })),
+    };
+  }
+
+  async function renderLensedWorkstation() {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({ type: "FeatureCollection", features: [CURRENT_NO_MATCH] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response(JSON.stringify(CURRENT_PERMIT_ANALYSIS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportDisplay
+        report={renameTitles(savedWorkstationReport(), {
+          "Area Snapshot": SECTION_IDS.areaSnapshot,
+          "Practitioner Notes": SECTION_IDS.practitionerNotes,
+          "Permit Filing Context": SECTION_IDS.permitFilingContext,
+          "Recent Permit Records in Current View":
+            SECTION_IDS.recentPermitRecordsInCurrentView,
+          "Provenance Chain": SECTION_IDS.provenanceChain,
+        })}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Saved snapshot")).toBeTruthy());
+  }
+
+  it("keeps a renamed section in its slot when its stable id is intact", async () => {
+    await renderLensedWorkstation();
+
+    // The renamed titles are on screen — under their SLOT eyebrows.
+    expect(screen.getByText("Lensed · Area Snapshot")).toBeTruthy();
+    expect(screen.getByText("Lensed · Provenance Chain")).toBeTruthy();
+    expect(screen.getByText("Boundary provenance")).toBeTruthy();
+  });
+
+  it("drops nothing into the generic 'Saved report detail' fallback list", async () => {
+    await renderLensedWorkstation();
+
+    // Every section in this fixture belongs to a recognized slot. Before the
+    // id-first dispatch, renaming their titles pushed all five here.
+    expect(screen.queryByText("Saved report detail")).toBeNull();
+  });
+
+  it("still dispatches a legacy saved report that has titles but no ids", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/vacant?")) {
+        return new Response(
+          JSON.stringify({ type: "FeatureCollection", features: [CURRENT_NO_MATCH] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.startsWith("/api/permit-area?")) {
+        return new Response(JSON.stringify(CURRENT_PERMIT_ANALYSIS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // savedWorkstationReport() predates the ids: title-only, as saved.
+    render(
+      <ReportDisplay
+        report={savedWorkstationReport()}
+        wizardState={{ ...INITIAL_WIZARD_STATE, neighborhood: "Chatham" }}
+        onStartOver={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Saved snapshot")).toBeTruthy());
+    expect(screen.getByText("Area Snapshot")).toBeTruthy();
+    expect(screen.queryByText("Saved report detail")).toBeNull();
+  });
+});
+

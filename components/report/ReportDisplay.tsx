@@ -16,8 +16,10 @@ import { encodeWizardState } from "@/lib/url-state";
 import { selectedProjectGoalLabels } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import {
+  CONFIRMED_PROGRAMS_SECTION_ID,
   normalizePublicReportForDisplay,
   SECTION_IDS,
+  sectionMatchesIdOrTitle,
   type GeneratedReport,
   type ReportSection,
   type ReportItem,
@@ -118,20 +120,15 @@ import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 import { trackEvent } from "@/lib/analytics-events";
 import {
+  analyticsReportKey,
+  reportAnalyticsPayload,
+} from "@/lib/report-generated-event";
+import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-
-/**
- * Match a section by its stable id, falling back to the English title only
- * for sections saved before the `id` field existed. Renaming a section's
- * title in report-engine.ts must never change what this finds.
- */
-function sectionMatchesIdOrTitle(section: ReportSection, id: string, title: string): boolean {
-  return section.id ? section.id === id : section.title === title;
-}
 
 const fadeIn = {
   initial: { opacity: 0, y: 16 },
@@ -141,37 +138,13 @@ const fadeIn = {
 
 // ─── Report Display ──────────────────────────────────────────────────
 
-// Small analytics helpers, intentionally duplicated from app/report/page.tsx.
-// This component and app/report/page.tsx's local ReportDisplay are two
-// diverged forks of the same UI (see RF2/RO1); unifying them is out of
-// scope here, so instrumentation added to one is mirrored in the other by
-// hand instead of shared.
-function analyticsReportKey(report: GeneratedReport): string {
-  return [
-    report.reportType,
-    report.generatedAt,
-    report.metadata?.address || report.title,
-  ].join("|");
-}
-
-function reportAnalyticsPayload(
-  report: GeneratedReport,
-  source: string,
-  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {}
-) {
-  return {
-    reportType: report.reportType,
-    source,
-    address: report.metadata?.address ?? null,
-    lat: report.metadata?.lat ?? null,
-    lon: report.metadata?.lon ?? null,
-    metadata: {
-      reportKey: analyticsReportKey(report),
-      reportTitle: report.title,
-      ...metadata,
-    },
-  };
-}
+// RF2, first landing: the analytics helpers this component uses were local
+// copies, deliberately duplicated from app/report/page.tsx while the two
+// forks of this UI stayed unmerged. They had already drifted — this fork's
+// copy dropped zipCode/sectionCount/actionCount — so both now come from
+// lib/report-generated-event.ts and the shape is the same wherever an event
+// fires. The two ReportDisplay forks are still forks; this is one slice of
+// them made shared, not the merge.
 
 export function ReportDisplay({
   report: rawReport,
@@ -363,6 +336,12 @@ export function ReportDisplay({
   const handleDownloadAfterCapture = async () => {
     const { generateReportPdf } = await import("@/lib/pdf-report");
     generateReportPdf(report);
+    // RF2 drift fix: this event fired only on app/report/page.tsx, so every
+    // download from a saved Workspace report was dark in the funnel.
+    trackEvent(
+      "report_pdf_downloaded",
+      reportAnalyticsPayload(report, "report_pdf_download"),
+    );
     setDownloadGateOpen(false);
   };
 
@@ -376,9 +355,15 @@ export function ReportDisplay({
     }`;
     navigator.clipboard.writeText(url).then(() => {
       setLinkCopied(true);
+      // RF2 drift fix: mirrors app/report/page.tsx, where this event has
+      // always fired — shares from a saved report were uncounted.
+      trackEvent(
+        "share_link_copied",
+        reportAnalyticsPayload(report, "report_share_link")
+      );
       setTimeout(() => setLinkCopied(false), 2500);
     });
-  }, [persona, reportWizardState]);
+  }, [persona, report, reportWizardState]);
 
   // The Brief (gate finding 8). The backlink reuses the exact same
   // share-URL construction as handleShareReport (round-trips the persona
@@ -474,16 +459,32 @@ export function ReportDisplay({
 
   const trackSectionLinkClick = useCallback(
     (section: ReportSection, item: ReportItem) => {
-      if (section.title !== CAPITAL_PARTNER_SECTION_TITLE) return;
-      trackEvent(
-        "capital_partner_clicked",
-        reportAnalyticsPayload(report, "report_capital_partner_section", {
-          partnerId: item.partnerId || item.label,
-          partnerName: item.label,
-          contactMethod: "website",
-          originSource: analyticsSource,
-        }),
-      );
+      if (sectionMatchesIdOrTitle(section, CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE)) {
+        trackEvent(
+          "capital_partner_clicked",
+          reportAnalyticsPayload(report, "report_capital_partner_section", {
+            partnerId: item.partnerId || item.label,
+            partnerName: item.label,
+            contactMethod: "website",
+            originSource: analyticsSource,
+          }),
+        );
+        return;
+      }
+
+      // RF2 drift fix: program_link_clicked fired only on the live fork, so
+      // program clicks on saved reports never reached the funnel. Same
+      // payload as app/report/page.tsx — `source` already names the surface.
+      if (sectionMatchesIdOrTitle(section, CONFIRMED_PROGRAMS_SECTION_ID, "Programs Mapped at This Address") || item.programId) {
+        trackEvent(
+          "program_link_clicked",
+          reportAnalyticsPayload(report, "report_program_link", {
+            programId: item.programId || item.label,
+            programName: item.label,
+            programLevel: item.level || null,
+          })
+        );
+      }
     },
     [analyticsSource, report],
   );

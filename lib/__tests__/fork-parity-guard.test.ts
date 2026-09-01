@@ -7,15 +7,19 @@
  * repo; the synthetic self-tests prove the scanner's mechanics in
  * isolation, independent of whatever the real files currently contain.
  */
-import { Project } from "ts-morph";
+import { Node, Project } from "ts-morph";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildForkParityProject,
   checkReportActionForkParity,
   checkForkFileParity,
+  checkReportSurfaceActionCopy,
   collectDrawnAreaSignatures,
+  collectReportSurfaceFilePaths,
   FORK_FILE_PATHS,
+  REPORT_ACTION_COPY_OWNERS,
+  REPORT_ACTION_POLICY_NAMES,
   REPORT_ACTION_RUNTIME_SIGNATURES,
   SHARED_DRAWN_AREA_MODULE_SPECIFIERS,
   SHARED_REPORT_ACTION_COMPONENT_NAME,
@@ -227,5 +231,91 @@ describe("fork parity: generic report actions are shared by construction", () =>
     const violations = checkReportActionForkParity(sourceFile);
     expect(violations.some((violation) => violation.kind === "missing-shared-action-import")).toBe(true);
     expect(violations.some((violation) => violation.kind === "missing-shared-action-render")).toBe(true);
+  });
+});
+
+/**
+ * R3: the audit's exact blind spot. The action sweep above only ever ran on
+ * the two FORK files, so components/report/VacancySpreadsheetSection.tsx
+ * could — and did — hand-rebuild the same action row twice, carrying all
+ * seven forbidden copy strings and an inline re-implementation of the share
+ * predicate that lib/report-action-policy.ts owns. Nothing was red. The
+ * sweep now covers every report surface component.
+ */
+describe("report-action copy stays in the shared component across ALL report surfaces — real codebase", () => {
+  const surfacePaths = collectReportSurfaceFilePaths(ROOT_DIR);
+  const surfaceProject = new Project({
+    skipAddingFilesFromTsConfig: true,
+    compilerOptions: { allowJs: false },
+  });
+
+  it("sweeps a real, non-trivial set of report surfaces (sanity: the directory scan found files)", () => {
+    expect(surfacePaths.length).toBeGreaterThan(10);
+    expect(surfacePaths).toContain("components/report/VacancySpreadsheetSection.tsx");
+    // The copy owners are excluded by construction, not by luck.
+    for (const owner of REPORT_ACTION_COPY_OWNERS) {
+      expect(surfacePaths).not.toContain(owner);
+    }
+  });
+
+  it.each(collectReportSurfaceFilePaths(ROOT_DIR))(
+    "%s rebuilds neither the shared action copy nor the shared action policy",
+    (relPath) => {
+      const sourceFile = surfaceProject.addSourceFileAtPath(`${ROOT_DIR}/${relPath}`);
+      const violations = checkReportSurfaceActionCopy(sourceFile);
+      if (violations.length > 0) {
+        const report = violations.map((v) => `  [${v.kind}] ${v.detail}`).join("\n");
+        throw new Error(
+          `${relPath} rebuilds the shared report action row:\n${report}\n` +
+            `Render <${SHARED_REPORT_ACTION_COMPONENT_NAME} /> from ` +
+            `${SHARED_REPORT_ACTION_MODULE_SPECIFIER} and take the labels and ` +
+            `share gate from lib/report-action-policy.ts. If this file legitimately ` +
+            `OWNS the copy (a modal heading, say), add it to REPORT_ACTION_COPY_OWNERS ` +
+            `with a reason — do not delete the assertion.`,
+        );
+      }
+      expect(violations).toEqual([]);
+    },
+  );
+
+  it("VacancySpreadsheetSection renders the shared action component for both of its rows", () => {
+    const sourceFile = surfaceProject.addSourceFileAtPath(
+      `${ROOT_DIR}/components/report/VacancySpreadsheetSection.tsx`,
+    );
+    const renders = sourceFile
+      .getDescendants()
+      .filter(
+        (node) =>
+          Node.isJsxSelfClosingElement(node) &&
+          node.getTagNameNode().getText() === SHARED_REPORT_ACTION_COMPONENT_NAME,
+      );
+    // Two action rows: the drawn-area workstation and the vacancy spreadsheet.
+    expect(renders.length).toBe(2);
+  });
+
+  it("turns red when a report surface rebuilds the row's copy or the policy", () => {
+    const syntheticProject = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = syntheticProject.createSourceFile(
+      "surface.tsx",
+      [
+        `function ${REPORT_ACTION_POLICY_NAMES[0]}(report) { return report.title.includes("vacancy"); }`,
+        `export function Surface() {`,
+        `  return <button>${REPORT_ACTION_RUNTIME_SIGNATURES[0]}</button>;`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const violations = checkReportSurfaceActionCopy(sourceFile);
+    expect(violations.some((violation) => violation.kind === "local-action-copy")).toBe(true);
+    expect(violations.some((violation) => violation.kind === "local-vacancy-predicate")).toBe(true);
+  });
+
+  it("stays quiet on a report surface that has nothing to do with the action row", () => {
+    const syntheticProject = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = syntheticProject.createSourceFile(
+      "surface.tsx",
+      `export function Surface() { return <div>Neighborhood economic context</div>; }`,
+    );
+    expect(checkReportSurfaceActionCopy(sourceFile)).toEqual([]);
   });
 });

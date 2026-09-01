@@ -26,6 +26,7 @@
  * forks must render one shared component and may not restore the old local
  * action copy or vacancy predicate.
  */
+import { readdirSync } from "node:fs";
 import { Node, Project, type SourceFile } from "ts-morph";
 
 /** Fork files this guard protects — relative to the repo root. */
@@ -54,6 +55,38 @@ export const SHARED_DRAWN_AREA_MODULE_SPECIFIERS = [
 export const SHARED_REPORT_ACTION_MODULE_SPECIFIER =
   "@/components/report/ReportActionButtons";
 export const SHARED_REPORT_ACTION_COMPONENT_NAME = "ReportActionButtons";
+
+/**
+ * R3: the action sweep above ran on the two FORK files only, which was the
+ * audit's exact blind spot — components/report/VacancySpreadsheetSection.tsx
+ * hand-rebuilt the same action row twice, with all seven copy strings and an
+ * inline re-implementation of the share predicate, and no guard looked at
+ * it because it is not a fork file. The sweep now covers every report
+ * surface component, so a third rebuild of the row lands red wherever it is
+ * written.
+ */
+export const REPORT_SURFACE_DIR = "components/report";
+
+/**
+ * Files under `REPORT_SURFACE_DIR` that legitimately contain action copy
+ * and are therefore not swept. Kept deliberately tiny and explicit: each
+ * entry is a module that OWNS its copy rather than borrowing the row's.
+ */
+export const REPORT_ACTION_COPY_OWNERS = [
+  // The shared row itself — the single place this copy is allowed to live.
+  "components/report/ReportActionButtons.tsx",
+  // The modals the row OPENS. "Email Report" is this modal's own heading
+  // and "Download PDF" its own confirm button; they are the destination of
+  // an action, not a second copy of the control that triggers it.
+  "components/report/ReportModals.tsx",
+] as const;
+
+/**
+ * Names owned by lib/report-action-policy.ts. A report surface that
+ * declares one of these locally has re-implemented the share gate or the
+ * vacancy category instead of asking the policy.
+ */
+export const REPORT_ACTION_POLICY_NAMES = ["isVacancyReport", "getReportActionPolicy"] as const;
 
 /** Runtime copy that belongs only in the shared generic action component. */
 export const REPORT_ACTION_RUNTIME_SIGNATURES = [
@@ -257,13 +290,17 @@ function rendersSharedReportActionComponent(sourceFile: SourceFile): boolean {
   });
 }
 
-function declaresLocalVacancyPredicate(sourceFile: SourceFile): boolean {
-  return sourceFile.getDescendants().some((node) => {
+function locallyDeclaredPolicyNames(sourceFile: SourceFile): string[] {
+  const declared = new Set<string>();
+  sourceFile.forEachDescendant((node) => {
     if (Node.isVariableDeclaration(node) || Node.isFunctionDeclaration(node)) {
-      return node.getName() === "isVacancyReport";
+      const name = node.getName();
+      if (name && (REPORT_ACTION_POLICY_NAMES as readonly string[]).includes(name)) {
+        declared.add(name);
+      }
     }
-    return false;
   });
+  return [...declared];
 }
 
 /**
@@ -304,15 +341,67 @@ export function checkReportActionForkParity(
     }
   }
 
-  if (declaresLocalVacancyPredicate(forkSourceFile)) {
+  for (const name of locallyDeclaredPolicyNames(forkSourceFile)) {
     violations.push({
       filePath,
       kind: "local-vacancy-predicate",
-      detail: "Fork file locally declares isVacancyReport instead of using the shared action policy.",
+      detail: `Fork file locally declares ${name} instead of using the shared action policy.`,
     });
   }
 
   return violations;
+}
+
+/**
+ * The same action-copy and policy-redeclaration sweep, applied to a report
+ * surface component that is NOT one of the two forks.
+ *
+ * Deliberately weaker than `checkReportActionForkParity` in one direction:
+ * most components under components/report/ render no action row at all, so
+ * this does not demand the shared import/render — only that nothing here
+ * REBUILDS the row's copy or the policy it delegates to.
+ */
+export function checkReportSurfaceActionCopy(
+  sourceFile: SourceFile,
+): ReportActionForkParityViolation[] {
+  const violations: ReportActionForkParityViolation[] = [];
+  const filePath = sourceFile.getFilePath();
+
+  const runtimeStrings = new Set(collectRuntimeStrings(sourceFile));
+  for (const signature of REPORT_ACTION_RUNTIME_SIGNATURES) {
+    if (runtimeStrings.has(signature)) {
+      violations.push({
+        filePath,
+        kind: "local-action-copy",
+        detail:
+          `Report surface locally declares shared report-action copy: ${JSON.stringify(signature)}. ` +
+          `Render <${SHARED_REPORT_ACTION_COMPONENT_NAME} /> instead of rebuilding the row.`,
+      });
+    }
+  }
+
+  for (const name of locallyDeclaredPolicyNames(sourceFile)) {
+    violations.push({
+      filePath,
+      kind: "local-vacancy-predicate",
+      detail: `Report surface locally declares ${name} instead of importing it from @/lib/report-action-policy.`,
+    });
+  }
+
+  return violations;
+}
+
+/**
+ * Every swept report surface: components/report/*.tsx, minus the copy
+ * owners and minus tests (a test may legitimately assert on the copy).
+ */
+export function collectReportSurfaceFilePaths(rootDir: string): string[] {
+  const owners = new Set<string>(REPORT_ACTION_COPY_OWNERS);
+  return readdirSync(`${rootDir}/${REPORT_SURFACE_DIR}`, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".tsx"))
+    .map((entry) => `${REPORT_SURFACE_DIR}/${entry.name}`)
+    .filter((relPath) => !owners.has(relPath))
+    .sort();
 }
 
 export function buildForkParityProject(rootDir: string): {

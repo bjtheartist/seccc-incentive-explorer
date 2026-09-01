@@ -8,6 +8,7 @@ import {
   OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
   SECTION_IDS,
+  sectionMatchesIdOrTitle,
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
 import { selectedProjectGoalLabels } from "./report-wizard-config";
@@ -41,15 +42,6 @@ function filterSectionsByIdOrTitle(
   titles: Set<string>,
 ): GeneratedReport["sections"] {
   return sections.filter((candidate) => (candidate.id ? ids.has(candidate.id) : titles.has(candidate.title)));
-}
-
-/** Single-section version of {@link findSectionByIdOrTitle}'s matching rule. */
-function sectionMatchesIdOrTitle(
-  candidate: GeneratedReport["sections"][number],
-  id: string,
-  title: string,
-): boolean {
-  return candidate.id ? candidate.id === id : candidate.title === title;
 }
 
 /**

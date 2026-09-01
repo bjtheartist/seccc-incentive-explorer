@@ -1,3 +1,4 @@
+import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,7 @@ vi.setConfig({ testTimeout: 20_000 });
 import { INITIAL_WIZARD_STATE } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { reportEmailGateKey } from "@/lib/report-email";
+import { deriveStateSlotOrder } from "@/lib/source-guard/react-state-order";
 import { DEFAULT_PERSONA } from "@/lib/personas";
 import { DEFAULT_BRIEF_UI_STATE } from "@/lib/report-brief";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
@@ -73,15 +75,27 @@ import {
  *
  * `REPORT_WIZARD_PAGE_STATE_ORDER` and `REPORT_DISPLAY_STATE_ORDER` below
  * must exactly match the order `useState` is called in `ReportWizardPage`
- * (lines 656-1443) and `ReportDisplay` (lines 3704-4171) respectively. Any
- * added, removed, or reordered `useState` call in either function — even one
- * completely unrelated to what this file asserts on — desyncs every slot
- * after it. That usually surfaces as a loud runtime error (a boolean fed to
- * something expecting an array, etc.), but a same-shape swap (e.g. two
- * adjacent `useState(false)` calls trading places) would desync silently. If
- * this file starts failing after an unrelated page.tsx change, regenerate
- * the two order arrays first — with a `const [name] = useState` capture over
- * the same line ranges — before assuming the covered behavior itself broke.
+ * and `ReportDisplay` — INCLUDING the eight slots that live inside the
+ * shared `useVacancySpreadsheetSection` hook, in a file this suite never
+ * otherwise mentions. Any added, removed, or reordered `useState` call
+ * anywhere on that path — even one completely unrelated to what this file
+ * asserts on — desyncs every slot after it.
+ *
+ * R3: that desync used to be able to happen SILENTLY. A same-shape swap
+ * (two adjacent `useState(false)` calls trading places) fed every later slot
+ * the wrong value with no error, and the suite could stay green while
+ * asserting on a render that no longer matched production. The first test
+ * below now DERIVES the real call order from the real source
+ * (lib/source-guard/react-state-order.ts walks each component body in order,
+ * expanding `useVacancySpreadsheetSection` at its call site) and compares it
+ * to the two arrays. A desync is now a loud, specific failure that prints
+ * the order these arrays should hold.
+ *
+ * So: if that first test goes red, do not adjust the assertion. Copy the
+ * derived order it prints into the arrays below, in the SAME commit as the
+ * source change. The arrays stay hand-written because they also carry the
+ * seed VALUES and their types (`defaultSlotValues`), which no derivation can
+ * supply — the derivation guarantees only that their ORDER is honest.
  *
  * WHAT THIS FILE COVERS
  *   - Sections render in `report.sections` array order (engine order),
@@ -377,6 +391,65 @@ const FULL_STATE_ORDER = [
   ...REPORT_WIZARD_PAGE_STATE_ORDER,
   ...REPORT_DISPLAY_STATE_ORDER,
 ];
+
+/**
+ * The render path the seeded counter actually walks: `ReportWizardPage`'s
+ * own state, then `ReportDisplay`'s, with the shared vacancy hook expanded
+ * where it is called. Kept beside the arrays it validates.
+ */
+const STATE_ORDER_TARGETS = [
+  { filePath: "app/report/page.tsx", functionName: "ReportWizardPage" },
+  { filePath: "app/report/page.tsx", functionName: "ReportDisplay" },
+] as const;
+
+const STATE_ORDER_EXPANDED_HOOKS = [
+  {
+    name: "useVacancySpreadsheetSection",
+    filePath: "components/report/useVacancySpreadsheetSection.ts",
+  },
+] as const;
+
+describe("ordinal useState harness stays in sync with the real source (R3)", () => {
+  const derived = deriveStateSlotOrder(
+    path.resolve(__dirname, "../../.."),
+    STATE_ORDER_TARGETS,
+    STATE_ORDER_EXPANDED_HOOKS,
+  );
+
+  it("finds a real slot list (sanity: the derivation located both components and the shared hook)", () => {
+    expect(derived.length).toBeGreaterThan(50);
+    // The eight slots that live outside page.tsx entirely — the ones the
+    // harness's own comment warns can desync it from a file it never names.
+    expect(derived).toContain("savedAreaVisibleVacancyCount");
+    expect(derived).toContain("isExportingVacancySpreadsheet");
+  });
+
+  it("matches FULL_STATE_ORDER exactly, slot for slot", () => {
+    expect(
+      derived,
+      "The seeded useState slot order in this file no longer matches the real " +
+        "call order in app/report/page.tsx + " +
+        "components/report/useVacancySpreadsheetSection.ts. Every slot after " +
+        "the first difference is being seeded with the WRONG value, and a " +
+        "same-shape swap would otherwise have passed silently. Update " +
+        "REPORT_WIZARD_PAGE_STATE_ORDER / REPORT_DISPLAY_STATE_ORDER in this " +
+        "file to the derived order — and add any new name to " +
+        "defaultSlotValues() — in the same commit as the source change:\n" +
+        JSON.stringify(derived, null, 2),
+    ).toEqual([...FULL_STATE_ORDER]);
+  });
+
+  it("seeds a value for every derived slot (a new useState needs a new default)", () => {
+    const defaults = defaultSlotValues();
+    const missing = derived.filter((name) => !(name in defaults));
+    expect(
+      missing,
+      `defaultSlotValues() has no seed for: ${missing.join(", ")}. An unseeded ` +
+        "slot renders as undefined, which is exactly the silent failure this " +
+        "harness is prone to.",
+    ).toEqual([]);
+  });
+});
 
 type StateSlotName = (typeof FULL_STATE_ORDER)[number];
 

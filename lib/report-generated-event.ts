@@ -17,6 +17,53 @@ export function analyticsReportKey(report: GeneratedReport): string {
   ].join("|");
 }
 
+/**
+ * The report address's Chicago ZIP, when it has one. Exported because
+ * app/report/page.tsx also gates its admin-only ownership panel on it.
+ */
+export function extractReportZipCode(report: GeneratedReport): string | null {
+  const address = report.metadata?.address || "";
+  const match = address.match(/\b(606\d{2}|60707|60827)\b/);
+  return match?.[1] ?? null;
+}
+
+/**
+ * The shared analytics envelope for every report-surface event.
+ *
+ * RF2, first landing: this helper used to exist as three hand-copied
+ * local functions — app/report/page.tsx, components/report/ReportDisplay.tsx,
+ * and components/report/VacancySpreadsheetSection.tsx each declared their
+ * own, with headers saying the duplication was deliberate until RF2 could
+ * unify the forks. The copies had already diverged: only page.tsx's carried
+ * zipCode/sectionCount/actionCount, so the same event arrived with a
+ * different shape depending on which renderer fired it, and nothing caught
+ * it. This is that richest version, and all three sites now import it.
+ * `source` (and each caller's own `analyticsSource`) is what distinguishes
+ * the surface — the payload shape must not.
+ */
+export function reportAnalyticsPayload(
+  report: GeneratedReport,
+  source: string,
+  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {},
+) {
+  const zipCode = extractReportZipCode(report);
+  return {
+    reportType: report.reportType,
+    source,
+    address: report.metadata?.address ?? null,
+    lat: report.metadata?.lat ?? null,
+    lon: report.metadata?.lon ?? null,
+    metadata: {
+      reportKey: analyticsReportKey(report),
+      reportTitle: report.title,
+      zipCode,
+      sectionCount: report.sections?.length ?? 0,
+      actionCount: report.recommendedActions?.length ?? 0,
+      ...metadata,
+    },
+  };
+}
+
 export function generatedReportEventType(
   report: GeneratedReport,
   isInstantMode: boolean,

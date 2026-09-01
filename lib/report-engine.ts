@@ -676,7 +676,40 @@ export const SECTION_IDS = {
   civicRepresentation: "civic-representation",
   documentReadiness: "document-readiness",
   contactSheet: "contact-sheet",
+  // Drawn-area analysis sections, emitted by components/map/MapPolygonPanel.tsx
+  // and dispatched by components/report/VacancySpreadsheetSection.tsx. Added
+  // in R3: that dispatch matched on the literal English titles below while
+  // persona lenses rename section titles at lens time, so a renamed section
+  // silently fell out of its slot and into the generic "additional sections"
+  // list — the regression class app/report/page.tsx's own comments describe.
+  areaSnapshot: "area-snapshot",
+  practitionerNotes: "practitioner-notes",
+  priorityProperties: "priority-properties",
+  incentiveZonesInArea: "incentive-zones-in-area",
+  ownershipBreakdown: "ownership-breakdown",
+  permitFilingContext: "permit-filing-context",
+  recentPermitRecordsInCurrentView: "recent-permit-records-in-current-view",
+  provenanceChain: "provenance-chain",
 } as const;
+
+/**
+ * Match a section by its stable id, falling back to the English title only
+ * for sections saved before the `id` field existed. Renaming a section's
+ * title — in a builder here, or at persona-lens time — must never change
+ * what a renderer finds.
+ *
+ * R3: this lived as four hand-copied private functions (both report-renderer
+ * forks, lib/pdf-report.ts, and nothing at all in the drawn-area dispatch,
+ * which matched raw titles). It belongs beside SECTION_IDS, which is what it
+ * exists to compare against.
+ */
+export function sectionMatchesIdOrTitle(
+  section: Pick<ReportSection, "id" | "title">,
+  id: string,
+  title: string,
+): boolean {
+  return section.id ? section.id === id : section.title === title;
+}
 
 /** Kebab-case id for a `${level}-Level Programs` section, e.g. "city-level-programs". */
 function levelProgramsSectionId(level: string): string {
