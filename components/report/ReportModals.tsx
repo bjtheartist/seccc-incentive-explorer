@@ -25,6 +25,28 @@ import { trackEvent } from "@/lib/analytics-events";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { programCount } from "@/lib/report-email";
 
+/**
+ * R1 finding 5. Building a PDF and posting it can take a long time on a big
+ * report over a slow link, and the send previously had NO deadline at all —
+ * a stalled connection left the modal on "Sending…" forever with no way out.
+ * A 30s ceiling turns that into a stateable, retryable failure.
+ */
+export const EMAIL_REPORT_TIMEOUT_MS = 30_000;
+
+/** Distinct from a server error: the request never came back. */
+export const EMAIL_REPORT_TIMEOUT_MESSAGE =
+  "That took too long — the report was not sent. Please try again.";
+
+/** True for an aborted fetch (our own deadline) rather than a rejected send. */
+export function isTimeoutError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === "TimeoutError" || err.name === "AbortError";
+}
+
+/** Copy shown when the PDF itself could not be produced or handed over. */
+export const PDF_DOWNLOAD_FAILURE_MESSAGE =
+  "We couldn't build your PDF just then. Nothing was sent or saved — try again.";
+
 export function EmailReportModal({
   report,
   onClose,
@@ -60,6 +82,8 @@ export function EmailReportModal({
           // F14 (build-spec.md 2.4): a program count, not a section count.
           incentiveCount: programCount(report),
         }),
+        // R1 finding 5: without this the modal can sit on "Sending…" forever.
+        signal: AbortSignal.timeout(EMAIL_REPORT_TIMEOUT_MS),
       });
 
       if (!res.ok) {
@@ -72,7 +96,13 @@ export function EmailReportModal({
       setTimeout(() => { onClose(); }, 2000);
     } catch (err) {
       setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
+      setErrorMsg(
+        isTimeoutError(err)
+          ? EMAIL_REPORT_TIMEOUT_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong",
+      );
     }
   };
 
@@ -139,7 +169,13 @@ export function DownloadGateModal({
 }: {
   reportAddress?: string;
   reportTitle?: string;
-  onDownload: () => void;
+  /**
+   * R1 finding 5: this was typed `() => void`, so the async PDF work every
+   * caller actually does was fire-and-forget. A rejected download became an
+   * unhandled rejection while the modal sat at status "done" — it had already
+   * declared success. It is a promise now, and it is awaited.
+   */
+  onDownload: () => Promise<void>;
   onClose: () => void;
   /** When set, the gate offers a "download without sharing details" path. */
   allowSkip?: boolean;
@@ -147,12 +183,28 @@ export function DownloadGateModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [zipCode, setZipCode] = useState("");
-  const [status, setStatus] = useState<"idle" | "saving" | "done">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
 
   const isValid = name.trim().length > 0 && email.includes("@") && zipCode.trim().length >= 5;
 
+  /**
+   * Run the caller's download and report the truth about it. Returns whether
+   * it succeeded, so each path can gate its own analytics on the real outcome
+   * instead of on having merely started.
+   */
+  const runDownload = async (): Promise<boolean> => {
+    try {
+      await onDownload();
+      return true;
+    } catch (err) {
+      console.error("[download gate] PDF download failed:", err);
+      setStatus("error");
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!isValid) return;
+    if (!isValid || status === "saving") return;
     setStatus("saving");
     trackEvent("inquiry_submitted", {
       source: "report_pdf_gate",
@@ -176,8 +228,25 @@ export function DownloadGateModal({
       // Still allow download even if lead save fails
     }
 
-    setStatus("done");
-    onDownload();
+    // "done" only once the download really is done — `runDownload` sets the
+    // error state itself if it is not.
+    if (await runDownload()) setStatus("done");
+  };
+
+  const handleSkip = async () => {
+    if (status === "saving") return;
+    setStatus("saving");
+    // R1 finding 5: `report_pdf_downloaded` used to fire HERE, before the
+    // download was even attempted — every failed skip-path download was
+    // counted as a successful one. It now fires only after the PDF is real.
+    if (await runDownload()) {
+      trackEvent("report_pdf_downloaded", {
+        source: "report_pdf_gate_skipped",
+        address: reportAddress || null,
+        metadata: { reportTitle: reportTitle || null },
+      });
+      setStatus("done");
+    }
   };
 
   return (
@@ -205,7 +274,7 @@ export function DownloadGateModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
-              disabled={status !== "idle"}
+              disabled={status === "saving" || status === "done"}
               className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
               autoFocus
             />
@@ -219,7 +288,7 @@ export function DownloadGateModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              disabled={status !== "idle"}
+              disabled={status === "saving" || status === "done"}
               className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
             />
           </div>
@@ -231,20 +300,32 @@ export function DownloadGateModal({
               type="text"
               value={zipCode}
               onChange={(e) => setZipCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && isValid && status === "idle" && handleSubmit()}
+              onKeyDown={(e) => e.key === "Enter" && isValid && status !== "saving" && status !== "done" && handleSubmit()}
               placeholder="60617"
               maxLength={10}
-              disabled={status !== "idle"}
+              disabled={status === "saving" || status === "done"}
               className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
             />
           </div>
+          {status === "error" && (
+            <div
+              data-testid="download-gate-error"
+              className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2"
+            >
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{PDF_DOWNLOAD_FAILURE_MESSAGE}</span>
+            </div>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={!isValid || status !== "idle"}
+            data-testid="download-gate-submit"
+            disabled={!isValid || status === "saving" || status === "done"}
             className="w-full flex items-center justify-center gap-2 py-3 mt-1 bg-[#0C1B33] hover:bg-[#0C1B33]/80 disabled:opacity-40 text-white transition-all font-mono-bureau text-[11px] tracking-wide uppercase"
           >
             {status === "saving" ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Preparing...</>
+            ) : status === "error" ? (
+              <><Printer className="w-4 h-4" /> Try Again</>
             ) : (
               <><Printer className="w-4 h-4" /> Download PDF</>
             )}
@@ -253,18 +334,11 @@ export function DownloadGateModal({
             <button
               type="button"
               data-testid="download-gate-skip"
-              onClick={() => {
-                trackEvent("report_pdf_downloaded", {
-                  source: "report_pdf_gate_skipped",
-                  address: reportAddress || null,
-                  metadata: { reportTitle: reportTitle || null },
-                });
-                onDownload();
-              }}
-              disabled={status !== "idle"}
+              onClick={handleSkip}
+              disabled={status === "saving" || status === "done"}
               className="w-full text-center font-mono-bureau text-[10px] tracking-wide uppercase text-[#0C1B33]/70 underline underline-offset-4 hover:text-[#0C1B33] disabled:opacity-40 py-1"
             >
-              Download without sharing details
+              {status === "error" ? "Try downloading again" : "Download without sharing details"}
             </button>
           )}
           <p className="text-[9px] text-[#0C1B33]/30 text-center leading-snug">

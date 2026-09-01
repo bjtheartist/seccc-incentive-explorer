@@ -1454,9 +1454,10 @@ export function buildCommunityInvestmentExport(
 const COMMUNITY_INVESTMENT_PATH = path.join(process.cwd(), "data/private/community-investment.json");
 
 // Module-level cache, read once per process.
-// `undefined` = not attempted yet; `null` = attempted and the file is absent or
-// unparseable (a legitimate state before the export has been generated).
-let cache: CommunityInvestmentExport | null | undefined = undefined;
+// `undefined` = not attempted yet; a settled `CommunityInvestmentLoadResult`
+// otherwise — including the `{ ok: false }` outcomes, which are just as
+// cacheable as a success (a missing export stays missing for the process).
+let cache: CommunityInvestmentLoadResult | undefined = undefined;
 
 function isValidExport(value: unknown): value is CommunityInvestmentExport {
   if (!value || typeof value !== "object") return false;
@@ -1465,24 +1466,91 @@ function isValidExport(value: unknown): value is CommunityInvestmentExport {
 }
 
 /**
- * Read and parse the committed export once per process. Static-only (no DB
- * fallback). Returns `null` when the file has not been generated yet (or fails
- * to parse) so the gated API route degrades to a clean 503 instead of throwing.
+ * R1 finding 4 (the false-claims class). A bare `null` from this loader could
+ * not tell a page whether the dataset was MISSING or whether the community
+ * genuinely has no records, so /investment/[area] rendered a missing export as
+ * "No grants, awards, or development have been recorded in <area> since 2020" —
+ * an authoritative negative finding produced by an absent file. The typed
+ * failure below lets a page say "dataset unavailable" instead. Modelled on
+ * lib/shortlist-universe.ts's fail-closed result, the house style for this.
+ */
+export type CommunityInvestmentLoadFailureReason =
+  /** data/private/community-investment.json has not been generated. */
+  | "export_missing"
+  /** The file exists but could not be read off disk. */
+  | "export_unreadable"
+  /** The file exists but is not parseable JSON. */
+  | "export_invalid_json"
+  /** Parseable, but not the documented export envelope. */
+  | "export_invalid_shape";
+
+export type CommunityInvestmentLoadResult =
+  | { ok: true; data: CommunityInvestmentExport }
+  | { ok: false; reason: CommunityInvestmentLoadFailureReason; detail?: string };
+
+/**
+ * The honest unavailability copy every /investment surface renders on a
+ * `{ ok: false }` load. It states what could not be read; it never asserts
+ * that a community has no records, and it is not eligibility-shaped.
+ */
+export const COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING = "Investment dataset unavailable";
+export const COMMUNITY_INVESTMENT_UNAVAILABLE_COPY =
+  "The community investment dataset could not be loaded right now, so nothing on this page reports what has or has not been recorded here. This is a data-loading problem, not a finding about this community.";
+
+/**
+ * Read and parse the committed export once per process, reporting WHY it could
+ * not be loaded. Static-only (no DB fallback). Never throws. Prefer this over
+ * `loadCommunityInvestment` in anything that RENDERS a finding — a caller that
+ * only sees `null` cannot distinguish an outage from a genuine absence.
+ */
+export function loadCommunityInvestmentResult(): CommunityInvestmentLoadResult {
+  if (cache !== undefined) return cache;
+  cache = readCommunityInvestmentUncached();
+  return cache;
+}
+
+function readCommunityInvestmentUncached(): CommunityInvestmentLoadResult {
+  if (!existsSync(COMMUNITY_INVESTMENT_PATH)) {
+    return { ok: false, reason: "export_missing", detail: COMMUNITY_INVESTMENT_PATH };
+  }
+
+  let raw: string;
+  try {
+    raw = readFileSync(COMMUNITY_INVESTMENT_PATH, "utf8");
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "export_unreadable",
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "export_invalid_json",
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  if (!isValidExport(parsed)) {
+    return { ok: false, reason: "export_invalid_shape" };
+  }
+  return { ok: true, data: parsed };
+}
+
+/**
+ * Null-returning wrapper over `loadCommunityInvestmentResult`, kept for the
+ * callers that only need "is there data" — the gated API route (which already
+ * degrades to a clean 503) and the analysis builders in lib/investment-analysis.
  * Mirrors loadOwnerClusterGeoFile / loadTifBriefs.
  */
 export function loadCommunityInvestment(): CommunityInvestmentExport | null {
-  if (cache !== undefined) return cache;
-  try {
-    if (!existsSync(COMMUNITY_INVESTMENT_PATH)) {
-      cache = null;
-      return cache;
-    }
-    const parsed = JSON.parse(readFileSync(COMMUNITY_INVESTMENT_PATH, "utf8")) as unknown;
-    cache = isValidExport(parsed) ? parsed : null;
-  } catch {
-    cache = null;
-  }
-  return cache;
+  const result = loadCommunityInvestmentResult();
+  return result.ok ? result.data : null;
 }
 
 /** Test-only: reset the module cache so tests can re-read the file after mutating it. */

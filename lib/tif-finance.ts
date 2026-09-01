@@ -1,4 +1,4 @@
-import { socrataFetch } from "./socrata";
+import { socrataFetchResult } from "./socrata";
 
 const TIF_ANNUAL_ANALYSIS_ENDPOINT =
   "https://data.cityofchicago.org/resource/qm7s-3ctt.json";
@@ -43,7 +43,33 @@ export interface TifFinanceContext {
   sourceLabel: string;
   sourceUrl: string;
   caution: string;
+  /**
+   * How this context came to be, so a renderer never presents an upstream
+   * OUTAGE as an authoritative negative finding (R1 finding 4):
+   *   - `matched`     — a real annual finance row was returned and mapped.
+   *   - `no_row`      — the portal answered, and it holds no row for this
+   *                     district. A genuine, publishable absence.
+   *   - `unavailable` — the portal could not be reached (timeout, 5xx,
+   *                     transport error). NOTHING is known about whether a
+   *                     row exists, so the caution says exactly that.
+   * Optional so existing persisted payloads keep validating; treat a missing
+   * value as `matched` only when the finance figures are actually present.
+   */
+  dataAvailability?: TifFinanceAvailability;
 }
+
+export type TifFinanceAvailability = "matched" | "no_row" | "unavailable";
+
+/**
+ * The honest outage copy. It states what is not known; it never asserts an
+ * absence, and it is deliberately not eligibility-shaped.
+ */
+export const TIF_FINANCE_UNAVAILABLE_CAUTION =
+  "TIF finance data is temporarily unavailable for this district. The City data portal could not be reached, so no annual finance figures could be checked either way.";
+
+/** The genuine-absence copy: the portal answered and held no matching row. */
+export const TIF_FINANCE_NO_ROW_CAUTION =
+  "This address is inside a TIF boundary, but no annual finance row was matched for this district.";
 
 export function normalizeTifKey(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -110,6 +136,7 @@ export function mapTifAnnualFinanceRow(
     sourceUrl: TIF_ANNUAL_ANALYSIS_SOURCE_URL,
     caution:
       "District-level City annual report data. Not proof of funding availability, project approval, or funds reserved for this property or business.",
+    dataAvailability: "matched",
   };
 }
 
@@ -130,9 +157,17 @@ export async function fetchLatestTifFinanceContext(
   url.searchParams.set("$order", "report_year DESC");
   url.searchParams.set("$limit", "1");
 
-  const rows = await socrataFetch<TifAnnualFinanceRow[]>(url.toString());
-  const row = rows?.[0];
+  const result = await socrataFetchResult<TifAnnualFinanceRow[]>(url.toString());
+
+  // R1 finding 4 (honest outage rendering): a FETCH FAILURE is not evidence
+  // that no finance row exists — it is evidence of nothing. Previously both
+  // branches collapsed into the "no annual finance row was matched" caution,
+  // which published an outage as an authoritative negative finding about the
+  // district. The two cases are now reported separately.
+  const rows = result.ok ? result.data : null;
+  const row = Array.isArray(rows) ? rows[0] : undefined;
   if (!row) {
+    const unavailable = !result.ok || !Array.isArray(rows);
     return {
       districtId: tifKey,
       rawDistrictId: boundary.rawDistrictId ?? boundary.districtId,
@@ -144,8 +179,8 @@ export async function fetchLatestTifFinanceContext(
       boundaryWards: boundary.boundaryWards ?? null,
       sourceLabel: "City of Chicago TIF Annual Report - Analysis of Special Tax Allocation Fund",
       sourceUrl: TIF_ANNUAL_ANALYSIS_SOURCE_URL,
-      caution:
-        "This address is inside a TIF boundary, but no annual finance row was matched for this district.",
+      caution: unavailable ? TIF_FINANCE_UNAVAILABLE_CAUTION : TIF_FINANCE_NO_ROW_CAUTION,
+      dataAvailability: unavailable ? "unavailable" : "no_row",
     };
   }
 

@@ -33,7 +33,7 @@ describe("DownloadGateModal", () => {
   const baseProps = {
     reportAddress: "9101 S Commercial Ave",
     reportTitle: "Location Snapshot",
-    onDownload: () => {},
+    onDownload: async () => {},
     onClose: () => {},
   };
 

@@ -31,8 +31,14 @@ vi.mock("@/components/investment/FunderFlowSankey", () => ({
   },
 }));
 
-vi.mock("@/lib/community-investment", () => ({
+// R1 finding 4: the page now reads the TYPED loader so it can tell an
+// unloadable export apart from a community with genuinely no records. The
+// real copy constants are kept (importOriginal) so an assertion on the
+// unavailability copy pins the shipped string, not a test-local duplicate.
+vi.mock("@/lib/community-investment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/community-investment")>()),
   loadCommunityInvestment: vi.fn(),
+  loadCommunityInvestmentResult: vi.fn(),
 }));
 
 vi.mock("@/lib/investment-analysis", () => ({
@@ -49,7 +55,8 @@ vi.mock("@/lib/investment-analysis", () => ({
 }));
 
 import * as gate from "@/app/investment/gate";
-import { loadCommunityInvestment } from "@/lib/community-investment";
+import { loadCommunityInvestment, loadCommunityInvestmentResult } from "@/lib/community-investment";
+import { COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING } from "@/lib/community-investment";
 import { loadInvestmentAnalysis } from "@/lib/investment-analysis";
 import type { CommunityInvestmentExport } from "@/lib/community-investment";
 import type { CommunityInvestmentAnalysis } from "@/lib/investment-analysis";
@@ -57,6 +64,20 @@ import Page from "./page";
 
 const mockState = vi.mocked(gate.getInvestmentAdminState);
 const mockLoadCommunityInvestment = vi.mocked(loadCommunityInvestment);
+const mockLoadCommunityInvestmentResult = vi.mocked(loadCommunityInvestmentResult);
+
+/**
+ * Keep the two loaders in lockstep so every pre-existing `mockLoadCommunityInvestment`
+ * setup line still steers the page exactly as it did before the typed loader landed.
+ * A test that wants the OUTAGE branch overrides `mockLoadCommunityInvestmentResult`
+ * directly.
+ */
+function syncInvestmentLoaders(): void {
+  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(() => {
+    const data = mockLoadCommunityInvestment();
+    return data ? { ok: true, data } : { ok: false, reason: "export_missing" };
+  });
+}
 const mockLoadInvestmentAnalysis = vi.mocked(loadInvestmentAnalysis);
 
 type GateProps = { redirectTo?: string; hasAuthError?: boolean };
@@ -155,6 +176,7 @@ describe("GET /print/investment/[area] — StatusCards scope (Sol gate blockers 
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
     mockLoadCommunityInvestment.mockReset().mockReturnValue(FIXTURE_INVESTMENT);
+    syncInvestmentLoaders();
     mockLoadInvestmentAnalysis.mockReset();
   });
 
@@ -184,5 +206,59 @@ describe("GET /print/investment/[area] — StatusCards scope (Sol gate blockers 
     // The print brief's own missing-data warning must carry the same
     // citywide-scoped framing, not the old false absolute claim.
     expect(html).toContain("closed recovery-program files report a disbursed total citywide");
+  });
+});
+
+/**
+ * R1 finding 4 — the false-claims class, the printable meeting packet. The
+ * same false negative finding as the area page, on a document people carry
+ * into rooms and hand to other people.
+ */
+describe("/print/investment/[area] — a dataset outage is never printed as an absence", () => {
+  const ABSENCE_CLAIM = "No grants, awards, or development have been recorded";
+
+  beforeEach(() => {
+    mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
+    mockLoadInvestmentAnalysis.mockReset();
+    mockLoadCommunityInvestment.mockReset();
+  });
+
+  async function renderHtml(): Promise<string> {
+    const el = await Page({
+      params: Promise.resolve({ area: "South Shore" }),
+      searchParams: Promise.resolve({}),
+    });
+    return renderToStaticMarkup(el as ReactElement);
+  }
+
+  const LOADED_EMPTY_EXPORT = {
+    generatedAt: "2026-08-14T00:00:00.000Z",
+    recoverySources: {},
+    meta: { sources: [] },
+    records: [],
+  } as unknown as CommunityInvestmentExport;
+
+  it("an unloadable export prints the unavailability state, not the absence claim", async () => {
+    mockLoadCommunityInvestmentResult
+      .mockReset()
+      .mockReturnValue({ ok: false, reason: "export_invalid_json" });
+    mockLoadInvestmentAnalysis.mockReturnValue(null);
+
+    const html = await renderHtml();
+
+    expect(html).toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
+    expect(html).toContain("could not be loaded");
+    expect(html).not.toContain(ABSENCE_CLAIM);
+  });
+
+  it("a LOADED dataset with no records for this community still prints the genuine absence", async () => {
+    mockLoadCommunityInvestment.mockReturnValue(LOADED_EMPTY_EXPORT);
+    syncInvestmentLoaders();
+    mockLoadInvestmentAnalysis.mockReturnValue(null);
+
+    const html = await renderHtml();
+
+    expect(html).toContain(ABSENCE_CLAIM);
+    expect(html).not.toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
   });
 });

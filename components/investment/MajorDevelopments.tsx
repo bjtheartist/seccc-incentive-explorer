@@ -19,10 +19,32 @@ const DEV_ACCENT = FUNDER_TYPE_COLORS.private_development; // #7C3AED
 export function MajorDevelopments({
   summary,
   scope,
+  datasetUnavailable = false,
 }: {
   summary: MajorDevelopmentsSummary;
   scope: "citywide" | "area";
+  /**
+   * R1 finding 4: `loadMajorDevelopments` returns an empty summary BOTH when
+   * the export is genuinely development-free and when the export could not be
+   * loaded at all. A zero count therefore proves nothing on its own, and the
+   * "No major private developments …" sentence below is an authoritative
+   * negative finding. The caller — which is the only place that knows how the
+   * load went — passes this so an outage renders as an outage.
+   */
+  datasetUnavailable?: boolean;
 }) {
+  if (datasetUnavailable) {
+    return (
+      <div
+        data-testid="major-developments-unavailable"
+        className="border border-[#0C1B33]/10 bg-white p-6 text-[13px] text-[#0C1B33]/55"
+      >
+        Major private development data is temporarily unavailable — the investment dataset could not
+        be loaded, so this section does not report whether any are on record.
+      </div>
+    );
+  }
+
   if (summary.count === 0) {
     return (
       <div className="border border-[#0C1B33]/10 bg-white p-6 text-[13px] text-[#0C1B33]/55">

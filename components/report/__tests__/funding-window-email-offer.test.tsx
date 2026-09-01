@@ -126,4 +126,57 @@ describe("FundingWindowChart inline email offer", () => {
     expect(body.email).toBe("owner@business.com");
     expect(body.source).toBe("funding_window_inline_offer");
   });
+
+  /**
+   * R1 finding 5 — the email half. This send had NO deadline of any kind, so
+   * a stalled connection left the offer on "Sending…" indefinitely with
+   * nothing said and nothing to click. It now carries the same 30s ceiling as
+   * the Email Report modal, and reports a timeout in its own words.
+   */
+  it("carries an abort deadline on the send — a stalled request cannot hang the offer forever", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FundingWindowChart report={reportWithWindow} />);
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me this report/i }));
+    await screen.findByText(/sent — check your inbox/i);
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("reports an aborted send as 'took too long', distinctly from a rejected one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(Object.assign(new Error("aborted"), { name: "TimeoutError" })),
+    );
+
+    render(<FundingWindowChart report={reportWithWindow} />);
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me this report/i }));
+
+    const message = await screen.findByText(/took too long/i);
+    expect(normalizeApostrophes(message.textContent ?? "")).toContain("was not sent");
+  });
+
+  it("still reports an ordinary server rejection in the server's own words", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: "Email service is not configured" }) }),
+    );
+
+    render(<FundingWindowChart report={reportWithWindow} />);
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me this report/i }));
+
+    await screen.findByText(/Email service is not configured/i);
+    expect(screen.queryByText(/took too long/i)).toBeNull();
+  });
 });

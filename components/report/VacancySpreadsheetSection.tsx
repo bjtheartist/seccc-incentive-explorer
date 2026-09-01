@@ -195,7 +195,8 @@ export interface VacancySpreadsheetSectionProps {
   handleShareReport: () => void;
   handleSaveReport: () => void;
   handlePrint: () => void;
-  handleDownloadAfterCapture: () => void;
+  /** R1 finding 5: awaited by DownloadGateModal, so failures are real. */
+  handleDownloadAfterCapture: () => Promise<void>;
   handleEmailReportClick: () => void;
   linkCopied: boolean;
   downloadGateOpen: boolean;
