@@ -4,6 +4,15 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 
 /**
+ * Request ceiling (20s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * A DB-first corridor-metrics lookup with a precomputed-file fallback.
+ */
+export const maxDuration = 20;
+
+/**
  * GET /api/corridor?zip=60617
  *
  * Returns the latest corridor metrics snapshot per ZIP corridor.

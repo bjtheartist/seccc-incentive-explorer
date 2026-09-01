@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkStaticZones, resolveZonesAtPoint } from "@/lib/zones-check";
 
+/**
+ * Request ceiling (30s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * A PostGIS zone check across every configured layer, falling back to
+ * loading and searching static GeoJSON zone files when the DB is absent.
+ */
+export const maxDuration = 30;
+
 export const runtime = "nodejs";
 
 /**

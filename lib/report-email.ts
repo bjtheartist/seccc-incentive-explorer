@@ -3,6 +3,7 @@ import {
   projectGoalDisplayLabel,
   selectedProjectGoals,
 } from "./report-wizard-config";
+import { MAX_PDF_BASE64_CHARS, REPORT_TOO_LARGE_MESSAGE } from "./report-email-limits";
 
 export interface ReportEmailIdentity {
   email: string;
@@ -24,6 +25,40 @@ interface ReportEmailResponse {
   error?: string;
   dryRun?: boolean;
 }
+
+/**
+ * A report that genuinely will not fit in an email.
+ *
+ * Thrown BEFORE the request is sent, from a size pre-check, and marked
+ * `retryable: false` — because retrying sends the same bytes and fails the
+ * same way. Previously this case produced the generic
+ * "We could not email the report. Please try again." message, which is both
+ * untrue (trying again cannot help) and unhelpful (it hides the download,
+ * which has no size limit). Worse, the payloads it applied to exceeded
+ * Vercel's 4.5MB body limit, so the request never reached the route: the
+ * browser saw an opaque platform rejection rather than any message this code
+ * chose.
+ */
+export class ReportEmailTooLargeError extends Error {
+  readonly retryable = false;
+  readonly pdfBase64Length: number;
+
+  constructor(pdfBase64Length: number) {
+    super(REPORT_TOO_LARGE_MESSAGE);
+    this.name = "ReportEmailTooLargeError";
+    this.pdfBase64Length = pdfBase64Length;
+  }
+}
+
+/**
+ * How long to wait on /api/email-report before giving up.
+ *
+ * The fetch had no timeout at all: a hung connection left the caller awaiting
+ * a promise that would never settle, so the modal's "Sending…" state was
+ * terminal — no error, no retry, nothing. 30s is comfortably longer than a
+ * successful multi-megabyte upload plus Resend's own round trip.
+ */
+const EMAIL_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * Unique program count for a report (F14, build-spec.md 2.4: "Programs
@@ -73,6 +108,15 @@ export async function deliverReportByEmail({
 }: DeliverReportByEmailInput): Promise<ReportEmailResponse> {
   const { generateReportPdfBase64 } = await import("./pdf-report");
   const { base64, filename } = generateReportPdfBase64(report);
+
+  // Size pre-check, BEFORE the upload. Above this the request exceeds Vercel's
+  // body limit and is rejected by the platform before the route runs, so
+  // sending it can only produce an opaque failure. Fail here instead, with a
+  // message that is true and names the download as the way forward.
+  if (base64.length > MAX_PDF_BASE64_CHARS) {
+    throw new ReportEmailTooLargeError(base64.length);
+  }
+
   const address = report.metadata?.address;
   const normalizedGoals = selectedProjectGoals({ projectGoals, projectType });
   const projectGoal = normalizedGoals
@@ -100,6 +144,7 @@ export async function deliverReportByEmail({
       reportType: report.reportType,
       incentiveCount: programCount(report),
     }),
+    signal: AbortSignal.timeout(EMAIL_REQUEST_TIMEOUT_MS),
   });
   const body = (await response.json().catch(() => ({}))) as ReportEmailResponse;
 

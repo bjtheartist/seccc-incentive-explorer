@@ -667,6 +667,29 @@ export interface ParcelData {
   addressMatch?: ParcelAddressMatch;
   /** The street line the caller asked to resolve, when one was provided. */
   requestedAddress?: string | null;
+  /**
+   * ISO instant the Cook County record behind this parcel was ACTUALLY read.
+   *
+   * Set by /api/parcel and carried THROUGH its cache, so a cached response
+   * reports the original read instant rather than the moment it was served.
+   * Without it, a 24-hour-old cache hit was indistinguishable from a live
+   * lookup and nothing downstream could date the record.
+   *
+   * Absent on payloads built before this field existed and on records that did
+   * not come from a dated read — treat absence as "unknown", never as "now".
+   *
+   * NOTE (R2 finding 3): this makes dating POSSIBLE; nothing consumes it yet.
+   * The intended consumer was countyRecordQualifier() in lib/site-shortlist.ts,
+   * whose live branch returns "current County record" for any non-snapshot
+   * fact however old. Changing that is blocked: two existing tests pin the
+   * current wording as deliberate — lib/__tests__/shortlist-csv.test.ts
+   * ("keeps 'current County record' for a live County read") and
+   * components/vacancy/__tests__/site-matchmaker-parcel-dossier-interaction.test.ts
+   * ("a live lookup keeps today's wording") — and the latter sits in a fence
+   * this round may not edit. Left for an owner ruling rather than weakening
+   * either assertion.
+   */
+  checkedAt?: string | null;
   zip?: string | null;      // ZIP code from parcel source when available
   classCode: string;        // e.g. "5-17", "2-11"
   classDescription: string; // "One-story commercial building"
