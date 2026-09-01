@@ -185,15 +185,52 @@ describe("POST /api/email-report", () => {
     expect(sendMock).toHaveBeenCalledTimes(1);
   });
 
-  it("still succeeds when the optional staff notification fails after delivery", async () => {
+  it("still succeeds when the optional staff notification fails after delivery — but reports helpDelivered: false with the direct-contact address (owner ruling 2026-09-01: never a silent broken promise)", async () => {
     vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
     sendMock
       .mockResolvedValueOnce({ data: { id: "email-1" }, error: null })
       .mockRejectedValueOnce(new Error("notification unavailable"));
 
     const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
     expect(response.status).toBe(200);
     expect(sendMock).toHaveBeenCalledTimes(2);
     expect(markDeliveryMock).toHaveBeenCalledWith(11, "sent");
+    expect(payload).toMatchObject({
+      success: true,
+      helpRequested: true,
+      helpDelivered: false,
+      helpContact: "help@example.com",
+    });
+  });
+
+  it("a staff notification that RESOLVES with an error object is equally not a delivery — helpDelivered: false with the contact address", async () => {
+    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
+    sendMock
+      .mockResolvedValueOnce({ data: { id: "email-1" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "rejected" } });
+
+    const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({ success: true, helpDelivered: false, helpContact: "help@example.com" });
+  });
+
+  it("a successful staff notification reports helpDelivered: true and no contact fallback", async () => {
+    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
+
+    const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({ success: true, helpRequested: true, helpDelivered: true });
+    expect(payload.helpContact).toBeUndefined();
+  });
+
+  it("wantsHelp with NO configured inbox reports helpDelivered: false — a request nobody was told about is not a delivery", async () => {
+    const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload).toMatchObject({ success: true, helpRequested: true, helpDelivered: false });
+    expect(payload.helpContact).toBeUndefined();
   });
 });

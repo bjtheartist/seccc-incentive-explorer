@@ -136,7 +136,7 @@ describe("POST /api/support-request", () => {
     expect(sendArgs.subject).toContain("123 Main St");
   });
 
-  it("a Resend failure still returns success (the lead is captured regardless) with notified: false", async () => {
+  it("a Resend failure still returns success (the lead is captured regardless) with notified: false AND the direct-contact address (owner ruling 2026-09-01: fail loudly, tell the visitor to email us directly)", async () => {
     process.env.RESEND_API_KEY = "test-key";
     process.env.INCENTIVE_HELP_INBOX = "help@example.org";
     sendMock.mockResolvedValueOnce({ data: null, error: { message: "rejected" } });
@@ -144,6 +144,26 @@ describe("POST /api/support-request", () => {
     const res = await POST(supportRequest({ email: "owner@business.com" }));
     const body = await res.json();
     expect(res.status).toBe(200);
+    expect(body).toEqual({ success: true, notified: false, contact: "help@example.org" });
+  });
+
+  it("a thrown Resend send also returns notified: false with the direct-contact address, never a silent success", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.INCENTIVE_HELP_INBOX = "help@example.org";
+    sendMock.mockRejectedValueOnce(new Error("network down"));
+
+    const res = await POST(supportRequest({ email: "owner@business.com" }));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ success: true, notified: false, contact: "help@example.org" });
+    expect(createReportLeadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the unconfigured branch (no inbox) reports notified: false WITHOUT a contact address — there is no destination to hand out", async () => {
+    const res = await POST(supportRequest({ email: "owner@business.com" }));
+    const body = await res.json();
+    expect(res.status).toBe(200);
     expect(body).toEqual({ success: true, notified: false });
+    expect(body.contact).toBeUndefined();
   });
 });

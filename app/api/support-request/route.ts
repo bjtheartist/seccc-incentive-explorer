@@ -114,5 +114,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Owner ruling (Billy, 2026-09-01): a missed Chamber notification must fail
+  // LOUDLY at the visitor, not dissolve into a silent 200 — the gate promised
+  // a real person within 48 hours, and the lead row alone doesn't guarantee a
+  // person sees it in time. `notified: false` already reports the miss; when
+  // the help inbox is configured we also hand the client the address so its
+  // copy can say "email us directly" with a real destination instead of a
+  // dead-end apology. The inbox exists precisely to receive these requests,
+  // so returning it discloses nothing sensitive.
+  if (!notified && process.env.INCENTIVE_HELP_INBOX) {
+    return NextResponse.json({
+      success: true,
+      notified,
+      contact: process.env.INCENTIVE_HELP_INBOX,
+    });
+  }
   return NextResponse.json({ success: true, notified });
 }
