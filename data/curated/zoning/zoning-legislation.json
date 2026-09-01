@@ -6,16 +6,16 @@
     "apiUrl": "https://api.chicityclerkelms.chicago.gov",
     "publicUrl": "https://chicityclerkelms.chicago.gov",
     "coverage": "City Council records from December 1, 2010 to present. Special-use decisions are handled separately by the Zoning Board of Appeals.",
-    "sourceUpdatedThrough": "2026-08-07T19:20:06.000Z"
+    "sourceUpdatedThrough": "2026-08-26T20:00:13.000Z"
   },
   "coverage": {
-    "total": 6731,
+    "total": 6735,
     "searches": [
       {
         "query": "Zoning Reclassification",
-        "publishedCount": 6661,
-        "fetchedCount": 6661,
-        "normalizedMatches": 6657,
+        "publishedCount": 6665,
+        "fetchedCount": 6665,
+        "normalizedMatches": 6661,
         "excludedRelatedRecords": 4
       },
       {
@@ -34,7 +34,7 @@
       }
     ],
     "byKind": {
-      "map_amendment": 6657,
+      "map_amendment": 6661,
       "zoning_code_amendment": 74
     },
     "byLifecycle": {
@@ -44,7 +44,7 @@
       "failed": 23,
       "repealed": 3,
       "closed_without_adoption": 0,
-      "unknown": 0
+      "unknown": 4
     },
     "byFileYear": {
       "2010": 66,
@@ -63,10 +63,90 @@
       "2023": 493,
       "2024": 388,
       "2025": 480,
-      "2026": 248
+      "2026": 252
     }
   },
   "matters": [
+    {
+      "matterId": "AAE4A43A-74A1-F111-B8DB-001DD803894A",
+      "recordNumber": "O2026-0027667",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "unknown",
+      "title": "Zoning Reclassification Map No. 17-H at 1721 W Greenleaf Ave - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-08-26T17:40:09.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=AAE4A43A-74A1-F111-B8DB-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "DC488EAC-1898-F111-AB0E-001DD8066D23",
+      "recordNumber": "O2026-0027582",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "unknown",
+      "title": "Zoning Reclassification Map No. 24-E at 520 E 103rd St - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-08-14T19:50:01.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=DC488EAC-1898-F111-AB0E-001DD8066D23",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "4969D943-1898-F111-AB0E-001DD8066D23",
+      "recordNumber": "O2026-0027581",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "unknown",
+      "title": "Zoning Reclassification Map No. 26-F at 10657-10659 S Wentworth Ave - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-08-14T19:45:06.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=4969D943-1898-F111-AB0E-001DD8066D23",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "0D79F6C0-1798-F111-AB0E-001DD8066D23",
+      "recordNumber": "O2026-0027580",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "unknown",
+      "title": "Zoning Reclassification Map No. 28-E at 1-7 E 111th St - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-08-14T19:45:03.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=0D79F6C0-1798-F111-AB0E-001DD8066D23",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
     {
       "matterId": "A526565E-5E84-F111-AB0E-001DD80ED7AA",
       "recordNumber": "O2026-0027417",
@@ -98,7 +178,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-08-07T13:35:04.000Z",
+      "lastPublicationDate": "2026-08-26T19:25:17.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=E6BE87E3-5C84-F111-AB0E-001DD80ED7AA",
       "searchTerms": [
@@ -118,7 +198,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-20T17:05:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:15:15.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=5AA714A5-5A84-F111-AB0E-001DD80ED7AA",
       "searchTerms": [
@@ -138,7 +218,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-20T19:00:14.000Z",
+      "lastPublicationDate": "2026-08-26T19:00:04.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FB2BA8B6-5884-F111-AB0E-001DD80ED7AA",
       "searchTerms": [
@@ -158,7 +238,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-20T20:35:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:15:10.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=CD3876DE-5484-F111-AB0E-001DD80ED7AA",
       "searchTerms": [
@@ -178,7 +258,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T20:50:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:10:15.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=346A4807-1E82-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -198,7 +278,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T20:00:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:10:09.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=BFA70EFA-0C82-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -218,7 +298,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T18:30:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:30:05.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9910EF61-0B82-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -238,7 +318,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T18:15:06.000Z",
+      "lastPublicationDate": "2026-08-26T20:00:13.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=C168658B-0882-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -258,7 +338,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T17:40:04.000Z",
+      "lastPublicationDate": "2026-08-26T19:05:07.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=67F08848-FB81-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -278,7 +358,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-08-06T20:45:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:20:11.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=EA0B612C-F981-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -298,7 +378,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T16:10:09.000Z",
+      "lastPublicationDate": "2026-08-26T18:55:11.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=EACD5DFC-F681-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -318,7 +398,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T15:50:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:25:12.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=7831675D-F581-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -338,7 +418,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T15:35:10.000Z",
+      "lastPublicationDate": "2026-08-26T18:55:05.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=61BAC444-F281-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -358,7 +438,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T15:15:04.000Z",
+      "lastPublicationDate": "2026-08-26T19:10:04.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=C2A92DF8-EF81-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -378,7 +458,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-17T14:55:03.000Z",
+      "lastPublicationDate": "2026-08-26T19:50:05.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A7621F54-EC81-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -398,7 +478,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T21:00:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:50:11.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=56B0F4DD-8380-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -418,7 +498,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T19:25:17.000Z",
+      "lastPublicationDate": "2026-08-26T19:20:20.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=49E237F2-7C80-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -438,7 +518,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T18:40:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:05:12.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=5876CFAD-7780-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -498,7 +578,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T16:25:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:35:05.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FAF3117B-6780-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -518,7 +598,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T16:10:10.000Z",
+      "lastPublicationDate": "2026-08-26T19:30:11.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FE9D4DD7-6380-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -538,7 +618,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-20T16:10:07.000Z",
+      "lastPublicationDate": "2026-08-26T19:55:15.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=448FE634-5480-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -558,7 +638,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T13:50:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:00:15.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=42B374BE-5080-F111-AB0E-001DD80F46AC",
       "searchTerms": [
@@ -578,7 +658,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-15T12:30:07.000Z",
+      "lastPublicationDate": "2026-08-26T19:20:06.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=1E9040EC-C37F-F111-AB0E-001DD80216AA",
       "searchTerms": [
@@ -618,7 +698,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-22T16:05:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:45:14.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=1CCFF29F-F77E-F111-AB0E-001DD8013458",
       "searchTerms": [
@@ -638,7 +718,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-07-13T20:20:22.000Z",
+      "lastPublicationDate": "2026-08-26T19:25:07.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=14C9DAB9-F37E-F111-AB0E-001DD8013458",
       "searchTerms": [
@@ -658,7 +738,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-08-07T14:05:05.000Z",
+      "lastPublicationDate": "2026-08-26T19:55:06.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=179AC65F-EA7E-F111-AB0E-001DD8013458",
       "searchTerms": [
@@ -678,7 +758,7 @@
       "subStatus": "Referred",
       "introductionDate": "2026-07-15T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2026-08-07T13:55:06.000Z",
+      "lastPublicationDate": "2026-08-26T19:45:08.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=764CF365-E47E-F111-AB0E-001DD8013458",
       "searchTerms": [
@@ -1338,7 +1418,7 @@
       "subStatus": "Passed",
       "introductionDate": "2026-06-17T15:00:00.000Z",
       "finalActionDate": "2026-07-15T15:00:00.000Z",
-      "lastPublicationDate": "2026-07-17T14:10:07.000Z",
+      "lastPublicationDate": "2026-08-17T20:35:06.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A681FCDC-0565-F111-A823-001DD80071EA",
       "searchTerms": [
@@ -10639,7 +10719,7 @@
       "subStatus": "Referred",
       "introductionDate": "2025-05-21T15:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2025-12-08T16:45:17.000Z",
+      "lastPublicationDate": "2026-08-19T17:00:38.000Z",
       "controllingBody": "Committee on Committees and Rules",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=0020AA34-6336-F011-8C4D-001DD80501AC",
       "searchTerms": [
@@ -14539,7 +14619,7 @@
       "subStatus": "Referred",
       "introductionDate": "2025-01-15T16:00:00.000Z",
       "finalActionDate": null,
-      "lastPublicationDate": "2025-02-21T16:48:58.000Z",
+      "lastPublicationDate": "2026-08-19T17:00:27.000Z",
       "controllingBody": "Committee on Committees and Rules",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=6E91F2D6-63D3-EF11-8EEA-001DD804AA64",
       "searchTerms": [
