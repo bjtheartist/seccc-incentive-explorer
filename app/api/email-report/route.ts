@@ -216,6 +216,13 @@ export async function POST(req: NextRequest) {
     });
     if (delivery.error) throw new Error("Resend rejected the report email");
 
+    // Owner ruling (Billy, 2026-09-01): a help request whose Chamber-inbox
+    // alert did not actually dispatch must not dissolve into a silent
+    // success — the response now reports `helpDelivered`, and when the inbox
+    // is configured, `helpContact` so the client can tell the recipient to
+    // email the Chamber directly. (The report email itself succeeded above;
+    // only the follow-up promise is at stake here.)
+    let helpDelivered = false;
     if (input.wantsHelp && process.env.INCENTIVE_HELP_INBOX) {
       try {
         const notification = await resend.emails.send({
@@ -227,6 +234,7 @@ export async function POST(req: NextRequest) {
           html: helpNotificationHtml(input),
           text: `Incentive help requested\n\nName: ${input.name || "Report recipient"}\nEmail: ${input.email}\nAddress: ${input.address || "Not provided"}\nProject goals: ${input.projectGoal || input.projectType || "Not provided"}`,
         });
+        helpDelivered = !notification.error;
         if (notification.error) {
           console.error("Incentive help notification was not accepted by Resend");
         }
@@ -243,7 +251,19 @@ export async function POST(req: NextRequest) {
       console.error("Report email was delivered but delivery metadata was not fully updated");
     }
 
-    return NextResponse.json({ success: true, helpRequested: input.wantsHelp });
+    if (input.wantsHelp && !helpDelivered && process.env.INCENTIVE_HELP_INBOX) {
+      return NextResponse.json({
+        success: true,
+        helpRequested: input.wantsHelp,
+        helpDelivered,
+        helpContact: process.env.INCENTIVE_HELP_INBOX,
+      });
+    }
+    return NextResponse.json({
+      success: true,
+      helpRequested: input.wantsHelp,
+      helpDelivered: input.wantsHelp ? helpDelivered : undefined,
+    });
   } catch (error) {
     if (reservationId != null) {
       await markReportEmailDelivery(reservationId, "failed").catch(() => undefined);

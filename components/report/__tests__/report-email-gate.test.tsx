@@ -612,6 +612,55 @@ describe("ReportEmailGate — BLOCKER 3(b)/(c): support submission is awaited an
     expect(submitSupportRequestMock).toHaveBeenCalledTimes(1);
   });
 
+  it("View: a stored-but-unnotified submission (notified: false) surfaces the direct-email instruction loudly before the report; a second click proceeds without re-submitting (owner ruling 2026-09-01)", async () => {
+    submitSupportRequestMock.mockResolvedValueOnce({
+      success: true,
+      notified: false,
+      contact: "help@example.org",
+    });
+    const { onReportReady } = renderGate();
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(submitSupportRequestMock).toHaveBeenCalledTimes(1));
+    // The failure is SURFACED, names the direct address, and holds the report.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/email us directly at help@example\.org/i),
+      ).toBeTruthy(),
+    );
+    expect(screen.getByText(/did not go through/i)).toBeTruthy();
+    expect(onReportReady).not.toHaveBeenCalled();
+
+    // Second click: the lead row already exists — no duplicate submission —
+    // and the visitor, having seen the instruction, gets their report.
+    fireEvent.click(viewButton());
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+    expect(submitSupportRequestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("View: notified: false with NO contact address still surfaces the failure with the generic direct-contact copy", async () => {
+    submitSupportRequestMock.mockResolvedValueOnce({ success: true, notified: false });
+    const { onReportReady } = renderGate();
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+
+    fireEvent.click(viewButton());
+    await waitFor(() =>
+      expect(
+        screen.getByText(/contact the Southeast Chicago Chamber of Commerce directly/i),
+      ).toBeTruthy(),
+    );
+    expect(onReportReady).not.toHaveBeenCalled();
+  });
+
   it("Save (unauthenticated): navigation is awaited AFTER a successful submission, never before", async () => {
     let resolveSubmit: (value: { success: true }) => void = () => {};
     submitSupportRequestMock.mockReturnValueOnce(

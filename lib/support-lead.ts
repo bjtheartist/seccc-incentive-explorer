@@ -27,6 +27,13 @@ export interface SupportRequestResponse {
   error?: string;
   /** Whether a chamber-inbox notification was actually sent (false when Resend/inbox env vars are unset — the lead is still captured either way). */
   notified?: boolean;
+  /**
+   * Owner ruling (2026-09-01): when `notified` is false and the help inbox is
+   * configured, the server hands back the address so the visitor can be told
+   * to email the Chamber directly instead of trusting a follow-up that was
+   * never actually dispatched.
+   */
+  contact?: string;
 }
 
 export async function submitSupportRequest(
