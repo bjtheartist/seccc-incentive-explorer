@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
-import { loadCommunityInvestment } from "@/lib/community-investment";
+import {
+  COMMUNITY_INVESTMENT_UNAVAILABLE_COPY,
+  COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING,
+  loadCommunityInvestmentResult,
+} from "@/lib/community-investment";
 import {
   computeInvestmentFindings,
   loadCapitalContextForArea,
@@ -135,7 +139,13 @@ export default async function InvestmentBriefPrintPage({
   if (!name) notFound();
 
   const analysis = loadInvestmentAnalysis(name);
-  const meta = loadCommunityInvestment()?.meta;
+  // R1 finding 4: an unloadable export and a community with genuinely no
+  // records both reached here as a null analysis, and the packet printed the
+  // "no grants … have been recorded" sentence for both — a false negative
+  // finding on a document people take into meetings.
+  const investmentResult = loadCommunityInvestmentResult();
+  const datasetUnavailable = !investmentResult.ok;
+  const meta = investmentResult.ok ? investmentResult.data.meta : undefined;
   const sources = meta?.sources ?? [];
   const flowRows = loadFlowRows(name);
   const findings = analysis ? computeInvestmentFindings(analysis) : [];
@@ -180,7 +190,17 @@ export default async function InvestmentBriefPrintPage({
             <code>scripts/export-investment-brief.ts</code>.
           </p>
 
-          {!analysis ? (
+          {datasetUnavailable ? (
+            <div
+              data-testid="investment-dataset-unavailable"
+              className="border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/55"
+            >
+              <p className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#0C1B33]/70">
+                {COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING}
+              </p>
+              <p className="mt-3 leading-relaxed">{COMMUNITY_INVESTMENT_UNAVAILABLE_COPY}</p>
+            </div>
+          ) : !analysis ? (
             <div className="border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/55">
               No grants, awards, or development have been recorded in {name} since 2020 in this dataset.
             </div>

@@ -246,6 +246,10 @@ export default function MapPolygonPanel({
   const { status } = useSession();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  // R1 finding 5: `handleDownloadPdf` was an un-caught async click handler —
+  // a failed jsPDF render became a silent unhandled rejection and the reader
+  // simply got no file, with nothing on screen to say so or to retry from.
+  const [pdfDownloadFailed, setPdfDownloadFailed] = useState(false);
   const editButtonRef = useRef<HTMLButtonElement | null>(null);
   const editDoneButtonRef = useRef<HTMLButtonElement | null>(null);
   const loadingStatusRef = useRef<HTMLDivElement | null>(null);
@@ -1147,8 +1151,14 @@ export default function MapPolygonPanel({
 
   const handleDownloadPdf = useCallback(async () => {
     if (!drawnAreaScope || loading || permitPending) return;
-    const { generateReportPdf } = await import("@/lib/pdf-report");
-    generateReportPdf(areaReport);
+    setPdfDownloadFailed(false);
+    try {
+      const { generateReportPdf } = await import("@/lib/pdf-report");
+      generateReportPdf(areaReport);
+    } catch (err) {
+      console.error("[map panel] area PDF download failed:", err);
+      setPdfDownloadFailed(true);
+    }
   }, [areaReport, drawnAreaScope, loading, permitPending]);
 
   /* ── Export CSV ──
@@ -2620,7 +2630,7 @@ export default function MapPolygonPanel({
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 border border-[#0C1B33]/15 px-3 py-2.5 text-center font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/70 transition-colors hover:bg-[#0C1B33]/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FileDown className="h-3.5 w-3.5" />
-                Download PDF
+                {pdfDownloadFailed ? "Retry PDF" : "Download PDF"}
               </button>
               <button
                 onClick={handleExportCsv}
@@ -2636,6 +2646,16 @@ export default function MapPolygonPanel({
                   {loading || permitPending
                     ? "Save, email, PDF, and CSV export will be available after the vacancy and permit lookups finish."
                     : "Save, email, PDF, and CSV export are unavailable because the exact boundary provenance could not be created."}
+                </p>
+              )}
+              {pdfDownloadFailed && (
+                <p
+                  role="status"
+                  data-testid="area-pdf-download-error"
+                  className="col-span-full text-[9px] leading-snug text-red-600"
+                >
+                  We couldn&rsquo;t build that PDF just then. Nothing was saved or sent — use Retry
+                  PDF to try again.
                 </p>
               )}
             </div>

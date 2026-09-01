@@ -27,7 +27,7 @@
  * this stays far cheaper than pulling boundary polygons.
  */
 
-import { socrataFetch } from "./socrata";
+import { socrataFetchResult } from "./socrata";
 import { memCached } from "./redis";
 
 const SOCRATA_ZONING_URL = "https://data.cityofchicago.org/resource/dj47-wfun.json";
@@ -63,12 +63,19 @@ async function fetchZoneClass(lat: number, lon: number): Promise<string | null> 
     });
 
   const value = await memCached(cacheKey(lat, lon), CACHE_TTL_MS / 1000, async () => {
-    const rows = await socrataFetch<{ zone_class?: string }[]>(url, 12_000);
+    const result = await socrataFetchResult<{ zone_class?: string }[]>(url, 12_000);
     // A failed lookup must NOT be stored as an absence — that would freeze a
     // transient outage into six hours of "zoning unverified". Throwing keeps it
     // out of the cache; resolveZoneClasses turns it back into "unresolved".
-    if (rows === null) throw new Error("zoning lookup unavailable");
-    return rows[0]?.zone_class?.trim() || NO_ZONE;
+    // The typed result names WHICH failure happened, so the thrown message is
+    // diagnosable instead of a single undifferentiated "unavailable".
+    if (!result.ok) {
+      throw new Error(`zoning lookup unavailable (${result.reason})`);
+    }
+    if (!Array.isArray(result.data)) {
+      throw new Error("zoning lookup unavailable (unexpected payload shape)");
+    }
+    return result.data[0]?.zone_class?.trim() || NO_ZONE;
   });
 
   return value === NO_ZONE ? null : value;

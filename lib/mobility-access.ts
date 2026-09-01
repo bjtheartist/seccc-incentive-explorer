@@ -48,7 +48,38 @@ export interface MobilityAccess {
   sources: MobilityAccessSource[];
   caveats: string[];
   refreshedAt: string;
+  /**
+   * R1 finding 4 (honest outage rendering): the ids of the upstream feeds
+   * that could not be loaded for this lookup. A rejected feed means NOTHING
+   * is known about what it would have contained — so the corresponding
+   * label reports unavailability rather than the bottom "Limited nearby …"
+   * rung, which is an authoritative negative finding this data cannot
+   * support. Empty on a fully successful lookup.
+   *
+   * Optional because this value is fetched over the wire (/api/mobility-access)
+   * and persisted inside saved reports: a payload minted before R1 simply has
+   * no such field, and `undefined` there means "no outage was recorded", which
+   * is exactly the pre-R1 shape. Read it as `?? []`.
+   */
+  unavailableSources?: MobilityAccessFeedId[];
 }
+
+export type MobilityAccessFeedId =
+  | "cta_rail"
+  | "metra"
+  | "bus_stops"
+  | "bike_routes"
+  | "expressways"
+  | "freight_rail";
+
+/**
+ * Unavailability copy. Each states what could not be checked; none asserts
+ * an absence, and none is eligibility-shaped.
+ */
+export const MOBILITY_TRANSIT_UNAVAILABLE_LABEL = "Transit data temporarily unavailable";
+export const MOBILITY_BIKE_UNAVAILABLE_LABEL = "Bike-route data temporarily unavailable";
+export const MOBILITY_DRIVE_UNAVAILABLE_LABEL = "Drive-access data temporarily unavailable";
+export const MOBILITY_FREIGHT_UNAVAILABLE_LABEL = "Freight-rail data temporarily unavailable";
 
 interface CsvRow {
   [key: string]: string | undefined;
@@ -315,7 +346,14 @@ async function fetchNearbyBusStops(lat: number, lon: number): Promise<MobilityAc
   });
 
   const response = await fetch(`${CTA_BUS_STOPS_URL}?${params.toString()}`);
-  if (!response.ok) return [];
+  // R1 finding 4: an empty array here is indistinguishable from "no bus stops
+  // within the radius", and that false absence is exactly what a 5xx used to
+  // publish. Reject instead — getMobilityAccess's Promise.allSettled turns a
+  // rejection into an explicit unavailability, and an empty array back into an
+  // honest "none nearby".
+  if (!response.ok) {
+    throw new Error(`CTA bus stops lookup failed with status ${response.status}`);
+  }
 
   const rows = (await response.json()) as ChicagoDataPointRow[];
   const byName = new Map<string, MobilityAccessPoint>();
@@ -360,7 +398,10 @@ async function fetchNearbyBikeRoutes(lat: number, lon: number): Promise<Mobility
   });
 
   const response = await fetch(`${BIKE_ROUTES_URL}?${params.toString()}`);
-  if (!response.ok) return [];
+  // Same as the bus-stop lookup above: a failed request is not an absence.
+  if (!response.ok) {
+    throw new Error(`Bike routes lookup failed with status ${response.status}`);
+  }
 
   const rows = (await response.json()) as ChicagoBikeRouteRow[];
   const seen = new Set<string>();
@@ -411,7 +452,12 @@ async function getNetworkAccess(
   category: "expressway" | "freight_rail",
 ): Promise<MobilityAccessLine[]> {
   const network = await loadTransportNetwork();
-  if (!network?.features?.length) return [];
+  // A network that could not be READ (null) is an outage; a network that
+  // loaded and simply holds no features is a real, publishable emptiness.
+  if (!network) {
+    throw new Error("Transport network layer unavailable");
+  }
+  if (!network.features?.length) return [];
 
   const pt = turf.point([lon, lat]);
   const lines: MobilityAccessLine[] = [];
@@ -451,49 +497,140 @@ function isFreightRailName(name: string | undefined): boolean {
   return !["amtrak", "metra", "south shore line"].includes(normalized);
 }
 
-function labelTransit(access: {
-  ctaRailStations: MobilityAccessPoint[];
-  metraStations: MobilityAccessPoint[];
-  busStops: MobilityAccessPoint[];
-}): string {
+/**
+ * R1 finding 4. Every label below grades proximity from what was actually
+ * retrieved. A POSITIVE rung ("Strong public transit access") is safe even
+ * from a partial view — the stations it names were really found. The bottom
+ * rung is different: "Limited nearby transit context" is an authoritative
+ * NEGATIVE finding, and it is exactly what a rejected feed used to render.
+ * So when a feed that contributes to a label was unavailable, the bottom
+ * rung is replaced by an explicit unavailability label; the positive rungs
+ * are untouched.
+ */
+function degradeAbsenceClaim(
+  label: string,
+  bottomRung: string,
+  unavailableLabel: string,
+  degraded: boolean,
+): string {
+  return degraded && label === bottomRung ? unavailableLabel : label;
+}
+
+function labelTransit(
+  access: {
+    ctaRailStations: MobilityAccessPoint[];
+    metraStations: MobilityAccessPoint[];
+    busStops: MobilityAccessPoint[];
+  },
+  degraded = false,
+): string {
   const nearestRail = Math.min(
     access.ctaRailStations[0]?.miles ?? Number.POSITIVE_INFINITY,
     access.metraStations[0]?.miles ?? Number.POSITIVE_INFINITY,
   );
   const nearestBus = access.busStops[0]?.miles ?? Number.POSITIVE_INFINITY;
 
-  if (nearestRail <= 0.5 && nearestBus <= 0.25) return "Strong public transit access";
-  if (nearestRail <= 1 || nearestBus <= 0.25) return "Good public transit access";
-  if (nearestRail <= 1.5 || nearestBus <= 0.5) return "Moderate public transit access";
-  return "Limited nearby transit context";
+  const label =
+    nearestRail <= 0.5 && nearestBus <= 0.25
+      ? "Strong public transit access"
+      : nearestRail <= 1 || nearestBus <= 0.25
+        ? "Good public transit access"
+        : nearestRail <= 1.5 || nearestBus <= 0.5
+          ? "Moderate public transit access"
+          : "Limited nearby transit context";
+  return degradeAbsenceClaim(
+    label,
+    "Limited nearby transit context",
+    MOBILITY_TRANSIT_UNAVAILABLE_LABEL,
+    degraded,
+  );
 }
 
-function labelBike(routes: MobilityAccessLine[]): string {
+function labelBike(routes: MobilityAccessLine[], degraded = false): string {
   const nearest = routes[0]?.miles ?? Number.POSITIVE_INFINITY;
-  if (nearest <= 0.1) return "Bike route at or near the site";
-  if (nearest <= 0.35) return "Nearby bike access";
-  if (nearest <= 0.75) return "Some bike access nearby";
-  return "Limited nearby bike-route context";
+  const label =
+    nearest <= 0.1
+      ? "Bike route at or near the site"
+      : nearest <= 0.35
+        ? "Nearby bike access"
+        : nearest <= 0.75
+          ? "Some bike access nearby"
+          : "Limited nearby bike-route context";
+  return degradeAbsenceClaim(
+    label,
+    "Limited nearby bike-route context",
+    MOBILITY_BIKE_UNAVAILABLE_LABEL,
+    degraded,
+  );
 }
 
-function labelDrive(expressways: MobilityAccessLine[], airports: MobilityAccessPoint[]): string {
+function labelDrive(
+  expressways: MobilityAccessLine[],
+  airports: MobilityAccessPoint[],
+  degraded = false,
+): string {
   const nearestExpressway = expressways[0]?.miles ?? Number.POSITIVE_INFINITY;
   const nearestAirport = airports[0]?.miles ?? Number.POSITIVE_INFINITY;
-  if (nearestExpressway <= 1 && nearestAirport <= 12) return "Strong drive and regional access";
-  if (nearestExpressway <= 2.5) return "Good drive access";
-  if (nearestExpressway <= 5) return "Moderate drive access";
-  return "Limited expressway proximity";
+  const label =
+    nearestExpressway <= 1 && nearestAirport <= 12
+      ? "Strong drive and regional access"
+      : nearestExpressway <= 2.5
+        ? "Good drive access"
+        : nearestExpressway <= 5
+          ? "Moderate drive access"
+          : "Limited expressway proximity";
+  return degradeAbsenceClaim(
+    label,
+    "Limited expressway proximity",
+    MOBILITY_DRIVE_UNAVAILABLE_LABEL,
+    degraded,
+  );
 }
 
-function labelFreight(lines: MobilityAccessLine[]): string {
+function labelFreight(lines: MobilityAccessLine[], degraded = false): string {
   const nearest = lines[0]?.miles ?? Number.POSITIVE_INFINITY;
-  if (nearest <= 0.5) return "Freight rail nearby";
-  if (nearest <= 2) return "Freight rail in the broader area";
-  return "Limited nearby freight-rail context";
+  const label =
+    nearest <= 0.5
+      ? "Freight rail nearby"
+      : nearest <= 2
+        ? "Freight rail in the broader area"
+        : "Limited nearby freight-rail context";
+  return degradeAbsenceClaim(
+    label,
+    "Limited nearby freight-rail context",
+    MOBILITY_FREIGHT_UNAVAILABLE_LABEL,
+    degraded,
+  );
+}
+
+const MOBILITY_FEED_LABELS: Record<MobilityAccessFeedId, string> = {
+  cta_rail: "CTA rail stations",
+  metra: "Metra stations",
+  bus_stops: "CTA bus stops",
+  bike_routes: "City bike routes",
+  expressways: "the expressway network",
+  freight_rail: "the freight-rail network",
+};
+
+/** Human list of the feeds that failed, for the caveat sentence. */
+function describeUnavailableFeeds(ids: readonly MobilityAccessFeedId[]): string {
+  const labels = ids.map((id) => MOBILITY_FEED_LABELS[id]);
+  if (labels.length === 1) return labels[0];
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
 }
 
 export function describeMobilityAccess(access: MobilityAccess): string[] {
   const lines: string[] = [];
+
+  // R1 finding 4: this list only ever names what WAS found, so an outage
+  // used to render as a shorter list — visually identical to a genuinely
+  // quiet site. Lead with what could not be checked.
+  const unavailable = access.unavailableSources ?? [];
+  if (unavailable.length > 0) {
+    lines.push(
+      `Temporarily unavailable: ${describeUnavailableFeeds(unavailable)} could not be loaded, so this list does not describe ${unavailable.length === 1 ? "it" : "them"}.`,
+    );
+  }
 
   if (access.ctaRailStations.length) {
     lines.push(
@@ -599,11 +736,29 @@ export async function getMobilityAccess(lat: number, lon: number): Promise<Mobil
     const expressways = expresswaysResult.status === "fulfilled" ? expresswaysResult.value : [];
     const freightRail = freightRailResult.status === "fulfilled" ? freightRailResult.value : [];
 
+    // R1 finding 4: a REJECTED source was previously indistinguishable from an
+    // empty one — both fell through to `[]`, and the labels then published
+    // "Limited nearby transit context" as if the area had been checked and
+    // found wanting. Record which feeds failed so each label can report
+    // unavailability instead of that false absence.
+    const unavailableSources: MobilityAccessFeedId[] = [];
+    if (ctaStationsResult.status === "rejected") unavailableSources.push("cta_rail");
+    if (metraStationsResult.status === "rejected") unavailableSources.push("metra");
+    if (busStopsResult.status === "rejected") unavailableSources.push("bus_stops");
+    if (bikeRoutesResult.status === "rejected") unavailableSources.push("bike_routes");
+    if (expresswaysResult.status === "rejected") unavailableSources.push("expressways");
+    if (freightRailResult.status === "rejected") unavailableSources.push("freight_rail");
+    const failed = new Set(unavailableSources);
+
     return {
-      transitLabel: labelTransit({ ctaRailStations, metraStations, busStops }),
-      bikeLabel: labelBike(bikeRoutes),
-      driveLabel: labelDrive(expressways, airports),
-      freightLabel: labelFreight(freightRail),
+      transitLabel: labelTransit(
+        { ctaRailStations, metraStations, busStops },
+        failed.has("cta_rail") || failed.has("metra") || failed.has("bus_stops"),
+      ),
+      bikeLabel: labelBike(bikeRoutes, failed.has("bike_routes")),
+      driveLabel: labelDrive(expressways, airports, failed.has("expressways")),
+      freightLabel: labelFreight(freightRail, failed.has("freight_rail")),
+      unavailableSources,
       ctaRailStations,
       metraStations,
       busStops,
@@ -645,6 +800,13 @@ export async function getMobilityAccess(lat: number, lon: number): Promise<Mobil
       caveats: [
         "Distances are straight-line proximity signals, not routed travel times.",
         "Transit, bike, freight, loading, and site-access conditions should be verified before lease, acquisition, financing, or incentive decisions.",
+        // Named explicitly so a reader can tell a checked-and-quiet area from
+        // one the app could not check at all (R1 finding 4).
+        ...(unavailableSources.length > 0
+          ? [
+              `${describeUnavailableFeeds(unavailableSources)} could not be loaded for this lookup, so nothing below reports on ${unavailableSources.length === 1 ? "it" : "them"} either way.`,
+            ]
+          : []),
       ],
       refreshedAt: retrievedAt,
     };
