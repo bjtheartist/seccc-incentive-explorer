@@ -115,6 +115,13 @@ describe("buildSiteCardHtml", () => {
   });
 
   it("keeps all four source-separated space facts in the standard pin dossier", () => {
+    // The availability bundle must be CURRENT for the card to show it, and the
+    // renderer consults the real clock. The original fixture pinned absolute
+    // dates ("2026-08-01" verified / "2026-09-01" reconfirm) and went red the
+    // moment the reconfirm date passed — a wall-clock time bomb, same class as
+    // the exact-date assertion defused in the persona-report round. Relative
+    // dates keep the bundle current on any run date.
+    const DAY_MS = 24 * 60 * 60 * 1000;
     const html = buildSiteCardHtml(
       card({
         space: {
@@ -125,8 +132,8 @@ describe("buildSiteCardHtml", () => {
           cityGroundFootprintVintage: "Current as of August 2015",
           availableSpaceSqft: 2000,
           availableSpaceSource: "Owner confirmation",
-          availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
-          availableSpaceReconfirmAfter: "2026-09-01T00:00:00.000Z",
+          availableSpaceVerifiedAt: new Date(Date.now() - 30 * DAY_MS).toISOString(),
+          availableSpaceReconfirmAfter: new Date(Date.now() + 30 * DAY_MS).toISOString(),
         },
       }),
       "60617",
@@ -139,6 +146,28 @@ describe("buildSiteCardHtml", () => {
     expect(html).toContain("Reported available space: 2,000 sq ft");
     expect(html).toContain("Current as of August 2015");
     expect(html).toContain("confirm current availability");
+  });
+
+  it("drops the reported-available-space fact once the reconfirm window has passed", () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const html = buildSiteCardHtml(
+      card({
+        space: {
+          lotAreaSqft: 12027,
+          assessorBuildingSqft: 5000,
+          availableSpaceSqft: 2000,
+          availableSpaceSource: "Owner confirmation",
+          availableSpaceVerifiedAt: new Date(Date.now() - 60 * DAY_MS).toISOString(),
+          availableSpaceReconfirmAfter: new Date(Date.now() - 1 * DAY_MS).toISOString(),
+        },
+      }),
+      "60617",
+      null,
+    );
+
+    expect(html).not.toContain("Reported available space: 2,000 sq ft");
+    expect(html).toContain("Lot area: 12,027 sq ft");
+    expect(html).toContain("Assessor building area: 5,000 sq ft");
   });
 
   it("maps unknown ownership to 'Not yet classified' and never shows 'Unknown'", () => {
