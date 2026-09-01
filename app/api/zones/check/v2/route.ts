@@ -3,6 +3,17 @@ import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import { ZONE_DATA_REVISION } from "@/lib/zone-layer-registry";
 import { resolveZoneEvidenceV2Cached } from "@/lib/zone-evidence-cache";
 
+/**
+ * Request ceiling (30s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * The v2 zone-evidence check: the same multi-layer PostGIS/GeoJSON work as
+ * v1, plus the evidence envelope. Also invoked in-process by the watchlist
+ * digest cron.
+ */
+export const maxDuration = 30;
+
 export const runtime = "nodejs";
 
 /**

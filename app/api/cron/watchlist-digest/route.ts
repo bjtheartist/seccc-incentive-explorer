@@ -40,12 +40,27 @@ interface DigestUserRow {
   areas: { areaType: string; areaId: string; areaLabel: string | null }[];
 }
 
-function isAuthorized(req: NextRequest): boolean {
+/**
+ * Fail CLOSED when CRON_SECRET is unset (R2 finding 7).
+ *
+ * This used to end `return process.env.NODE_ENV !== "production"` — an
+ * unauthenticated open door on any deployment whose NODE_ENV was not exactly
+ * "production". Preview deployments are the obvious case: they run against
+ * real infrastructure, carry real user rows, and this route reads the watched
+ * areas of every user and SENDS THEM EMAIL. "Not production" was standing in
+ * for "not real", and it is not the same thing.
+ *
+ * Now it matches app/api/cron/sync-permits/route.ts, which already treated a
+ * missing secret as "this cron is not configured" and refused. Callers get 503
+ * for unconfigured (an honest description of the deployment) and 401 for a bad
+ * or missing header — never a free pass.
+ */
+type CronAuthResult = "ok" | "unconfigured" | "unauthorized";
+
+function cronAuth(req: NextRequest): CronAuthResult {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    return req.headers.get("authorization") === `Bearer ${secret}`;
-  }
-  return process.env.NODE_ENV !== "production";
+  if (!secret) return "unconfigured";
+  return req.headers.get("authorization") === `Bearer ${secret}` ? "ok" : "unauthorized";
 }
 
 async function checkZonesAtPoint(lat: number, lon: number): Promise<unknown> {
@@ -64,8 +79,18 @@ async function checkZonesAtPoint(lat: number, lon: number): Promise<unknown> {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = cronAuth(req);
+  if (auth === "unconfigured") {
+    return NextResponse.json(
+      { error: "Watchlist digest cron is not configured" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (auth === "unauthorized") {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const sql = getSQL();

@@ -23,6 +23,20 @@ import { socrataHeaders } from "@/lib/socrata";
 import type { ParcelData, ParcelAddressMatch } from "@/lib/types";
 
 /**
+ * Request ceiling (30s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * Resolves a parcel through up to three upstreams in sequence (the parcels
+ * table, the County CookViewer point-in-polygon query, then a small-radius
+ * buffer search) and follows that with a Cook County Assessor enrichment
+ * fetch. Each hop has its own AbortSignal, but nothing bounded the WHOLE
+ * request, so a chain of slow-but-not-timing-out upstreams could sit on a
+ * function slot until the platform default killed it.
+ */
+export const maxDuration = 30;
+
+/**
  * Queries Cook County parcel data for a PIN or a lat/lon point.
  *
  * Strategy:
@@ -314,10 +328,38 @@ function featureDistanceSq(
   return best;
 }
 
+/** What the resolvers produce: the parcel and how confidently it matches. */
 interface ResolvedParcel {
   parcel: ParcelData;
   addressMatch: ParcelAddressMatch;
 }
+
+/**
+ * A resolved parcel plus the instant the County was ACTUALLY read for it.
+ *
+ * Stamped once, at the cache boundary, on the miss path — so it goes INTO the
+ * cache with the record and comes back out of it unchanged. A cache hit
+ * therefore reports the original read instant, not the instant it was served,
+ * and a consumer can say how old the record is instead of inferring "current"
+ * from the fact that a response arrived at all.
+ */
+interface DatedParcel extends ResolvedParcel {
+  checkedAt: string;
+}
+
+/**
+ * How long a resolved parcel may be served from cache.
+ *
+ * Was 30 days (2592000s). Parcel facts are not immutable on that horizon —
+ * PIN splits and consolidations, class changes, address corrections and
+ * demolitions all land inside a month — and this endpoint's whole reason for
+ * existing is to keep the app from asserting the wrong parcel for an address.
+ * A month-old answer presented as the County record is a freshness claim
+ * nobody checked. 24 hours keeps the round-trip savings that matter (repeat
+ * views of the same site inside a session or a day) without carrying a stale
+ * record across a County publication cycle.
+ */
+const PARCEL_CACHE_TTL_S = 24 * 60 * 60;
 
 /**
  * Resolve a parcel for a coordinate lookup.
@@ -450,17 +492,44 @@ export async function GET(request: NextRequest) {
   // populated refresh/dev branch into the parcels table cannot consume a
   // CookViewer result cached by the default production source mode. v4
   // entries also predate this explicit source contract.
+  //
+  // v6 orphans every v5 entry on deploy. Three things about a v5 key's
+  // contents are now wrong: it was written with a 30-day TTL, it may hold an
+  // addressMatch:"mismatch" result that must no longer be cached at all, and
+  // its coordinate bucket is 4 decimals (~11m) rather than 6. Reusing the
+  // version segment would keep serving those entries for up to a month, so
+  // the segment is bumped instead — the same reason v4 -> v5 was bumped.
   const requestedKeyPart = requested
     ? `:a:${requested.toUpperCase().replace(/\s+/g, " ")}`
     : "";
   const parcelSourceMode =
     process.env.PARCEL_DB_LOOKUPS_ENABLED === "true" ? "db-first" : "cookviewer";
+  // 6 decimals (~0.1m) instead of the shared 4-decimal default (~11m). This
+  // route resolves WHICH PARCEL an address is, and Chicago lots are routinely
+  // narrower than the 11m bucket 4 decimals creates — so two points on
+  // genuinely different parcels could collide on one key and be served each
+  // other's record. Deliberately local to this route: `roundCoord`'s default
+  // stays 4 for the zone/census/district lookups, where an 11m bucket is the
+  // point and tightening it would only shred their hit rates.
+  const PARCEL_COORD_DECIMALS = 6;
   const cacheKey = pin
-    ? `parcel:v5:${parcelSourceMode}:pin:${pin}`
-    : `parcel:v5:${parcelSourceMode}:${roundCoord(lat!)}:${roundCoord(lon!)}${requestedKeyPart}`;
+    ? `parcel:v6:${parcelSourceMode}:pin:${pin}`
+    : `parcel:v6:${parcelSourceMode}:${roundCoord(lat!, PARCEL_COORD_DECIMALS)}:${roundCoord(lon!, PARCEL_COORD_DECIMALS)}${requestedKeyPart}`;
 
-  const result = await cached<ResolvedParcel | null>(cacheKey, 2592000, async () =>
-    pin ? resolveByPin(pin) : resolveByPoint(lat!, lon!, requested),
+  const result = await cached<DatedParcel | null>(
+    cacheKey,
+    // A "mismatch" is the endpoint's own admission that the parcel it found is
+    // probably NOT the one the caller asked about — the wrong-parcel bug this
+    // route exists to prevent. Caching that pins the wrong answer to the
+    // address for a day and, worse, keeps re-serving it after the retry that
+    // would have resolved it correctly (a better geocode, a County address
+    // correction, an added buffer candidate). A TTL of 0 makes `cached()` skip
+    // the write entirely; the result is still returned to this caller.
+    (value) => (value?.addressMatch === "mismatch" ? 0 : PARCEL_CACHE_TTL_S),
+    async () => {
+      const resolved = pin ? await resolveByPin(pin) : await resolveByPoint(lat!, lon!, requested);
+      return resolved ? { ...resolved, checkedAt: new Date().toISOString() } : null;
+    },
   );
 
   if (!result) {
@@ -472,6 +541,10 @@ export async function GET(request: NextRequest) {
     ...result.parcel,
     addressMatch: result.addressMatch,
     requestedAddress: requested,
+    // The instant the COUNTY was read, not the instant this response was
+    // built — so a consumer can date the record instead of calling a
+    // 24-hour-old cache hit "current".
+    checkedAt: result.checkedAt,
   };
 
   // Non-blocking Cook County Assessor enrichment (assessment + ownership)

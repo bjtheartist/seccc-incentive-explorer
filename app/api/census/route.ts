@@ -6,6 +6,17 @@ import { getSQL } from "@/lib/db";
 import { memCached, roundCoord } from "@/lib/redis";
 
 /**
+ * Request ceiling (20s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * One ACS tract lookup with a static GeoJSON fallback that is read and
+ * point-in-polygon searched with Turf. Generous for the fallback's file read
+ * without leaving the slot open indefinitely.
+ */
+export const maxDuration = 20;
+
+/**
  * GET /api/census?lat=&lon=
  *
  * Returns census tract data (ACS estimates) for a given lat/lon.

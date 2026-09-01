@@ -4,6 +4,27 @@ import { getProgramsSync } from "@/lib/programs-data";
 import { loadCapitalContextForArea } from "@/lib/investment-analysis";
 import type { WizardState } from "@/lib/report-wizard-config";
 import type { Program } from "@/lib/types";
+import {
+  GenerateReportRequestSchema,
+  MAX_GENERATE_BODY_BYTES,
+  firstIssue,
+} from "@/lib/report-request-schemas";
+import {
+  reportGenerateClientIdentifier,
+  reserveReportGeneration,
+} from "@/lib/report-generate-rate-limit";
+
+/**
+ * Request ceiling (30s). R2 finding 8: this route sits on the report pathway
+ * and had no `maxDuration`, so it ran under the platform default with no
+ * declared bound of its own.
+ *
+ * Runs the full report engine server-side over the internal catalog. Pure
+ * compute with no upstream, but the largest report types walk every program
+ * across every section, and an unbounded handler has no ceiling at all if a
+ * pathological input ever finds a slow path.
+ */
+export const maxDuration = 30;
 
 /**
  * POST /api/report/generate
@@ -30,34 +51,81 @@ import type { Program } from "@/lib/types";
  * site signals, transport, mobility access, corridor metrics,
  * neighborhood economics — none of it is raw Program data; it's exactly
  * what the client already fetched from its own (already-public) API
- * routes before this call. Passed through largely as-is, matching the
- * trust level every other request body in this app already gets.
+ * routes before this call.
  *
- * No DB (Hard Rules): reads the static catalog directly, matching
- * lib/owner-file-letter-context.ts's own server-only pattern.
+ * R2 finding 2 — this paragraph used to end "Passed through largely as-is,
+ * matching the trust level every other request body in this app already
+ * gets", and that was exactly the problem: `state` and `ctx` were cast
+ * (`body.state as unknown as WizardState`) after a single isPlainObject
+ * check, the body was read with no size ceiling, and the most expensive
+ * endpoint in the app had no rate limit of any kind. All three are addressed
+ * below; see lib/report-request-schemas.ts for why the schemas are permissive
+ * (app/report/page.tsx is outside this round's fence and must keep working
+ * unchanged).
+ *
+ * DB: this route still generates reports from the static catalog with no
+ * database involvement. The rate limiter is the one DB touch, and it FAILS
+ * OPEN by design — see lib/report-generate-rate-limit.ts — so an outage
+ * degrades the brake, never report generation itself.
  */
-interface GenerateRequestBody {
-  state?: unknown;
-  ctx?: unknown;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 export async function POST(request: NextRequest) {
-  let body: GenerateRequestBody;
+  // ── Size ceiling, before parsing ──────────────────────────────────────
+  // `await request.json()` used to buffer and parse whatever arrived. Check
+  // the declared length first, then the actual bytes, so an oversized or
+  // lying Content-Length is refused either way.
+  const declaredLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_GENERATE_BODY_BYTES) {
+    return NextResponse.json({ error: "Request body is too large" }, { status: 413 });
+  }
+
+  let rawBody: string;
   try {
-    body = (await request.json()) as GenerateRequestBody;
+    rawBody = await request.text();
+  } catch {
+    return NextResponse.json({ error: "Could not read request body" }, { status: 400 });
+  }
+  if (rawBody.length > MAX_GENERATE_BODY_BYTES) {
+    return NextResponse.json({ error: "Request body is too large" }, { status: 413 });
+  }
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!isPlainObject(body.state)) {
-    return NextResponse.json({ error: "Missing or invalid state" }, { status: 400 });
+  // ── Shape validation ──────────────────────────────────────────────────
+  const parsed = GenerateReportRequestSchema.safeParse(parsedJson);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request body", detail: firstIssue(parsed.error) },
+      { status: 400 },
+    );
   }
-  const state = body.state as unknown as WizardState;
-  const ctx = (isPlainObject(body.ctx) ? body.ctx : {}) as ReportContext;
+
+  // ── Rate limit ────────────────────────────────────────────────────────
+  const decision = await reserveReportGeneration(
+    reportGenerateClientIdentifier(request.headers),
+  );
+  if (!decision.allowed) {
+    return NextResponse.json(
+      { error: "Too many reports were requested. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(decision.retryAfterSeconds),
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  }
+
+  // The schemas are `.passthrough()`, so these carry every key the client
+  // sent — validated in shape, unchanged in content.
+  const state = parsed.data.state as unknown as WizardState;
+  const ctx = (parsed.data.ctx ?? {}) as ReportContext;
 
   const programs: Program[] = getProgramsSync();
 
