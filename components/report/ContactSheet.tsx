@@ -20,6 +20,10 @@ const CONTACT_GROUPS = [
   { kind: "organization", title: "Community resources" },
 ] as const;
 
+/** In-page anchor for the Contact Sheet section, so PART 02 can point at it
+ *  without adding a second source of truth for where the sheet lives. */
+export const CONTACT_SHEET_ANCHOR = "contact-sheet";
+
 export function ContactSheet({
   report: lensed,
   persona,
@@ -37,6 +41,7 @@ export function ContactSheet({
       number={sectionNumber}
       title="Contact sheet"
       testId="contact-sheet"
+      id={CONTACT_SHEET_ANCHOR}
     >
       {rows.length === 0 ? (
         <p className="text-[12.5px] leading-relaxed text-[#5A6478]">

@@ -115,6 +115,33 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["components/report/ReasonChips.tsx"],
   },
   {
+    // Owner ruling 2026-08-31 (routing-first supporter cards): NEW in that
+    // round, so it is registered here rather than baselined into
+    // PUBLIC_CLAIM_SURFACES_REPORT_COMPONENT_GAPS (that list is closed to
+    // pre-2026-08-23 gaps by its own contract). Same claim contract as the
+    // three card components it composes — it renders the identical
+    // ReportItem program fields, only rearranged: the glance facts on the
+    // compact face, and the complete blessed panel (ProgramCardFace +
+    // ReasonChips + ProgramCardExtras, verify block and "what to expect"
+    // included) inside its disclosure.
+    id: "program-routing-card",
+    description: "Supporter lens's routing-first program card — glance row, why-shown chips, next step, with the full blessed program panel one disclosure away. Shared by both report forks.",
+    contracts: ["PublicProgramView"],
+    files: ["components/report/ProgramRoutingCard.tsx"],
+  },
+  {
+    // Owner ruling 2026-08-31 (who-to-call pointer). Registered, not
+    // baselined, for the same reason as program-routing-card above. It
+    // makes no program or boundary claim: it renders one hand-authored
+    // line plus a count taken straight from buildContactSheetRows() on the
+    // already-lensed report — the same rows the Contact Sheet it links to
+    // renders — so its safety property is the copy, not a DTO.
+    id: "contact-sheet-pointer",
+    description: "Supporter lens's PART 02 who-to-call pointer row — a partner count derived from the report's own contact-sheet rows, anchored to the Contact Sheet in PART 03. Shared by both report forks.",
+    contracts: ["reviewed-copy"],
+    files: ["components/report/ContactSheetPointerRow.tsx"],
+  },
+  {
     // Fork-unification round: newly extracted from the report-live-route /
     // report-saved-fork forks above (both already registered) into its own
     // shared file — not a pre-existing unaudited gap, so it belongs here,

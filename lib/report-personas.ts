@@ -23,6 +23,13 @@
 // the section, never a blank page and never a fallback to the unfiltered
 // list.
 
+// VISIBLE PROGRAM-CARD BUDGET (owner ruling, binding): the developer and
+// supporter lenses show at most SIX program cards on the face of the board.
+// This is a further narrowing of the SAME lens mechanism as the hard filter
+// above — it never deletes: the programs past the budget move into the one
+// "Also at this address (N)" disclosure and are counted there, exactly like
+// the out-of-lens pool. See PERSONA_VISIBLE_PROGRAM_BUDGET.
+
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
@@ -175,6 +182,162 @@ export const PINNED_OVERLAY_PROGRAM_IDS = new Set(["industrialCorridors", "highU
 
 function isPinnedOverlayItem(item: ReportItem): boolean {
   return Boolean(item.programId && PINNED_OVERLAY_PROGRAM_IDS.has(item.programId));
+}
+
+/**
+ * OWNER RULING (Billy, 2026-08-31, binding): the developer and supporter
+ * lenses render at most **N = 6** visible program cards. Starting/growing
+ * are deliberately UNBUDGETED this round (no entry here = no cap), and the
+ * "All" (full record) view is exempt by construction — it never runs the
+ * lens at all.
+ *
+ * This is a narrowing of the same lens mechanism as the hard relevance
+ * filter, not a generator change and not a deletion: every program past
+ * the budget moves into the ONE "Also at this address (N)" disclosure and
+ * is counted in its N, so the full record stays exactly one gesture away
+ * and the disclosure's "nothing has been removed" copy stays literally
+ * true (see `personaAlsoAtAddressDescription`, which names the budgeted
+ * overflow explicitly rather than mislabelling it "outside the lens").
+ *
+ * Enforced by lib/__tests__/report-personas.test.ts ("Owner ruling
+ * 2026-08-31: visible program-card budget").
+ */
+export const PERSONA_VISIBLE_PROGRAM_BUDGET: Partial<
+  Record<Exclude<PersonaId, "all">, number>
+> = {
+  developer: 6,
+  supporter: 6,
+};
+
+/** One entry in the budget ranking — the visible item plus the ONE piece of
+ *  structured context the ranking needs that the item itself cannot carry:
+ *  whether the canonical tier it came from was the goal-matched partition
+ *  (`GOAL_MATCH_PROGRAMS_SECTION_ID`, built by `generateLocationIncentives`
+ *  from `isProjectGoalMatch`). Derived from the section, never re-guessed
+ *  from prose. */
+interface PersonaProgramEntry {
+  item: ReportItem;
+  goalMatched: boolean;
+}
+
+function isGoalMatchTier(section: ReportSection): boolean {
+  return section.id
+    ? section.id === GOAL_MATCH_PROGRAMS_SECTION_ID
+    : section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE;
+}
+
+/**
+ * Days until this program's next published funding window, or null when the
+ * item carries no usable window fact. NEVER invents one: the only source is
+ * `item.nextWindow.expected` — the structured date `programReportItem()`
+ * copies straight off the catalog record (see ReportItem.nextWindow). An
+ * absent, unparseable, or already-past date all return null, i.e. NEUTRAL —
+ * a program with no published window is never presented as more or less
+ * urgent than one that has one, it simply does not participate in the
+ * proximity comparison (see `resequenceByWindowProximity`).
+ */
+function windowProximityDays(item: ReportItem, now: number): number | null {
+  const expected = item.nextWindow?.expected;
+  if (!expected) return null;
+  const parsed = Date.parse(expected);
+  if (Number.isNaN(parsed)) return null;
+  const days = Math.round((parsed - now) / 86_400_000);
+  // A window that has already closed is not an "actionable window" — treated
+  // as neutral rather than as maximum urgency.
+  return days >= 0 ? days : null;
+}
+
+/**
+ * Re-sequence ONLY the entries that carry a real window date, in place,
+ * among the slots those entries already occupy. Entries with no window fact
+ * keep their exact position — this is what "if window data is absent treat
+ * as neutral" means mechanically: absent data can neither promote nor demote
+ * an item, it just leaves it where the engine's own ordering put it.
+ */
+function resequenceByWindowProximity(
+  entries: PersonaProgramEntry[],
+  now: number,
+): PersonaProgramEntry[] {
+  const slots: number[] = [];
+  const dated: { entry: PersonaProgramEntry; days: number; index: number }[] = [];
+  entries.forEach((entry, index) => {
+    const days = windowProximityDays(entry.item, now);
+    if (days === null) return;
+    slots.push(index);
+    dated.push({ entry, days, index });
+  });
+  if (dated.length < 2) return entries;
+  dated.sort((a, b) => a.days - b.days || a.index - b.index);
+  const out = entries.slice();
+  dated.forEach((candidate, i) => {
+    out[slots[i]] = candidate.entry;
+  });
+  return out;
+}
+
+/**
+ * The owner's ranking for WHICH programs keep a visible card when the budget
+ * bites, built only from structured fields that already exist:
+ *
+ *   0. Pinned protection/informational overlays (industrialCorridors,
+ *      highUnemployment). "Context, not programs" — always visible in every
+ *      lens, so they can never be budgeted out. There are exactly two such
+ *      ids and every budget is ≥ 2, so this stratum can never crowd out the
+ *      real ranking.
+ *   1. Goal-matched programs — the item came from the engine's goal-match
+ *      partition, so the user's own selected goals put it there.
+ *   2. Persona-tag-only matches — relevant to the audience, not tied to a
+ *      stated goal.
+ *
+ * Within each stratum: funding-window proximity (sooner first) among the
+ * entries that actually publish a window; everything else holds its engine
+ * order. Stable throughout — equal-ranked entries never swap.
+ */
+function rankPersonaProgramsForBudget(
+  entries: PersonaProgramEntry[],
+  now: number,
+): PersonaProgramEntry[] {
+  const stratum = (entry: PersonaProgramEntry) =>
+    isPinnedOverlayItem(entry.item) ? 0 : entry.goalMatched ? 1 : 2;
+  const ordered = entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => stratum(a.entry) - stratum(b.entry) || a.index - b.index)
+    .map(({ entry }) => entry);
+  return [0, 1, 2].flatMap((tier) =>
+    resequenceByWindowProximity(
+      ordered.filter((entry) => stratum(entry) === tier),
+      now,
+    ),
+  );
+}
+
+/**
+ * Split a persona's hard-filtered program set into the visible cards and the
+ * budget overflow. Under budget (or unbudgeted persona) this is a pure
+ * pass-through — the ranking never runs, so a report that already fits is
+ * byte-for-byte what it was before this ruling.
+ *
+ * When the budget DOES bite, the ranking above decides *which* items stay;
+ * the survivors then render in their original engine order, so the cap
+ * removes cards without silently reshuffling the ones it kept.
+ */
+export function applyVisibleProgramBudget(
+  entries: PersonaProgramEntry[],
+  budget: number | undefined,
+  now: number = Date.now(),
+): { visible: ReportItem[]; overflow: ReportItem[] } {
+  if (budget === undefined || entries.length <= budget) {
+    return { visible: entries.map(({ item }) => item), overflow: [] };
+  }
+  const keep = new Set(
+    rankPersonaProgramsForBudget(entries, now)
+      .slice(0, budget)
+      .map(({ item }) => item),
+  );
+  return {
+    visible: entries.filter(({ item }) => keep.has(item)).map(({ item }) => item),
+    overflow: entries.filter(({ item }) => !keep.has(item)).map(({ item }) => item),
+  };
 }
 
 /** A lookup from program id to persona tags. */
@@ -621,6 +784,34 @@ export function personaEmptyProgramsDescription(persona: PersonaId): string {
   )} lens. See "Also at this address" below for the full list — nothing has been removed.`;
 }
 
+/**
+ * Copy for the ONE "Also at this address" disclosure. Two shapes, because
+ * after the visible program-card budget (owner ruling 2026-08-31) the pool
+ * can hold two genuinely different kinds of program and calling them all
+ * "outside the lens" would be false:
+ *   - out-of-lens items (the hard relevance filter's own pool), and
+ *   - budgeted overflow — programs the lens DID match but that fell past
+ *     the visible card budget.
+ * Both are disclosed, counted in the same N, and restorable in full; the
+ * "nothing is removed" promise is stated in every shape.
+ */
+export function personaAlsoAtAddressDescription(
+  persona: PersonaId,
+  total: number,
+  overflow = 0,
+): string {
+  const descriptor = personaDescriptor(persona);
+  const restorable = "Nothing is removed; switch to All to see everything together.";
+  if (overflow <= 0) {
+    return `${total} other program${total === 1 ? "" : "s"} tied to this address — outside the ${descriptor} lens. ${restorable}`;
+  }
+  const matches = `${overflow} further ${descriptor} match${overflow === 1 ? "" : "es"} past this view's visible card budget`;
+  if (overflow >= total) {
+    return `${total} more program${total === 1 ? "" : "s"} tied to this address — ${matches}. ${restorable}`;
+  }
+  return `${total} other program${total === 1 ? "" : "s"} tied to this address — ${matches}, the rest outside the ${descriptor} lens. ${restorable}`;
+}
+
 export interface PersonaLensResult {
   /** The lensed report. Identical reference to the input when persona = "all". */
   report: GeneratedReport;
@@ -654,7 +845,7 @@ export function applyPersonaLens(
   const nextSections: ReportSection[] = [];
   const alsoItems: ReportItem[] = [];
   let personaProgramSection: ReportSection | null = null;
-  const personaProgramItems: ReportItem[] = [];
+  const personaProgramEntries: PersonaProgramEntry[] = [];
   let confirmedProgramTierHadItems = false;
   const boardPersona = persona as Exclude<PersonaId, "all">;
 
@@ -716,17 +907,34 @@ export function applyPersonaLens(
       if (!personaProgramSection || (isConfirmedTier && isFullyDemotedTier(personaProgramSection))) {
         personaProgramSection = section;
       }
+      // Owner ruling 2026-08-31 (visible card budget): the goal-match fact
+      // is carried here, from the canonical TIER this item arrived in — the
+      // only structured signal for it that survives onto a ReportItem.
+      const goalMatched = isGoalMatchTier(section);
       for (const item of primary) {
         if (
           !item.programId ||
-          !personaProgramItems.some((candidate) => candidate.programId === item.programId)
+          !personaProgramEntries.some(
+            (candidate) => candidate.item.programId === item.programId,
+          )
         ) {
-          personaProgramItems.push(item);
+          personaProgramEntries.push({ item, goalMatched });
         }
       }
     }
     if (programsBelongOnBoard) alsoItems.push(...secondary);
   }
+
+  // Owner ruling 2026-08-31 (Billy): cap the VISIBLE program cards for the
+  // budgeted personas. Overflow is disclosed, never dropped — it leads the
+  // "Also at this address" pool below (nearest misses first) and is counted
+  // in that disclosure's N.
+  const { visible: personaProgramItems, overflow: budgetOverflowItems } =
+    applyVisibleProgramBudget(
+      personaProgramEntries,
+      PERSONA_VISIBLE_PROGRAM_BUDGET[boardPersona],
+    );
+  if (budgetOverflowItems.length > 0) alsoItems.unshift(...budgetOverflowItems);
 
   // Every R5 board has exactly one program section. Canonical reports can
   // split programs across goal-matched, confirmed, and fully-demoted tiers;
@@ -757,9 +965,11 @@ export function applyPersonaLens(
     nextSections.push({
       id: "persona-also-at-this-address",
       title: ALSO_AT_ADDRESS_TITLE,
-      description: `${alsoItems.length} other program${alsoItems.length === 1 ? "" : "s"} tied to this address — outside the ${personaDescriptor(
+      description: personaAlsoAtAddressDescription(
         persona,
-      )} lens. Nothing is removed; switch to All to see everything together.`,
+        alsoItems.length,
+        budgetOverflowItems.length,
+      ),
       items: alsoItems,
       collapsedByPersona: true,
     });

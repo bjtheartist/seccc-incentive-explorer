@@ -132,7 +132,9 @@ import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
 import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens, guidepostPartForSection, type GuidepostPart } from "@/lib/report-personas";
 import { ContactSheet } from "@/components/report/ContactSheet";
+import { ContactSheetPointerRow } from "@/components/report/ContactSheetPointerRow";
 import { ProgramCardExtras } from "@/components/report/ProgramCardExtras";
+import { ProgramRoutingCard, ProgramRoutingViewNote } from "@/components/report/ProgramRoutingCard";
 import { ReasonChips } from "@/components/report/ReasonChips";
 import { ProgramCardFace } from "@/components/report/ProgramCardFace";
 import {
@@ -4604,6 +4606,11 @@ function ReportDisplay({
                   : isSectionOpen(sectionKey, sectionIdx, section.title);
                 const isPersonaProgramSection =
                   showPersonaView && section.guidepostBucket === "programs";
+                // Owner ruling 2026-08-31 (routing-first supporter cards):
+                // the supporter lens renders its program cards in the compact
+                // routing variant, full blessed panel one disclosure deep.
+                const isRoutingProgramSection =
+                  isPersonaProgramSection && boardPersona === "supporter";
                 const isPersonaFactSection =
                   showPersonaView &&
                   ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning"].includes(
@@ -4831,6 +4838,9 @@ function ReportDisplay({
                       </div>
                     )}
 
+                    {isRoutingProgramSection && visibleSectionItems(section).length > 0 && (
+                      <ProgramRoutingViewNote />
+                    )}
                     {visibleSectionItems(section).length > 0 && (
                       <div className={isPersonaFactSection ? "grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3" : "space-y-0 divide-y divide-[#0C1B33]/5"}>
                         {visibleSectionItems(section).map((item, itemIdx) => {
@@ -4952,14 +4962,23 @@ function ReportDisplay({
                                 full board-order rationale, and
                                 lib/__tests__/refine-tier1.test.ts's real render-order
                                 test for the enforcing proof. */}
-                            {!isSupportNetworkItem && !isPersonaProgramSibling && (
+                            {/* Owner ruling 2026-08-31: on the SUPPORTER lens a
+                                program card renders the routing variant instead
+                                — glance row + why-shown chips + next step, with
+                                this exact blessed panel (face, chips, extras)
+                                one disclosure away inside the card. Every other
+                                lens is untouched. */}
+                            {isRoutingProgramSection && item.programId && (
+                              <ProgramRoutingCard item={item} />
+                            )}
+                            {!isSupportNetworkItem && !isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (
                               <>
                                 <ProgramCardFace item={item} />
                                 <ReasonChips explanation={item.matchExplanation} />
                                 <ProgramCardExtras item={item} />
                               </>
                             )}
-                            {isPersonaProgramSibling && (
+                            {isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (
                               <ReasonChips explanation={item.matchExplanation} />
                             )}
 
@@ -5030,6 +5049,18 @@ function ReportDisplay({
                     )}
                   </div>
                 );
+                // Owner ruling 2026-08-31 (who-to-call pointer): PART 02 ends
+                // by pointing the supporter at the Contact Sheet in PART 03.
+                // Rendered AFTER the programs section, inside the same part —
+                // no new data, no reordering of the guidepost anatomy.
+                const whoToCall =
+                  isRoutingProgramSection && boardPersona ? (
+                    <ContactSheetPointerRow
+                      key={`${sectionKey}-who-to-call`}
+                      report={lensed}
+                      persona={boardPersona}
+                    />
+                  ) : null;
                 const supplements =
                   isPersonaProgramSection && boardPersona
                     ? (
@@ -5045,7 +5076,7 @@ function ReportDisplay({
                 if (isPersonaProgramSection && boardPersona) {
                   personaSectionCounter += personaProgramSupplementCount(boardPersona);
                 }
-                return [band, sectionElement, supplements].filter(Boolean);
+                return [band, sectionElement, whoToCall, supplements].filter(Boolean);
               });
             })()}
 

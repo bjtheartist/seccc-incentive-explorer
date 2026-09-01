@@ -4,6 +4,8 @@ import { join } from "path";
 import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
+  applyVisibleProgramBudget,
+  PERSONA_VISIBLE_PROGRAM_BUDGET,
   BUCKET_PART,
   guidepostPartForSection,
   PERSONA_SECTION_ORDER,
@@ -849,5 +851,210 @@ describe("Owner ruling 2026-08-31: persona lenses cap at four canonical sections
     const { report: all } = applyPersonaLens(report, "all");
     expect(all).toBe(report);
     expect(all.sections.length).toBeGreaterThan(4);
+  });
+});
+
+// ─── Owner ruling 2026-08-31: visible program-card budget (N = 6) ────────
+// Billy's second 2026-08-31 ruling, alongside the four-section cap above:
+// the DEVELOPER and SUPPORTER lenses render at most six program cards.
+// Starting/growing are deliberately left unbudgeted this round, and the
+// last test in this block pins that so scope creep goes red.
+
+describe("Owner ruling 2026-08-31: visible program-card budget", () => {
+  /** Builds a confirmed tier of `ids` program items, all real catalog ids. */
+  function programsReport(
+    ids: string[],
+    options: { sectionId?: string; windows?: Record<string, string> } = {},
+  ): GeneratedReport {
+    return {
+      ...reportFixture(),
+      sections: [
+        {
+          id: options.sectionId ?? CONFIRMED_PROGRAMS_SECTION_ID,
+          title:
+            options.sectionId === GOAL_MATCH_PROGRAMS_SECTION_ID
+              ? GOAL_MATCH_PROGRAMS_SECTION_TITLE
+              : CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: ids.map((programId) => ({
+            label: programId,
+            value: "",
+            programId,
+            ...(options.windows?.[programId]
+              ? { nextWindow: { expected: options.windows[programId], note: null } }
+              : {}),
+          })),
+        },
+      ],
+    };
+  }
+
+  const DEVELOPER_EIGHT = [
+    "tif",
+    "federalOZ",
+    "illinoisOZ",
+    "enterprise",
+    "edge",
+    "rev",
+    "micro",
+    "dataCenter",
+  ];
+  const SUPPORTER_EIGHT = [
+    "ssa",
+    "catalystGrant",
+    "smallBizSource",
+    "nof",
+    "landmarkDistricts",
+    "microMarketRecovery",
+    "ccsa",
+    "innovationVoucher",
+  ];
+
+  function visibleAndAlso(report: GeneratedReport, persona: PersonaId) {
+    const { report: lensed } = applyPersonaLens(report, persona);
+    const programs = lensed.sections.find(
+      (section) => !section.collapsedByPersona && section.guidepostBucket === "programs",
+    );
+    const also = lensed.sections.find((section) => section.title === ALSO_AT_ADDRESS_TITLE);
+    return {
+      lensed,
+      visible: (programs?.items ?? []).map((item) => item.programId),
+      also: (also?.items ?? []).map((item) => item.programId),
+      alsoDescription: also?.description ?? null,
+    };
+  }
+
+  it("declares the budget as a named per-persona constant — N=6, developer + supporter ONLY", () => {
+    expect(PERSONA_VISIBLE_PROGRAM_BUDGET).toEqual({ developer: 6, supporter: 6 });
+  });
+
+  it.each(["developer", "supporter"] as const)(
+    "%s: never renders more than six program cards, and the Also disclosure picks up the overflow EXACTLY",
+    (persona) => {
+      const ids = persona === "developer" ? DEVELOPER_EIGHT : SUPPORTER_EIGHT;
+      const report = programsReport(ids);
+      // Non-vacuous: every one of these eight really does survive the hard
+      // relevance filter for this persona, so an unbudgeted lens shows eight.
+      for (const id of ids) expect(programMatchesPersona(id, persona)).toBe(true);
+
+      const { visible, also, alsoDescription } = visibleAndAlso(report, persona);
+      expect(visible).toHaveLength(6);
+      expect(also).toHaveLength(2);
+      // Collapse, never delete: the split is a partition of the full set.
+      expect(new Set([...visible, ...also])).toEqual(new Set(ids));
+      // The disclosure's own count line is the overflow-aware copy, and it
+      // still carries the "nothing is removed" promise.
+      expect(alsoDescription).toContain("2 more programs tied to this address");
+      expect(alsoDescription).toContain("2 further");
+      expect(alsoDescription).toContain("Nothing is removed");
+    },
+  );
+
+  it.each(["developer", "supporter"] as const)(
+    "%s: a report already at or under the budget is byte-for-byte unaffected — no reorder, no disclosure",
+    (persona) => {
+      const ids = (persona === "developer" ? DEVELOPER_EIGHT : SUPPORTER_EIGHT).slice(0, 6);
+      const report = programsReport(ids);
+      const { visible, also } = visibleAndAlso(report, persona);
+      expect(visible).toEqual(ids); // same set AND same engine order
+      expect(also).toEqual([]);
+    },
+  );
+
+  it.each(["starting", "growing"] as const)(
+    "%s stays UNBUDGETED this round — every hard-filter survivor keeps a visible card (scope-creep guard)",
+    (persona) => {
+      const ids = [
+        "sbif",
+        "catalystGrant",
+        "smallBizSource",
+        "nof",
+        "ccsa",
+        "hubzone",
+        "sba7a504",
+        "sbaMicroloan",
+      ].filter((id) => programMatchesPersona(id, persona));
+      expect(ids.length).toBeGreaterThan(6);
+      const { visible, also } = visibleAndAlso(programsReport(ids), persona);
+      expect(visible).toEqual(ids);
+      expect(also).toEqual([]);
+      expect(PERSONA_VISIBLE_PROGRAM_BUDGET[persona]).toBeUndefined();
+    },
+  );
+
+  it("pinned protection/informational overlays are never budgeted out — context, not programs", () => {
+    const report = programsReport([...DEVELOPER_EIGHT, "highUnemployment"]);
+    const { visible } = visibleAndAlso(report, "developer");
+    expect(visible).toHaveLength(6);
+    expect(visible).toContain("highUnemployment");
+  });
+
+  it("ranks goal-matched programs above persona-tag-only matches when the budget cuts", () => {
+    // Four goal-matched (the engine's own goal-match partition) + five that
+    // are persona-tagged but arrived in the plain confirmed tier.
+    const goalMatched = ["tif", "federalOZ", "illinoisOZ", "enterprise"];
+    const tagOnly = ["edge", "rev", "micro", "dataCenter", "cpace"];
+    const report: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        programsReport(goalMatched, { sectionId: GOAL_MATCH_PROGRAMS_SECTION_ID }).sections[0],
+        programsReport(tagOnly).sections[0],
+      ],
+    };
+    const { visible, also } = visibleAndAlso(report, "developer");
+    expect(visible).toHaveLength(6);
+    // Every goal-matched program survives; the cut falls entirely on the
+    // persona-tag-only pool.
+    for (const id of goalMatched) expect(visible).toContain(id);
+    expect(also).toHaveLength(3);
+    for (const id of also) expect(tagOnly).toContain(id);
+  });
+
+  it("breaks ties on funding-window proximity, and treats a MISSING window as neutral (never as urgency)", () => {
+    const now = Date.parse("2026-09-01T00:00:00.000Z");
+    const day = 86_400_000;
+    const iso = (offsetDays: number) =>
+      new Date(now + offsetDays * day).toISOString().slice(0, 10);
+    // Slots 0-3 publish no window; slots 4-6 do. The three dated entries
+    // re-sequence among THEIR OWN slots by proximity; the four undated ones
+    // never move — being undated neither promotes nor demotes them.
+    const entries = [
+      { item: { label: "b", value: "", programId: "b" }, goalMatched: true },
+      { item: { label: "d", value: "", programId: "d" }, goalMatched: true },
+      { item: { label: "f", value: "", programId: "f" }, goalMatched: true },
+      { item: { label: "g", value: "", programId: "g" }, goalMatched: true },
+      { item: { label: "a", value: "", programId: "a", nextWindow: { expected: iso(90), note: null } }, goalMatched: true },
+      { item: { label: "c", value: "", programId: "c", nextWindow: { expected: iso(10), note: null } }, goalMatched: true },
+      { item: { label: "e", value: "", programId: "e", nextWindow: { expected: iso(45), note: null } }, goalMatched: true },
+    ];
+    const { visible, overflow } = applyVisibleProgramBudget(entries, 6, now);
+    // Of the three programs that publish a window, the two soonest keep their
+    // cards and the one 90 days out is the single card cut.
+    expect(overflow.map((item) => item.programId)).toEqual(["a"]);
+    // Survivors render in their original engine order — the cap removes
+    // cards, it does not reshuffle the ones it keeps.
+    expect(visible.map((item) => item.programId)).toEqual(["b", "d", "f", "g", "c", "e"]);
+  });
+
+  it("a window that has already closed is neutral, not the earliest date on the record", () => {
+    const now = Date.parse("2026-09-01T00:00:00.000Z");
+    const entries = [
+      { item: { label: "far", value: "", programId: "far", nextWindow: { expected: "2026-11-30", note: null } }, goalMatched: false },
+      { item: { label: "near", value: "", programId: "near", nextWindow: { expected: "2026-09-10", note: null } }, goalMatched: false },
+      { item: { label: "past", value: "", programId: "past", nextWindow: { expected: "2020-01-01", note: null } }, goalMatched: false },
+    ];
+    // A naive "sort by nextWindow.expected" would rank the 2020 date first
+    // and hand it the last card. It is treated as no actionable window at
+    // all instead: it holds its engine slot and is the one cut.
+    const { visible, overflow } = applyVisibleProgramBudget(entries, 2, now);
+    expect(overflow.map((item) => item.programId)).toEqual(["past"]);
+    expect(visible.map((item) => item.programId)).toEqual(["far", "near"]);
+  });
+
+  it("the budget never touches the 'All' view — the full-record escape hatch the ruling depends on", () => {
+    const report = programsReport(DEVELOPER_EIGHT);
+    const { report: all } = applyPersonaLens(report, "all");
+    expect(all).toBe(report);
+    expect(all.sections[0].items).toHaveLength(8);
   });
 });
