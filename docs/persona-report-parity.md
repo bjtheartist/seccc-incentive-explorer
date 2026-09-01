@@ -56,6 +56,63 @@ the canonical report — every dropped bucket still renders in full on
 describe the canonical report and the "All" view; they no longer describe
 a persona board.
 
+**Owner ruling — streamlining round (Billy, 2026-08-31): three levers on
+the developer and supporter lenses.** Same class of change as the
+four-section cap above — a lens narrowing, never a generator change, never
+a deletion. The 3-part guidepost anatomy, the hard relevance filter's ONE
+"Also at this address (N)" disclosure, and the transparency floor's
+non-suppressibles (verify-at-the-source block, "what to expect" line,
+not-a-determination language, sources + vintage) are all unchanged. Zero
+fabricated content: every lever reads structured fields the engine already
+computes.
+
+1. **Visible program-card budget, N = 6 — developer + supporter only.**
+   `PERSONA_VISIBLE_PROGRAM_BUDGET` in `lib/report-personas.ts`. Programs
+   past the budget move into the same "Also at this address" disclosure and
+   are counted in its N; `personaAlsoAtAddressDescription()` names the
+   budgeted overflow separately from the out-of-lens pool so the count line
+   stays literally true. Ranking for which six stay: goal-match strength
+   (the item's own canonical tier — the engine's `GOAL_MATCH_PROGRAMS_-
+   SECTION_ID` partition), then funding-window proximity from
+   `item.nextWindow.expected`. An absent, unparseable, or already-closed
+   window is NEUTRAL — it holds its engine slot rather than being demoted,
+   so no urgency is ever invented for a program that publishes no window.
+   Pinned protection/informational overlays are never budgeted out. A
+   report already at or under six is untouched — the ranking does not even
+   run. Starting/growing are deliberately unbudgeted this round. Enforced
+   by `lib/__tests__/report-personas.test.ts` ("Owner ruling 2026-08-31:
+   visible program-card budget"), which also pins the unbudgeted personas
+   so scope creep goes red.
+   *Honest note on where the lever actually bites:* at production report
+   shapes the hard relevance filter has already folded every
+   non-goal-matched program into the disclosure, so the goal-match stratum
+   is usually uniform and window proximity is the criterion doing the work.
+   The goal-match stratum is still encoded, and still discriminates on the
+   mixed goal-match + confirmed tier shapes saved reports can carry.
+2. **Routing-first supporter card variant — supporter only.**
+   `components/report/ProgramRoutingCard.tsx`, mounted by both
+   `ReportDisplay` forks. The card face carries the glance row (window,
+   decision-by, administrator/status), the existing "Why this is shown"
+   reason chips, and the existing next-step line; the FULL blessed panel —
+   the same shared `ProgramCardFace` + `ProgramCardExtras` every other lens
+   shows, verify block, its traces-to-a-public-record line and "What to
+   expect" included — sits one native `<details>` gesture away, in the DOM
+   for print and deep-links. `ProgramRoutingViewNote` labels the compact
+   rendering as a view, in the register the lens already uses. There is no
+   "who this serves" field in the catalog and none was invented: the
+   existing reason chips serve that role. Enforced by
+   `app/report/__tests__/report-page-live-renderer.test.tsx` ("supporter
+   routing view") at render level, and by `lib/__tests__/refine-tier1.test.ts`
+   for fork parity.
+3. **Who-to-call pointer row — supporter only.**
+   `components/report/ContactSheetPointerRow.tsx`. Sits inside PART 02,
+   after the programs section, and anchors to the Contact Sheet in PART 03
+   (`CONTACT_SHEET_ANCHOR`). Its count is `buildContactSheetRows()` on the
+   same lensed report the sheet itself reads, so the two can never
+   disagree; at zero it renders nothing at all. No new data, no reordering
+   of parts. Enforced by the same live-renderer describe and the
+   fork-parity test.
+
 **Updated under the gate review (2026-08-22/23), status contract amended
 under gate round 2's RULING (2026-08-23).** The gate review's full 22-
 finding pass is closed out, and gate round 2 closed a further seven items

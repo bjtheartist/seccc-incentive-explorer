@@ -29,6 +29,7 @@ import {
   personaEmptyProgramsDescription,
   visiblePersonaProgramNames,
 } from "@/lib/report-personas";
+import { buildContactSheetRows } from "@/lib/report-contact-sheet";
 import { encodeWizardState } from "@/lib/url-state";
 import {
   CAPITAL_PARTNER_SECTION_ID,
@@ -1458,4 +1459,151 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
     });
   });
 });
+});
+
+// ─── Owner ruling 2026-08-31: routing-first supporter cards + who-to-call
+// pointer (levers 2 and 3) ───────────────────────────────────────────────
+// Rendered through the REAL route and the REAL lens, not a component
+// harness, so these prove what a supporter actually sees. Fork parity for
+// the same two surfaces is pinned by source-grep in
+// lib/__tests__/refine-tier1.test.ts.
+describe("live report route renderer — supporter routing view (owner ruling 2026-08-31)", () => {
+  const occurrences = (html: string, needle: string) => html.split(needle).length - 1;
+
+  /** boardParityReport with its supporter-visible program fully populated,
+   *  so the blessed panel actually has a verify block and expectations line
+   *  to render (the base fixture's items carry neither — honest omission). */
+  function supporterRoutingReport(): GeneratedReport {
+    const base = boardParityReport();
+    return {
+      ...base,
+      sections: base.sections.map((section) =>
+        section.id === CONFIRMED_PROGRAMS_SECTION_ID
+          ? {
+              ...section,
+              items: section.items.map((item) =>
+                item.programId === "ssa"
+                  ? {
+                      ...item,
+                      administrator: "Department of Planning and Development",
+                      availability: "active" as const,
+                      nextWindow: { expected: "2026-11-01", note: null },
+                      nextStep: "Contact the SSA commission for the current work plan",
+                      primaryContact: { agency: "SSA #42 Commission", phone: "(312) 744-4000" },
+                      expectations:
+                        "Applications are reviewed against the published SSA work plan.",
+                      verifySources: [
+                        { label: "SSA program page", url: "https://example.com/ssa", dated: "2026-07-10" },
+                      ],
+                    }
+                  : item,
+              ),
+            }
+          : section,
+      ),
+    } as GeneratedReport;
+  }
+
+  it("supporter: every program card renders the COMPACT routing variant, labeled as a view", async () => {
+    const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, {
+      persona: "supporter",
+    });
+    expect(html).toContain('data-testid="supporter-routing-card"');
+    // The simplification names itself as a view — the transparency law's
+    // labeling requirement, in the register the lens already uses.
+    expect(html).toContain('data-testid="program-routing-view-note"');
+    expect(html).toContain("Routing view");
+    expect(html).toContain("Nothing is removed");
+    // Every routing card carries the expand affordance...
+    const cards = occurrences(html, 'data-testid="supporter-routing-card"');
+    expect(cards).toBeGreaterThan(0);
+    expect(occurrences(html, 'data-testid="supporter-routing-full-record"')).toBe(cards);
+    expect(html).toContain("Full program record");
+    // ...and it is a native <details>, so the full record is in the DOM for
+    // print and deep-links, never fetched or hidden behind script.
+    expect(html).toMatch(/<details[^>]*data-testid="supporter-routing-full-record"/);
+  });
+
+  it("supporter: the non-suppressible transparency floor lives on the expanded panel of the routing card", async () => {
+    const html = await renderReportRoute(supporterRoutingReport(), BASE_WIZARD_STATE, {
+      persona: "supporter",
+    });
+    const start = html.indexOf('data-testid="supporter-routing-full-record"');
+    expect(start).toBeGreaterThanOrEqual(0);
+    // The expanded panel is the complete blessed panel: the same shared
+    // face + extras every other lens shows, so the verify-at-the-source
+    // block, its traces-to-a-public-record line and "What to expect" are all
+    // present, one gesture away and never suppressed.
+    const panel = html.slice(start, html.indexOf('data-testid="persona-also-at-address"'));
+    expect(panel).toContain('data-testid="program-card-face"');
+    expect(panel).toContain("Verify at the source");
+    expect(panel).toContain("Every figure above traces to a public record.");
+    expect(panel).toContain("What to expect");
+  });
+
+  it("developer and owner lenses are untouched — full panel on the face, no routing variant", async () => {
+    for (const persona of ["developer", "starting", "growing"] as const) {
+      const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+      expect(html, `persona=${persona}`).not.toContain('data-testid="supporter-routing-card"');
+      expect(html, `persona=${persona}`).not.toContain('data-testid="program-routing-view-note"');
+      expect(html, `persona=${persona}`).toContain('data-testid="program-card-face"');
+    }
+  });
+
+  it("supporter: PART 02 ends with a who-to-call pointer whose count is the REAL contact-sheet row count", async () => {
+    const report = boardParityReport();
+    const html = await renderReportRoute(report, BASE_WIZARD_STATE, { persona: "supporter" });
+    const expected = buildContactSheetRows(
+      applyPersonaLens(report, "supporter").report,
+      "supporter",
+    ).length;
+    expect(expected).toBeGreaterThan(0);
+    expect(html).toContain('data-testid="contact-sheet-pointer"');
+    expect(html).toContain(`data-contact-count="${expected}"`);
+    expect(html).toContain(
+      `${expected} partner${expected === 1 ? "" : "s"} can help you route`,
+    );
+    // It is an in-page anchor into PART 03's Contact Sheet — no new data, no
+    // reordering: the pointer sits after the programs section, the sheet it
+    // targets still renders later in the document.
+    expect(html).toContain('href="#contact-sheet"');
+    expect(html.indexOf('data-testid="contact-sheet-pointer"')).toBeLessThan(
+      html.indexOf('id="contact-sheet"'),
+    );
+    expect(html.indexOf('data-testid="guidepost-part-3"')).toBeGreaterThan(
+      html.indexOf('data-testid="contact-sheet-pointer"'),
+    );
+  });
+
+  it("the who-to-call pointer renders NOTHING when the report publishes no contacts, and never on another lens", async () => {
+    // No support orgs, no capital-partner handoff, and a program tier whose
+    // only entry is developer-tagged — so the supporter lens has zero
+    // visible program administrators to derive a contact from either.
+    const bare: GeneratedReport = {
+      ...boardParityReport(),
+      capitalPartnerHandoff: undefined,
+      sections: boardParityReport()
+        .sections.filter(
+          (section) =>
+            section.title !== SUPPORT_ORGANIZATIONS_SECTION_TITLE &&
+            section.id !== CAPITAL_PARTNER_SECTION_ID,
+        )
+        .map((section) =>
+          section.id === CONFIRMED_PROGRAMS_SECTION_ID
+            ? { ...section, items: section.items.filter((item) => item.programId === "federalOZ") }
+            : section,
+        ),
+    };
+    expect(
+      buildContactSheetRows(applyPersonaLens(bare, "supporter").report, "supporter"),
+    ).toHaveLength(0);
+    const html = await renderReportRoute(bare, BASE_WIZARD_STATE, { persona: "supporter" });
+    expect(html).not.toContain('data-testid="contact-sheet-pointer"');
+
+    // Supporter-only: the pointer is not a general persona surface.
+    for (const persona of ["developer", "starting", "growing"] as const) {
+      const other = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
+      expect(other, `persona=${persona}`).not.toContain('data-testid="contact-sheet-pointer"');
+    }
+  });
 });

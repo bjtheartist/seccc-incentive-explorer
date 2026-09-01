@@ -403,6 +403,44 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
+  // ─── Owner ruling 2026-08-31: routing-first supporter cards + who-to-call
+  // pointer. The render-level proof (real route, real lens) lives in
+  // app/report/__tests__/report-page-live-renderer.test.tsx; this is the
+  // fork-parity half — the workspace fork has no live-renderer harness, so
+  // the two surfaces are pinned here by source identity instead.
+  it("both forks gate the supporter routing card on the SAME condition, and every other lens keeps the full face", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain("import { ProgramRoutingCard, ProgramRoutingViewNote }");
+      expect(fork).toContain(
+        'const isRoutingProgramSection =\n                  isPersonaProgramSection && boardPersona === "supporter";',
+      );
+      expect(fork).toContain("<ProgramRoutingCard item={item} />");
+      expect(fork).toContain("<ProgramRoutingViewNote />");
+      // The full blessed face still renders on every OTHER lens — the
+      // routing variant is an exclusive branch, never an addition.
+      expect(fork).toContain(
+        "{!isSupportNetworkItem && !isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (",
+      );
+    }
+  });
+
+  it("both forks mount the who-to-call pointer after the programs section, fed the lensed report", () => {
+    for (const fork of [liveFork, workspaceFork]) {
+      expect(fork).toContain(
+        'import { ContactSheetPointerRow } from "@/components/report/ContactSheetPointerRow";',
+      );
+      expect(fork).toContain("<ContactSheetPointerRow");
+      // Same lensed report the Contact Sheet itself reads, so the count can
+      // never disagree with the sheet it points at.
+      expect(fork).toContain("report={lensed}");
+      // Rendered between the programs section and its supplements — inside
+      // PART 02, after the programs section, no part reordering.
+      expect(fork).toContain(
+        "return [band, sectionElement, whoToCall, supplements].filter(Boolean);",
+      );
+    }
+  });
+
   it("both forks render the looking board in its exact three-part sequence with no contact sheet", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain('boardPersona === "looking" && renderGuidepostBand(1)');
