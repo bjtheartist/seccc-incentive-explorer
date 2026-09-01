@@ -4,6 +4,26 @@ import type { WizardState } from "../report-wizard-config";
 import { decodeWizardState, encodeWizardState } from "../url-state";
 
 describe("wizard URL state", () => {
+  it("stamps wv=2 on every encoded link, including an otherwise-empty state", () => {
+    // decodeWizardState returns null outright when `wv` is absent, so the
+    // encoder emitting it is what makes a shared link decodable at all. Every
+    // other case here decodes a hand-written `wv=2` string; nothing pinned the
+    // ENCODE side, so a dropped stamp would have silently produced links that
+    // decode to null.
+    expect(encodeWizardState(INITIAL_WIZARD_STATE)).toContain("wv=2");
+
+    const populated = encodeWizardState({
+      ...INITIAL_WIZARD_STATE,
+      reportType: "site-incentives",
+      address: "4200 S California Ave",
+      projectGoals: ["hiring"],
+      projectType: "hiring",
+    });
+    expect(populated).toContain("wv=2");
+    // And the stamp survives the round trip the decoder gates on.
+    expect(decodeWizardState(new URLSearchParams(populated))).not.toBeNull();
+  });
+
   it("round-trips up to three goals and custom goal text", () => {
     const query = encodeWizardState({
       ...INITIAL_WIZARD_STATE,

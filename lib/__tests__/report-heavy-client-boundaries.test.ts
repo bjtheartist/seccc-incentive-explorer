@@ -23,7 +23,53 @@ const REPORT_ROOTS = [
   },
 ] as const;
 
+/**
+ * Roots that reach the VACANCY INDEX PDF builder (lib/vacancy-index-pdf.ts,
+ * whose line 1 is `import { jsPDF } from "jspdf"`). Pinned in BOTH directions,
+ * exactly as REPORT_ROOTS is: no static path, and a dynamic path that still
+ * exists — a boundary that only forbids the static edge would be satisfied by
+ * deleting the download entirely.
+ */
+const VACANCY_INDEX_PDF_ROOTS = [
+  {
+    label: "vacancy report route",
+    path: resolve(process.cwd(), "app/vacancy/[zip]/report/page.tsx"),
+  },
+  {
+    label: "vacancy case workbench route",
+    path: resolve(process.cwd(), "app/vacancy/[zip]/page.tsx"),
+  },
+] as const;
+
+/**
+ * Roots that reach lib/pdf-report.ts only behind a dynamic import. These are
+ * pinned in ONE direction only — "no static path" — deliberately. Their
+ * internals are under active edit, and asserting WHERE the dynamic import sits
+ * would pin a call site rather than the bundle property that matters. The
+ * one-directional pin still fails the moment jsPDF re-enters an initial bundle,
+ * which is the regression worth catching.
+ */
+const PDF_REPORT_DYNAMIC_ONLY_ROOTS = [
+  {
+    label: "report modals",
+    path: resolve(process.cwd(), "components/report/ReportModals.tsx"),
+  },
+  {
+    label: "funding window chart",
+    path: resolve(process.cwd(), "components/report/FundingWindowChart.tsx"),
+  },
+  {
+    label: "map polygon panel",
+    path: resolve(process.cwd(), "components/map/MapPolygonPanel.tsx"),
+  },
+] as const;
+
 const PDF_REPORT_PATH = resolve(process.cwd(), "lib/pdf-report.ts");
+const VACANCY_INDEX_PDF_PATH = resolve(process.cwd(), "lib/vacancy-index-pdf.ts");
+const VACANCY_INDEX_PDF_BUTTON_PATH = resolve(
+  process.cwd(),
+  "components/owner-file/VacancyIndexPdfButton.tsx",
+);
 const ZONING_MAP_PATH = resolve(
   process.cwd(),
   "components/report/ReportZoningMap.tsx",
@@ -154,6 +200,47 @@ describe("report heavy client boundaries", () => {
       ).not.toBeNull();
       expect(findStaticPathToFile(root, zoningMap.getFilePath())).toBeNull();
       expect(findPathToFile(root, zoningMap.getFilePath())).not.toBeNull();
+    },
+  );
+
+  const vacancyIndexPdf = project.getSourceFileOrThrow(VACANCY_INDEX_PDF_PATH);
+  const vacancyIndexPdfButton = project.getSourceFileOrThrow(
+    VACANCY_INDEX_PDF_BUTTON_PATH,
+  );
+
+  it.each(VACANCY_INDEX_PDF_ROOTS)(
+    "$label keeps the vacancy index PDF builder out of its initial static graph",
+    ({ path }) => {
+      const root = project.getSourceFileOrThrow(path);
+
+      expect(
+        findStaticPathToFile(root, vacancyIndexPdf.getFilePath()),
+      ).toBeNull();
+      expect(findPathToFile(root, vacancyIndexPdf.getFilePath())).not.toBeNull();
+    },
+  );
+
+  it("holds the vacancy index PDF boundary inside the download button itself", () => {
+    // The dynamic edge lives here rather than at the route roots, so this is
+    // where it has to be pinned. The adapter stays a STATIC import on purpose —
+    // it imports the builder's shapes as types only, carrying no runtime edge.
+    expect(
+      findStaticPathToFile(vacancyIndexPdfButton, vacancyIndexPdf.getFilePath()),
+    ).toBeNull();
+    expect(
+      hasLiteralDynamicImport(vacancyIndexPdfButton, "@/lib/vacancy-index-pdf"),
+    ).toBe(true);
+    expect(vacancyIndexPdfButton.getFullText()).toContain(
+      "generateVacancyIndexPdf(input)",
+    );
+  });
+
+  it.each(PDF_REPORT_DYNAMIC_ONLY_ROOTS)(
+    "$label has no static path to lib/pdf-report.ts",
+    ({ path }) => {
+      const root = project.getSourceFileOrThrow(path);
+
+      expect(findStaticPathToFile(root, pdfReport.getFilePath())).toBeNull();
     },
   );
 

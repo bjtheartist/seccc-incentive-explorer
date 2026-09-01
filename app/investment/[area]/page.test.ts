@@ -39,6 +39,17 @@ vi.mock("@/lib/investment-analysis", () => ({
   loadFlowRows: vi.fn(() => []),
 }));
 
+const { notFoundMock } = vi.hoisted(() => ({
+  notFoundMock: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("next/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/navigation")>();
+  return { ...actual, notFound: notFoundMock };
+});
+
 import * as gate from "@/app/investment/gate";
 import { loadCommunityInvestment } from "@/lib/community-investment";
 import { loadInvestmentAnalysis } from "@/lib/investment-analysis";
@@ -115,6 +126,69 @@ async function render(): Promise<string> {
   } as never)) as ReactElement;
   return renderToStaticMarkup(el);
 }
+
+type GateProps = { redirectTo?: string; hasAuthError?: boolean };
+
+function renderElement(
+  area = AREA,
+  searchParams: Record<string, string> = {},
+): Promise<ReactElement<GateProps>> {
+  return Page({
+    params: Promise.resolve({ area }),
+    searchParams: Promise.resolve(searchParams),
+  } as never) as Promise<ReactElement<GateProps>>;
+}
+
+/**
+ * GATE branches for the interactive area page. Every case in the StatusCards
+ * block below runs with the gate mocked to configured+session, so the two
+ * refusal branches this page shares with its print sibling
+ * (app/print/investment/[area]/page.test.ts) were never exercised here — a
+ * regression that dropped either check would have rendered community
+ * investment detail to the public with a green suite. Mirrors the print
+ * sibling's gate tests.
+ */
+describe("/investment/[area] page — gate", () => {
+  beforeEach(() => {
+    mockState.mockReset();
+    notFoundMock.mockClear();
+  });
+
+  it("renders the not-configured screen when the admin gate is unset", async () => {
+    mockState.mockResolvedValue({ configured: false, hasSession: false });
+    const el = await renderElement();
+    expect(el.type).toBe(gate.InvestmentNotConfigured);
+  });
+
+  it("renders the password wall (no session) and never reaches the area detail", async () => {
+    mockState.mockResolvedValue({ configured: true, hasSession: false });
+    const el = await renderElement();
+    expect(el.type).toBe(gate.InvestmentLoginForm);
+    expect(el.props.redirectTo).toBe(`/investment/${AREA}`);
+    expect(el.props.hasAuthError).toBe(false);
+    // The gate returns before any community data is loaded.
+    expect(mockLoadInvestmentAnalysis).not.toHaveBeenCalled();
+    expect(mockLoadCommunityInvestment).not.toHaveBeenCalled();
+  });
+
+  it("passes an error flag through to the password wall", async () => {
+    mockState.mockResolvedValue({ configured: true, hasSession: false });
+    const el = await renderElement(AREA, { error: "1" });
+    expect(el.type).toBe(gate.InvestmentLoginForm);
+    expect(el.props.hasAuthError).toBe(true);
+  });
+
+  it("routes an unknown community-area slug to not-found, past the gate", async () => {
+    mockState.mockResolvedValue({ configured: true, hasSession: true });
+    mockLoadCommunityInvestment.mockReturnValue(FIXTURE_INVESTMENT);
+
+    await expect(renderElement("Not A Community Area")).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(notFoundMock).toHaveBeenCalledOnce();
+    // A slug that resolves to no community area must never reach a data load.
+    expect(mockLoadInvestmentAnalysis).not.toHaveBeenCalled();
+  });
+});
 
 describe("/investment/[area] page — StatusCards scope (Sol gate blockers 2 + 5)", () => {
   beforeEach(() => {
