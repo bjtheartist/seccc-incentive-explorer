@@ -271,6 +271,9 @@ export function ReportDisplay({
   // Tracks the last guidepost PART band emitted by the section-render loop
   // below — see the live fork (app/report/page.tsx) for the full rationale.
   let guidepostBandTracker: GuidepostPart | null = boardPersona === "looking" ? 1 : null;
+  // Running count of NUMBERED sections/mounts the persona board has actually
+  // rendered — see the live fork (app/report/page.tsx) for the full rationale.
+  let personaSectionCounter = boardPersona === "looking" ? 1 : 0;
 
   // ── TOC ──
   // Gate finding 19: id-first (see app/report/page.tsx's fuller rationale)
@@ -867,7 +870,6 @@ export function ReportDisplay({
 
             {/* ── Content Sections ── */}
             {(() => {
-              let personaSectionCounter = boardPersona === "looking" ? 1 : 0;
               const personaAlsoSection = lensed.sections?.find(
                 (section) => section.collapsedByPersona,
               );
@@ -1341,7 +1343,11 @@ export function ReportDisplay({
                       )
                     : null;
                 if (isPersonaProgramSection && boardPersona) {
-                  personaSectionCounter += personaProgramSupplementCount(boardPersona);
+                  personaSectionCounter += personaProgramSupplementCount(
+                    report,
+                    lensed,
+                    boardPersona,
+                  );
                 }
                 return [band, sectionElement, supplements].filter(Boolean);
               });
@@ -1367,7 +1373,7 @@ export function ReportDisplay({
                 <ContactSheet
                   report={lensed}
                   persona={boardPersona}
-                  sectionNumber={personaContactSectionNumber(boardPersona)}
+                  sectionNumber={personaContactSectionNumber(personaSectionCounter)}
                 />
               </>
             )}
