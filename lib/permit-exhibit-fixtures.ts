@@ -115,6 +115,8 @@ function metaFor(pin: string, radiusFt: number, exhibitId: string, situsAddress:
     limitsBlock: PERMIT_EXHIBIT_LIMITS,
     exhibitIdFooter: formatExhibitIdFooter(exhibitId),
     subjectParcel: { pin, pinFormatted: pin, situsAddress },
+    // Fixtures are small, complete reads — nothing was truncated.
+    truncation: null,
   };
 }
 

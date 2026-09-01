@@ -87,7 +87,7 @@ describe("GET /api/parcel", () => {
     expect(parcelQuery).not.toContain("ST_DWithin");
     expect(sqlMock.mock.calls[0].slice(1)).toContain("20123456789012");
     expect(cachedMock.mock.calls[0][0]).toBe(
-      "parcel:v5:db-first:pin:20123456789012",
+      "parcel:v6:db-first:pin:20123456789012",
     );
     expect(response.headers.get("cache-control")).toContain("s-maxage=300");
   });
@@ -157,7 +157,7 @@ describe("GET /api/parcel", () => {
     expect(sqlQueries.some((query) => query.includes("FROM parcels"))).toBe(false);
     expect(sqlQueries.some((query) => query.includes("FROM parcel_space_measurements"))).toBe(true);
     expect(cachedMock.mock.calls[0][0]).toBe(
-      "parcel:v5:cookviewer:pin:20363230080000",
+      "parcel:v6:cookviewer:pin:20363230080000",
     );
   });
 
@@ -235,7 +235,7 @@ describe("GET /api/parcel", () => {
     expect(body.pin).toBe("25023150220000");
     expect(body.addressMatch).toBe("pin");
     expect(cachedMock.mock.calls[0][0]).toBe(
-      "parcel:v5:db-first:pin:25023150220000",
+      "parcel:v6:db-first:pin:25023150220000",
     );
   });
 
