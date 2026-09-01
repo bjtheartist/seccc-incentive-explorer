@@ -41,6 +41,17 @@ vi.mock("@/lib/community-investment", async (importOriginal) => ({
   loadCommunityInvestmentResult: vi.fn(),
 }));
 
+const { notFoundMock } = vi.hoisted(() => ({
+  notFoundMock: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("next/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/navigation")>();
+  return { ...actual, notFound: notFoundMock };
+});
+
 vi.mock("@/lib/investment-analysis", () => ({
   loadInvestmentAnalysis: vi.fn(),
   loadFlowRows: vi.fn(() => []),
@@ -114,6 +125,18 @@ describe("GET /print/investment/[area] — gate", () => {
     const el = await render("South Shore", { error: "1" });
     expect(el.type).toBe(gate.InvestmentLoginForm);
     expect(el.props.hasAuthError).toBe(true);
+  });
+
+  it("routes an unknown community-area slug to not-found, past the gate", async () => {
+    mockState.mockResolvedValue({ configured: true, hasSession: true });
+    mockLoadInvestmentAnalysis.mockReset();
+    notFoundMock.mockClear();
+
+    await expect(render("Not A Community Area")).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(notFoundMock).toHaveBeenCalledOnce();
+    // A slug that resolves to no community area must never reach a data load.
+    expect(mockLoadInvestmentAnalysis).not.toHaveBeenCalled();
   });
 });
 

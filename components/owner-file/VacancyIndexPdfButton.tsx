@@ -4,13 +4,21 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import { buildVacancyIndexPdfInput } from "@/lib/vacancy-index-adapter";
-import { generateVacancyIndexPdf } from "@/lib/vacancy-index-pdf";
 import type { VacancyIndexExport } from "@/lib/vacancy-index";
 
 /**
  * Gated download button for the shareable Vacancy Opportunity Index edition.
  * Fetches the static export on click (keeps the force-dynamic admin page's
  * RSC payload lean); the PDF itself is anonymized and safe to share onward.
+ *
+ * lib/vacancy-index-pdf.ts is loaded with `await import()` inside download(),
+ * never statically. Its first line is `import { jsPDF } from "jspdf"`, so a
+ * static edge would put the whole PDF engine in the initial bundle of every
+ * route that renders this button — /vacancy/[zip]/report among them — for a
+ * click most readers never make. lib/vacancy-index-adapter.ts stays a static
+ * import: it imports the builder's shapes as types only, so it carries no
+ * runtime edge to jsPDF. Pinned both directions in
+ * lib/__tests__/report-heavy-client-boundaries.test.ts.
  */
 export function VacancyIndexPdfButton({
   zip,
@@ -31,6 +39,7 @@ export function VacancyIndexPdfButton({
       const exportData = (await res.json()) as VacancyIndexExport;
       const input = buildVacancyIndexPdfInput(exportData, zip);
       if (!input) throw new Error(`no edition for ${zip}`);
+      const { generateVacancyIndexPdf } = await import("@/lib/vacancy-index-pdf");
       generateVacancyIndexPdf(input);
       trackEvent("vacancy_index_pdf_downloaded", {
         source,

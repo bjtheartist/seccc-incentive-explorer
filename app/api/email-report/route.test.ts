@@ -129,6 +129,62 @@ describe("POST /api/email-report", () => {
     });
   });
 
+  /**
+   * HARD delivery failure. Every case above either short-circuits before the
+   * provider or lets the PRIMARY send succeed — the only failing-send test
+   * covers the OPTIONAL staff notification, which is deliberately swallowed.
+   * So the branch that matters most to a user was unpinned: when the report
+   * itself never leaves, the route must say so. A regression that let a
+   * provider outage return `success: true` would tell someone their report is
+   * on the way when nothing was sent, and no test would have caught it.
+   */
+  it("returns an honest 5xx when the provider throws on the report send", async () => {
+    sendMock.mockReset().mockRejectedValue(new Error("Resend is down"));
+
+    const response = await POST(request());
+    const payload = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(response.status).toBeGreaterThanOrEqual(500);
+    expect(payload).not.toHaveProperty("success");
+    expect(payload.error).toBe("We could not email the report. Please try again.");
+    // The reservation is settled as failed, not left claiming a delivery.
+    expect(markDeliveryMock).toHaveBeenCalledWith(11, "failed");
+    expect(markDeliveryMock).not.toHaveBeenCalledWith(11, "sent");
+    expect(markLeadMock).not.toHaveBeenCalled();
+  });
+
+  it("returns an honest 5xx when the provider rejects the report send with an error payload", async () => {
+    // Resend reports some failures by resolving with `{ error }` rather than
+    // throwing — the quieter half of the same outage, and the one most likely
+    // to be mistaken for a success.
+    sendMock
+      .mockReset()
+      .mockResolvedValue({ data: null, error: { name: "validation_error", message: "rejected" } });
+
+    const response = await POST(request());
+    const payload = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(payload).not.toHaveProperty("success");
+    expect(payload.error).toBe("We could not email the report. Please try again.");
+    expect(markDeliveryMock).toHaveBeenCalledWith(11, "failed");
+    expect(markDeliveryMock).not.toHaveBeenCalledWith(11, "sent");
+  });
+
+  it("never reports the optional help notification as sent when the report itself failed", async () => {
+    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
+    sendMock.mockReset().mockRejectedValue(new Error("Resend is down"));
+
+    const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(payload).not.toHaveProperty("helpRequested");
+    // The staff notification is never attempted once the report send failed.
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
   it("still succeeds when the optional staff notification fails after delivery", async () => {
     vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
     sendMock
