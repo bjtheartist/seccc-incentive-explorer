@@ -11,12 +11,80 @@ import {
   buildFundingWindowChartData,
   buildIncentiveHorizonChartData,
 } from "@/lib/report-charts";
+import { buildProgramLinkedDocumentsToGather } from "@/lib/report-documents-to-gather";
 import { visiblePersonaProgramNames } from "@/lib/report-personas";
 
-export function personaProgramSupplementCount(persona: PersonaId): number {
-  if (persona === "starting" || persona === "growing") return 2;
-  if (persona === "supporter" || persona === "developer") return 1;
-  return 0;
+/** The numbered mounts PersonaProgramSupplements can put on a board, in the
+ *  order they render behind the programs section. */
+export type PersonaProgramSupplementKind =
+  | "fundingWindows"
+  | "documents"
+  | "incentiveHorizon";
+
+/**
+ * The deadline-backed chart report: canonical sections (the lens drops the
+ * deadline section outright) narrowed to the programs the lens still shows.
+ * Shared by the renderer and the ordinal derivation so the two can never
+ * disagree about whether a chart has data.
+ */
+function personaChartReport(
+  report: GeneratedReport,
+  lensedReport: GeneratedReport,
+): GeneratedReport {
+  const visibleProgramIds = new Set(
+    visiblePersonaProgramNames(lensedReport).map((program) => program.programId),
+  );
+  return {
+    ...report,
+    sections: report.sections.map((section) =>
+      section.id === SECTION_IDS.upcomingDeadlines ||
+      section.title === "Upcoming Deadlines Near This Address"
+        ? {
+            ...section,
+            items: section.items.filter(
+              (item) => !item.programId || visibleProgramIds.has(item.programId),
+            ),
+          }
+        : section,
+    ),
+  };
+}
+
+/**
+ * Which supplement mounts ACTUALLY render for this persona on this report,
+ * in board order. Every one of them is data-dependent — a report with no
+ * dated programs has no funding-window chart, a report whose visible programs
+ * ask for no documents has no readiness list — so this is the single source
+ * of truth for both the mounts themselves and the ordinals around them.
+ */
+export function personaProgramSupplementKinds(
+  report: GeneratedReport,
+  lensedReport: GeneratedReport,
+  persona: PersonaId,
+): PersonaProgramSupplementKind[] {
+  const chartReport = personaChartReport(report, lensedReport);
+  const hasDocuments = buildProgramLinkedDocumentsToGather(lensedReport).length > 0;
+  if (persona === "starting" || persona === "growing") {
+    const kinds: PersonaProgramSupplementKind[] = [];
+    if (buildFundingWindowChartData(chartReport)) kinds.push("fundingWindows");
+    if (hasDocuments) kinds.push("documents");
+    return kinds;
+  }
+  if (persona === "supporter") return hasDocuments ? ["documents"] : [];
+  if (persona === "developer") {
+    return buildIncentiveHorizonChartData(chartReport) ? ["incentiveHorizon"] : [];
+  }
+  return [];
+}
+
+/** How many numbered mounts the supplements add to the board — exactly the
+ *  ones personaProgramSupplementKinds says will render. */
+export function personaProgramSupplementCount(
+  report: GeneratedReport,
+  lensedReport: GeneratedReport,
+  persona: PersonaId,
+): number {
+  return personaProgramSupplementKinds(report, lensedReport, persona).length;
 }
 
 export function PersonaNeighborhoodSupplement({
@@ -43,49 +111,39 @@ export function PersonaProgramSupplements({
   persona: PersonaId;
   firstSectionNumber: number;
 }) {
-  const number = (offset = 0) => String(firstSectionNumber + offset).padStart(2, "0");
-  const visibleProgramIds = new Set(
-    visiblePersonaProgramNames(lensedReport).map((program) => program.programId),
-  );
-  const chartReport: GeneratedReport = {
-    ...report,
-    sections: report.sections.map((section) =>
-      section.id === SECTION_IDS.upcomingDeadlines ||
-      section.title === "Upcoming Deadlines Near This Address"
-        ? {
-            ...section,
-            items: section.items.filter(
-              (item) => !item.programId || visibleProgramIds.has(item.programId),
-            ),
-          }
-        : section,
-    ),
-  };
+  const kinds = personaProgramSupplementKinds(report, lensedReport, persona);
+  // Each mount's ordinal is its position in the list of mounts that actually
+  // render — a skipped chart closes the gap behind it instead of leaving one.
+  const number = (kind: PersonaProgramSupplementKind) =>
+    String(firstSectionNumber + kinds.indexOf(kind)).padStart(2, "0");
+  const chartReport = personaChartReport(report, lensedReport);
   if (persona === "starting" || persona === "growing") {
-    const hasFundingWindows = Boolean(buildFundingWindowChartData(chartReport));
     return (
       <>
-        {hasFundingWindows && (
+        {kinds.includes("fundingWindows") && (
           <PersonaReportSection
-            number={number()}
+            number={number("fundingWindows")}
             title="Funding windows"
             testId="funding-windows-section"
           >
             <FundingWindowChart report={chartReport} showEmailOffer={false} />
           </PersonaReportSection>
         )}
-        <DocumentsToGather report={lensedReport} sectionNumber={number(1)} />
+        {kinds.includes("documents") && (
+          <DocumentsToGather report={lensedReport} sectionNumber={number("documents")} />
+        )}
       </>
     );
   }
   if (persona === "supporter") {
-    return <DocumentsToGather report={lensedReport} sectionNumber={number()} />;
+    if (!kinds.includes("documents")) return null;
+    return <DocumentsToGather report={lensedReport} sectionNumber={number("documents")} />;
   }
   if (persona === "developer") {
-    if (!buildIncentiveHorizonChartData(chartReport)) return null;
+    if (!kinds.includes("incentiveHorizon")) return null;
     return (
       <PersonaReportSection
-        number={number()}
+        number={number("incentiveHorizon")}
         title="Incentive horizon"
         testId="incentive-horizon-section"
       >
@@ -98,17 +156,19 @@ export function PersonaProgramSupplements({
 
 /**
  * The Contact Sheet is always the LAST numbered section on a persona board,
- * so its number is the board's own section count. Owner ruling 2026-08-31
- * (the four-section cap in lib/report-personas.ts PERSONA_SECTION_ORDER)
- * shortened every board, so these follow it down:
- *   owner (starting/growing): site facts, programs, funding windows,
- *     document readiness, financing → contact sheet is 06
- *   supporter: neighborhood context, programs, document readiness,
- *     financing → contact sheet is 05
- *   developer: site facts, programs, incentive horizon, financing →
- *     contact sheet is 05
+ * so its number is one past everything the board actually rendered ahead of
+ * it. Pass the render loop's own running section counter — NOT a per-persona
+ * constant.
+ *
+ * This used to be hardcoded per persona ("06" for starting/growing, "05" for
+ * supporter/developer, and "07"/"09" before the 2026-08-31 four-section cap).
+ * Section presence is data-dependent, though: a report with no capital-partner
+ * financing section, or with no dated programs to chart, renders fewer
+ * sections than the constant assumed, and the board numbered 01 → 02 → 03 →
+ * 05 with a visible hole in it (seen live on 8701 S Bennett Ave for the
+ * supporter and developer boards). Deriving from the counter closes the hole
+ * by construction, for every board shape the data can produce.
  */
-export function personaContactSectionNumber(persona: PersonaId): string {
-  if (persona === "starting" || persona === "growing") return "06";
-  return "05";
+export function personaContactSectionNumber(sectionsRenderedBefore: number): string {
+  return String(sectionsRenderedBefore + 1).padStart(2, "0");
 }

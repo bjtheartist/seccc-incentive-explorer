@@ -273,7 +273,15 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     for (const fork of [liveFork, workspaceFork]) {
       expect(fork).toContain("import { ContactSheet }");
       expect(fork).toContain('boardPersona && boardPersona !== "looking" && (');
-      expect(fork).toContain("sectionNumber={personaContactSectionNumber(boardPersona)}");
+      // The Contact Sheet numbers itself off the render loop's OWN running
+      // counter, never off the persona identity — a per-persona constant goes
+      // stale whenever a data-dependent section (financing, the charts, the
+      // document list) is absent, which is how the live board came to number
+      // 01 → 02 → 03 → 05.
+      expect(fork).toContain(
+        "sectionNumber={personaContactSectionNumber(personaSectionCounter)}",
+      );
+      expect(fork).not.toContain("personaContactSectionNumber(boardPersona)");
     }
   });
 

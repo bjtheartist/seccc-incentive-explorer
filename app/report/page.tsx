@@ -3751,6 +3751,15 @@ function ReportDisplay({
   // variable, not state — recomputed fresh every render, same pattern as
   // `isFramedPersonaLink` above.
   let guidepostBandTracker: GuidepostPart | null = boardPersona === "looking" ? 1 : null;
+  // Running count of the NUMBERED sections/mounts the persona board has
+  // actually rendered. Lives out here, beside guidepostBandTracker and on the
+  // same plain mutable render-scoped pattern, because the Contact Sheet mounts
+  // AFTER the section loop and must number itself off what that loop really
+  // emitted. Section presence is data-dependent (no financing section, no
+  // chartable deadlines, no required documents ⇒ fewer numbered mounts), so
+  // any per-persona constant here goes stale the moment a report is missing
+  // one — which is exactly how the board came to number 01 → 02 → 03 → 05.
+  let personaSectionCounter = boardPersona === "looking" ? 1 : 0;
 
   // ── TOC ──
   // Gate finding 19 (regression, real bug this fixes): this used to slug
@@ -4563,7 +4572,6 @@ function ReportDisplay({
 
             {/* ── Content Sections ── */}
             {(() => {
-              let personaSectionCounter = boardPersona === "looking" ? 1 : 0;
               const personaAlsoSection = lensed.sections?.find((section) => section.collapsedByPersona);
               return lensed.sections?.flatMap((section, sectionIdx) => {
                 // Part-03 correction (late owner amendment, binding — supersedes
@@ -5043,7 +5051,11 @@ function ReportDisplay({
                       )
                     : null;
                 if (isPersonaProgramSection && boardPersona) {
-                  personaSectionCounter += personaProgramSupplementCount(boardPersona);
+                  personaSectionCounter += personaProgramSupplementCount(
+                    report,
+                    lensed,
+                    boardPersona,
+                  );
                 }
                 return [band, sectionElement, supplements].filter(Boolean);
               });
@@ -5069,7 +5081,7 @@ function ReportDisplay({
                 <ContactSheet
                   report={lensed}
                   persona={boardPersona}
-                  sectionNumber={personaContactSectionNumber(boardPersona)}
+                  sectionNumber={personaContactSectionNumber(personaSectionCounter)}
                 />
               </>
             )}
