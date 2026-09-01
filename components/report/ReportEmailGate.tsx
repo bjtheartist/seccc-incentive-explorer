@@ -340,7 +340,7 @@ export function ReportEmailGate({
     try {
       const goalIds = projectGoalIds();
       const projectGoal = goalIds.map((id) => projectGoalDisplayLabel(id, customGoal)).join(", ");
-      await submitSupportRequest({
+      const outcome = await submitSupportRequest({
         name: supportName.trim() || undefined,
         email: supportEmail.trim(),
         address: preparedReport.metadata?.address,
@@ -350,13 +350,29 @@ export function ReportEmailGate({
         source: "report_email_gate",
         website,
       });
-      setSupportStatus("sent");
       trackEvent("inquiry_submitted", {
         reportType: preparedReport.reportType,
         source: "report_email_gate",
         address: preparedReport.metadata?.address || null,
-        metadata: { projectGoals: goalIds, entrySource: source },
+        metadata: { projectGoals: goalIds, entrySource: source, notified: outcome.notified !== false },
       });
+      // Owner ruling (Billy, 2026-09-01): the request row was stored, but if
+      // the Chamber-inbox alert did not actually go out, the 48-hour promise
+      // the visitor just read has no one on the other end of it. Surface that
+      // loudly through the SAME first-click-stops / second-click-continues
+      // doctrine every other support failure here uses — with copy that tells
+      // the visitor the one action that guarantees a human sees them: email
+      // the Chamber directly.
+      if (outcome.notified === false) {
+        setSupportStatus("error");
+        setSupportError(
+          outcome.contact
+            ? `Your request was saved, but our alert to the Chamber team did not go through. To make sure a real person follows up, email us directly at ${outcome.contact}. Your report is still ready — continue below.`
+            : "Your request was saved, but our alert to the Chamber team did not go through. To make sure a real person follows up, contact the Southeast Chicago Chamber of Commerce directly. Your report is still ready — continue below.",
+        );
+        return false;
+      }
+      setSupportStatus("sent");
       return true;
     } catch (supportSubmitError) {
       setSupportStatus("error");
