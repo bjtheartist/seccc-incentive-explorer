@@ -3,19 +3,20 @@
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Check,
   Search,
   MapPin,
   FileText,
   Loader2,
   RotateCcw,
-  Printer,
   ExternalLink,
-  Mail,
-  Link2,
 } from "lucide-react";
 import type { WizardState } from "@/lib/report-wizard-config";
-import type { GeneratedReport, ReportSection } from "@/lib/report-engine";
+import {
+  SECTION_IDS,
+  sectionMatchesIdOrTitle,
+  type GeneratedReport,
+  type ReportSection,
+} from "@/lib/report-engine";
 import {
   DownloadGateModal,
   EmailReportModal,
@@ -38,6 +39,8 @@ import {
 } from "@/lib/area-analysis-workstation";
 import { formatPermitAreaCoverageLabel } from "@/lib/permit-area";
 import { trackEvent } from "@/lib/analytics-events";
+import { reportAnalyticsPayload } from "@/lib/report-generated-event";
+import { ReportActionButtons } from "@/components/report/ReportActionButtons";
 import type { VacancySpreadsheetSectionData } from "@/components/report/useVacancySpreadsheetSection";
 
 /**
@@ -148,35 +151,10 @@ export function DrawnAreaScopeUnavailableBanner({
   );
 }
 
-// Small analytics helper, intentionally duplicated from each fork's own
-// top-level ReportDisplay (same precedent as those forks' own copies of
-// this — see components/report/ReportDisplay.tsx's header comment).
-function analyticsReportKey(report: GeneratedReport): string {
-  return [
-    report.reportType,
-    report.generatedAt,
-    report.metadata?.address || report.title,
-  ].join("|");
-}
-
-function reportAnalyticsPayload(
-  report: GeneratedReport,
-  source: string,
-  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {}
-) {
-  return {
-    reportType: report.reportType,
-    source,
-    address: report.metadata?.address ?? null,
-    lat: report.metadata?.lat ?? null,
-    lon: report.metadata?.lon ?? null,
-    metadata: {
-      reportKey: analyticsReportKey(report),
-      reportTitle: report.title,
-      ...metadata,
-    },
-  };
-}
+// RF2, first landing: this file's analytics helpers were a third copy of
+// the same pair, carried over from each fork's own ReportDisplay. Both now
+// come from lib/report-generated-event.ts — see that module's header for
+// why the copies could not stay.
 
 export interface VacancySpreadsheetSectionProps {
   report: GeneratedReport;
@@ -314,38 +292,68 @@ export function VacancySpreadsheetSection({
   };
 
   if (isDrawnArea && vacancySpreadsheetScope.status === "ready") {
-    const areaSnapshotSection = report.sections.find(
-      (section) => section.title === "Area Snapshot",
+    // R3: this dispatch used to match the literal English titles below.
+    // Persona lenses rename section titles at lens time, so a renamed
+    // section silently dropped out of its slot and reappeared in the
+    // generic `additionalSections` list further down the page — the exact
+    // regression class app/report/page.tsx's own comments document. Every
+    // slot is now id-first (the ids are stamped at the emit site in
+    // components/map/MapPolygonPanel.tsx), with the title kept only as the
+    // fallback for drawn-area reports saved before those ids existed.
+    const matchesAnyDrawnAreaSlot = (
+      section: ReportSection,
+      slots: readonly (readonly [string, string])[],
+    ) => slots.some(([id, title]) => sectionMatchesIdOrTitle(section, id, title));
+
+    const AREA_SNAPSHOT_SLOT = [SECTION_IDS.areaSnapshot, "Area Snapshot"] as const;
+    const PRIORITY_PROPERTIES_SLOT = [
+      SECTION_IDS.priorityProperties,
+      "Priority Properties",
+    ] as const;
+    const CONTEXT_SLOTS = [
+      [SECTION_IDS.incentiveZonesInArea, "Incentive Zones in Area"],
+      [SECTION_IDS.ownershipBreakdown, "Ownership Breakdown"],
+    ] as const;
+    const PERMIT_SLOTS = [
+      [SECTION_IDS.permitFilingContext, "Permit Filing Context"],
+      [
+        SECTION_IDS.recentPermitRecordsInCurrentView,
+        "Recent Permit Records in Current View",
+      ],
+    ] as const;
+    const PROVENANCE_SLOT = [SECTION_IDS.provenanceChain, "Provenance Chain"] as const;
+    // Rendered from the saved scope rather than from the section itself, but
+    // still a recognized slot — it must not fall through to the generic list.
+    const PRACTITIONER_NOTES_SLOT = [
+      SECTION_IDS.practitionerNotes,
+      "Practitioner Notes",
+    ] as const;
+
+    const areaSnapshotSection = report.sections.find((section) =>
+      sectionMatchesIdOrTitle(section, ...AREA_SNAPSHOT_SLOT),
     );
-    const vacancySections = report.sections.filter(
-      (section) => section.title === "Priority Properties",
+    const vacancySections = report.sections.filter((section) =>
+      sectionMatchesIdOrTitle(section, ...PRIORITY_PROPERTIES_SLOT),
     );
     const contextSections = report.sections.filter((section) =>
-      ["Incentive Zones in Area", "Ownership Breakdown"].includes(
-        section.title,
-      ),
+      matchesAnyDrawnAreaSlot(section, CONTEXT_SLOTS),
     );
     const permitSections = report.sections.filter((section) =>
-      [
-        "Permit Filing Context",
-        "Recent Permit Records in Current View",
-      ].includes(section.title),
+      matchesAnyDrawnAreaSlot(section, PERMIT_SLOTS),
     );
-    const provenanceSections = report.sections.filter(
-      (section) => section.title === "Provenance Chain",
+    const provenanceSections = report.sections.filter((section) =>
+      sectionMatchesIdOrTitle(section, ...PROVENANCE_SLOT),
     );
-    const recognizedSectionTitles = new Set([
-      "Area Snapshot",
-      "Priority Properties",
-      "Incentive Zones in Area",
-      "Ownership Breakdown",
-      "Permit Filing Context",
-      "Recent Permit Records in Current View",
-      "Practitioner Notes",
-      "Provenance Chain",
-    ]);
+    const recognizedSlots = [
+      AREA_SNAPSHOT_SLOT,
+      PRIORITY_PROPERTIES_SLOT,
+      ...CONTEXT_SLOTS,
+      ...PERMIT_SLOTS,
+      PRACTITIONER_NOTES_SLOT,
+      PROVENANCE_SLOT,
+    ] as const;
     const additionalSections = report.sections.filter(
-      (section) => !recognizedSectionTitles.has(section.title),
+      (section) => !matchesAnyDrawnAreaSlot(section, recognizedSlots),
     );
     const permitProvenance =
       vacancySpreadsheetScope.drawnArea.provenance.permit;
@@ -992,33 +1000,31 @@ export function VacancySpreadsheetSection({
 
           <div className="mx-auto mt-8 max-w-[1180px] print:hidden">
             <div className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
-              <button
-                onClick={handlePrint}
-                className="inline-flex w-full items-center justify-center gap-2 bg-[#0C1B33] px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white shadow-md transition-colors hover:bg-[#0C1B33]/80 sm:w-auto"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Download PDF
-              </button>
-              <button
-                onClick={handleSaveReport}
-                className="inline-flex w-full items-center justify-center gap-2 bg-[#2563EB] px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white shadow-md transition-colors hover:bg-[#1d4ed8] sm:w-auto"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                Save Report
-              </button>
-              <StartPreparationPacketButton
+              {/* R3: this row used to hand-rebuild the generic Download /
+                  Save / Email controls that ReportActionButtons owns —
+                  including its label copy and, below, its share gate. Both
+                  vacancy rows now render the shared component. `isDrawnArea`
+                  is true throughout this branch, so the shared policy
+                  resolves canShare to false and this row keeps having no
+                  Share button, exactly as before. */}
+              <ReportActionButtons
                 report={report}
                 wizardState={reportWizardState}
-                source={`${analyticsSource}_area_actions`}
-                className="w-full px-8 py-3.5 shadow-md sm:w-auto"
+                isDrawnAreaReport={isDrawnArea}
+                linkCopied={linkCopied}
+                onDownload={handlePrint}
+                onSave={handleSaveReport}
+                onEmail={handleEmailReportClick}
+                onShare={handleShareReport}
+                afterSave={
+                  <StartPreparationPacketButton
+                    report={report}
+                    wizardState={reportWizardState}
+                    source={`${analyticsSource}_area_actions`}
+                    className="w-full px-8 py-3.5 shadow-md sm:w-auto"
+                  />
+                }
               />
-              <button
-                onClick={handleEmailReportClick}
-                className="inline-flex w-full items-center justify-center gap-2 border border-[#2563EB]/30 bg-white px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#2563EB] shadow-md transition-colors hover:border-[#2563EB]/50 hover:bg-[#2563EB]/5 sm:w-auto"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Email This to Me
-              </button>
               <button
                 onClick={onStartOver}
                 className="inline-flex w-full items-center justify-center gap-2 border border-[#0C1B33]/15 bg-white px-8 py-3.5 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33]/60 shadow-md transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33] sm:w-auto"
@@ -1345,56 +1351,45 @@ export function VacancySpreadsheetSection({
 
         <div className="mx-auto max-w-[1180px] print:hidden mt-8">
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={handleVacancySpreadsheetExport}
-              disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
-            >
-              {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <FileText className="w-3.5 h-3.5" />
-              )}
-              Download CSV
-            </button>
-            <button
-              onClick={handleSaveReport}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Save Report
-            </button>
-            <StartPreparationPacketButton
+            {/* R3: the CSV export leads this row instead of a PDF download,
+                and its share control says "Share Spreadsheet" — both are
+                slot/label configuration on the shared component now. The
+                share GATE is the shared policy's `canShare`, which is
+                `Boolean(wizardState) && !isDrawnAreaReport` — the exact
+                predicate this row used to re-implement inline. */}
+            <ReportActionButtons
               report={report}
               wizardState={reportWizardState}
-              source={`${analyticsSource}_vacancy_actions`}
-              className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+              isDrawnAreaReport={isDrawnAreaReport}
+              linkCopied={linkCopied}
+              onDownload={handlePrint}
+              onSave={handleSaveReport}
+              onEmail={handleEmailReportClick}
+              onShare={handleShareReport}
+              shareLabel="Share Spreadsheet"
+              downloadSlot={
+                <button
+                  onClick={handleVacancySpreadsheetExport}
+                  disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet || !canExportVacancySpreadsheet}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
+                >
+                  {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5" />
+                  )}
+                  Download CSV
+                </button>
+              }
+              afterSave={
+                <StartPreparationPacketButton
+                  report={report}
+                  wizardState={reportWizardState}
+                  source={`${analyticsSource}_vacancy_actions`}
+                  className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+                />
+              }
             />
-            <button
-              onClick={handleEmailReportClick}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              Email This to Me
-            </button>
-            {reportWizardState && !isDrawnAreaReport && (
-              <button
-                onClick={handleShareReport}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-              >
-                {linkCopied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    Link Copied!
-                  </>
-                ) : (
-                  <>
-                    <Link2 className="w-3.5 h-3.5" />
-                    Share Spreadsheet
-                  </>
-                )}
-              </button>
-            )}
             {!compact && onCompare && !compareMode && (
               <button
                 onClick={onCompare}

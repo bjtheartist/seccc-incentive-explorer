@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
-import type { GeneratedReport } from "@/lib/report-engine";
+import { SECTION_IDS, type GeneratedReport } from "@/lib/report-engine";
 import { programCount } from "@/lib/report-email";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
@@ -791,6 +791,7 @@ export default function MapPolygonPanel({
         ...(normalizedPractitionerNotes
           ? [
               {
+                id: SECTION_IDS.practitionerNotes,
                 title: "Practitioner Notes",
                 description:
                   "User-authored context saved with this analysis. It is not source evidence and should be reviewed separately from public records.",
@@ -804,6 +805,7 @@ export default function MapPolygonPanel({
             ]
           : []),
         {
+          id: SECTION_IDS.areaSnapshot,
           title: "Area Snapshot",
           description: "Source-backed vacancy signals and permit context inside the drawn area.",
           items: [
@@ -888,6 +890,7 @@ export default function MapPolygonPanel({
         ...(zoneItems.length > 0
           ? [
               {
+                id: SECTION_IDS.incentiveZonesInArea,
                 title: "Incentive Zones in Area",
                 description: "Zone coverage among the vacancy signals shown by the selected filters.",
                 items: zoneItems,
@@ -897,6 +900,7 @@ export default function MapPolygonPanel({
         ...(ownerItems.length > 0
           ? [
               {
+                id: SECTION_IDS.ownershipBreakdown,
                 title: "Ownership Breakdown",
                 description: "Ownership classification among the displayed vacancy signals.",
                 items: ownerItems,
@@ -906,6 +910,7 @@ export default function MapPolygonPanel({
         ...(propertyItems.length > 0
           ? [
               {
+                id: SECTION_IDS.priorityProperties,
                 title: "Priority Properties",
                 description:
                   propertyItems.length < features.length
@@ -918,6 +923,7 @@ export default function MapPolygonPanel({
         ...(permitAnalysis
           ? [
               {
+                id: SECTION_IDS.permitFilingContext,
                 title: "Permit Filing Context",
                 description: `${PERMIT_AREA_ACTIVITY_NOTE} ${PERMIT_AREA_COVERAGE_NOTE}`,
                 items: [
@@ -954,6 +960,7 @@ export default function MapPolygonPanel({
               ...(permitRecords.length > 0 || permitFilterLabels.length > 0
                 ? [
                     {
+                      id: SECTION_IDS.recentPermitRecordsInCurrentView,
                       title: "Recent Permit Records in Current View",
                       description: `${filteredPermitRecords.length} of ${permitRecords.length} recent record${permitRecords.length === 1 ? "" : "s"} match the workstation filters. This report snapshot includes ${permitRecordItems.length}${filteredPermitRecords.length > permitRecordItems.length ? ` of those ${filteredPermitRecords.length}` : ""}; the CSV includes every filtered recent record. Full-polygon permit aggregates above remain based on all ${permitAnalysis.totalFilings} geocoded filings.`,
                       items: permitRecordSnapshotItems,
@@ -965,6 +972,7 @@ export default function MapPolygonPanel({
         ...(drawnAreaScope
           ? [
               {
+                id: SECTION_IDS.provenanceChain,
                 title: "Provenance Chain",
                 description:
                   "The saved boundary, source coverage, filters, and generation-time record manifest connect this analysis to its report and CSV outputs.",

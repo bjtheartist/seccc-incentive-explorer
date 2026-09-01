@@ -17,6 +17,19 @@ export interface ReportActionButtonsProps {
   afterSave?: ReactNode;
   /** Existing report-specific controls that follow Email in the action row. */
   afterEmail?: ReactNode;
+  /**
+   * Replaces the Download PDF control. The vacancy spreadsheet row leads
+   * with a CSV export instead of a PDF download and always has; this keeps
+   * that row on the shared component rather than hand-rebuilding the other
+   * four buttons around its one difference.
+   */
+  downloadSlot?: ReactNode;
+  /**
+   * Share-button label. Defaults to the report wording; the vacancy
+   * spreadsheet row says "Share Spreadsheet" because that is what its link
+   * opens. Copy only — the share GATE stays the shared policy's.
+   */
+  shareLabel?: string;
 }
 
 /**
@@ -35,18 +48,22 @@ export function ReportActionButtons({
   onShare,
   afterSave,
   afterEmail,
+  downloadSlot,
+  shareLabel = "Share Report",
 }: ReportActionButtonsProps) {
   const policy = getReportActionPolicy(report, wizardState, isDrawnAreaReport);
 
   return (
     <>
-      <button
-        onClick={onDownload}
-        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
-      >
-        <Printer className="w-3.5 h-3.5" />
-        Download PDF
-      </button>
+      {downloadSlot ?? (
+        <button
+          onClick={onDownload}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          Download PDF
+        </button>
+      )}
       <button
         onClick={onSave}
         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
@@ -76,7 +93,7 @@ export function ReportActionButtons({
           ) : (
             <>
               <Link2 className="w-3.5 h-3.5" />
-              Share Report
+              {shareLabel}
             </>
           )}
         </button>

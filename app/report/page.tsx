@@ -52,6 +52,7 @@ import {
   CONFIRMED_PROGRAMS_SECTION_ID,
   normalizePublicReportForDisplay,
   SECTION_IDS,
+  sectionMatchesIdOrTitle,
 } from "@/lib/report-engine";
 import type {
   GeneratedReport,
@@ -254,7 +255,9 @@ import {
   analyticsReportKey,
   createGeneratedReportEventGate,
   generatedReportEventKey,
+  extractReportZipCode,
   generatedReportEventType,
+  reportAnalyticsPayload,
 } from "@/lib/report-generated-event";
 
 // ─── Animation Variants ──────────────────────────────────────────────
@@ -279,34 +282,6 @@ const fadeIn = {
   transition: { duration: 0.4, ease: "easeOut" as const },
 };
 
-function extractReportZipCode(report: GeneratedReport): string | null {
-  const address = report.metadata?.address || "";
-  const match = address.match(/\b(606\d{2}|60707|60827)\b/);
-  return match?.[1] ?? null;
-}
-
-function reportAnalyticsPayload(
-  report: GeneratedReport,
-  source: string,
-  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {}
-) {
-  const zipCode = extractReportZipCode(report);
-  return {
-    reportType: report.reportType,
-    source,
-    address: report.metadata?.address ?? null,
-    lat: report.metadata?.lat ?? null,
-    lon: report.metadata?.lon ?? null,
-    metadata: {
-      reportKey: analyticsReportKey(report),
-      reportTitle: report.title,
-      zipCode,
-      sectionCount: report.sections?.length ?? 0,
-      actionCount: report.recommendedActions?.length ?? 0,
-      ...metadata,
-    },
-  };
-}
 
 const ALLOWED_REPORT_SOURCES = new Set([
   "homepage",
@@ -346,15 +321,6 @@ function cleanReportSource(value: string | null): string | null {
   if (!value) return null;
   const cleaned = value.toLowerCase().trim().slice(0, 80);
   return ALLOWED_REPORT_SOURCES.has(cleaned) ? cleaned.replace(/-/g, "_") : null;
-}
-
-/**
- * Match a section by its stable id, falling back to the English title only
- * for sections saved before the `id` field existed. Renaming a section's
- * title in report-engine.ts must never change what this finds.
- */
-function sectionMatchesIdOrTitle(section: ReportSection, id: string, title: string): boolean {
-  return section.id ? section.id === id : section.title === title;
 }
 
 function supportOrganizationCount(report: GeneratedReport) {
