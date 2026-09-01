@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { loadCommunityInvestment } from "@/lib/community-investment";
+import {
+  COMMUNITY_INVESTMENT_UNAVAILABLE_COPY,
+  COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING,
+  loadCommunityInvestmentResult,
+} from "@/lib/community-investment";
 import {
   loadIllinoisArtsCouncilAwards,
   loadInvestmentIndex,
@@ -40,7 +44,14 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
   const index = loadInvestmentIndex();
-  const investment = loadCommunityInvestment();
+  // R1 finding 4: "has not been generated yet" is only true for a MISSING
+  // export. An unreadable or malformed one is an outage, and telling a beta
+  // reader to re-run the exporter would be a claim about state we did not
+  // check. The typed result keeps the two apart.
+  const investmentResult = loadCommunityInvestmentResult();
+  const investment = investmentResult.ok ? investmentResult.data : null;
+  const exportNotGenerated = !investmentResult.ok && investmentResult.reason === "export_missing";
+  const datasetUnavailable = !investmentResult.ok && !exportNotGenerated;
   const meta = investment?.meta;
   const coverageRows = meta ? buildSourceCoverageRows(meta) : [];
   const topDevelopments = loadMajorDevelopments({ limit: 10 });
@@ -90,7 +101,17 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
           {accessMode === "beta" ? "Private beta access." : "Staff analysis access."}
         </p>
 
-        {!index || index.rows.length === 0 ? (
+        {datasetUnavailable ? (
+          <div
+            data-testid="investment-dataset-unavailable"
+            className="mt-8 border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/55"
+          >
+            <p className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#0C1B33]/70">
+              {COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING}
+            </p>
+            <p className="mt-3 max-w-2xl leading-relaxed">{COMMUNITY_INVESTMENT_UNAVAILABLE_COPY}</p>
+          </div>
+        ) : !index || index.rows.length === 0 ? (
           <div className="mt-8 border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/55">
             The Community Investment dataset has not been generated yet. Run{" "}
             <code className="font-mono-bureau text-[12px]">npm run data:export:investment</code> and reload.
@@ -244,7 +265,11 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                     Top 10 by announced $
                   </span>
                 </div>
-                <MajorDevelopments summary={topDevelopments} scope="citywide" />
+                <MajorDevelopments
+                  summary={topDevelopments}
+                  scope="citywide"
+                  datasetUnavailable={datasetUnavailable}
+                />
               </div>
             ) : null}
 

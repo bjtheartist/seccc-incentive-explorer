@@ -57,3 +57,29 @@ export async function loadPermitExhibit(
     return { ok: false, error: { kind: "unavailable" } };
   }
 }
+
+/**
+ * ── R2 finding 8, gate-reorder sub-item: NOT APPLIED. Deliberate. ──
+ *
+ * The audit asked for the access-gate check in
+ * app/permit-exhibit/[pin]/page.tsx to move BEFORE `loadPermitExhibit`, so
+ * ungated traffic stops driving the full upstream chain (two
+ * `building_permits` queries, a live County parcel lookup, a live
+ * zoning-district lookup, the zoning-archive read) for output it is not
+ * allowed to see. That reading of the cost is correct.
+ *
+ * It cannot be done without contradicting an existing, deliberate assertion.
+ * app/permit-exhibit/[pin]/__tests__/page.test.tsx pins "still renders the
+ * header (address, PIN, exhibit id) even when gated" — the gated view is
+ * SUPPOSED to show the exhibit header. That header needs `meta.exhibitId` and
+ * `meta.snapshotDate`, both derived from the completed build
+ * (`computePermitExhibitId` takes the dataset vintage), so there is no way to
+ * render it without doing the work. Gate-first and header-when-gated are
+ * mutually exclusive; choosing between them is a product call about what an
+ * ungated visitor should see, not a defect fix.
+ *
+ * Left for an owner ruling rather than silently weakening the test. Note the
+ * PRINT variant (app/print/permit-exhibit/[pin]/page.tsx) already gates before
+ * loading — it renders `NotAuthorized` with no header, so it never had the
+ * conflict.
+ */

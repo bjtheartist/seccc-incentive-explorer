@@ -1,4 +1,5 @@
 import type { SurveyAnswers } from "./types";
+import { SurveyAnswersSchema } from "./schemas";
 import type { WizardState, ReportType } from "./report-wizard-config";
 import {
   INITIAL_WIZARD_STATE,
@@ -16,6 +17,49 @@ import {
 function isKnownGoalId(goalId: string): boolean {
   return Object.prototype.hasOwnProperty.call(PROJECT_TYPE_LABELS, goalId);
 }
+
+/**
+ * Length ceiling for every free-text share-link param (R2 finding 6).
+ *
+ * Goal ids were fixed against an allow-list and `cg` (custom goal) was capped
+ * at 240 — but the ELEVEN other free-string params beside them (`nbh`, `ind`,
+ * `bud`, `pu`, `fc`, `gap`, `tl`, `sc`, `jobs`, `addr`, `caddr`) were copied
+ * into wizard state raw, at whatever length the URL carried. Every one of them
+ * is attacker-writable, and they flow into the report engine, into rendered
+ * report copy, and into saved-report jsonb. 240 matches the cap `cg` already
+ * had — comfortably above any real value (the longest genuine neighborhood or
+ * address string is well under 100 characters) and far below a payload worth
+ * sending.
+ */
+const MAX_SHARE_PARAM_LENGTH = 240;
+
+/**
+ * Read a free-text param and cap it. Returns "" for a missing param so callers
+ * keep the existing `if (value)` truthiness checks.
+ */
+function cappedParam(params: URLSearchParams, key: string): string {
+  return (params.get(key) ?? "").slice(0, MAX_SHARE_PARAM_LENGTH);
+}
+
+/**
+ * Count ceiling for the base64-JSON array params (`cta`, `docs`, `need`).
+ *
+ * `decodeArray` filtered its output to strings and then returned however many
+ * of them the link contained. The largest real option list behind these params
+ * has 13 entries (DOCUMENT_READINESS_OPTIONS); 32 leaves generous headroom for
+ * the lists to grow while keeping a hand-written link from pushing thousands
+ * of entries into wizard state and, from there, into the engine and the saved
+ * report. Item length is capped for the same reason the scalar params are.
+ */
+const MAX_DECODED_ARRAY_ITEMS = 32;
+const MAX_DECODED_ARRAY_ITEM_LENGTH = 120;
+
+/**
+ * Ceiling on the ENCODED length of a base64 param before it is decoded, so a
+ * multi-megabyte `sa=`/`docs=` string is rejected without ever being expanded
+ * in memory.
+ */
+const MAX_ENCODED_PARAM_LENGTH = 4096;
 
 export interface CheckState {
   lat: number;
@@ -68,16 +112,27 @@ export function decodeCheckState(
     // `addr` is the short form encodeCheckState emits and every existing deep
     // link carries; `address` is the readable spelling /check links are written
     // with. Accept both so neither shape drops the label.
-    address: params.get("addr") || params.get("address") || "",
+    address: cappedParam(params, "addr") || cappedParam(params, "address"),
   };
 
-  const sector = params.get("sector");
+  const sector = cappedParam(params, "sector");
   if (sector) state.sector = sector;
 
+  // `sa=` is attacker-writable base64 JSON that used to be JSON.parse'd
+  // straight into `state.surveyAnswers` — any shape at all, including a
+  // multi-megabyte object, typed as `SurveyAnswers` on the way out.
+  // SurveyAnswersSchema already existed in lib/schemas.ts and simply was not
+  // wired in here. The param is NOT dead (components/check/QuickCheckClient
+  // decodes it, and lib/check-retirement.ts forwards it on the /check ->
+  // /report redirect), so it is validated rather than removed. Note this only
+  // makes the decode honest: per CLAUDE.md the confidence engine's `survey`
+  // parameter stays `undefined` at every live call site pending an owner
+  // ruling, and nothing here changes that.
   const sa = params.get("sa");
-  if (sa) {
+  if (sa && sa.length <= MAX_ENCODED_PARAM_LENGTH) {
     try {
-      state.surveyAnswers = JSON.parse(atob(sa));
+      const parsed = SurveyAnswersSchema.safeParse(JSON.parse(atob(sa)));
+      if (parsed.success) state.surveyAnswers = parsed.data;
     } catch {
       // Ignore invalid survey answers
     }
@@ -175,7 +230,7 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
     if (mapped) state.reportType = mapped;
   }
 
-  const addr = params.get("addr");
+  const addr = cappedParam(params, "addr");
   if (addr) state.address = addr;
 
   const lat = params.get("lat");
@@ -183,13 +238,13 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   if (lat) state.lat = parseFloat(lat);
   if (lon) state.lon = parseFloat(lon);
 
-  const nbh = params.get("nbh");
+  const nbh = cappedParam(params, "nbh");
   if (nbh) state.neighborhood = nbh;
 
-  const ind = params.get("ind");
+  const ind = cappedParam(params, "ind");
   if (ind) state.industry = ind;
 
-  const bud = params.get("bud");
+  const bud = cappedParam(params, "bud");
   if (bud) state.budgetRange = bud;
 
   // `pt` is a goal id too (legacy single-goal links, and the fallback into
@@ -198,36 +253,42 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   const pt = params.get("pt");
   if (pt && isKnownGoalId(pt)) state.projectType = pt;
 
-  const customGoal = params.get("cg");
-  if (customGoal) state.customGoal = customGoal.slice(0, 240);
+  const customGoal = cappedParam(params, "cg");
+  if (customGoal) state.customGoal = customGoal;
 
-  const pu = params.get("pu");
+  const pu = cappedParam(params, "pu");
   if (pu) state.proposedUse = pu;
 
-  const fc = params.get("fc");
+  const fc = cappedParam(params, "fc");
   if (fc) state.fundingCommitted = fc;
 
-  const gap = params.get("gap");
+  const gap = cappedParam(params, "gap");
   if (gap) state.remainingGap = gap;
 
-  const tl = params.get("tl");
+  const tl = cappedParam(params, "tl");
   if (tl) state.timeline = tl;
 
-  const sc = params.get("sc");
+  const sc = cappedParam(params, "sc");
   if (sc) state.siteControl = sc;
 
-  const jobs = params.get("jobs");
+  const jobs = cappedParam(params, "jobs");
   if (jobs) state.jobsImpact = jobs;
 
-  // Decode array fields
+  // Decode array fields. Bounded three ways: the encoded param is rejected
+  // outright above a fixed size (so a huge string is never expanded), the
+  // decoded list is truncated to MAX_DECODED_ARRAY_ITEMS, and each surviving
+  // entry is capped in length. Previously this returned every string the link
+  // contained, at any length.
   function decodeArray(key: string): string[] {
     const val = params.get(key);
-    if (!val) return [];
+    if (!val || val.length > MAX_ENCODED_PARAM_LENGTH) return [];
     try {
       const parsed: unknown = JSON.parse(atob(val));
-      return Array.isArray(parsed)
-        ? parsed.filter((item): item is string => typeof item === "string")
-        : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((item): item is string => typeof item === "string")
+        .slice(0, MAX_DECODED_ARRAY_ITEMS)
+        .map((item) => item.slice(0, MAX_DECODED_ARRAY_ITEM_LENGTH));
     } catch {
       return [];
     }
@@ -247,7 +308,7 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   }
 
   // Comparison address
-  const caddr = params.get("caddr");
+  const caddr = cappedParam(params, "caddr");
   if (caddr) state.compareAddress = caddr;
   const clat = params.get("clat");
   const clon = params.get("clon");

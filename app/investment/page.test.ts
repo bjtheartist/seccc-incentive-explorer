@@ -24,8 +24,14 @@ vi.mock("@/app/investment/gate", () => ({
   },
 }));
 
-vi.mock("@/lib/community-investment", () => ({
+// R1 finding 4: the page now reads the TYPED loader so it can tell an
+// unloadable export apart from a community with genuinely no records. The
+// real copy constants are kept (importOriginal) so an assertion on the
+// unavailability copy pins the shipped string, not a test-local duplicate.
+vi.mock("@/lib/community-investment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/community-investment")>()),
   loadCommunityInvestment: vi.fn(),
+  loadCommunityInvestmentResult: vi.fn(),
 }));
 
 vi.mock("@/lib/investment-analysis", () => ({
@@ -41,7 +47,8 @@ vi.mock("@/lib/investment-source-coverage", () => ({
 }));
 
 import * as gate from "@/app/investment/gate";
-import { loadCommunityInvestment } from "@/lib/community-investment";
+import { loadCommunityInvestment, loadCommunityInvestmentResult } from "@/lib/community-investment";
+import { COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING } from "@/lib/community-investment";
 import { loadInvestmentIndex } from "@/lib/investment-analysis";
 import type { CommunityInvestmentExport } from "@/lib/community-investment";
 import type { CommunityInvestmentIndex } from "@/lib/investment-analysis";
@@ -49,6 +56,20 @@ import Page from "./page";
 
 const mockState = vi.mocked(gate.getInvestmentAdminState);
 const mockLoadCommunityInvestment = vi.mocked(loadCommunityInvestment);
+const mockLoadCommunityInvestmentResult = vi.mocked(loadCommunityInvestmentResult);
+
+/**
+ * Keep the two loaders in lockstep so every pre-existing `mockLoadCommunityInvestment`
+ * setup line still steers the page exactly as it did before the typed loader landed.
+ * A test that wants the OUTAGE branch overrides `mockLoadCommunityInvestmentResult`
+ * directly.
+ */
+function syncInvestmentLoaders(): void {
+  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(() => {
+    const data = mockLoadCommunityInvestment();
+    return data ? { ok: true, data } : { ok: false, reason: "export_missing" };
+  });
+}
 const mockLoadInvestmentIndex = vi.mocked(loadInvestmentIndex);
 
 /**
@@ -126,6 +147,7 @@ describe("/investment landing page — meta-driven contracts (Sol gate blocker 5
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
     mockLoadCommunityInvestment.mockReset().mockReturnValue(FIXTURE_INVESTMENT);
+    syncInvestmentLoaders();
     mockLoadInvestmentIndex.mockReset().mockReturnValue(FIXTURE_INDEX);
   });
 
@@ -200,5 +222,44 @@ describe("/investment landing page — meta-driven contracts (Sol gate blocker 5
     expect(html).toContain('href="/public-investment-analysis"');
     expect(html).not.toContain('href="/admin/owner-files"');
     expect(html).not.toContain('href="/admin"');
+  });
+});
+
+/**
+ * R1 finding 4 — /investment landing. "The Community Investment dataset has
+ * not been generated yet. Run npm run data:export:investment and reload." is
+ * only TRUE for a genuinely missing file. For an unreadable or malformed one
+ * it is a claim about state nobody checked, aimed at a beta reader who cannot
+ * act on it.
+ */
+describe("/investment landing — a broken export is not reported as an ungenerated one", () => {
+  const NOT_GENERATED_CLAIM = "has not been generated yet";
+
+  beforeEach(() => {
+    mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
+    mockLoadInvestmentIndex.mockReset().mockReturnValue(null);
+    mockLoadCommunityInvestment.mockReset();
+  });
+
+  it("a malformed export renders the unavailability state instead", async () => {
+    mockLoadCommunityInvestmentResult
+      .mockReset()
+      .mockReturnValue({ ok: false, reason: "export_invalid_json" });
+
+    const html = await render();
+
+    expect(html).toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
+    expect(html).not.toContain(NOT_GENERATED_CLAIM);
+  });
+
+  it("a genuinely missing export keeps the accurate 'not generated yet' instruction", async () => {
+    mockLoadCommunityInvestmentResult
+      .mockReset()
+      .mockReturnValue({ ok: false, reason: "export_missing" });
+
+    const html = await render();
+
+    expect(html).toContain(NOT_GENERATED_CLAIM);
+    expect(html).not.toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
   });
 });

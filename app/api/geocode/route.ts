@@ -19,6 +19,136 @@ const CHICAGO_VIEWBOX = [
   CHICAGO_BOUNDS.south,
 ].join(",");
 
+/**
+ * R1 finding 3 (geocoder hardening). Nominatim is a free community service
+ * with no SLA: before this, a hung connection had NO timeout at all, so the
+ * route could sit on a request until the platform killed it, and the reader
+ * saw an indefinite spinner. Every upstream call now gets a hard 5s deadline
+ * and exactly one retry (two attempts total, never more — the Nominatim usage
+ * policy asks for restraint, and the identifying User-Agent stays set).
+ */
+const UPSTREAM_TIMEOUT_MS = 5000;
+const UPSTREAM_ATTEMPTS = 2;
+const NOMINATIM_USER_AGENT = "Chicago-Site-Incentive-Map/1.0";
+
+/**
+ * The distinct machine-readable marker the client maps to service-failure
+ * copy ("The address service is temporarily unavailable…") rather than
+ * blame-the-user "could not find that address" copy. Mirrors /api/zoning's
+ * own `status: "unavailable"` convention.
+ */
+const GEOCODE_UNAVAILABLE_STATUS = "unavailable";
+
+/** Thrown when every attempt against every configured provider failed. */
+class GeocodeServiceUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GeocodeServiceUnavailableError";
+  }
+}
+
+/**
+ * Fetch with a hard deadline and one retry. Retries a transport failure, a
+ * timeout, and a 5xx — never a 4xx, which is a real answer from the service
+ * (retrying it would just spend the reader's time on the same reply).
+ * Throws `GeocodeServiceUnavailableError` when the last attempt fails.
+ */
+async function fetchUpstreamWithRetry(url: string, label: string): Promise<Response> {
+  let lastDetail = "unknown error";
+  for (let attempt = 1; attempt <= UPSTREAM_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": NOMINATIM_USER_AGENT },
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
+      if (res.status >= 500) {
+        lastDetail = `HTTP ${res.status}`;
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastDetail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    }
+  }
+  throw new GeocodeServiceUnavailableError(`${label} unavailable after ${UPSTREAM_ATTEMPTS} attempts (${lastDetail})`);
+}
+
+/**
+ * Optional Mapbox forward-geocoding fallback. Feature-detected from whatever
+ * token the runtime already has — this adds NO new required configuration, and
+ * with no token present the route's behavior is exactly timeout + retry +
+ * honest error. The public token is accepted because the app already ships it
+ * to the browser for the map, so using it server-side leaks nothing new.
+ */
+function mapboxToken(): string | null {
+  const token =
+    process.env.MAPBOX_TOKEN ||
+    process.env.MAPBOX_ACCESS_TOKEN ||
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  return token && token.trim() ? token.trim() : null;
+}
+
+interface MapboxFeature {
+  center?: [number, number];
+  place_name?: string;
+  address?: string;
+  text?: string;
+  place_type?: string[];
+}
+
+/**
+ * Ask Mapbox for the same query, bounded to the Chicago viewbox, and shape the
+ * answer like a Nominatim candidate so `selectCandidate`'s house-number rules —
+ * including its refusal to substitute a street centroid for a house number —
+ * apply identically to both providers. Returns `null` (never throws) when the
+ * fallback is not configured or cannot answer, so a Mapbox outage degrades to
+ * the Nominatim-only error rather than replacing it.
+ */
+async function mapboxForwardCandidates(query: string): Promise<NominatimCandidate[] | null> {
+  const token = mapboxToken();
+  if (!token) return null;
+
+  const params = new URLSearchParams({
+    access_token: token,
+    limit: "8",
+    country: "us",
+    types: "address,poi,place",
+    bbox: [
+      CHICAGO_BOUNDS.west,
+      CHICAGO_BOUNDS.south,
+      CHICAGO_BOUNDS.east,
+      CHICAGO_BOUNDS.north,
+    ].join(","),
+  });
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const body: unknown = await res.json();
+    const features = (body as { features?: unknown })?.features;
+    if (!Array.isArray(features)) return null;
+
+    return (features as MapboxFeature[])
+      .filter((feature) => Array.isArray(feature.center) && feature.center.length === 2)
+      .map((feature) => {
+        const [lon, lat] = feature.center as [number, number];
+        return {
+          lat: String(lat),
+          lon: String(lon),
+          display_name: feature.place_name,
+          address: {
+            house_number: feature.address,
+            road: feature.text,
+            country_code: "us",
+          },
+        } satisfies NominatimCandidate;
+      });
+  } catch {
+    return null;
+  }
+}
+
 interface NominatimAddress {
   house_number?: string;
   road?: string;
@@ -220,10 +350,15 @@ export async function GET(request: NextRequest) {
     try {
       const cacheKey = `revgeo:${lat.toFixed(4)},${lon.toFixed(4)}`;
       const result = await cached(cacheKey, 2592000, async () => {
-        const res = await fetch(
+        const res = await fetchUpstreamWithRetry(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`,
-          { headers: { "User-Agent": "Chicago-Site-Incentive-Map/1.0" } }
+          "Nominatim reverse geocode",
         );
+        if (!res.ok) {
+          throw new GeocodeServiceUnavailableError(
+            `Nominatim reverse geocode returned ${res.status}`,
+          );
+        }
         const data = await res.json();
         const postcode: string | undefined = data?.address?.postcode;
         const zip = postcode ? (postcode.match(/\b(\d{5})\b/)?.[1] ?? null) : null;
@@ -231,7 +366,14 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.json(result ?? { zip: null }, { headers: CDN_HEADERS });
     } catch {
-      return NextResponse.json({ zip: null }, { status: 200, headers: CDN_HEADERS });
+      // The reverse path only ATTACHES optional ZIP context, so a failure here
+      // has always degraded to `{ zip: null }` rather than failing the caller.
+      // It now says so explicitly — a null ZIP from an outage must not be read
+      // as "this point has no ZIP" (R1 findings 3 + 4).
+      return NextResponse.json(
+        { zip: null, status: GEOCODE_UNAVAILABLE_STATUS },
+        { status: 200, headers: CDN_HEADERS },
+      );
     }
   }
 
@@ -255,23 +397,42 @@ export async function GET(request: NextRequest) {
         viewbox: CHICAGO_VIEWBOX,
         bounded: "1",
       });
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-        {
-          headers: {
-            "User-Agent": "Chicago-Site-Incentive-Map/1.0",
-          },
+      let candidates: NominatimCandidate[] | null = null;
+      let nominatimFailure: unknown = null;
+      try {
+        const res = await fetchUpstreamWithRetry(
+          `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+          "Nominatim forward geocode",
+        );
+        if (!res.ok) {
+          throw new GeocodeServiceUnavailableError(
+            `Nominatim request failed with status ${res.status}`,
+          );
         }
-      );
-
-      if (!res.ok) {
-        throw new Error(`Nominatim request failed with status ${res.status}`);
+        const data: unknown = await res.json();
+        if (!Array.isArray(data)) {
+          throw new GeocodeServiceUnavailableError("Nominatim returned an unexpected payload shape");
+        }
+        candidates = data as NominatimCandidate[];
+      } catch (err) {
+        nominatimFailure = err;
       }
 
-      const data: unknown = await res.json();
-      if (!Array.isArray(data)) return null;
+      // Mapbox fallback (feature-detected). Only reached when Nominatim could
+      // not answer AT ALL — never to second-guess an answer it did give, so a
+      // genuine "not in Chicago" stays a 404 rather than becoming a fuzzy
+      // second-provider match.
+      if (candidates === null) {
+        candidates = await mapboxForwardCandidates(query);
+      }
 
-      const selected = selectCandidate(data as NominatimCandidate[], address);
+      if (candidates === null) {
+        throw nominatimFailure instanceof Error
+          ? nominatimFailure
+          : new GeocodeServiceUnavailableError("Geocoding providers unavailable");
+      }
+
+      const selected = selectCandidate(candidates, address);
       if (!selected) return null;
 
       const lat = Number(selected.candidate.lat);
@@ -286,17 +447,23 @@ export async function GET(request: NextRequest) {
     });
 
     if (!result) {
+      // A GENUINE not-found: a provider answered, and nothing it returned was
+      // a Chicago match for this address. Distinct from the 503 below, which
+      // means nobody answered at all (R1 finding 1 — the client must not blame
+      // the reader's typing for an outage).
       return NextResponse.json(
-        { error: "Address not found" },
+        { error: "Address not found", status: "not_found" },
         { status: 404, headers: CDN_HEADERS }
       );
     }
 
     return NextResponse.json(result, { headers: CDN_HEADERS });
   } catch {
+    // 503 + `status: "unavailable"`, matching /api/zoning's convention. Not
+    // cached: an outage must not be pinned into the CDN for a month.
     return NextResponse.json(
-      { error: "Geocoding service unavailable" },
-      { status: 500 }
+      { error: "Geocoding service unavailable", status: GEOCODE_UNAVAILABLE_STATUS },
+      { status: 503 }
     );
   }
 }

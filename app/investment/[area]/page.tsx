@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Network } from "lucide-react";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
-import { loadCommunityInvestment } from "@/lib/community-investment";
+import {
+  COMMUNITY_INVESTMENT_UNAVAILABLE_COPY,
+  COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING,
+  loadCommunityInvestmentResult,
+} from "@/lib/community-investment";
 import { loadInvestmentAnalysis, loadMajorDevelopments, loadFlowRows } from "@/lib/investment-analysis";
 import { FunderTypeBars } from "@/components/investment/FunderTypeBars";
 import { YearBars } from "@/components/investment/YearBars";
@@ -174,7 +178,12 @@ export default async function InvestmentAreaPage({
   const analysis = loadInvestmentAnalysis(name);
   const developments = loadMajorDevelopments({ communityArea: name });
   const flowRows = loadFlowRows(name);
-  const investment = loadCommunityInvestment();
+  // R1 finding 4: a failed LOAD and a community with genuinely no records both
+  // used to arrive here as `null`, and the page published the second sentence
+  // for both. Keep the two apart from the first read.
+  const investmentResult = loadCommunityInvestmentResult();
+  const investment = investmentResult.ok ? investmentResult.data : null;
+  const datasetUnavailable = !investmentResult.ok;
   const meta = investment?.meta;
   const sources = meta?.sources ?? [];
 
@@ -262,7 +271,23 @@ export default async function InvestmentAreaPage({
           </div>
         ) : null}
 
-        {!analysis ? (
+        {datasetUnavailable ? (
+          <div
+            data-testid="investment-dataset-unavailable"
+            className="mt-8 border border-[#0C1B33]/15 bg-white p-6 text-[14px] text-[#0C1B33]/55"
+          >
+            <p className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#0C1B33]/70">
+              {COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING}
+            </p>
+            <p className="mt-3 max-w-2xl leading-relaxed">{COMMUNITY_INVESTMENT_UNAVAILABLE_COPY}</p>
+            <div className="mt-4">
+              <Link href="/investment" className="inline-flex items-center font-mono-bureau text-[12px] uppercase tracking-[0.1em] text-[#2563EB]">
+                <ArrowLeft aria-hidden className="mr-1.5 h-4 w-4" strokeWidth={1.8} />
+                All communities
+              </Link>
+            </div>
+          </div>
+        ) : !analysis ? (
           <div className="mt-8 border border-[#0C1B33]/15 bg-white p-6 text-[14px] text-[#0C1B33]/55">
             No grants, awards, or development have been recorded in {name} since 2020 in this dataset.
             <div className="mt-4">
@@ -446,7 +471,11 @@ export default async function InvestmentAreaPage({
               title="Major private developments"
               description="Announced private capital sited in this community — a different measure from the awarded grants above, and never combined with them."
             >
-              <MajorDevelopments summary={developments} scope="area" />
+              <MajorDevelopments
+                summary={developments}
+                scope="area"
+                datasetUnavailable={datasetUnavailable}
+              />
             </Section>
 
             {/* 5 — Top recipients + working set. Wrapped in the drawer provider so a

@@ -154,26 +154,55 @@ export const SurveyAnswersSchema = z.object({
   size: z.string().optional(),
 });
 
-/* ── Safe parse helper (warn + passthrough) ─ */
+/* ── Safe parse helper (drop invalid + count) ─ */
 
+/**
+ * Validate every item against `schema`, keeping the parsed values and DROPPING
+ * the ones that fail.
+ *
+ * This used to push the raw, unvalidated item into the result on a parse
+ * failure and call that "graceful degradation". It was the opposite: the
+ * return type is `T[]`, so every caller — `lib/data.ts`, `/api/programs`,
+ * `/api/stacking` — received objects typed as validated `Program` /
+ * `StackingRule` records that had never passed validation, and then read
+ * fields off them that the schema exists to guarantee. A record missing
+ * `summary` or carrying a `level` outside the enum reached the report engine
+ * and the public program surfaces indistinguishable from a good one; the only
+ * trace was a per-item `console.warn` in a log nobody reads. Dropping is the
+ * honest degradation: a malformed record is not a program, and a short list of
+ * real records beats a full list containing fiction.
+ *
+ * A single summary line is logged when anything was dropped — one line naming
+ * the count and the first failure, instead of N lines of noise.
+ */
 export function safeParseArray<T>(
   schema: z.ZodType<T>,
   data: unknown[],
   label: string
 ): T[] {
   const results: T[] = [];
+  let dropped = 0;
+  let firstIssue: string | null = null;
+
   for (const item of data) {
     const parsed = schema.safeParse(item);
     if (parsed.success) {
       results.push(parsed.data);
-    } else {
-      console.warn(
-        `[${label}] Validation warning for item:`,
-        parsed.error.issues?.[0]?.message ?? "unknown error"
-      );
-      // Graceful degradation: include the raw item
-      results.push(item as T);
+      continue;
+    }
+    dropped += 1;
+    if (firstIssue === null) {
+      const issue = parsed.error.issues?.[0];
+      const path = issue?.path?.length ? issue.path.join(".") : "(root)";
+      firstIssue = `${path}: ${issue?.message ?? "unknown error"}`;
     }
   }
+
+  if (dropped > 0) {
+    console.warn(
+      `[${label}] dropped ${dropped} of ${data.length} invalid item(s) — first failure ${firstIssue}`
+    );
+  }
+
   return results;
 }

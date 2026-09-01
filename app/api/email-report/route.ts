@@ -9,15 +9,17 @@ import {
   ReportEmailStorageUnavailableError,
   reserveReportEmailDelivery,
 } from "@/lib/report-email-delivery";
+import {
+  MAX_PDF_BASE64_CHARS,
+  MAX_PDF_BYTES,
+  MAX_REQUEST_BYTES,
+} from "@/lib/report-email-limits";
 
 export const runtime = "nodejs";
 
-const MAX_REQUEST_BYTES = 6_500_000;
-const MAX_PDF_BYTES = 4_500_000;
-
 const EmailReportSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
-  pdfBase64: z.string().min(100).max(6_000_000),
+  pdfBase64: z.string().min(100).max(MAX_PDF_BASE64_CHARS),
   filename: z.string().trim().max(180).optional(),
   businessName: z.string().trim().max(180).optional(),
   name: z.string().trim().max(120).optional(),

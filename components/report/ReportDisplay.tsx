@@ -354,6 +354,12 @@ export function ReportDisplay({
     setDownloadGateOpen(true);
   };
 
+  // R1 finding 5: this MUST stay a promise that REJECTS on failure. It is
+  // awaited by DownloadGateModal, which turns a rejection into an on-screen
+  // retry state; swallowing the error here would put the gate back at "done"
+  // while no file was ever produced. Everything after generateReportPdf —
+  // the analytics event and closing the gate — is therefore reached only on
+  // a real success.
   const handleDownloadAfterCapture = async () => {
     const { generateReportPdf } = await import("@/lib/pdf-report");
     generateReportPdf(report);

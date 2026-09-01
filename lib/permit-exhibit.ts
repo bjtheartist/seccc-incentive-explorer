@@ -142,6 +142,20 @@ export function formatBoundaryContextLimitNote(asOfDate: string): string {
 }
 
 /** S4's three methods-and-limits sentences, verbatim from the spec. */
+/**
+ * Row cap on each of the two `building_permits` reads (R2 finding 8).
+ *
+ * Both were unbounded `SELECT *` queries; the area one is a radius search
+ * whose result set grows with the square of the radius, so a dense downtown
+ * PIN at the 1000ft setting had no ceiling on what it pulled into a serverless
+ * function's memory. 20,000 is far above any genuine parcel-plus-radius result
+ * in this dataset (the densest real exhibits are in the low thousands), so in
+ * practice the cap changes nothing except removing the unbounded tail — and
+ * when it IS hit, {@link PermitExhibitMeta.truncation} says so rather than
+ * letting a partial read pass as a complete exhibit.
+ */
+export const PERMIT_EXHIBIT_ROW_CAP = 20_000;
+
 export const PERMIT_EXHIBIT_LIMITS = [
   "A permit shows work was authorized. It does not show that a use occurred or continued. Business licenses, certificates of occupancy, utility records, photographs, and sworn affidavits are the usual companion evidence.",
   "The absence of a permit is not evidence of absence: the City's electronic permit record thins sharply before the mid-2000s, and unpermitted work occurs.",
@@ -388,6 +402,31 @@ export interface PermitExhibitMeta {
     pinFormatted: string;
     situsAddress: string | null;
   };
+  /**
+   * Whether either underlying permit query hit its row cap (R2 finding 8).
+   *
+   * Both queries were unbounded: `SELECT *` over `building_permits` with no
+   * LIMIT, one of them a radius search whose result set grows with the square
+   * of the radius. A dense downtown PIN at the widest radius could pull an
+   * unbounded row count into a serverless function's memory, and — worse for a
+   * document that is meant to be evidence — an exhibit built from a partial
+   * read would have looked exactly like a complete one.
+   *
+   * `null` when both queries returned under their caps (the ordinary case, and
+   * a genuinely complete exhibit). Non-null means the exhibit is INCOMPLETE and
+   * every surface rendering it must say so — a count on this page is then a
+   * floor, not a total.
+   */
+  truncation: PermitExhibitTruncation | null;
+}
+
+export interface PermitExhibitTruncation {
+  /** Which query or queries hit the cap. */
+  scope: "subject" | "area" | "both";
+  /** The cap each query was run with. */
+  rowCap: number;
+  /** Ready-to-render disclosure, so no surface has to invent its own wording. */
+  notice: string;
 }
 
 export interface PermitExhibitArea {
@@ -1022,6 +1061,7 @@ export async function buildPermitExhibit(
         )
     )
     SELECT * FROM candidates
+    LIMIT ${PERMIT_EXHIBIT_ROW_CAP}
   `) as unknown as RawPermitRow[];
 
   // ── S2: point-in-radius, plus address-only siblings. See
@@ -1055,7 +1095,26 @@ export async function buildPermitExhibit(
     SELECT *, 'point'::text AS located_via FROM point_matches
     UNION ALL
     SELECT *, 'address_only'::text AS located_via FROM address_only
+    LIMIT ${PERMIT_EXHIBIT_ROW_CAP}
   `) as unknown as RawAreaPermitRow[];
+
+  // Hitting the cap EXACTLY is the only signal Postgres gives that more rows
+  // existed. Treated as truncation rather than a suspiciously round complete
+  // result — over-disclosing completeness on the boundary is the safe error
+  // for a document offered as evidence.
+  const subjectTruncated = subjectCandidateRows.length >= PERMIT_EXHIBIT_ROW_CAP;
+  const areaTruncated = areaRows.length >= PERMIT_EXHIBIT_ROW_CAP;
+  const truncation: PermitExhibitTruncation | null =
+    subjectTruncated || areaTruncated
+      ? {
+          scope: subjectTruncated && areaTruncated ? "both" : subjectTruncated ? "subject" : "area",
+          rowCap: PERMIT_EXHIBIT_ROW_CAP,
+          notice:
+            `This exhibit reached its ${PERMIT_EXHIBIT_ROW_CAP.toLocaleString()}-record read limit, ` +
+            "so it does not show every matching permit. Counts here are a floor, not a total. " +
+            "Narrow the radius or verify directly against the City's dataset at the linked source.",
+        }
+      : null;
 
   // ── S1: classify strongest-first, drop non-matches (the candidate net is
   // deliberately wider than genuine matches). ──
@@ -1211,6 +1270,7 @@ export async function buildPermitExhibit(
       pinFormatted: formatPin14(pin) ?? pin,
       situsAddress: parcel.situsAddress,
     },
+    truncation,
   };
 
   return { subject, area, boundaryContext, coverage, meta };

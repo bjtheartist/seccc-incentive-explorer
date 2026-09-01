@@ -10,6 +10,11 @@ import { useState } from "react";
 import { AlertCircle, Check, Loader2, Mail, X } from "lucide-react";
 import { buildFundingWindowChartData } from "@/lib/report-charts";
 import { programCount } from "@/lib/report-email";
+import {
+  EMAIL_REPORT_TIMEOUT_MESSAGE,
+  EMAIL_REPORT_TIMEOUT_MS,
+  isTimeoutError,
+} from "./ReportModals";
 import type { GeneratedReport } from "@/lib/report-engine";
 
 const CHART_WIDTH = 560;
@@ -162,6 +167,9 @@ function FundingWindowEmailOffer({ report }: { report: GeneratedReport }) {
           incentiveCount: programCount(report),
           source: "funding_window_inline_offer",
         }),
+        // R1 finding 5: the same 30s ceiling the Email Report modal uses —
+        // without it a stalled send leaves this offer on "Sending…" forever.
+        signal: AbortSignal.timeout(EMAIL_REPORT_TIMEOUT_MS),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -171,9 +179,11 @@ function FundingWindowEmailOffer({ report }: { report: GeneratedReport }) {
     } catch (sendError) {
       setStatus("error");
       setErrorMessage(
-        sendError instanceof Error
-          ? sendError.message
-          : "We could not email this report. Please try again.",
+        isTimeoutError(sendError)
+          ? EMAIL_REPORT_TIMEOUT_MESSAGE
+          : sendError instanceof Error
+            ? sendError.message
+            : "We could not email this report. Please try again.",
       );
     }
   };
