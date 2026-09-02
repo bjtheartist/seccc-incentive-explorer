@@ -12,7 +12,7 @@ vi.mock("@upstash/redis", () => ({
   },
 }));
 
-import { cached } from "@/lib/redis";
+import { cached, memCached } from "@/lib/redis";
 
 beforeEach(() => {
   vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://cache.example.test");
@@ -84,6 +84,57 @@ describe("cached result-derived TTL", () => {
       "[redis] cache write error:",
       expect.any(Error),
     );
+    warn.mockRestore();
+  });
+});
+
+/**
+ * R1 finding 3, follow-up. `cached()` already accepted a result-derived TTL,
+ * but `memCached()` — the wrapper every caller actually uses — took only a
+ * number, so it could not express "hold this one for minutes, that one for a
+ * day". Callers that needed the distinction had no way to ask for it, which is
+ * how lib/mobility-access.ts came to store a transient upstream outage under a
+ * 24-hour key. The selector now reaches both layers.
+ */
+describe("memCached result-derived TTL", () => {
+  it("passes the selector through to Redis, so a degraded result gets the short key", async () => {
+    const selectTTL = (value: { degraded: boolean }) => (value.degraded ? 300 : 86_400);
+
+    await memCached("mem-degraded", selectTTL, async () => ({ degraded: true }));
+    await memCached("mem-healthy", selectTTL, async () => ({ degraded: false }));
+
+    expect(redisSet).toHaveBeenNthCalledWith(
+      1,
+      "mem-degraded",
+      JSON.stringify({ degraded: true }),
+      { ex: 300 },
+    );
+    expect(redisSet).toHaveBeenNthCalledWith(
+      2,
+      "mem-healthy",
+      JSON.stringify({ degraded: false }),
+      { ex: 86_400 },
+    );
+  });
+
+  it("still accepts a plain number, so every existing caller is untouched", async () => {
+    const result = await memCached("mem-numeric", 60, async () => ({ status: "ok" }));
+
+    expect(result).toEqual({ status: "ok" });
+    expect(redisSet).toHaveBeenCalledWith("mem-numeric", JSON.stringify(result), { ex: 60 });
+  });
+
+  it("returns the loaded value when the selector throws, matching cached()", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await memCached(
+      "mem-selector-error",
+      () => {
+        throw new Error("bad selector");
+      },
+      async () => ({ status: "available" }),
+    );
+
+    expect(result).toEqual({ status: "available" });
     warn.mockRestore();
   });
 });

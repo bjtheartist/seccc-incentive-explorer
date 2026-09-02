@@ -234,6 +234,16 @@ describe("/investment landing page — meta-driven contracts (Sol gate blocker 5
  */
 describe("/investment landing — a broken export is not reported as an ungenerated one", () => {
   const NOT_GENERATED_CLAIM = "has not been generated yet";
+  /**
+   * R1 finding 4 follow-up — see the twin constant in
+   * app/investment/[area]/page.test.ts. The citywide major-developments
+   * section's absence sentence is its own authoritative negative finding, and
+   * this asserts an unloadable export never publishes it: the section is
+   * rendered only inside the ELSE arm of the `datasetUnavailable ?` ternary,
+   * so on an outage the page-level card replaces it entirely.
+   */
+  const DEVELOPMENTS_ABSENCE_CLAIM =
+    "No major private developments with an announced capital figure are on record";
 
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
@@ -250,6 +260,7 @@ describe("/investment landing — a broken export is not reported as an ungenera
 
     expect(html).toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
     expect(html).not.toContain(NOT_GENERATED_CLAIM);
+    expect(html).not.toContain(DEVELOPMENTS_ABSENCE_CLAIM);
   });
 
   it("a genuinely missing export keeps the accurate 'not generated yet' instruction", async () => {

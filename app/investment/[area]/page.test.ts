@@ -263,6 +263,18 @@ describe("/investment/[area] page — StatusCards scope (Sol gate blockers 2 + 5
  */
 describe("/investment/[area] — a dataset outage is never rendered as an absence", () => {
   const ABSENCE_CLAIM = "No grants, awards, or development have been recorded";
+  /**
+   * R1 finding 4 follow-up. The major-developments section carries its OWN
+   * authoritative negative finding, and `loadMajorDevelopments` returns the
+   * same empty summary on an outage as on a genuinely development-free
+   * community. It used to take a `datasetUnavailable` prop to tell those
+   * apart — a prop this page could never pass as true, since the section is
+   * rendered only inside the ELSE arm of the ternary below. Asserting the
+   * sentence's ABSENCE here is what actually proves the reader is never told
+   * "none are sited here" during an outage: the section is not rendered at all.
+   */
+  const DEVELOPMENTS_ABSENCE_CLAIM =
+    "No major private developments with an announced capital figure are sited";
 
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
@@ -289,6 +301,7 @@ describe("/investment/[area] — a dataset outage is never rendered as an absenc
       expect(html).toContain(COMMUNITY_INVESTMENT_UNAVAILABLE_HEADING);
       expect(html).toContain("could not be loaded");
       expect(html).not.toContain(ABSENCE_CLAIM);
+      expect(html).not.toContain(DEVELOPMENTS_ABSENCE_CLAIM);
     });
   }
 

@@ -124,6 +124,27 @@ const METRA_GTFS_URL = "https://schedules.metrarail.com/gtfs/schedule.zip";
 const CTA_BUS_STOPS_URL = "https://data.cityofchicago.org/resource/qs84-j7wh.json";
 const BIKE_ROUTES_URL = "https://data.cityofchicago.org/resource/hvv9-38ut.json";
 const MOBILITY_CACHE_TTL_SECONDS = 60 * 60 * 24;
+/**
+ * How long a DEGRADED mobility answer may be cached — one whose
+ * `unavailableSources` is non-empty because a CTA/Metra/Socrata feed failed
+ * during this lookup.
+ *
+ * The 24h TTL above is right for a real answer: the underlying station and
+ * route data barely moves. It is wrong for an outage. A degraded result is not
+ * a fact about this coordinate, it is a fact about one upstream's health five
+ * seconds ago, and storing it for a day pins "Transit data temporarily
+ * unavailable" to that coordinate — for every reader, and inside every report
+ * generated from it — for 24 hours after the feed recovers. "Temporarily" then
+ * describes the copy better than the outage.
+ *
+ * Five minutes keeps the stampede protection a cache is actually for (a
+ * flapping upstream is not re-hammered once per request) while letting the
+ * first lookup after recovery publish the real answer. This is the same
+ * discipline lib/zoning-point-lookup.ts applies by refusing to cache a failed
+ * point lookup at all; mobility keeps the degraded body because it is still
+ * partially useful, so it needs a short TTL rather than none.
+ */
+const MOBILITY_OUTAGE_CACHE_TTL_SECONDS = 5 * 60;
 const GTFS_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 const NEARBY_RADIUS_METERS = 8047; // 5 miles, enough to find context at most Chicago addresses.
 const MAX_RESULTS = 5;
@@ -697,10 +718,21 @@ export function describeMobilityAccess(access: MobilityAccess): string[] {
   return lines;
 }
 
+/**
+ * The TTL a given mobility result has earned: a full day for a complete
+ * answer, minutes for one computed while an upstream feed was down. Exported
+ * so the cache policy is testable without a Redis instance.
+ */
+export function mobilityCacheTTLSeconds(result: MobilityAccess): number {
+  return (result.unavailableSources?.length ?? 0) > 0
+    ? MOBILITY_OUTAGE_CACHE_TTL_SECONDS
+    : MOBILITY_CACHE_TTL_SECONDS;
+}
+
 export async function getMobilityAccess(lat: number, lon: number): Promise<MobilityAccess> {
   const cacheKey = `mobility:v1:${roundCoord(lat)}:${roundCoord(lon)}`;
 
-  return memCached(cacheKey, MOBILITY_CACHE_TTL_SECONDS, async () => {
+  return memCached(cacheKey, mobilityCacheTTLSeconds, async () => {
     const retrievedAt = new Date().toISOString();
     const [
       ctaStationsResult,

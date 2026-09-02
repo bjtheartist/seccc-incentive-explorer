@@ -137,6 +137,85 @@ describe("cachedFetch — unchanged signature", () => {
   });
 });
 
+/**
+ * R1 finding 2, follow-up — the hole the honest `stale` flag left open.
+ *
+ * Making staleness VISIBLE fixed nothing for the callers that cannot see it:
+ * `cachedFetch()` drops the flag, and every geocode call site in the app uses
+ * `cachedFetch()`. So once an address had geocoded successfully, a later
+ * `/api/geocode` 503 resolved with the OLD coordinates through the identical
+ * promise shape a fresh 200 uses. `handleGeocode`'s catch never ran, the
+ * client-side 503 classifier never ran, and the whole report — zones, census,
+ * parcel, every downstream lookup keyed off that coordinate — was rebuilt on a
+ * position the geocoder had just declined to confirm, presented as current.
+ *
+ * The fix is a per-URL opt-out in TTL_RULES rather than a change at the four
+ * geocode call sites, so a fifth cannot reintroduce it. These tests pin both
+ * halves: geocode propagates the failure, and the rules that did NOT opt out
+ * still serve stale exactly as before.
+ */
+describe("stale-while-error is refused where staleness would be a false claim", () => {
+  const GEOCODE_URL = "/api/geocode?address=100%20E%20Test%20St";
+
+  async function primeGeocodeSuccess() {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ lat: 41.75, lon: -87.6 }));
+    await cachedFetch(GEOCODE_URL);
+    // Past the geocode TTL (30 min), so the next call is a real network attempt.
+    vi.advanceTimersByTime(31 * 60_000);
+  }
+
+  it("cachedFetch REJECTS a geocode 503 instead of resolving with the previous coordinates", async () => {
+    await primeGeocodeSuccess();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      json: async () => ({ error: "upstream down" }),
+    } as Response);
+
+    // The precise failure has to survive: the client classifier recovers the
+    // upstream status by reading this message.
+    await expect(cachedFetch(GEOCODE_URL)).rejects.toThrow(/503/);
+  });
+
+  it("cachedFetch REJECTS a geocode network error rather than serving the cached position", async () => {
+    await primeGeocodeSuccess();
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("offline"));
+
+    await expect(cachedFetch(GEOCODE_URL)).rejects.toThrow(/offline/);
+  });
+
+  it("cachedFetchWithMeta gets the same refusal — there is no stale geocode to disclose", async () => {
+    await primeGeocodeSuccess();
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("offline"));
+
+    await expect(cachedFetchWithMeta(GEOCODE_URL)).rejects.toThrow(/offline/);
+  });
+
+  it("a within-TTL geocode hit is still served from cache — this narrows failure handling, not caching", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ lat: 41.75, lon: -87.6 }));
+    await cachedFetch(GEOCODE_URL);
+
+    const secondFetch = vi.fn().mockRejectedValue(new Error("should not be called"));
+    globalThis.fetch = secondFetch;
+
+    await expect(cachedFetch(GEOCODE_URL)).resolves.toEqual({ lat: 41.75, lon: -87.6 });
+    expect(secondFetch).not.toHaveBeenCalled();
+  });
+
+  it("CONTROL: a non-opted-out route still serves stale on error, flagged", async () => {
+    const url = "/api/zoning?lat=41.7&lon=-87.6";
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ zone: "B3-2" }));
+    await cachedFetch(url);
+
+    vi.advanceTimersByTime(31 * 60_000);
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("offline"));
+
+    const result = await cachedFetchWithMeta<{ zone: string }>(url);
+    expect(result).toEqual({ data: { zone: "B3-2" }, stale: true });
+  });
+});
+
 describe("bounded cache", () => {
   it("never exceeds the max-entries ceiling no matter how many distinct URLs are fetched", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async () => jsonResponse({ v: 1 }));

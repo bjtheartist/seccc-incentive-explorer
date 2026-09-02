@@ -6,41 +6,50 @@ import type { MajorDevelopmentsSummary } from "@/lib/investment-analysis";
 /**
  * R1 finding 4 — the false-claims class, major-developments section.
  *
- * `loadMajorDevelopments` returns `{ count: 0, totalAnnounced: 0,
- * developments: [] }` BOTH when the export genuinely holds no megaprojects
- * and when the export could not be loaded at all. A zero count therefore
- * proves nothing on its own — yet this section rendered "No major private
- * developments with an announced capital figure are sited in this community",
- * an authoritative negative finding, for both. The caller now tells the
- * component how the load actually went.
+ * The finding: `loadMajorDevelopments` returns `{ count: 0, totalAnnounced: 0,
+ * developments: [] }` BOTH when the export genuinely holds no megaprojects and
+ * when the export could not be loaded at all, so "No major private
+ * developments with an announced capital figure are sited in this community" —
+ * an authoritative negative finding — must never be published on an outage.
+ *
+ * The FIRST fix gave this component a `datasetUnavailable` prop and an outage
+ * branch, and this file proved the branch worked. It proved nothing about what
+ * a reader sees, because the prop was dead: `loadMajorDevelopments` reads the
+ * same export as `loadCommunityInvestment`, and both call sites render this
+ * component only inside the ELSE arm of a `datasetUnavailable ? … : …`
+ * ternary — so it was `false` at every site that read it, and only this file
+ * ever set it true. A test whose only subject is an unreachable branch reports
+ * coverage the product does not have.
+ *
+ * So the branch is gone, and the property it was supposed to guarantee is
+ * asserted where it is actually decided:
+ *   - HERE: the absence sentence is what a LOADED, empty dataset renders, and
+ *     real rows still render, so the honest cases are pinned.
+ *   - app/investment/page.test.ts and app/investment/[area]/page.test.ts: on
+ *     every load failure the page renders its unavailability card and NEITHER
+ *     absence sentence — i.e. the outage never reaches this component at all.
  */
 
 const EMPTY: MajorDevelopmentsSummary = { count: 0, totalAnnounced: 0, developments: [] };
 
 const ABSENCE_AREA = "No major private developments with an announced capital figure are sited";
-const ABSENCE_CITYWIDE = "No major private developments with an announced capital figure are on record";
+const ABSENCE_CITYWIDE =
+  "No major private developments with an announced capital figure are on record";
 
-describe("MajorDevelopments: a dataset outage is never an absence claim", () => {
-  for (const scope of ["area", "citywide"] as const) {
-    it(`renders the unavailability state for scope "${scope}", never the absence claim`, () => {
-      const html = renderToStaticMarkup(
-        <MajorDevelopments summary={EMPTY} scope={scope} datasetUnavailable />,
-      );
-
-      expect(html).toContain("temporarily unavailable");
-      expect(html).toContain("does not report whether any are on record");
-      expect(html).not.toContain(ABSENCE_AREA);
-      expect(html).not.toContain(ABSENCE_CITYWIDE);
-    });
-  }
-
-  it("keeps the genuine absence claim when the dataset LOADED and holds nothing", () => {
+describe("MajorDevelopments: the absence claim belongs to a LOADED, empty dataset", () => {
+  it("states the area-scoped absence when the dataset loaded and this community has none", () => {
     const html = renderToStaticMarkup(<MajorDevelopments summary={EMPTY} scope="area" />);
     expect(html).toContain(ABSENCE_AREA);
-    expect(html).not.toContain("temporarily unavailable");
+    expect(html).not.toContain(ABSENCE_CITYWIDE);
   });
 
-  it("an outage wins over a populated summary — it never renders stale figures as current", () => {
+  it("states the citywide-scoped absence when the dataset loaded and holds none", () => {
+    const html = renderToStaticMarkup(<MajorDevelopments summary={EMPTY} scope="citywide" />);
+    expect(html).toContain(ABSENCE_CITYWIDE);
+    expect(html).not.toContain(ABSENCE_AREA);
+  });
+
+  it("renders the developments themselves — never the absence claim — when there are some", () => {
     const populated: MajorDevelopmentsSummary = {
       count: 1,
       totalAnnounced: 12_000_000,
@@ -56,10 +65,9 @@ describe("MajorDevelopments: a dataset outage is never an absence claim", () => 
         } as MajorDevelopmentsSummary["developments"][number],
       ],
     };
-    const html = renderToStaticMarkup(
-      <MajorDevelopments summary={populated} scope="area" datasetUnavailable />,
-    );
-    expect(html).toContain("temporarily unavailable");
-    expect(html).not.toContain("Fixture Development");
+    const html = renderToStaticMarkup(<MajorDevelopments summary={populated} scope="area" />);
+    expect(html).toContain("Fixture Development");
+    expect(html).not.toContain(ABSENCE_AREA);
+    expect(html).not.toContain(ABSENCE_CITYWIDE);
   });
 });

@@ -471,11 +471,11 @@ export default async function InvestmentAreaPage({
               title="Major private developments"
               description="Announced private capital sited in this community — a different measure from the awarded grants above, and never combined with them."
             >
-              <MajorDevelopments
-                summary={developments}
-                scope="area"
-                datasetUnavailable={datasetUnavailable}
-              />
+              {/* No `datasetUnavailable` prop: this whole branch is the ELSE
+                  of the `datasetUnavailable ?` ternary above, so an outage
+                  renders the page-level unavailability card instead of any of
+                  these sections. See the header comment on MajorDevelopments. */}
+              <MajorDevelopments summary={developments} scope="area" />
             </Section>
 
             {/* 5 — Top recipients + working set. Wrapped in the drawer provider so a
