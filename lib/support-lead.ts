@@ -22,16 +22,29 @@ export interface SupportRequestInput {
   website?: string;
 }
 
+/**
+ * Why the alert did or did not reach the Chamber inbox.
+ *
+ * `notified: false` alone used to mean three different things — a failed
+ * send, an unset `RESEND_API_KEY`, an unset `INCENTIVE_HELP_INBOX` — so any
+ * preview deploy told every visitor their request had not gone through. Only
+ * `"failed"` is a broken promise; `"unconfigured"` is a deployment gap the
+ * server logs and the visitor never needs to see.
+ */
+export type SupportNotificationState = "sent" | "failed" | "unconfigured";
+
 export interface SupportRequestResponse {
   success?: boolean;
   error?: string;
-  /** Whether a chamber-inbox notification was actually sent (false when Resend/inbox env vars are unset — the lead is still captured either way). */
+  /** Whether a chamber-inbox notification was actually sent. */
   notified?: boolean;
+  /** The three-way outcome behind `notified` — see SupportNotificationState. */
+  notificationState?: SupportNotificationState;
   /**
-   * Owner ruling (2026-09-01): when `notified` is false and the help inbox is
-   * configured, the server hands back the address so the visitor can be told
-   * to email the Chamber directly instead of trusting a follow-up that was
-   * never actually dispatched.
+   * Owner ruling (2026-09-01): when the send genuinely FAILED and the help
+   * inbox is configured, the server hands back the address so the visitor can
+   * be told to email the Chamber directly instead of trusting a follow-up that
+   * was never actually dispatched.
    */
   contact?: string;
 }

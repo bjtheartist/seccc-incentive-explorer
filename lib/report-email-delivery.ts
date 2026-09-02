@@ -53,6 +53,17 @@ async function migrateReportEmailStorage(sql: SqlClient): Promise<void> {
   await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS wants_incentive_help BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS delivery_source TEXT`;
   await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS email_delivered_at TIMESTAMPTZ`;
+  // PR #250 audit finding 1: a Chamber alert that never dispatched used to
+  // leave nothing behind but a console.error, so a Resend outage produced lead
+  // rows indistinguishable from delivered ones and recovery depended entirely
+  // on the visitor acting on an on-screen notice. These two columns are the
+  // durable record staff can query for missed alerts.
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS notification_status TEXT`;
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS notification_error TEXT`;
+  await sql`
+    CREATE INDEX IF NOT EXISTS report_leads_notification_status_idx
+    ON report_leads (notification_status)
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS report_email_deliveries (
@@ -152,6 +163,37 @@ export async function createReportLead(input: ReportLeadInput): Promise<number> 
     RETURNING id
   `;
   return Number(rows[0]?.id);
+}
+
+/**
+ * Outcome of the Chamber-inbox alert for a lead.
+ *
+ * - `sent` — Resend accepted the notification.
+ * - `failed` — a real send was attempted and did not go through. Staff must
+ *   follow up manually; this is the row a missed-alert query looks for.
+ * - `unconfigured` — no send was attempted because `RESEND_API_KEY` or
+ *   `INCENTIVE_HELP_INBOX` is unset (a preview deploy, or an env rotation).
+ *   Not a failure of the send path, but still not a notified lead.
+ */
+export type LeadNotificationStatus = "sent" | "failed" | "unconfigured";
+
+/**
+ * Stamps the Chamber-alert outcome onto the lead row (PR #250 audit finding
+ * 1). Idempotent-safe to call once per lead, after the send attempt.
+ */
+export async function markReportLeadNotification(
+  leadId: number,
+  status: LeadNotificationStatus,
+  errorMessage?: string,
+): Promise<void> {
+  const sql = requireEmailSQL();
+  await ensureReportEmailStorage(sql);
+  await sql`
+    UPDATE report_leads
+    SET notification_status = ${status},
+        notification_error = ${errorMessage?.slice(0, 500) || null}
+    WHERE id = ${leadId}
+  `;
 }
 
 export async function markReportLeadDelivered(leadId: number): Promise<void> {

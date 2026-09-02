@@ -354,7 +354,12 @@ export function ReportEmailGate({
         reportType: preparedReport.reportType,
         source: "report_email_gate",
         address: preparedReport.metadata?.address || null,
-        metadata: { projectGoals: goalIds, entrySource: source, notified: outcome.notified !== false },
+        metadata: {
+          projectGoals: goalIds,
+          entrySource: source,
+          notified: outcome.notified === true,
+          notificationState: outcome.notificationState || null,
+        },
       });
       // Owner ruling (Billy, 2026-09-01): the request row was stored, but if
       // the Chamber-inbox alert did not actually go out, the 48-hour promise
@@ -363,7 +368,13 @@ export function ReportEmailGate({
       // doctrine every other support failure here uses — with copy that tells
       // the visitor the one action that guarantees a human sees them: email
       // the Chamber directly.
-      if (outcome.notified === false) {
+      //
+      // Audit finding 3: this fires ONLY on a genuine `failed`. When the
+      // server reports `unconfigured` (no Resend key or no help inbox — a
+      // preview deploy, or a prod env rotation) the lead is captured, the gap
+      // is logged and recorded on the row server-side, and the visitor is
+      // told nothing alarming about a send that was never attempted.
+      if (outcome.notificationState === "failed") {
         setSupportStatus("error");
         setSupportError(
           outcome.contact
