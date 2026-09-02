@@ -115,7 +115,7 @@ function memEvict(): void {
  */
 export async function memCached<T>(
   key: string,
-  redisTTLSeconds: number,
+  redisTTLSeconds: number | ((result: T) => number),
   fn: () => Promise<T>
 ): Promise<T> {
   const now = Date.now();
@@ -127,8 +127,27 @@ export async function memCached<T>(
   // Fall through to Redis-backed cached()
   const result = await cached<T>(key, redisTTLSeconds, fn);
 
-  // Store in memory
-  const mTTL = memTTL(redisTTLSeconds);
+  // Store in memory. A result-derived TTL (already supported by `cached()`)
+  // has to be resolved here too, or a value Redis deliberately holds for only
+  // a few minutes — a degraded answer computed during an upstream outage —
+  // would still sit in THIS process for a tenth of the healthy TTL.
+  //
+  // A throwing selector must not fail the call: `cached()` above already
+  // swallows one and returns the value, so this mirrors that and falls back to
+  // the SHORTEST memory TTL rather than propagating. Erring short is the safe
+  // direction — the worst case is one extra recompute, not a wrong answer held
+  // for a day.
+  let resolvedTTLSeconds: number;
+  try {
+    resolvedTTLSeconds =
+      typeof redisTTLSeconds === "function" ? redisTTLSeconds(result) : redisTTLSeconds;
+  } catch {
+    resolvedTTLSeconds = 0;
+  }
+  if (!Number.isFinite(resolvedTTLSeconds) || resolvedTTLSeconds <= 0) {
+    resolvedTTLSeconds = 0;
+  }
+  const mTTL = memTTL(resolvedTTLSeconds);
   memStore.set(key, { data: result, expiresAt: now + mTTL * 1000 });
   memEvict();
 

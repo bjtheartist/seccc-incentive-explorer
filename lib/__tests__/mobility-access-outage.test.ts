@@ -4,6 +4,7 @@ import {
   MOBILITY_TRANSIT_UNAVAILABLE_LABEL,
   describeMobilityAccess,
   getMobilityAccess,
+  mobilityCacheTTLSeconds,
   type MobilityAccess,
 } from "../mobility-access";
 
@@ -23,6 +24,7 @@ import {
 // coordinate key, so reusing a pin would serve the previous test's answer.
 const OUTAGE_PIN = { lat: 41.7511, lon: -87.6249 };
 const EMPTY_PIN = { lat: 41.7311, lon: -87.6049 };
+const TTL_PIN = { lat: 41.7911, lon: -87.6449 };
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -119,5 +121,61 @@ describe("describeMobilityAccess: an outage is stated, not silently shorter", ()
     delete legacy.unavailableSources;
     const lines = describeMobilityAccess(legacy);
     expect(lines.some((line) => line.includes("Temporarily unavailable"))).toBe(false);
+  });
+});
+
+/**
+ * R1 finding 3 — a mobility outage was frozen into a 24-hour cache.
+ *
+ * `getMobilityAccess` wrapped its WHOLE result — `unavailableSources` and the
+ * degraded "Transit data temporarily unavailable" labels included — in
+ * `memCached(..., 86400)`. One transient CTA/Socrata 5xx therefore pinned the
+ * unavailability copy to that coordinate for a day, for every reader and
+ * inside every report generated from it, long after the feed recovered.
+ * "Temporarily" ended up describing the sentence rather than the outage.
+ *
+ * lib/zoning-point-lookup.ts already applies the opposite discipline two files
+ * over: a failed point lookup is THROWN so it cannot be stored, because
+ * caching it "would freeze a transient outage". Mobility keeps the degraded
+ * body — it is still partly useful — so it needs the short-TTL form of the
+ * same rule.
+ */
+describe("getMobilityAccess cache policy: an outage is held for minutes, not a day", () => {
+  const HEALTHY = { unavailableSources: [] } as unknown as MobilityAccess;
+
+  it("a complete answer keeps the full 24-hour TTL", () => {
+    expect(mobilityCacheTTLSeconds(HEALTHY)).toBe(60 * 60 * 24);
+  });
+
+  it("a degraded answer is cached in MINUTES — never for the healthy TTL", () => {
+    const degraded = {
+      unavailableSources: ["cta_rail"],
+    } as unknown as MobilityAccess;
+
+    const ttl = mobilityCacheTTLSeconds(degraded);
+    expect(ttl).toBeLessThanOrEqual(15 * 60);
+    expect(ttl).toBeGreaterThan(0);
+    expect(ttl).not.toBe(mobilityCacheTTLSeconds(HEALTHY));
+  });
+
+  it("one failed feed out of six is enough — a partial outage is still an outage", () => {
+    for (const source of ["cta_rail", "metra", "bus_stops", "bike_routes", "expressways", "freight_rail"]) {
+      const degraded = { unavailableSources: [source] } as unknown as MobilityAccess;
+      expect(mobilityCacheTTLSeconds(degraded)).toBeLessThan(mobilityCacheTTLSeconds(HEALTHY));
+    }
+  });
+
+  it("a pre-R1 payload with no unavailableSources field is treated as complete, not degraded", () => {
+    const legacy = {} as MobilityAccess;
+    expect(mobilityCacheTTLSeconds(legacy)).toBe(60 * 60 * 24);
+  });
+
+  it("the live outage path really does produce a short-TTL result", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
+
+    const access = await getMobilityAccess(TTL_PIN.lat, TTL_PIN.lon);
+
+    expect(access.unavailableSources?.length ?? 0).toBeGreaterThan(0);
+    expect(mobilityCacheTTLSeconds(access)).toBeLessThanOrEqual(15 * 60);
   });
 });

@@ -265,11 +265,11 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                     Top 10 by announced $
                   </span>
                 </div>
-                <MajorDevelopments
-                  summary={topDevelopments}
-                  scope="citywide"
-                  datasetUnavailable={datasetUnavailable}
-                />
+                {/* No `datasetUnavailable` prop: this whole branch is the ELSE
+                    of the `datasetUnavailable ?` ternary above, so an outage
+                    renders the page-level unavailability card instead of any
+                    of these sections. See MajorDevelopments' header comment. */}
+                <MajorDevelopments summary={topDevelopments} scope="citywide" />
               </div>
             ) : null}
 

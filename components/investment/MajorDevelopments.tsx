@@ -16,35 +16,41 @@ import { investmentStatusLabel, FUNDER_TYPE_COLORS } from "@/lib/community-inves
  */
 const DEV_ACCENT = FUNDER_TYPE_COLORS.private_development; // #7C3AED
 
+/**
+ * R1 finding 4, follow-up — why there is no `datasetUnavailable` prop here.
+ *
+ * The concern was real: `loadMajorDevelopments` returns the same empty summary
+ * whether the export holds no megaprojects or could not be read at all, and
+ * the "No major private developments …" sentence below is an authoritative
+ * negative finding that must not stand in for an outage.
+ *
+ * But the prop that was added to carry that distinction could never be true.
+ * `loadMajorDevelopments` reads the SAME export as `loadCommunityInvestment`,
+ * so an unreadable export fails both at once — and both call sites
+ * (app/investment/page.tsx, app/investment/[area]/page.tsx) render this
+ * component only inside the ELSE branch of a `datasetUnavailable ? … : …`
+ * ternary that has already tested exactly that flag. On an outage neither page
+ * reaches this component at all: each renders its own page-level
+ * COMMUNITY_INVESTMENT_UNAVAILABLE card in place of every section, which is
+ * the honest statement the reader actually needs, made once rather than
+ * repeated per section. That is verified at the page level in
+ * app/investment/page.test.ts and app/investment/[area]/page.test.ts, which
+ * assert the outage render carries the unavailability heading and NOT the
+ * absence sentences below.
+ *
+ * So the branch was unreachable in production and the prop was always `false`
+ * where it was read — only its own unit test ever set it. A dead branch that
+ * looks like a safeguard is worse than no branch: it reads as coverage this
+ * component does not have. Keeping this component honest is instead the
+ * CALLER's job, and the caller already does it.
+ */
 export function MajorDevelopments({
   summary,
   scope,
-  datasetUnavailable = false,
 }: {
   summary: MajorDevelopmentsSummary;
   scope: "citywide" | "area";
-  /**
-   * R1 finding 4: `loadMajorDevelopments` returns an empty summary BOTH when
-   * the export is genuinely development-free and when the export could not be
-   * loaded at all. A zero count therefore proves nothing on its own, and the
-   * "No major private developments …" sentence below is an authoritative
-   * negative finding. The caller — which is the only place that knows how the
-   * load went — passes this so an outage renders as an outage.
-   */
-  datasetUnavailable?: boolean;
 }) {
-  if (datasetUnavailable) {
-    return (
-      <div
-        data-testid="major-developments-unavailable"
-        className="border border-[#0C1B33]/10 bg-white p-6 text-[13px] text-[#0C1B33]/55"
-      >
-        Major private development data is temporarily unavailable — the investment dataset could not
-        be loaded, so this section does not report whether any are on record.
-      </div>
-    );
-  }
-
   if (summary.count === 0) {
     return (
       <div className="border border-[#0C1B33]/10 bg-white p-6 text-[13px] text-[#0C1B33]/55">

@@ -64,8 +64,26 @@ function evict(): void {
   }
 }
 
-/** TTL rules: first matching pattern wins. */
-const TTL_RULES: { pattern: RegExp; ttlMs: number }[] = [
+/**
+ * TTL rules: first matching pattern wins.
+ *
+ * `noStaleFallback` opts a URL OUT of the stale-while-error behavior described
+ * on `CachedFetchResult`. Serving a stale body is right when the body is a
+ * panel's worth of context — a days-old zoning polygon still draws the right
+ * shape, and an empty panel is worse. It is wrong when the body IS a factual
+ * answer the rest of the app then builds on and attributes to *now*.
+ *
+ * `/api/geocode` is the second kind. Its body is a coordinate pair, and every
+ * downstream lookup (zones, census, parcel, the whole report) is keyed off it,
+ * so a stale hit does not degrade one panel — it silently re-labels an outage
+ * as a successful geocode. Worse, `cachedFetch()` discards the `stale` flag,
+ * so the ONLY caller shape that could have noticed was the one nobody used:
+ * once an address had geocoded successfully, a later `/api/geocode` 503 came
+ * back through the exact same resolved promise as a fresh 200, and the
+ * client-side outage classifier (`geocodeFailureMessage`) never ran. Flagged
+ * here rather than at the four geocode call sites so a fifth cannot forget.
+ */
+const TTL_RULES: { pattern: RegExp; ttlMs: number; noStaleFallback?: boolean }[] = [
   { pattern: /\/api\/programs/, ttlMs: 5 * 60_000 },
   { pattern: /\/data\/programs\.json/, ttlMs: 5 * 60_000 },
   { pattern: /\/api\/stats/, ttlMs: 5 * 60_000 },
@@ -73,7 +91,7 @@ const TTL_RULES: { pattern: RegExp; ttlMs: number }[] = [
   { pattern: /\/api\/stacking/, ttlMs: 5 * 60_000 },
   { pattern: /\/api\/businesses/, ttlMs: 5 * 60_000 },
   { pattern: /\/data\/businesses\.json/, ttlMs: 5 * 60_000 },
-  { pattern: /\/api\/geocode/, ttlMs: 30 * 60_000 },
+  { pattern: /\/api\/geocode/, ttlMs: 30 * 60_000, noStaleFallback: true },
   { pattern: /\/api\/zones\/geojson\//, ttlMs: 30 * 60_000 },
   { pattern: /\/data\/zones\//, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/zones\/check/, ttlMs: 10 * 60_000 },
@@ -102,6 +120,18 @@ function getTTL(url: string): number {
   return DEFAULT_TTL_MS;
 }
 
+/**
+ * Whether a failed fetch for this URL may fall back to an expired cache entry.
+ * Unmatched URLs keep the historical stale-while-error behavior; only rules
+ * that opt in with `noStaleFallback` propagate the failure instead.
+ */
+function allowsStaleFallback(url: string): boolean {
+  for (const rule of TTL_RULES) {
+    if (rule.pattern.test(url)) return rule.noStaleFallback !== true;
+  }
+  return true;
+}
+
 function isFresh(entry: CacheEntry, ttlMs: number): boolean {
   return Date.now() - entry.timestamp < ttlMs;
 }
@@ -126,6 +156,9 @@ export async function cachedFetchWithMeta<T = unknown>(
   }
 
   const ttlMs = getTTL(url);
+  // A rule may forbid serving an expired body on failure; when it does, the
+  // stale entry is not a fallback at all and the failure must reach the caller.
+  const staleFallback = allowsStaleFallback(url) ? cache.get(url) : undefined;
   const existing = cache.get(url);
 
   // Return fresh cached data — a within-TTL hit is the cache working, not
@@ -146,8 +179,8 @@ export async function cachedFetchWithMeta<T = unknown>(
       const res = await fetch(url, init);
       if (!res.ok) {
         // Stale-while-error: serve stale data if available, and SAY it is stale.
-        if (existing) {
-          return { data: existing.data as T, stale: true };
+        if (staleFallback) {
+          return { data: staleFallback.data as T, stale: true };
         }
         throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
       }
@@ -157,8 +190,8 @@ export async function cachedFetchWithMeta<T = unknown>(
       return { data: data as T, stale: false };
     } catch (err) {
       // Stale-while-error: serve stale data on network failure, flagged.
-      if (existing) {
-        return { data: existing.data as T, stale: true };
+      if (staleFallback) {
+        return { data: staleFallback.data as T, stale: true };
       }
       throw err;
     } finally {
@@ -175,7 +208,10 @@ export async function cachedFetchWithMeta<T = unknown>(
  * Drop-in replacement for fetch() in client components.
  *
  * Discards the staleness flag — see `cachedFetchWithMeta()` when the caller
- * needs to know whether it is holding a stale fallback.
+ * needs to know whether it is holding a stale fallback. Because that flag is
+ * dropped here, a URL whose staleness would be a false claim rather than a
+ * degraded panel must be marked `noStaleFallback` in `TTL_RULES`, so this
+ * wrapper rejects instead of resolving with an expired body.
  */
 export async function cachedFetch<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   return (await cachedFetchWithMeta<T>(url, init)).data;
