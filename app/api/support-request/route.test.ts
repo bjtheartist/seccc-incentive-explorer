@@ -9,11 +9,13 @@ import { NextRequest } from "next/server";
 // the route's real POST handler directly.
 
 const createReportLeadMock = vi.fn();
+const markNotificationMock = vi.fn();
 
 class FakeStorageUnavailableError extends Error {}
 
 vi.mock("@/lib/report-email-delivery", () => ({
   createReportLead: (...args: unknown[]) => createReportLeadMock(...args),
+  markReportLeadNotification: (...args: unknown[]) => markNotificationMock(...args),
   ReportEmailStorageUnavailableError: FakeStorageUnavailableError,
 }));
 
@@ -40,6 +42,8 @@ const originalEnv = { ...process.env };
 beforeEach(() => {
   createReportLeadMock.mockReset();
   createReportLeadMock.mockResolvedValue(1);
+  markNotificationMock.mockReset();
+  markNotificationMock.mockResolvedValue(undefined);
   sendMock.mockReset();
   sendMock.mockResolvedValue({ data: { id: "email-1" }, error: null });
   delete process.env.RESEND_API_KEY;
@@ -112,7 +116,10 @@ describe("POST /api/support-request", () => {
     const res = await POST(supportRequest({ email: "owner@business.com" }));
     const body = await res.json();
     expect(createReportLeadMock).toHaveBeenCalledTimes(1);
-    expect(body).toEqual({ success: true, notified: false });
+    // Audit finding 3: an unset env is NOT a failed send. The response says
+    // so, so the client can stay quiet instead of telling every preview
+    // visitor their request did not go through.
+    expect(body).toEqual({ success: true, notified: false, notificationState: "unconfigured" });
     expect(sendMock).not.toHaveBeenCalled();
   });
 
@@ -128,7 +135,7 @@ describe("POST /api/support-request", () => {
       }),
     );
     const body = await res.json();
-    expect(body).toEqual({ success: true, notified: true });
+    expect(body).toEqual({ success: true, notified: true, notificationState: "sent" });
     expect(sendMock).toHaveBeenCalledTimes(1);
     const [sendArgs] = sendMock.mock.calls[0];
     expect(sendArgs.to).toEqual(["help@example.org"]);
@@ -144,7 +151,12 @@ describe("POST /api/support-request", () => {
     const res = await POST(supportRequest({ email: "owner@business.com" }));
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body).toEqual({ success: true, notified: false, contact: "help@example.org" });
+    expect(body).toEqual({
+      success: true,
+      notified: false,
+      notificationState: "failed",
+      contact: "help@example.org",
+    });
   });
 
   it("a thrown Resend send also returns notified: false with the direct-contact address, never a silent success", async () => {
@@ -155,15 +167,101 @@ describe("POST /api/support-request", () => {
     const res = await POST(supportRequest({ email: "owner@business.com" }));
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body).toEqual({ success: true, notified: false, contact: "help@example.org" });
+    expect(body).toEqual({
+      success: true,
+      notified: false,
+      notificationState: "failed",
+      contact: "help@example.org",
+    });
     expect(createReportLeadMock).toHaveBeenCalledTimes(1);
   });
 
-  it("the unconfigured branch (no inbox) reports notified: false WITHOUT a contact address — there is no destination to hand out", async () => {
+  it("the unconfigured branch (no inbox) reports notificationState 'unconfigured' WITHOUT a contact address — there is no destination to hand out, and nothing failed", async () => {
     const res = await POST(supportRequest({ email: "owner@business.com" }));
     const body = await res.json();
     expect(res.status).toBe(200);
-    expect(body).toEqual({ success: true, notified: false });
+    expect(body).toEqual({ success: true, notified: false, notificationState: "unconfigured" });
     expect(body.contact).toBeUndefined();
+  });
+
+  it("a configured key with NO inbox is 'unconfigured', not 'failed' — a half-set env must not tell the visitor the alert bounced", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+
+    const res = await POST(supportRequest({ email: "owner@business.com" }));
+    const body = await res.json();
+    expect(body).toEqual({ success: true, notified: false, notificationState: "unconfigured" });
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Audit finding 1 — the durable record. A missed Chamber alert used to leave
+ * nothing behind but a console.error, so the lead row was indistinguishable
+ * from a delivered one and staff had no way to find it. Every path now stamps
+ * `notification_status` (and, on failure, the provider's message) onto the row.
+ */
+describe("POST /api/support-request — notification status is written to the lead row", () => {
+  it("records 'sent' on the success path", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.INCENTIVE_HELP_INBOX = "help@example.org";
+    createReportLeadMock.mockResolvedValueOnce(4242);
+
+    await POST(supportRequest({ email: "owner@business.com" }));
+
+    expect(markNotificationMock).toHaveBeenCalledTimes(1);
+    expect(markNotificationMock).toHaveBeenCalledWith(4242, "sent", undefined);
+  });
+
+  it("records 'failed' WITH the provider's message when the send throws", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.INCENTIVE_HELP_INBOX = "help@example.org";
+    createReportLeadMock.mockResolvedValueOnce(77);
+    sendMock.mockRejectedValueOnce(new Error("network down"));
+
+    await POST(supportRequest({ email: "owner@business.com" }));
+
+    expect(markNotificationMock).toHaveBeenCalledWith(77, "failed", "network down");
+  });
+
+  it("records 'failed' when Resend RESOLVES with an error object — the quiet half of an outage", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.INCENTIVE_HELP_INBOX = "help@example.org";
+    createReportLeadMock.mockResolvedValueOnce(78);
+    sendMock.mockResolvedValueOnce({ data: null, error: { message: "rejected" } });
+
+    await POST(supportRequest({ email: "owner@business.com" }));
+
+    expect(markNotificationMock).toHaveBeenCalledWith(78, "failed", "rejected");
+  });
+
+  it("records 'unconfigured' when no send was attempted — the row still says nobody was told", async () => {
+    createReportLeadMock.mockResolvedValueOnce(79);
+
+    await POST(supportRequest({ email: "owner@business.com" }));
+
+    expect(markNotificationMock).toHaveBeenCalledWith(79, "unconfigured", undefined);
+  });
+
+  it("a failure to WRITE the status never downgrades a captured lead into an error response", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.INCENTIVE_HELP_INBOX = "help@example.org";
+    markNotificationMock.mockRejectedValueOnce(new Error("column does not exist"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(supportRequest({ email: "owner@business.com" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ success: true, notified: true, notificationState: "sent" });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("never stamps a status on the honeypot path — nothing was written to stamp", async () => {
+    const res = await POST(
+      supportRequest({ email: "owner@business.com", website: "http://spam.example" }),
+    );
+    expect(res.status).toBe(200);
+    expect(markNotificationMock).not.toHaveBeenCalled();
   });
 });

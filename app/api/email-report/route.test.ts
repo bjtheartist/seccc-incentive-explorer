@@ -98,13 +98,15 @@ describe("POST /api/email-report", () => {
   it("delivers the PDF and records consent-aware identity data", async () => {
     const response = await POST(request({
       name: "<script>alert(1)</script>",
-      wantsHelp: true,
     }));
     expect(response.status).toBe(200);
+    // PR #250 follow-up: this route is report delivery only. The Chamber
+    // follow-up opt-in lives at /api/support-request, so every lead this
+    // route writes is wantsHelp: false.
     expect(createLeadMock).toHaveBeenCalledWith(expect.objectContaining({
       email: "owner@example.com",
       projectGoal: "Hire or retain employees",
-      wantsHelp: true,
+      wantsHelp: false,
       source: "report_email_gate",
     }));
     expect(sendMock).toHaveBeenCalledTimes(1);
@@ -118,25 +120,23 @@ describe("POST /api/email-report", () => {
     expect(markLeadMock).toHaveBeenCalledWith(22);
   });
 
-  it("notifies the configured help inbox only after explicit consent", async () => {
+  it("never sends a second, Chamber-inbox email — even with the help inbox configured (PR #250 follow-up: that branch was unreachable dead code and is gone)", async () => {
     vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
     const response = await POST(request({ wantsHelp: true }));
+    const payload = await response.json();
     expect(response.status).toBe(200);
-    expect(sendMock).toHaveBeenCalledTimes(2);
-    expect(sendMock.mock.calls[1][0]).toMatchObject({
-      to: ["help@example.com"],
-      replyTo: "owner@example.com",
-    });
+    expect(payload).toEqual({ success: true });
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0][0].to).toEqual(["owner@example.com"]);
   });
 
   /**
    * HARD delivery failure. Every case above either short-circuits before the
-   * provider or lets the PRIMARY send succeed — the only failing-send test
-   * covers the OPTIONAL staff notification, which is deliberately swallowed.
-   * So the branch that matters most to a user was unpinned: when the report
-   * itself never leaves, the route must say so. A regression that let a
-   * provider outage return `success: true` would tell someone their report is
-   * on the way when nothing was sent, and no test would have caught it.
+   * provider or lets the send succeed, so the branch that matters most to a
+   * user was unpinned: when the report itself never leaves, the route must
+   * say so. A regression that let a provider outage return `success: true`
+   * would tell someone their report is on the way when nothing was sent, and
+   * no test would have caught it.
    */
   it("returns an honest 5xx when the provider throws on the report send", async () => {
     sendMock.mockReset().mockRejectedValue(new Error("Resend is down"));
@@ -170,67 +170,5 @@ describe("POST /api/email-report", () => {
     expect(payload.error).toBe("We could not email the report. Please try again.");
     expect(markDeliveryMock).toHaveBeenCalledWith(11, "failed");
     expect(markDeliveryMock).not.toHaveBeenCalledWith(11, "sent");
-  });
-
-  it("never reports the optional help notification as sent when the report itself failed", async () => {
-    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
-    sendMock.mockReset().mockRejectedValue(new Error("Resend is down"));
-
-    const response = await POST(request({ wantsHelp: true }));
-    const payload = await response.json();
-
-    expect(response.status).toBe(502);
-    expect(payload).not.toHaveProperty("helpRequested");
-    // The staff notification is never attempted once the report send failed.
-    expect(sendMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("still succeeds when the optional staff notification fails after delivery — but reports helpDelivered: false with the direct-contact address (owner ruling 2026-09-01: never a silent broken promise)", async () => {
-    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
-    sendMock
-      .mockResolvedValueOnce({ data: { id: "email-1" }, error: null })
-      .mockRejectedValueOnce(new Error("notification unavailable"));
-
-    const response = await POST(request({ wantsHelp: true }));
-    const payload = await response.json();
-    expect(response.status).toBe(200);
-    expect(sendMock).toHaveBeenCalledTimes(2);
-    expect(markDeliveryMock).toHaveBeenCalledWith(11, "sent");
-    expect(payload).toMatchObject({
-      success: true,
-      helpRequested: true,
-      helpDelivered: false,
-      helpContact: "help@example.com",
-    });
-  });
-
-  it("a staff notification that RESOLVES with an error object is equally not a delivery — helpDelivered: false with the contact address", async () => {
-    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
-    sendMock
-      .mockResolvedValueOnce({ data: { id: "email-1" }, error: null })
-      .mockResolvedValueOnce({ data: null, error: { message: "rejected" } });
-
-    const response = await POST(request({ wantsHelp: true }));
-    const payload = await response.json();
-    expect(response.status).toBe(200);
-    expect(payload).toMatchObject({ success: true, helpDelivered: false, helpContact: "help@example.com" });
-  });
-
-  it("a successful staff notification reports helpDelivered: true and no contact fallback", async () => {
-    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
-
-    const response = await POST(request({ wantsHelp: true }));
-    const payload = await response.json();
-    expect(response.status).toBe(200);
-    expect(payload).toMatchObject({ success: true, helpRequested: true, helpDelivered: true });
-    expect(payload.helpContact).toBeUndefined();
-  });
-
-  it("wantsHelp with NO configured inbox reports helpDelivered: false — a request nobody was told about is not a delivery", async () => {
-    const response = await POST(request({ wantsHelp: true }));
-    const payload = await response.json();
-    expect(response.status).toBe(200);
-    expect(payload).toMatchObject({ success: true, helpRequested: true, helpDelivered: false });
-    expect(payload.helpContact).toBeUndefined();
   });
 });

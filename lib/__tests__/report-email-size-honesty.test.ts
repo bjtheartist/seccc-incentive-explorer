@@ -6,49 +6,28 @@ import {
   REPORT_TOO_LARGE_MESSAGE,
   VERCEL_BODY_LIMIT_BYTES,
 } from "../report-email-limits";
-import { deliverReportByEmail, ReportEmailTooLargeError } from "../report-email";
-import type { GeneratedReport } from "../report-engine";
 
 /**
- * R2 finding 9 — the report-email path lied about size, and could hang forever.
+ * R2 finding 9 — the report-email path lied about size.
  *
  * The route's zod schema accepted a `pdfBase64` up to 6,000,000 characters and
  * its request ceiling was 6,500,000 bytes, both ABOVE Vercel's 4.5MB body
  * limit. Every payload in that band was rejected by the platform before the
  * handler ran, so the route's own "Report attachment is too large." 413 was
  * unreachable for exactly the payloads it existed for, and the browser got an
- * opaque platform error instead. Meanwhile the client helper's fetch had no
- * timeout, so a hung connection left the caller awaiting a promise that never
- * settled — a terminal "Sending…" with no error and no retry.
+ * opaque platform error instead.
+ *
+ * PR #250 follow-up: the client-side pre-check and its 30s upload timeout
+ * lived in `deliverReportByEmail`, which had no callers anywhere in the repo
+ * and has been deleted. The ceilings below are still enforced — by the route's
+ * own schema, which every live `/api/email-report` caller goes through.
  */
-
-const report = {
-  title: "Test Report",
-  reportType: "site-incentives",
-  sections: [],
-  metadata: { address: "100 E Test St" },
-} as unknown as GeneratedReport;
-
-function deliver(base64: string) {
-  vi.doMock("../pdf-report", () => ({
-    generateReportPdfBase64: () => ({ base64, filename: "report.pdf" }),
-  }));
-  return deliverReportByEmail({
-    report,
-    email: "someone@example.com",
-    wantsHelp: false,
-    projectType: "expansion",
-    projectGoals: ["expansion"],
-    source: "test",
-  });
-}
 
 beforeEach(() => {
   vi.resetModules();
 });
 
 afterEach(() => {
-  vi.doUnmock("../pdf-report");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -92,63 +71,5 @@ describe("the route's schema enforces the new cap", () => {
     );
     expect(res.status).toBe(400);
     vi.unstubAllEnvs();
-  });
-});
-
-describe("client-side pre-check", () => {
-  it("throws a typed, UNRETRYABLE too-large failure without sending the request", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(deliver("A".repeat(MAX_PDF_BASE64_CHARS + 1))).rejects.toBeInstanceOf(
-      ReportEmailTooLargeError,
-    );
-    expect(fetchMock, "an oversized report must never be uploaded").not.toHaveBeenCalled();
-  });
-
-  it("carries honest copy that names the download, not a pointless retry", async () => {
-    vi.stubGlobal("fetch", vi.fn());
-    let caught: ReportEmailTooLargeError | null = null;
-    try {
-      await deliver("A".repeat(MAX_PDF_BASE64_CHARS + 1));
-    } catch (error) {
-      caught = error as ReportEmailTooLargeError;
-    }
-    expect(caught?.retryable).toBe(false);
-    expect(caught?.message).toBe(REPORT_TOO_LARGE_MESSAGE);
-    expect(caught?.message).not.toMatch(/try again/i);
-    expect(caught?.pdfBase64Length).toBe(MAX_PDF_BASE64_CHARS + 1);
-  });
-
-  it("lets a report that DOES fit through to the request unchanged", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(deliver("A".repeat(1000))).resolves.toMatchObject({ success: true });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("request timeout", () => {
-  it("passes an AbortSignal with a 30s timeout on the upload", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await deliver("A".repeat(1000));
-
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    expect(init.signal, "a hung upload must not await forever").toBeInstanceOf(AbortSignal);
-  });
-
-  it("surfaces an aborted upload as an error rather than hanging", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(Object.assign(new Error("timeout"), { name: "TimeoutError" })),
-    );
-    await expect(deliver("A".repeat(1000))).rejects.toThrow();
   });
 });

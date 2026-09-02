@@ -122,7 +122,11 @@ beforeEach(() => {
   authState.status = "unauthenticated";
   trackEventMock.mockClear();
   submitSupportRequestMock.mockReset();
-  submitSupportRequestMock.mockResolvedValue({ success: true, notified: true });
+  submitSupportRequestMock.mockResolvedValue({
+    success: true,
+    notified: true,
+    notificationState: "sent",
+  });
   // Gate review follow-up round 1, MAJOR-1: the gate's own persona seed now
   // reads `resolveInitialPersona` (lib/personas.ts), which falls back to
   // `loadStoredPersona()` — jsdom's `sessionStorage` when no `?persona=` is
@@ -612,10 +616,11 @@ describe("ReportEmailGate — BLOCKER 3(b)/(c): support submission is awaited an
     expect(submitSupportRequestMock).toHaveBeenCalledTimes(1);
   });
 
-  it("View: a stored-but-unnotified submission (notified: false) surfaces the direct-email instruction loudly before the report; a second click proceeds without re-submitting (owner ruling 2026-09-01)", async () => {
+  it("View: a stored-but-unnotified submission (notificationState: failed) surfaces the direct-email instruction loudly before the report; a second click proceeds without re-submitting (owner ruling 2026-09-01)", async () => {
     submitSupportRequestMock.mockResolvedValueOnce({
       success: true,
       notified: false,
+      notificationState: "failed",
       contact: "help@example.org",
     });
     const { onReportReady } = renderGate();
@@ -643,8 +648,12 @@ describe("ReportEmailGate — BLOCKER 3(b)/(c): support submission is awaited an
     expect(submitSupportRequestMock).toHaveBeenCalledTimes(1);
   });
 
-  it("View: notified: false with NO contact address still surfaces the failure with the generic direct-contact copy", async () => {
-    submitSupportRequestMock.mockResolvedValueOnce({ success: true, notified: false });
+  it("View: a failed send with NO contact address still surfaces the failure with the generic direct-contact copy", async () => {
+    submitSupportRequestMock.mockResolvedValueOnce({
+      success: true,
+      notified: false,
+      notificationState: "failed",
+    });
     const { onReportReady } = renderGate();
     fireEvent.click(goalChip("Hire or train staff"));
     fireEvent.click(screen.getByRole("checkbox"));
@@ -659,6 +668,37 @@ describe("ReportEmailGate — BLOCKER 3(b)/(c): support submission is awaited an
       ).toBeTruthy(),
     );
     expect(onReportReady).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Audit finding 3: `notified: false` conflated "the send failed" with "no
+   * Resend key / no help inbox is configured". On every preview deploy the
+   * second state blocked the first click and told the visitor "our alert to
+   * the Chamber team did not go through" — alarming, and untrue: nothing was
+   * ever attempted. `unconfigured` is a server-side deployment gap (logged,
+   * and stamped on the lead row), never the visitor's problem.
+   */
+  it("View: an UNCONFIGURED environment shows nothing alarming and never blocks the report", async () => {
+    submitSupportRequestMock.mockResolvedValueOnce({
+      success: true,
+      notified: false,
+      notificationState: "unconfigured",
+    });
+    const { onReportReady } = renderGate();
+    fireEvent.click(goalChip("Hire or train staff"));
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(screen.getByPlaceholderText("you@business.com"), {
+      target: { value: "owner@business.com" },
+    });
+
+    fireEvent.click(viewButton());
+    // The report is delivered on the FIRST click — no gave-up round trip.
+    await waitFor(() => expect(onReportReady).toHaveBeenCalledTimes(1));
+    expect(submitSupportRequestMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/did not go through/i)).toBeNull();
+    expect(
+      screen.queryByText(/contact the Southeast Chicago Chamber of Commerce directly/i),
+    ).toBeNull();
   });
 
   it("Save (unauthenticated): navigation is awaited AFTER a successful submission, never before", async () => {

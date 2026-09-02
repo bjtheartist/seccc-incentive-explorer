@@ -3,7 +3,9 @@ import { Resend } from "resend";
 import { z } from "zod";
 import {
   createReportLead,
+  markReportLeadNotification,
   ReportEmailStorageUnavailableError,
+  type LeadNotificationStatus,
 } from "@/lib/report-email-delivery";
 
 export const runtime = "nodejs";
@@ -67,8 +69,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, notified: false });
   }
 
+  let leadId: number;
   try {
-    await createReportLead({
+    leadId = await createReportLead({
       name: input.name,
       email: input.email,
       reportAddress: input.address,
@@ -92,8 +95,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let notified = false;
-  if (process.env.RESEND_API_KEY && process.env.INCENTIVE_HELP_INBOX) {
+  // Audit finding 3: `notified: false` used to conflate two very different
+  // states — a send that genuinely failed, and an environment where no send
+  // was ever configured. On a preview deploy (or during a prod env rotation)
+  // the second state made every visitor read "our alert did not go through",
+  // which was both alarming and untrue. They are now distinct: only `failed`
+  // is a broken promise the visitor needs to hear about.
+  let notificationState: LeadNotificationStatus = "unconfigured";
+  let notificationError: string | undefined;
+
+  if (!process.env.RESEND_API_KEY || !process.env.INCENTIVE_HELP_INBOX) {
+    // Still recorded and still logged — a lead nobody was told about is a
+    // deployment problem, it just is not the visitor's problem.
+    console.warn(
+      "Support request notification skipped: RESEND_API_KEY and/or INCENTIVE_HELP_INBOX is not configured",
+    );
+  } else {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const delivery = await resend.emails.send({
@@ -105,29 +122,53 @@ export async function POST(req: NextRequest) {
         html: supportNotificationHtml(input),
         text: `1-on-1 support requested\n\nName: ${input.name || "Report visitor"}\nEmail: ${input.email}\nAddress: ${input.address || "Not provided"}\nProject goals: ${input.projectGoal || "Not provided"}`,
       });
-      notified = !delivery.error;
       if (delivery.error) {
+        notificationState = "failed";
+        notificationError = delivery.error.message || "Resend rejected the notification";
         console.error("Support request notification was not accepted by Resend");
+      } else {
+        notificationState = "sent";
       }
-    } catch (notificationError) {
-      console.error("Support request notification failed:", notificationError);
+    } catch (caught) {
+      notificationState = "failed";
+      notificationError = caught instanceof Error ? caught.message : String(caught);
+      console.error("Support request notification failed:", caught);
     }
+  }
+
+  // Audit finding 1: the miss must leave a durable record. Before this, a
+  // failed alert produced a console.error and a lead row indistinguishable
+  // from a delivered one — six leads lost to a 20-minute Resend outage would
+  // have been unfindable. Staff can now query
+  // `notification_status <> 'sent'`. A metadata write that itself fails must
+  // not turn a captured lead into an error response, so it is logged, not
+  // thrown.
+  try {
+    await markReportLeadNotification(leadId, notificationState, notificationError);
+  } catch (statusError) {
+    console.error(
+      `Support request notification status was not recorded for lead ${leadId} (${notificationState}):`,
+      statusError,
+    );
   }
 
   // Owner ruling (Billy, 2026-09-01): a missed Chamber notification must fail
   // LOUDLY at the visitor, not dissolve into a silent 200 — the gate promised
   // a real person within 48 hours, and the lead row alone doesn't guarantee a
-  // person sees it in time. `notified: false` already reports the miss; when
-  // the help inbox is configured we also hand the client the address so its
-  // copy can say "email us directly" with a real destination instead of a
-  // dead-end apology. The inbox exists precisely to receive these requests,
-  // so returning it discloses nothing sensitive.
-  if (!notified && process.env.INCENTIVE_HELP_INBOX) {
+  // person sees it in time. When the help inbox is configured we also hand the
+  // client the address so its copy can say "email us directly" with a real
+  // destination instead of a dead-end apology. The inbox exists precisely to
+  // receive these requests, so returning it discloses nothing sensitive. It is
+  // returned only on a genuine `failed` — an unconfigured env has no address
+  // to give and nothing alarming to say.
+  const notified = notificationState === "sent";
+  if (notificationState === "failed" && process.env.INCENTIVE_HELP_INBOX) {
     return NextResponse.json({
       success: true,
       notified,
+      notificationState,
       contact: process.env.INCENTIVE_HELP_INBOX,
     });
   }
-  return NextResponse.json({ success: true, notified });
+  return NextResponse.json({ success: true, notified, notificationState });
 }
