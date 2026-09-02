@@ -5,17 +5,16 @@
  * `--check` (used by the clean-diff test and CI) writes nothing and exits
  * nonzero if the committed file would change.
  */
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
-import { buildManifest, stringifyManifest, MANIFEST_PATH } from "./lib/investment-manifest";
+import { readFileSync, existsSync } from "node:fs";
+import { buildManifest, writeManifest, MANIFEST_PATH } from "./lib/investment-manifest";
 
 function main() {
   const check = process.argv.includes("--check");
-  // generatedAt is excluded from the diff comparison (it's a timestamp, not
-  // content) — the check compares everything EXCEPT that field.
-  const fresh = buildManifest(new Date().toISOString());
-  const freshText = stringifyManifest(fresh);
 
   if (check) {
+    // generatedAt is excluded from the diff comparison (it's a timestamp, not
+    // content) — the check compares everything EXCEPT that field.
+    const fresh = buildManifest(new Date().toISOString());
     if (!existsSync(MANIFEST_PATH)) {
       console.error(`MISSING: ${MANIFEST_PATH}`);
       process.exit(1);
@@ -32,8 +31,12 @@ function main() {
     return;
   }
 
-  writeFileSync(MANIFEST_PATH, freshText);
-  console.log(`Wrote ${MANIFEST_PATH} (${fresh.sources.length} sources)`);
+  // The write itself lives in scripts/lib/investment-manifest.ts's
+  // writeManifest() so scripts/refresh/refresh-live-sources.ts regenerates the
+  // manifest through the SAME code path this CLI uses, rather than a second
+  // copy that can drift from it.
+  const written = writeManifest();
+  console.log(`Wrote ${MANIFEST_PATH} (${written.sources.length} sources)`);
 }
 
 main();

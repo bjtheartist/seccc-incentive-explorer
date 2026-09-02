@@ -3,9 +3,28 @@
  * Monthly refresh of the LIVE-API Community Investment inputs.
  *
  * ONE entry point (`npm run data:refresh:live`) that re-pulls every input whose
- * upstream is a queryable API, rewrites the curated input file ONLY when the
- * bytes actually change, and then regenerates the export
- * (`npm run data:export:investment`).
+ * upstream is a queryable API and rewrites the curated input file ONLY when the
+ * bytes actually change.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PIPELINE ORDER — refresh → REGENERATE THE MANIFEST → export
+ *
+ * The middle step is not bookkeeping, it is a hard precondition. Every input
+ * read by scripts/export-community-investment.ts goes through
+ * verifyManifestInputBytes() (scripts/lib/investment-manifest.ts), which throws
+ * when a file's live sha256 does not match the contentHash committed in
+ * data/curated/investment-inputs/manifest.json. So a refresh that writes new
+ * input bytes and goes straight to the export is guaranteed to fail —
+ *
+ *   manifest.json's committed contentHash for "nof_large.json" (…) does not
+ *   match the file's ACTUAL bytes at read time (…)
+ *
+ * — which is exactly what happened on the 2026-09-02 scheduled run (Actions run
+ * 33628940119): the first month an input actually moved, the export died. The
+ * manifest regeneration between the two steps is what makes a changed input
+ * exportable at all, and it lands in the same working tree the workflow's
+ * "Detect changes" step diffs, so the fresh manifest.json reaches the review PR
+ * alongside the inputs that forced it. Do not reorder these three.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHAT THIS REFRESHES (live APIs — upstream can change any month)
@@ -88,7 +107,7 @@ import {
   serializeChicagoCaresProgramLedgerCsv,
 } from "../import-chicago-cares-program-ledger";
 import { buildChicagoCaresProgramLedger } from "../../lib/chicago-cares-program-ledger";
-import { loadManifest, type DecreasePolicy } from "../lib/investment-manifest";
+import { loadManifest, writeManifest, type DecreasePolicy } from "../lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +124,12 @@ const INPUT_DIR = process.env.INPUT_DIR || join(REPO_ROOT, "data", "curated", "i
  * a failure-only run (nothing else changed) still produces a diff for the
  * workflow's PR-open step to see. */
 const REFRESH_ATTEMPT_PATH = join(INPUT_DIR, "refresh-attempt.json");
+/** The manifest that has to be regenerated after this script rewrites an input
+ * and before the export reads it. Derived from INPUT_DIR (not from the lib's
+ * cwd-pinned MANIFEST_PATH) so it always describes the directory THIS script
+ * actually wrote to — the real repo path on every real run, the temp fixture
+ * dir under an INPUT_DIR override. */
+const MANIFEST_PATH = join(INPUT_DIR, "manifest.json");
 
 // ── Small shared utilities ───────────────────────────────────────────────────
 
@@ -992,6 +1017,86 @@ function renderSummaryMarkdown(outcomes: readonly Outcome[]): string {
   return lines.join("\n") + "\n";
 }
 
+/**
+ * The two steps that MUST follow a refresh that actually changed bytes, in the
+ * only order that works: regenerate manifest.json, THEN spawn the export.
+ *
+ * Why the manifest step exists at all: the exporter calls
+ * verifyManifestInputBytes() on every input read and throws when a file's live
+ * sha256 differs from the contentHash committed in manifest.json. Refreshing an
+ * input is precisely the act of making those differ. Before this function
+ * existed, nothing regenerated the manifest between the write and the export,
+ * so the export was guaranteed to die the first month any source moved — the
+ * 2026-09-02 scheduled run (Actions run 33628940119), which failed on
+ * `nof_large.json`. Regenerating is also cheap and correct on its own terms:
+ * contentHash is the ONLY field writeManifest() derives, so nothing this
+ * refresh wrote and nothing a human authored (decreasePolicy, valueField,
+ * cadence, vintage, notes — all of which live in AUTHORED_SOURCES in
+ * scripts/lib/investment-manifest.ts, not in the JSON) is clobbered.
+ *
+ * The regenerated manifest is written into INPUT_DIR — the same working tree
+ * data-refresh.yml's "Detect changes" step runs `git status --porcelain`
+ * against — so it reaches the review PR in the same commit as the inputs that
+ * forced it, which is the only state in which that PR's test job can pass.
+ *
+ * Gating mirrors the export step exactly, because these two now stand or fall
+ * together: nothing runs when no input changed, `--dry-run` writes nothing at
+ * all, and `--skip-export` defers both (a caller batching several refreshes
+ * owns running `npm run data:manifest:generate` before it exports, and is told
+ * so out loud).
+ *
+ * Returns false on failure — loudly, with the reason — and main() turns that
+ * into exit code 1. Exported so scripts/__tests__/refresh-manifest-order.test.ts
+ * can prove the ordering against a temp INPUT_DIR instead of asserting it about
+ * code it never runs.
+ */
+export function regenerateManifestThenExport(options: CliOptions, changed: boolean): boolean {
+  if (!changed) {
+    process.stdout.write("\nNo input changed — manifest regeneration and export skipped.\n");
+    return true;
+  }
+  if (options.dryRun) {
+    process.stdout.write(
+      "\n(dry run) inputs would change — would then regenerate manifest.json and re-run the export.\n",
+    );
+    return true;
+  }
+  if (options.skipExport) {
+    process.stdout.write(
+      "\n--skip-export — manifest regeneration and export both skipped.\n" +
+        "  The inputs on disk no longer match manifest.json's contentHashes, so run\n" +
+        "  `npm run data:manifest:generate` before `npm run data:export:investment`,\n" +
+        "  or the export will refuse to read them.\n",
+    );
+    return true;
+  }
+
+  process.stdout.write("\n▶ Regenerating the input manifest…\n");
+  try {
+    const fresh = writeManifest(INPUT_DIR, MANIFEST_PATH);
+    process.stdout.write(`  wrote ${MANIFEST_PATH} (${fresh.sources.length} sources)\n`);
+  } catch (error) {
+    process.stdout.write(
+      `\n✖ Manifest regeneration FAILED: ${error instanceof Error ? error.message : String(error)}\n` +
+        "  The refreshed inputs are on disk but manifest.json still carries the OLD contentHashes,\n" +
+        "  so the export cannot read them. Fix this, then run `npm run data:manifest:generate`.\n",
+    );
+    return false;
+  }
+
+  process.stdout.write("\n▶ Regenerating the Community Investment export…\n");
+  const run = spawnSync("npm", ["run", "data:export:investment"], {
+    cwd: REPO_ROOT,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+  if (run.status !== 0) {
+    process.stdout.write("\n✖ Export failed after refresh\n");
+    return false;
+  }
+  return true;
+}
+
 async function main(): Promise<void> {
   const options = parseRefreshCliArgs(process.argv.slice(2));
   const selected = options.only
@@ -1022,20 +1127,9 @@ async function main(): Promise<void> {
   const failed = outcomes.filter((o) => !o.ok);
   const changed = outcomes.some((o) => o.changed);
 
-  if (changed && !options.dryRun && !options.skipExport) {
-    process.stdout.write("\n▶ Regenerating the Community Investment export…\n");
-    const run = spawnSync("npm", ["run", "data:export:investment"], {
-      cwd: REPO_ROOT,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
-    if (run.status !== 0) {
-      process.stdout.write("\n✖ Export failed after refresh\n");
-      process.exitCode = 1;
-      return;
-    }
-  } else if (!changed) {
-    process.stdout.write("\nNo input changed — export skipped.\n");
+  if (!regenerateManifestThenExport(options, changed)) {
+    process.exitCode = 1;
+    return;
   }
 
   // Deliverable 7 (consult F9) — "always commit a refresh-attempt artifact on

@@ -17,6 +17,21 @@ each month) via `npm run data:refresh:live`. The job opens a **pull request** an
 never merges it — a month-over-month change in public data gets read by a person
 before it reaches the map.
 
+The run is three steps, in this order, and the order is load-bearing:
+
+1. **refresh** — re-pull each live source, rewrite the input only if its bytes
+   changed;
+2. **regenerate the manifest** — `manifest.json`'s `contentHash` per file;
+3. **export** — `npm run data:export:investment`.
+
+Step 2 is a hard precondition for step 3, not bookkeeping. The export verifies
+every input's live sha256 against the `contentHash` committed in `manifest.json`
+and throws on a mismatch — and refreshing an input is exactly what creates that
+mismatch. (Skipping step 2 is what broke the 2026-09-02 run: the first month a
+source actually moved, the export died on `nof_large.json`.) All three files —
+the changed inputs *and* the regenerated `manifest.json` — land in the same
+review PR, which is the only state in which that PR's test job can pass.
+
 | File | Upstream | Dataset |
 | --- | --- | --- |
 | `nof_small.json` | Socrata (City of Chicago) | `rym7-49n8` — NOF Small Business Improvement |
@@ -136,7 +151,8 @@ written by the export itself.
 ## Running it by hand
 
 ```bash
-# Everything: re-pull all six live sources, then regenerate the export.
+# Everything: re-pull all six live sources, regenerate manifest.json, then
+# regenerate the export — in that order.
 npm run data:refresh:live
 
 # Look before you leap — fetch and report the delta, write nothing.
@@ -145,7 +161,9 @@ npx tsx scripts/refresh/refresh-live-sources.ts --dry-run
 # One or two sources only.
 npx tsx scripts/refresh/refresh-live-sources.ts --only sbif,tif
 
-# Refresh the inputs but skip the export (e.g. batching several changes).
+# Refresh the inputs but skip BOTH the manifest regeneration and the export
+# (e.g. batching several changes). You then own running data:manifest:generate
+# before you export — the script says so out loud when you pass this.
 npx tsx scripts/refresh/refresh-live-sources.ts --skip-export
 
 # Write the markdown delta table somewhere (this is how the PR body is built).
@@ -157,7 +175,11 @@ per source but keeps going, prints a summary table, and exits nonzero if any
 source failed. Re-running it immediately should report every source `unchanged`
 — if it does not, something is non-deterministic and that is a bug.
 
-After any manual change to a curated input, run `npm run data:export:investment`.
+After any manual change to a curated input, run `npm run data:manifest:generate`
+and **then** `npm run data:export:investment`. The export refuses to read an
+input whose bytes no longer match the `contentHash` in `manifest.json`, so the
+regeneration is not optional — commit the refreshed manifest alongside the input
+that changed.
 
 ## When a source shrinks
 

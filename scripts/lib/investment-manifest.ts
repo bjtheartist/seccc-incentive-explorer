@@ -26,7 +26,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const INPUT_DIR = join(process.cwd(), "data", "curated", "investment-inputs");
@@ -524,11 +524,19 @@ function sha256File(absPath: string): string {
 }
 
 /** Recompute the manifest from disk (contentHash only — vintage/cadence/etc.
- * come from AUTHORED_SOURCES, the human-edited table above). */
-export function buildManifest(generatedAt: string): InvestmentManifest {
+ * come from AUTHORED_SOURCES, the human-edited table above).
+ *
+ * `inputDir` is an explicit PARAMETER, deliberately not an env override:
+ * scripts/__tests__/export-community-investment-tamper-detection.test.ts
+ * depends on MANIFEST_PATH (and the hashes in it) NOT following the
+ * `INPUT_DIR` env var, which is exactly what makes staging a tampered copy of
+ * the inputs a detectable tamper rather than a self-consistent relabelling.
+ * A caller that genuinely owns a different directory — the refresh script,
+ * which already writes the inputs itself — passes it in. */
+export function buildManifest(generatedAt: string, inputDir: string = INPUT_DIR): InvestmentManifest {
   const sources: ManifestSource[] = AUTHORED_SOURCES.map((s) => ({
     ...s,
-    contentHash: sha256File(join(INPUT_DIR, s.file)),
+    contentHash: sha256File(join(inputDir, s.file)),
   })).sort((a, b) => a.id.localeCompare(b.id));
   return {
     schemaVersion: 1,
@@ -544,6 +552,31 @@ export function buildManifest(generatedAt: string): InvestmentManifest {
 /** Stable stringify (2-space, trailing newline) — the exact bytes the clean-diff test compares. */
 export function stringifyManifest(m: InvestmentManifest): string {
   return JSON.stringify(m, null, 2) + "\n";
+}
+
+/**
+ * Regenerate manifest.json from AUTHORED_SOURCES + the files currently on
+ * disk, and WRITE it. The ONE implementation behind both writers:
+ *   - scripts/generate-investment-manifest.ts (`npm run data:manifest:generate`)
+ *   - scripts/refresh/refresh-live-sources.ts, which MUST call this after it
+ *     rewrites an input and BEFORE it spawns the export — the export's
+ *     verifyManifestInputBytes() below throws on any input whose bytes no
+ *     longer match the committed contentHash, so a refresh that skips this
+ *     step cannot export at all.
+ *
+ * Nothing authored is clobbered: `contentHash` is the ONLY derived field
+ * (see buildManifest above). cadence/refreshMethod/valueField/decreasePolicy/
+ * vintage/role all come from AUTHORED_SOURCES in this file, which is the
+ * documented — and clean-diff-gated — home for them. A hand-edit of the JSON
+ * is already declared overwritable by the note the generator stamps into it.
+ */
+export function writeManifest(
+  inputDir: string = INPUT_DIR,
+  manifestPath: string = MANIFEST_PATH,
+): InvestmentManifest {
+  const fresh = buildManifest(new Date().toISOString(), inputDir);
+  writeFileSync(manifestPath, stringifyManifest(fresh));
+  return fresh;
 }
 
 export function loadManifest(): InvestmentManifest {
