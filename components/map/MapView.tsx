@@ -53,7 +53,7 @@ import CountyReliefRecipientsPanel, {
   type CountyReliefRecipientsPanelStatus,
 } from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
-import { cachedFetch } from "@/lib/fetch-cache";
+import { cachedFetch, cachedFetchWithMeta } from "@/lib/fetch-cache";
 import { fetchZoningLookup } from "@/lib/zoning-lookup";
 import { webgl2Available, type MapFailureReason } from "@/lib/map-support";
 import { MapRenderFallback } from "@/components/map/MapRenderFallback";
@@ -954,17 +954,25 @@ export default function MapView() {
     try {
       const addressParam =
         !pin && requestedAddress ? `&address=${encodeURIComponent(requestedAddress)}` : "";
-      const [data, parcelData] = await Promise.all([
+      // cachedFetchWithMeta, not cachedFetch, for the parcel read: these are
+      // the County facts the snapshot panel and dossier card quote back to a
+      // reader (assessed values, owner, prior-year tax). The client cache
+      // serves a stale body when the live lookup fails, which is the right
+      // behavior — but `cachedFetch` discards the flag that says so, and this
+      // surface is the only place that can disclose it. See AreaStats.parcelStale.
+      const [data, parcelResult] = await Promise.all([
         cachedFetch<{
           medianHomeValue?: number;
           medianIncome?: number;
           walkScore?: number;
           tractId?: string;
         }>(`/api/census?lat=${lat}&lon=${lon}`).catch(() => null),
-        cachedFetch<ParcelData>(
+        cachedFetchWithMeta<ParcelData>(
           `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}${addressParam}`,
         ).catch(() => null),
       ]);
+      const parcelData = parcelResult?.data ?? null;
+      const parcelStale = parcelResult?.stale ?? false;
       if (data) {
         setAreaStats({
           medianHomePrice: data.medianHomeValue
@@ -994,6 +1002,7 @@ export default function MapView() {
           ownerName: parcelData?.ownerName,
           ownerType: parcelData?.ownerType,
           space: parcelData?.space,
+          parcelStale,
           districtsLoading: true,
         });
         if (!label && data.tractId) {

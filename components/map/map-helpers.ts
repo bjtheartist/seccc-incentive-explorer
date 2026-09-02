@@ -564,7 +564,26 @@ export interface AreaStats {
   ownerType?: string | null;
   siteSignals?: SiteSignals | null;
   transport?: TransportAccess | null;
+  /**
+   * True when the County parcel facts above (PIN, address, class, assessed
+   * values, owner, prior-year tax) came back as a STALE fallback — the live
+   * /api/parcel attempt failed and lib/fetch-cache.ts served a previously
+   * cached body that is already past its TTL.
+   *
+   * R2 finding 6 built `cachedFetchWithMeta` to report that and then shipped
+   * with zero production callers, so every surface kept rendering a stale
+   * fallback through the exact same code path as a fresh 200 and no reader
+   * could tell a live assessor record from a days-old one. Serving stale
+   * beats an empty panel; serving it silently, next to a dollar figure a
+   * reader may quote, does not.
+   */
+  parcelStale?: boolean;
 }
+
+/** Rendered by StaleFactsNote wherever `AreaStats.parcelStale` is true. */
+export const STALE_PARCEL_FACTS_NOTE =
+  "The Cook County parcel lookup did not answer, so these facts are a cached copy from an " +
+  "earlier lookup rather than a live read. Verify against the Assessor's record before relying on them.";
 
 export const DEFAULT_STATS: AreaStats = {
   medianHomePrice: "$142,000",

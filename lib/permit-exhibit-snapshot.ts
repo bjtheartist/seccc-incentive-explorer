@@ -302,6 +302,18 @@ const PermitExhibitResultSchema = z
         pinFormatted: nonEmptyString,
         situsAddress: nullableString,
       }),
+      // The row-cap marker (R2 finding 8). Optional, not required: documents
+      // saved before the surfaces disclosed it have no such key, and a
+      // complete exhibit stores `null`. Validated rather than merely tolerated
+      // because the snapshot surfaces now RENDER it — an unchecked value here
+      // would be an unchecked claim about the exhibit's own completeness.
+      truncation: z
+        .object({
+          scope: z.enum(["subject", "area", "both"]),
+          rowCap: z.number().int().positive(),
+          notice: nonEmptyString,
+        })
+        .nullish(),
     }),
   })
   .superRefine((value, context) => {

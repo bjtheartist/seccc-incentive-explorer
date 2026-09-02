@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
+import { StaleFactsNote } from "./StaleFactsNote";
 import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { SafeLocationContextMapSummary } from "@/lib/location-context";
@@ -318,6 +319,7 @@ export default function MapSnapshotPanel({
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1">
               Parcel
             </div>
+            <StaleFactsNote stale={areaStats.parcelStale} className="mb-2" />
             {areaStats.parcelAddressMatch === "mismatch" && areaStats.parcelAddress && (
               <div className="mb-2 border border-[#B45309]/40 bg-[#FEF3C7]/60 p-2 text-[10px] leading-relaxed text-[#78350F]">
                 <span className="font-semibold">Different parcel address.</span>{" "}

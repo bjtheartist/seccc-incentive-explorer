@@ -5,6 +5,7 @@ import { SubjectParcelSection } from "@/components/permit-exhibit/SubjectParcelS
 import { AreaContextSection } from "@/components/permit-exhibit/AreaContextSection";
 import { BoundaryContextSection } from "@/components/permit-exhibit/BoundaryContextSection";
 import { MethodsFooter } from "@/components/permit-exhibit/MethodsFooter";
+import { PermitExhibitTruncationNotice } from "@/components/permit-exhibit/PermitExhibitTruncationNotice";
 import {
   PermitExhibitSnapshotCertificate,
   PermitExhibitSnapshotProvenance,
@@ -128,6 +129,11 @@ export default async function SavedPermitExhibitPrintPage({ params }: { params: 
               {radiusFt.toLocaleString("en-US")} ft · Snapshot {snapshot.displayId}
             </p>
           </header>
+
+          {/* A printed exhibit is handed to a reader who cannot ask whether it
+              is complete — the cap disclosure goes on page one, not only in
+              the methods footer at the end. */}
+          <PermitExhibitTruncationNotice truncation={exhibit.meta.truncation} className="mt-4" />
 
           <PermitExhibitSnapshotCertificate snapshot={snapshot} printMode />
           <SubjectParcelSection subject={exhibit.subject} />

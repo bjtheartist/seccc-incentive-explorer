@@ -1,5 +1,6 @@
 import { formatPermitAreaDate } from "@/lib/permit-area";
 import type { PermitExhibitCoverage, PermitExhibitMeta } from "@/lib/permit-exhibit";
+import { PermitExhibitTruncationNotice } from "./PermitExhibitTruncationNotice";
 
 function queryParamsLine(meta: PermitExhibitMeta): string {
   const { pinFormatted, radiusFt, filters } = meta.queryParams;
@@ -30,6 +31,11 @@ export function MethodsFooter({
       <h2 id="s4-methods-title" className="mt-1 font-editorial text-[24px] leading-tight text-[#0C1B33]">
         How this exhibit was built
       </h2>
+
+      {/* The read cap is a limit of THIS exhibit, so it belongs in the
+          non-suppressible limits block — all four exhibit surfaces render
+          this footer, which is what makes the disclosure unconditional. */}
+      <PermitExhibitTruncationNotice truncation={meta.truncation} className="mt-4" />
 
       <dl className="mt-4 grid gap-x-6 gap-y-2 border border-[#0C1B33]/10 bg-white p-4 text-[12px] sm:grid-cols-2">
         <div>
