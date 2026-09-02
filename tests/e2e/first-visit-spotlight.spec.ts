@@ -25,7 +25,7 @@ test("welcome offers one primary path and the demoted static preview", async ({ 
 test("tours the homepage, hands off to the sample report, and returns to the address", async ({
   page,
 }) => {
-  test.setTimeout(120000);
+  test.setTimeout(180000);
   await openFreshGuide(page);
   await page.getByRole("button", { name: "Show me around" }).click();
 
@@ -51,11 +51,37 @@ test("tours the homepage, hands off to the sample report, and returns to the add
   await expect(page).toHaveURL(/\/report\?.*source=welcome_tour/);
 
   // The tour's sample report renders without the email gate.
-  await expect(page.locator("#verdict")).toBeVisible({ timeout: 45000 });
+  //
+  // Leg two cannot begin until the report has actually rendered, and the
+  // report is generated client-side: /report holds a "Generating Location
+  // Snapshot" screen while it resolves zones, census and program data, and
+  // #verdict is the first thing that exists on the other side of it. Wait on
+  // that screen clearing — the page's own completion signal — so a slow
+  // generation reads as a slow generation instead of "#verdict: element(s)
+  // not found". CI run 33637374842 failed both attempts here with the
+  // snapshot still showing "Generating Location Snapshot" at 45s; the
+  // budget, not the selector, was wrong.
+  //
+  // Polled rather than `expect(spinner).toHaveCount(0)`: the spinner may not
+  // have mounted yet at the instant the URL assertion resolves, so a plain
+  // "spinner is gone" check can pass before generation has even started.
+  await expect
+    .poll(
+      async () => {
+        if ((await page.locator("#verdict").count()) > 0) return "rendered";
+        if ((await page.getByTestId("report-generation-error").count()) > 0) {
+          return "generation-error";
+        }
+        return "generating";
+      },
+      { timeout: 120000, intervals: [250, 500, 1000] },
+    )
+    .toBe("rendered");
+  await expect(page.locator("#verdict")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your report is ready" })).toHaveCount(0);
 
   // Leg two resumes on the rendered snapshot.
-  await expect(popover).toBeVisible({ timeout: 15000 });
+  await expect(popover).toBeVisible({ timeout: 30000 });
   await expect(popover.locator(".driver-popover-title")).toHaveText("Findings, in plain terms");
   await expect(popover.locator(".driver-popover-progress-text")).toHaveText("Step 4 of 6");
 

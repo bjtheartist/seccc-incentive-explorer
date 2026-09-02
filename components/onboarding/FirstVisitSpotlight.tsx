@@ -18,8 +18,21 @@ import {
 
 type SpotlightLeg = "home" | "report";
 
-/** How long the report leg waits for the sample snapshot to finish rendering. */
-const REPORT_READY_TIMEOUT_MS = 20000;
+/** How long the report leg waits for the sample snapshot to finish rendering.
+ *
+ * Raised from 20s: this window opens the moment /report mounts, but the sample
+ * snapshot is generated client-side (zones, census and program lookups behind
+ * a "Generating Location Snapshot" screen) before any of the report anchors
+ * below exist, and that generation is the slow part — measured at ~8s warm and
+ * past 45s against a cold server/DB (CI run 33637374842 timed out at 45s with
+ * the generating screen still up; reproduced locally on the first request
+ * after a server start). When this window expired first, leg two never ran:
+ * the visitor landed on a perfectly good report with the tour silently
+ * recorded as `spotlight_report_unavailable`, which is also exactly how the
+ * e2e flake presented — the report renders, the popover never returns. The
+ * wait resolves as soon as the page settles, so a longer ceiling costs a warm
+ * visit nothing and only changes the outcome for a slow one. */
+const REPORT_READY_TIMEOUT_MS = 90000;
 
 function focusAddressSearch() {
   window.setTimeout(() => {
