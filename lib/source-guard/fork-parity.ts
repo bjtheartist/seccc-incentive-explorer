@@ -61,14 +61,23 @@ export const SHARED_REPORT_ACTION_COMPONENT_NAME = "ReportActionButtons";
  * audit's exact blind spot — components/report/VacancySpreadsheetSection.tsx
  * hand-rebuilt the same action row twice, with all seven copy strings and an
  * inline re-implementation of the share predicate, and no guard looked at
- * it because it is not a fork file. The sweep now covers every report
- * surface component, so a third rebuild of the row lands red wherever it is
- * written.
+ * it because it is not a fork file. The sweep was widened to every component
+ * under `components/report`.
+ *
+ * R3 follow-up (2026-09-02): one directory was still not enough. The review
+ * of PR #251 found components/map/MapPolygonPanel.tsx hand-building the same
+ * Save / Email / Download row — in a file that same PR edited — outside every
+ * guard, because `readdirSync` on ONE directory is not a sweep. The roots
+ * below are scanned RECURSIVELY, so a rebuild of the row lands red wherever
+ * in the app or the component tree it is written.
  */
-export const REPORT_SURFACE_DIR = "components/report";
+export const REPORT_SURFACE_ROOTS = ["app", "components"] as const;
+
+/** Directory names never swept: tests may legitimately assert on the copy. */
+export const REPORT_SURFACE_SKIPPED_DIRS = ["__tests__", "__snapshots__", "node_modules"] as const;
 
 /**
- * Files under `REPORT_SURFACE_DIR` that legitimately contain action copy
+ * Files under `REPORT_SURFACE_ROOTS` that legitimately contain action copy
  * and are therefore not swept. Kept deliberately tiny and explicit: each
  * entry is a module that OWNS its copy rather than borrowing the row's.
  */
@@ -79,7 +88,35 @@ export const REPORT_ACTION_COPY_OWNERS = [
   // and "Download PDF" its own confirm button; they are the destination of
   // an action, not a second copy of the control that triggers it.
   "components/report/ReportModals.tsx",
+  // The save modal the row OPENS, on the same rule: "Save to Workspace" is
+  // this modal's own eyebrow heading and "Save Report" its own confirm
+  // button. It renders no action ROW — it is where one of the row's buttons
+  // lands.
+  "components/workspace/SaveReportModal.tsx",
 ] as const;
+
+/**
+ * Action rows that predate the shared component and have NOT been migrated.
+ *
+ * A debt ratchet, not an exemption: each entry must still actually violate
+ * (the paired test fails if an entry has been cleaned up but left listed, so
+ * the list cannot go stale), and the test fails if the list GROWS. The only
+ * allowed edit is removal, in the commit that migrates the row.
+ *
+ * components/map/MapPolygonPanel.tsx — the drawn-area export row. Not a
+ * clean drop-in for `ReportActionButtons`: it is a four-up grid of compact
+ * buttons (`min-h-11`, `text-[9px]`, `px-3 py-2.5`) rather than the row's
+ * full-size flex controls, every button carries `disabled` and `aria-busy`
+ * bound to the vacancy/permit lookups (the shared component models neither),
+ * its order leads with Save and ends with the CSV export, its Download
+ * control swaps to "Retry PDF" after a failure, and it renders no Share
+ * button at all — where the shared policy's `canShare` would add one.
+ * Migrating it as-is would drop the `aria-busy`/`disabled` states or force a
+ * className/variant escape hatch into the shared component that would let
+ * any caller re-skin the row into a new fork. Recorded here so the row is
+ * visible to the guard rather than invisible to it.
+ */
+export const KNOWN_UNMIGRATED_ACTION_ROWS = ["components/map/MapPolygonPanel.tsx"] as const;
 
 /**
  * Names owned by lib/report-action-policy.ts. A report surface that
@@ -392,16 +429,38 @@ export function checkReportSurfaceActionCopy(
 }
 
 /**
- * Every swept report surface: components/report/*.tsx, minus the copy
- * owners and minus tests (a test may legitimately assert on the copy).
+ * Every swept report surface: every `.tsx` under `REPORT_SURFACE_ROOTS`,
+ * RECURSIVELY, minus the copy owners and minus tests (a test may
+ * legitimately assert on the copy).
+ *
+ * Recursive and content-addressed rather than one directory: the row can be
+ * rebuilt anywhere a button can be rendered, and the previous single-
+ * directory scan missed components/map/MapPolygonPanel.tsx for exactly that
+ * reason. Known-unmigrated rows are still RETURNED here — they are swept,
+ * and the paired test holds them on a shrink-only list rather than hiding
+ * them from the scan.
  */
 export function collectReportSurfaceFilePaths(rootDir: string): string[] {
   const owners = new Set<string>(REPORT_ACTION_COPY_OWNERS);
-  return readdirSync(`${rootDir}/${REPORT_SURFACE_DIR}`, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".tsx"))
-    .map((entry) => `${REPORT_SURFACE_DIR}/${entry.name}`)
-    .filter((relPath) => !owners.has(relPath))
-    .sort();
+  const skipped = new Set<string>(REPORT_SURFACE_SKIPPED_DIRS);
+  const found: string[] = [];
+
+  const walk = (relDir: string): void => {
+    for (const entry of readdirSync(`${rootDir}/${relDir}`, { withFileTypes: true })) {
+      const relPath = `${relDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (!skipped.has(entry.name)) walk(relPath);
+        continue;
+      }
+      if (entry.isFile() && entry.name.endsWith(".tsx") && !owners.has(relPath)) {
+        found.push(relPath);
+      }
+    }
+  };
+
+  for (const root of REPORT_SURFACE_ROOTS) walk(root);
+
+  return found.sort();
 }
 
 export function buildForkParityProject(rootDir: string): {

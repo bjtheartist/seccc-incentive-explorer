@@ -2602,7 +2602,17 @@ export default function MapPolygonPanel({
               the current filters produce a valid zero. Keeping the actions
               after the evidence means the Sources tab is read before export.
               Gated investment data stays CSV-only; public report actions never
-              expose it. */}
+              expose it.
+
+              This row is NOT the shared ReportActionButtons row. It is a
+              four-up compact grid whose every button carries disabled /
+              aria-busy tied to the vacancy and permit lookups, leads with
+              Save, ends with the CSV export, swaps Download PDF for Retry
+              PDF after a failure, and renders no Share control. It is
+              recorded as the one entry in KNOWN_UNMIGRATED_ACTION_ROWS
+              (lib/source-guard/fork-parity.ts) so the recursive report-surface
+              sweep sees it; migrating it must preserve those states and that
+              order, and must delete the list entry in the same commit. */}
           <div className="sticky bottom-0 z-10 border-t border-[#0C1B33]/10 bg-white/95 px-5 py-3 shadow-[0_-8px_24px_rgba(12,27,51,0.08)] backdrop-blur md:px-7">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="font-mono-bureau text-[8px] uppercase tracking-[0.18em] text-[#0C1B33]/40">

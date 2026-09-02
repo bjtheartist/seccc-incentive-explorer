@@ -18,6 +18,7 @@ import {
   collectDrawnAreaSignatures,
   collectReportSurfaceFilePaths,
   FORK_FILE_PATHS,
+  KNOWN_UNMIGRATED_ACTION_ROWS,
   REPORT_ACTION_COPY_OWNERS,
   REPORT_ACTION_POLICY_NAMES,
   REPORT_ACTION_RUNTIME_SIGNATURES,
@@ -239,26 +240,37 @@ describe("fork parity: generic report actions are shared by construction", () =>
  * the two FORK files, so components/report/VacancySpreadsheetSection.tsx
  * could — and did — hand-rebuild the same action row twice, carrying all
  * seven forbidden copy strings and an inline re-implementation of the share
- * predicate that lib/report-action-policy.ts owns. Nothing was red. The
- * sweep now covers every report surface component.
+ * predicate that lib/report-action-policy.ts owns. Nothing was red.
+ *
+ * R3 follow-up (2026-09-02): the widened sweep was still `readdirSync` on
+ * ONE directory, which is why components/map/MapPolygonPanel.tsx kept its
+ * own hand-built Save / Email / Download row with nothing red. The sweep is
+ * now recursive over `app/` and `components/`, and the one row it newly
+ * finds is held on `KNOWN_UNMIGRATED_ACTION_ROWS` — a shrink-only list, not
+ * an exemption.
  */
 describe("report-action copy stays in the shared component across ALL report surfaces — real codebase", () => {
   const surfacePaths = collectReportSurfaceFilePaths(ROOT_DIR);
+  const knownUnmigrated = new Set<string>(KNOWN_UNMIGRATED_ACTION_ROWS);
   const surfaceProject = new Project({
     skipAddingFilesFromTsConfig: true,
     compilerOptions: { allowJs: false },
   });
 
-  it("sweeps a real, non-trivial set of report surfaces (sanity: the directory scan found files)", () => {
+  it("sweeps a real, non-trivial set of report surfaces (sanity: the recursive scan found files)", () => {
     expect(surfacePaths.length).toBeGreaterThan(10);
     expect(surfacePaths).toContain("components/report/VacancySpreadsheetSection.tsx");
+    // The sweep is recursive: files outside components/report — the exact
+    // blind spot this follow-up closes — are in scope now.
+    expect(surfacePaths).toContain("components/map/MapPolygonPanel.tsx");
+    expect(surfacePaths).toContain("app/report/page.tsx");
     // The copy owners are excluded by construction, not by luck.
     for (const owner of REPORT_ACTION_COPY_OWNERS) {
       expect(surfacePaths).not.toContain(owner);
     }
   });
 
-  it.each(collectReportSurfaceFilePaths(ROOT_DIR))(
+  it.each(collectReportSurfaceFilePaths(ROOT_DIR).filter((relPath) => !knownUnmigrated.has(relPath)))(
     "%s rebuilds neither the shared action copy nor the shared action policy",
     (relPath) => {
       const sourceFile = surfaceProject.addSourceFileAtPath(`${ROOT_DIR}/${relPath}`);
@@ -275,6 +287,37 @@ describe("report-action copy stays in the shared component across ALL report sur
         );
       }
       expect(violations).toEqual([]);
+    },
+  );
+
+  /**
+   * The known-unmigrated list is a ratchet in its own right. It may only
+   * shrink, and every entry must still be a real violation — otherwise a
+   * migrated row would stay listed and the next hand-built row could be
+   * slipped in beside it.
+   */
+  it("holds exactly one known-unmigrated action row, and it may only shrink", () => {
+    expect([...KNOWN_UNMIGRATED_ACTION_ROWS]).toEqual([
+      "components/map/MapPolygonPanel.tsx",
+    ]);
+    for (const relPath of KNOWN_UNMIGRATED_ACTION_ROWS) {
+      expect(surfacePaths).toContain(relPath);
+    }
+  });
+
+  it.each(KNOWN_UNMIGRATED_ACTION_ROWS)(
+    "%s is still an un-migrated row — remove it from KNOWN_UNMIGRATED_ACTION_ROWS once it is migrated",
+    (relPath) => {
+      const sourceFile = surfaceProject.addSourceFileAtPath(`${ROOT_DIR}/${relPath}`);
+      const violations = checkReportSurfaceActionCopy(sourceFile);
+      if (violations.length === 0) {
+        throw new Error(
+          `${relPath} no longer rebuilds the shared action row. Delete it from ` +
+            `KNOWN_UNMIGRATED_ACTION_ROWS in lib/source-guard/fork-parity.ts in this ` +
+            `same commit — a stale entry is a hole the next hand-built row can hide in.`,
+        );
+      }
+      expect(violations.every((violation) => violation.kind === "local-action-copy")).toBe(true);
     },
   );
 

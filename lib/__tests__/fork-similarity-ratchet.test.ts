@@ -10,50 +10,89 @@
  * methodology, which is fixed — changing it invalidates the baseline
  * below.
  */
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   describeRatchetStatus,
   measureForkSimilarity,
+  measureForkSimilarityBetween,
   MIN_BLOCK_LINES,
   MIN_LINE_LENGTH,
+  normalizeSourceLines,
   RATCHET_FORK_FILE_PATHS,
 } from "../source-guard/fork-similarity-ratchet";
 
 const ROOT_DIR = path.resolve(__dirname, "../..");
 
 /**
- * Duplicated lines shared by the two fork files, measured 2026-09-01 on this
- * branch (R3 fork stabilization): 1,383 lines across 30 contiguous blocks,
- * largest 244. The pre-R3 audit reported ~1,282 / 22 / 239 with the same
- * methodology on an older tree.
+ * Duplicated lines shared by the two fork files.
  *
- * Honest note on why R3 raised the number it introduced: R3 was asked to
- * bring the workspace fork's analytics up to the live fork's — mirroring
- * report_pdf_downloaded, share_link_copied and program_link_clicked, and
- * aligning trackSectionLinkClick — so the funnel stops depending on which
- * renderer the user is on. Making two forks BEHAVE the same by hand makes
- * them look more identical, which is precisely the debt this ratchet
- * measures. That is the ratchet working as intended: it records the cost of
- * fixing drift by mirroring instead of by sharing, and the only way the
- * number comes down is the real merge (a future dedicated round).
+ * Measured 2026-09-02, AFTER the metric was hardened: 1,275 significant
+ * lines across 22 contiguous blocks, largest 261.
+ *
+ * ── Why this number moved without the debt moving ─────────────────────
+ * The previous baseline, 1,383 / 30 / 244 (measured 2026-09-01), was taken
+ * with the raw-line metric, which compared every line including comments
+ * and blanks. Review of PR #251 showed that metric could be driven to
+ * ZERO by injecting a JSX comment every 7th line into one fork — the noise
+ * split every run below `MIN_BLOCK_LINES`, and the ratchet then invited a
+ * baseline of 0, retiring the guard while the duplication was untouched.
+ * The scanner now deletes comments and blank lines before comparing, so
+ * interleaved noise cannot split a run (see the module's methodology note,
+ * step 0, and the "survives comment injection" tests below).
+ *
+ * The drop from 1,383 to 1,275 is therefore a METRIC change, not a debt
+ * reduction: the same duplication is now counted in significant lines only
+ * (comments and blank lines inside a pasted block no longer add to the
+ * total), and adjacent runs formerly separated by a comment now merge into
+ * one longer block, which is why the block count fell and the largest
+ * block grew. No markup was unified in the commit that moved this number.
  *
  * THIS NUMBER MAY ONLY GO DOWN from here. Unify a block, watch the number
  * drop, and lower this constant in the same commit with a dated note of your
  * own. RAISING it means a paste-back landed and requires an explicit owner
  * ruling recorded here — it is not a way to get a red test green.
  */
-const FORK_DUPLICATION_BASELINE = 1383;
+const FORK_DUPLICATION_BASELINE = 1275;
 
 describe("fork duplication ratchet: app/report/page.tsx vs components/report/ReportDisplay.tsx", () => {
   const report = measureForkSimilarity(ROOT_DIR);
 
-  it("does not exceed the committed baseline, and says so when it drops", () => {
+  it("fails only when duplication EXCEEDS the committed baseline; a drop asks for a lower baseline instead", () => {
     const status = describeRatchetStatus(report, FORK_DUPLICATION_BASELINE);
-    if (report.duplicatedLineCount !== FORK_DUPLICATION_BASELINE) {
+
+    // A one-directional ratchet. An unrelated PR that edits three lines
+    // inside a duplicated block makes the number fall, and that must not
+    // turn CI red on a change which improved things — it prints the status
+    // asking for the baseline to be lowered, and passes.
+    if (report.duplicatedLineCount < FORK_DUPLICATION_BASELINE) {
+      console.warn(status);
+    }
+
+    expect(report.duplicatedLineCount).toBeLessThanOrEqual(FORK_DUPLICATION_BASELINE);
+    if (report.duplicatedLineCount > FORK_DUPLICATION_BASELINE) {
       throw new Error(status);
     }
-    expect(report.duplicatedLineCount).toBe(FORK_DUPLICATION_BASELINE);
+  });
+
+  /**
+   * The counter-lock on the ratchet's one remaining escape: driving the
+   * measured number down without removing duplication. Zero blocks between
+   * two fork files that both still exist means the SCANNER stopped working
+   * (a metric change, an accidental normalization bug, a deliberate
+   * run-splitting edit), not that the forks were unified. The only honest
+   * way to reach zero is to delete or merge a fork file, which this test
+   * detects by looking for it on disk.
+   */
+  it("refuses a collapse to zero blocks while both fork files still exist", () => {
+    const forksStillExist = RATCHET_FORK_FILE_PATHS.every((relPath) =>
+      existsSync(path.join(ROOT_DIR, relPath)),
+    );
+    expect(forksStillExist).toBe(true);
+
+    expect(report.blocks.length).toBeGreaterThan(0);
+    expect(report.duplicatedLineCount).toBeGreaterThan(0);
   });
 
   it("is fast enough to stay in the default suite (<2s)", () => {
@@ -89,17 +128,27 @@ describe("fork duplication ratchet: app/report/page.tsx vs components/report/Rep
   });
 
   it("counts no source line twice (blocks claimed longest-first never overlap)", () => {
-    const seenA = new Set<number>();
-    const seenB = new Set<number>();
-    for (const block of report.blocks) {
-      for (let offset = 0; offset < block.lineCount; offset++) {
-        expect(seenA.has(block.startLineA + offset)).toBe(false);
-        expect(seenB.has(block.startLineB + offset)).toBe(false);
-        seenA.add(block.startLineA + offset);
-        seenB.add(block.startLineB + offset);
+    const forEachFork = [
+      report.blocks.map((block) => [block.startLineA, block.endLineA] as const),
+      report.blocks.map((block) => [block.startLineB, block.endLineB] as const),
+    ];
+
+    for (const ranges of forEachFork) {
+      const ordered = [...ranges].sort((a, b) => a[0] - b[0]);
+      for (let i = 1; i < ordered.length; i++) {
+        // Blocks are claimed on non-overlapping runs of significant lines,
+        // and significant lines map to original line numbers in order, so
+        // the original line RANGES must not overlap either.
+        expect(ordered[i][0]).toBeGreaterThan(ordered[i - 1][1]);
+      }
+      for (const [start, end] of ranges) {
+        expect(end).toBeGreaterThanOrEqual(start);
       }
     }
-    expect(seenA.size).toBe(report.duplicatedLineCount);
+
+    expect(report.blocks.reduce((total, block) => total + block.lineCount, 0)).toBe(
+      report.duplicatedLineCount,
+    );
   });
 
   it("reports both forks by their real paths", () => {
@@ -110,11 +159,138 @@ describe("fork duplication ratchet: app/report/page.tsx vs components/report/Rep
     const status = describeRatchetStatus(report, FORK_DUPLICATION_BASELINE + 50);
     expect(status).toContain("DECREASED");
     expect(status).toContain(`Set FORK_DUPLICATION_BASELINE to ${report.duplicatedLineCount}`);
+    expect(status).toContain("NOT a test failure");
   });
 
   it("tells a contributor to share the block — not raise the baseline — when duplication grows", () => {
     const status = describeRatchetStatus(report, FORK_DUPLICATION_BASELINE - 50);
     expect(status).toContain("INCREASED");
     expect(status).toContain("requires an owner ruling");
+  });
+});
+
+/**
+ * The hardening proof. PR #251's review showed the raw-line metric fell
+ * from 1,383 to 0 when a JSX comment was injected every 7th line — a change
+ * that removes no duplication at all. These fixtures reproduce that exact
+ * attack against the current scanner and require the number to be
+ * UNCHANGED, not merely non-zero.
+ */
+describe("fork duplication ratchet: the measurement survives interleaved cosmetic noise", () => {
+  /**
+   * Two files sharing one long, obviously-pasted JSX block. Lines are long
+   * enough to clear `MIN_LINE_LENGTH` so the block is substantial, and the
+   * run is comfortably longer than `MIN_BLOCK_LINES`.
+   */
+  const sharedBlock = Array.from(
+    { length: 24 },
+    (_, index) =>
+      `        <p className="text-[11px] text-[#0C1B33]/60">Duplicated narrative row number ${index}</p>`,
+  );
+
+  const fixtureA = [
+    `export function ForkA() {`,
+    `  return (`,
+    `    <section>`,
+    ...sharedBlock,
+    `    </section>`,
+    `  );`,
+    `}`,
+  ].join("\n");
+
+  const fixtureB = [
+    `export function ForkB({ variant }: { variant: string }) {`,
+    `  return (`,
+    `    <section data-variant={variant}>`,
+    ...sharedBlock,
+    `    </section>`,
+    `  );`,
+    `}`,
+  ].join("\n");
+
+  /** The audit's attack: one cosmetic line inserted after every 7th line. */
+  function injectEverySeventhLine(source: string, noise: string): string {
+    return source
+      .split("\n")
+      .flatMap((line, index) => ((index + 1) % 7 === 0 ? [line, noise] : [line]))
+      .join("\n");
+  }
+
+  const clean = measureForkSimilarityBetween(fixtureA, fixtureB);
+
+  it("measures the fixture's pasted block in the first place", () => {
+    // One run, covering the pasted block plus the identical wrapper lines
+    // on either side of it that the scanner legitimately absorbs.
+    expect(clean.blocks.length).toBe(1);
+    expect(clean.duplicatedLineCount).toBeGreaterThanOrEqual(sharedBlock.length);
+  });
+
+  it.each([
+    ["JSX comment", "        {/* cosmetic */}"],
+    ["line comment", "        // cosmetic"],
+    ["block comment", "        /* cosmetic */"],
+    ["blank line", "        "],
+  ])(
+    "a %s injected every 7th line does not change the duplicated line count",
+    (_label, noise) => {
+      const attacked = measureForkSimilarityBetween(
+        fixtureA,
+        injectEverySeventhLine(fixtureB, noise),
+      );
+
+      expect(attacked.duplicatedLineCount).toBe(clean.duplicatedLineCount);
+      expect(attacked.blocks.length).toBe(clean.blocks.length);
+    },
+  );
+
+  it("a multi-line JSX comment injected into the block does not split it", () => {
+    const noisy = fixtureB.replace(
+      sharedBlock[10],
+      [`        {/*`, `          cosmetic, spanning`, `          three lines`, `        */}`, sharedBlock[10]].join(
+        "\n",
+      ),
+    );
+
+    const attacked = measureForkSimilarityBetween(fixtureA, noisy);
+    expect(attacked.duplicatedLineCount).toBe(clean.duplicatedLineCount);
+    expect(attacked.blocks.length).toBe(1);
+  });
+
+  it("a trailing comment appended to a line does not stop that line matching", () => {
+    const noisy = fixtureB.replace(sharedBlock[3], `${sharedBlock[3]} // cosmetic`);
+    const attacked = measureForkSimilarityBetween(fixtureA, noisy);
+    expect(attacked.duplicatedLineCount).toBe(clean.duplicatedLineCount);
+  });
+
+  it("still counts real pasted markup — noise removal did not blunt the scanner", () => {
+    // Removing three lines from the pasted block must lower the number by
+    // three. A metric that ignores noise but also ignores real edits would
+    // be useless as a ratchet.
+    const shortened = fixtureB.replace(
+      sharedBlock.slice(0, 3).join("\n") + "\n",
+      "",
+    );
+    const measured = measureForkSimilarityBetween(fixtureA, shortened);
+    expect(measured.duplicatedLineCount).toBe(clean.duplicatedLineCount - 3);
+  });
+
+  it("normalizeSourceLines drops noise and keeps original line numbers", () => {
+    const lines = normalizeSourceLines(
+      ["const first = 1;", "", "// a comment", "  {/* jsx */}", "const second = 2;"].join("\n"),
+    );
+
+    expect(lines.map((line) => line.text)).toEqual(["const first = 1;", "const second = 2;"]);
+    expect(lines.map((line) => line.lineNumber)).toEqual([1, 5]);
+  });
+
+  it("does not mistake a comment delimiter inside a string for a comment", () => {
+    const lines = normalizeSourceLines(
+      [`const url = "https://example.com/path";`, `const text = "not /* a */ comment";`].join("\n"),
+    );
+
+    expect(lines.map((line) => line.text)).toEqual([
+      `const url = "https://example.com/path";`,
+      `const text = "not /* a */ comment";`,
+    ]);
   });
 });
