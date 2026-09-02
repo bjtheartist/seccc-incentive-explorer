@@ -76,3 +76,28 @@ export const PERMIT_EXHIBIT_UNAVAILABLE_COPY: Record<
     "The Permit History Exhibit is temporarily unavailable for this parcel. Retry, or verify " +
     "directly against the City's Building Permits dataset.",
 };
+
+/**
+ * Row-cap disclosure chrome (R2 finding 8 follow-up).
+ *
+ * The disclosure SENTENCE itself is the spine's — `meta.truncation.notice`,
+ * built in lib/permit-exhibit.ts alongside the cap that produced it — so it
+ * is not duplicated here. What lives here is only the rendering-layer label
+ * and the which-query line, i.e. this surface's own chrome, the same split
+ * every other constant in this file observes.
+ */
+export const PERMIT_EXHIBIT_TRUNCATION_LABEL = "Incomplete read · counts below are a floor";
+
+export function permitExhibitTruncationScopeLine(
+  scope: "subject" | "area" | "both",
+  rowCap: number,
+): string {
+  const cap = rowCap.toLocaleString("en-US");
+  if (scope === "both") {
+    return `Reached at the ${cap}-record cap on both the subject-parcel read and the radius read.`;
+  }
+  if (scope === "subject") {
+    return `Reached at the ${cap}-record cap on the subject-parcel read.`;
+  }
+  return `Reached at the ${cap}-record cap on the radius read.`;
+}

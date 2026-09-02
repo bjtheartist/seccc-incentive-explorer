@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
+import { StaleFactsNote } from "./StaleFactsNote";
 import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { SafeLocationContextMapSummary } from "@/lib/location-context";
@@ -763,6 +764,7 @@ export default function MapDossierCard({
           ) : null}
           {dossierPin ? (
             <>
+              <StaleFactsNote stale={areaStats.parcelStale} />
               <FactRow label="PIN" value={dossierPin} />
               {areaStats.parcelAddress ? (
                 <FactRow label="Parcel address" value={areaStats.parcelAddress.split(",")[0]} />

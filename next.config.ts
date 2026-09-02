@@ -1,5 +1,24 @@
 import type { NextConfig } from "next";
 
+/**
+ * The env doctrine's BUILD-TIME pass (R2 finding 7 follow-up).
+ *
+ * lib/env.ts validates process.env on first import and self-executes that
+ * check at module scope. instrumentation.ts's register() is the runtime
+ * importer — it runs once per server instance, in the Node runtime only. This
+ * side-effect import is the second half: next.config.ts is evaluated by the
+ * Node process that runs `next build`, so a malformed value is reported while
+ * the deploy is still being built rather than at first request.
+ *
+ * Safe in CI with nothing configured: every field in EnvSchema is optional by
+ * design (absence is a supported configuration in this app — no DATABASE_URL
+ * means static files, no Redis means no caching), so an empty environment
+ * produces zero issues and this import is a no-op. Only a value that is SET
+ * and malformed is reported, and under `next build` (NODE_ENV=production)
+ * lib/env.ts logs and continues rather than throwing.
+ */
+import "./lib/env";
+
 const nextConfig: NextConfig = {
   /* config options here */
   // The Site Shortlist canonical universe files

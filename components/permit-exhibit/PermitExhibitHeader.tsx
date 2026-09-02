@@ -4,6 +4,7 @@ import {
   PERMIT_EXHIBIT_EYEBROW,
   PERMIT_EXHIBIT_HEADER_SCOPE_STATEMENT,
 } from "@/lib/permit-exhibit-copy";
+import { PermitExhibitTruncationNotice } from "./PermitExhibitTruncationNotice";
 
 /**
  * The standardized evidence-brief header anatomy (matches
@@ -47,6 +48,11 @@ export function PermitExhibitHeader({
           </p>
         </aside>
       </div>
+      {/* Above the fold, before any count: an exhibit that hit its read cap
+          is INCOMPLETE, and the reader has to know that before reading a
+          single number off it. Repeated in the S4 methods footer, which is
+          the canonical limits block. */}
+      <PermitExhibitTruncationNotice truncation={meta.truncation} className="mt-5" />
       {actions ? <div className="mt-5 flex flex-wrap items-center gap-2 no-print">{actions}</div> : null}
     </header>
   );
