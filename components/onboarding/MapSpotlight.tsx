@@ -27,8 +27,21 @@ function prefersReducedMotion() {
 /** How long a tour start waits for the map to finish mounting its controls.
  * Real mobile/CI traces can cross 20 seconds while Mapbox initializes its
  * layers, so keep waiting in the background instead of abandoning a valid
- * first visit just before the search control becomes usable. */
-const ANCHOR_READY_TIMEOUT_MS = 60000;
+ * first visit just before the search control becomes usable.
+ *
+ * Raised from 60s after measuring the actual anchor: MapView only renders
+ * MapSearch (the `map-search` anchor) once its `loaded` state flips, and
+ * `setLoaded(true)` is the LAST line of a `map.on("load")` handler that first
+ * fetches and adds every zone layer, the zoning districts, parcels and vacant
+ * properties. That whole chain — not just Mapbox's style load — sits in front
+ * of step one. CI run 33637374842 measured it past 60s on a loaded runner
+ * (page snapshot at 60s still showed the "Drawing zone boundaries" overlay
+ * with the Mapbox canvas already up), which meant this gate expired on a map
+ * that was merely slow, not broken: no tour, and — because the bail path
+ * deliberately records no outcome — no explanation either. 120s keeps the
+ * bail-out safety net for a genuinely dead map while letting a slow one still
+ * get its tour. */
+const ANCHOR_READY_TIMEOUT_MS = 120000;
 
 /**
  * Resolves TRUE once the selector exists with layout, or FALSE after the

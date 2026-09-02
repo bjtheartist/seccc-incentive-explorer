@@ -141,10 +141,12 @@ describe("MapSpotlight — anchor-mount gate (hardening round)", () => {
 
       // [data-tour="map-search"] is never added to the DOM in this test —
       // wait for waitForAnchor to actually start looking for it, THEN
-      // spend its full 60s timeout budget (plus margin) confirming it
-      // keeps not finding it.
+      // spend its full ANCHOR_READY_TIMEOUT_MS budget (120s, plus margin)
+      // confirming it keeps not finding it. Kept deliberately in lockstep
+      // with MapSpotlight.tsx's constant: a budget shorter than the real
+      // timeout would let this test pass without the bail ever firing.
       await advanceUntilAnchorCheckStarts(querySelectorSpy);
-      await advanceFor(60500);
+      await advanceFor(120500);
 
       // Proves the async chain actually ran far enough to matter — not
       // just that the budget expired before anything happened.
@@ -156,7 +158,7 @@ describe("MapSpotlight — anchor-mount gate (hardening round)", () => {
       // standing in as "shown".
       expect(window.localStorage.getItem(MAP_GUIDE_STORAGE_KEY)).toBeNull();
     },
-    30000,
+    60000,
   );
 
   it(
