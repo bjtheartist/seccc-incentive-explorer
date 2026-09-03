@@ -84,6 +84,10 @@ jobs:
           set -o pipefail
           status=0
           {
+            # FIRST: a refresh that rewrote an input without regenerating the
+            # manifest fails right here, in the refresh run's own PR, instead
+            # of reaching main and blocking the next export (2026-09-02; #260).
+            echo "### manifest";  npm run data:manifest:verify || status=1
             echo "### lint";       npm run lint          || status=1
             echo "### test";       npm test              || status=1
             echo "### typecheck";  npx tsc --noEmit      || status=1
