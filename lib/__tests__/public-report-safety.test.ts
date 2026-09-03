@@ -626,25 +626,41 @@ describe("public report safety", () => {
   // current GeneratedReport-shaped generateReportPdf(Base64) pipeline
   // remains, which the rest of this file's tests already cover.
 
-  it("keeps both public report renderers off legacy confidence fields", () => {
-    for (const path of [
-      "components/report/ReportDisplay.tsx",
-      "app/report/page.tsx",
-    ]) {
-      const source = readFileSync(join(process.cwd(), path), "utf8");
-      expect(source).toContain("normalizePublicReportForDisplay(rawReport)");
-      expect(source).toContain("MatchExplanationDetails");
-      expect(source).not.toMatch(
-        /prog\.(?:confidence|confidenceLabel|relevance|relevanceLabel|benefitRange|whyOneLine)/,
-      );
-      expect(source).not.toContain("prog.projectFitLabel");
-      expect(source).not.toMatch(
-        /item\.(?:confidenceLabel|relevanceLabel|matchedRules|notVerified|whyOneLine)/,
-      );
-      expect(source).not.toContain("item.projectFit");
-    }
+  // Fork-unification round: this ran over two renderer files. There is one
+  // renderer now — components/report/ReportDisplay.tsx — and it carries the
+  // normalizer. app/report/page.tsx keeps the NEGATIVE half of the same
+  // contract: it renders no report body of its own, so it must never start
+  // reading a legacy confidence field either.
+  it("keeps the public report renderer off legacy confidence fields", () => {
+    const source = readFileSync(
+      join(process.cwd(), "components/report/ReportDisplay.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("normalizePublicReportForDisplay(rawReport)");
+    expect(source).toContain("MatchExplanationDetails");
+    expect(source).not.toMatch(
+      /prog\.(?:confidence|confidenceLabel|relevance|relevanceLabel|benefitRange|whyOneLine)/,
+    );
+    expect(source).not.toContain("prog.projectFitLabel");
+    expect(source).not.toMatch(
+      /item\.(?:confidenceLabel|relevanceLabel|matchedRules|notVerified|whyOneLine)/,
+    );
+    expect(source).not.toContain("item.projectFit");
+
     const pdfSource = readFileSync(join(process.cwd(), "lib/pdf-report.ts"), "utf8");
     expect(pdfSource).not.toContain("item.projectFit");
+  });
+
+  it("keeps the live report route off legacy confidence fields too", () => {
+    const source = readFileSync(join(process.cwd(), "app/report/page.tsx"), "utf8");
+    expect(source).not.toMatch(
+      /prog\.(?:confidence|confidenceLabel|relevance|relevanceLabel|benefitRange|whyOneLine)/,
+    );
+    expect(source).not.toContain("prog.projectFitLabel");
+    expect(source).not.toMatch(
+      /item\.(?:confidenceLabel|relevanceLabel|matchedRules|notVerified|whyOneLine)/,
+    );
+    expect(source).not.toContain("item.projectFit");
   });
 });
 

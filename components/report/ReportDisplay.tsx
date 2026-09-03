@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
   Search,
   MapPin,
   FileText,
@@ -26,6 +27,10 @@ import {
 } from "@/lib/report-engine";
 import ReportZoningMap from "@/components/report/ReportZoningMapIsland";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import type {
+  QuickRefineFields,
+  RefinePanelContext,
+} from "@/components/report/RefineValuePanel";
 import { ReportActionButtons } from "@/components/report/ReportActionButtons";
 import { StartHereCard } from "@/components/report/StartHereCard";
 import { ActionRoadmapSection } from "@/components/report/ActionRoadmapSection";
@@ -113,14 +118,28 @@ import {
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
-import { isSupportOrganizationSectionTitle } from "@/lib/support-organization-copy";
+import {
+  isSupportOrganizationSectionTitle,
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "@/lib/support-organization-copy";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
+import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
+import type { AdminOwnershipPanelStatus } from "@/components/report/AdminOwnershipPanel";
+import { fetchAdminOwnershipContext } from "@/lib/owner-file-report-context";
+import type {
+  OwnerFileReportMatch,
+  OwnerFileReportTopCluster,
+} from "@/lib/owner-file-report-context";
+import { REPORT_GENERATION_FAILURE_COPY } from "@/components/report/report-generation-failure";
 import { trackEvent } from "@/lib/analytics-events";
 import {
   analyticsReportKey,
+  extractReportZipCode,
   reportAnalyticsPayload,
 } from "@/lib/report-generated-event";
 import {
@@ -136,22 +155,105 @@ const fadeIn = {
   transition: { duration: 0.4, ease: "easeOut" as const },
 };
 
+/**
+ * Compact local-support strip under the verdict — elevates the support
+ * network (normally buried mid-report) to the top of the page. Clicks run
+ * through the same support_resource_clicked tracking as the full section.
+ *
+ * Live surface only (`surface="live"`), alongside the fuller support hero
+ * band below it. Moved here verbatim from app/report/page.tsx when the two
+ * report renderers were merged — see docs/report-renderer-unification.md
+ * section 3.4. `data-tour="report-support"` is the spotlight tour's anchor.
+ */
+function VerdictPartnerStrip({
+  items,
+  onPartnerClick,
+}: {
+  items: ReportItem[];
+  onPartnerClick: (item: ReportItem) => void;
+}) {
+  if (items.length === 0) return null;
+  const top = items.slice(0, 3);
+
+  return (
+    <div
+      data-tour="report-support"
+      className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden"
+    >
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]">
+          Local support to explore
+        </span>
+        <span className="text-[12px] text-[#0C1B33]/50">
+          {items.length} organization{items.length !== 1 ? "s" : ""} selected for this location
+        </span>
+        <a
+          href="#your-support-network"
+          className="ml-auto font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/45 hover:text-[#2563EB] transition-colors"
+        >
+          See all ↓
+        </a>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {top.map((item) =>
+          item.url ? (
+            <a
+              key={item.label}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => onPartnerClick(item)}
+              className="inline-flex items-center gap-1.5 bg-white border border-[#0C1B33]/12 px-3 py-1.5 text-[12px] text-[#0C1B33]/75 hover:border-[#2563EB] hover:text-[#2563EB] transition-colors"
+            >
+              {item.label}
+              <ExternalLink className="w-3 h-3 opacity-40" />
+            </a>
+          ) : (
+            <span
+              key={item.label}
+              className="inline-flex items-center bg-white border border-[#0C1B33]/12 px-3 py-1.5 text-[12px] text-[#0C1B33]/70"
+            >
+              {item.label}
+            </span>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Report Display ──────────────────────────────────────────────────
 
-// RF2, first landing: the analytics helpers this component uses were local
-// copies, deliberately duplicated from app/report/page.tsx while the two
-// forks of this UI stayed unmerged. They had already drifted — this fork's
-// copy dropped zipCode/sectionCount/actionCount — so both now come from
-// lib/report-generated-event.ts and the shape is the same wherever an event
-// fires. The two ReportDisplay forks are still forks; this is one slice of
-// them made shared, not the merge.
-
+/**
+ * THE report renderer. One component, two surfaces.
+ *
+ * Until the fork-unification round this UI existed twice: this exported
+ * component (rendering saved reports at /workspace/reports/[id]) and a
+ * private `ReportDisplay` inside app/report/page.tsx (rendering the live
+ * /report result and its two compare panes). They were hand-maintained
+ * copies — 1,275 byte-identical lines at the last measurement, ratcheted by
+ * lib/source-guard/fork-similarity-ratchet.ts — and they had drifted, in
+ * both directions, on screen and in the funnel.
+ *
+ * The private copy is gone; /report imports this. Everything the two forks
+ * genuinely did differently is now derived from ONE prop, `surface`, in the
+ * block at the top of the body. Every classification — which difference was
+ * drift and which was a real per-surface feature, and which fork won each —
+ * is written down in docs/report-renderer-unification.md. Read that before
+ * adding a per-surface branch: a second mode prop, or a `className` escape
+ * hatch, is how this became two files the first time.
+ */
 export function ReportDisplay({
   report: rawReport,
   onStartOver,
   onRefine,
+  onQuickRefine,
+  quickRefineBusy,
+  refineContext: refineContextProp,
   isInstantMode,
   showPersonaLens,
+  persona: personaProp,
+  onPersonaSelect,
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -160,20 +262,51 @@ export function ReportDisplay({
   setCompareAddressInput,
   compareGeocoding,
   onCompareGeocode,
+  comparisonFailed,
   compareGeoResult,
-  analyticsSource = "workspace",
+  surface = "saved",
+  analyticsSource: analyticsSourceProp,
 }: {
   report: GeneratedReport;
   onStartOver: () => void;
   onRefine?: () => void;
+  /**
+   * Inline goal-first quick refine inside RefineValuePanel. Live surface
+   * only — a saved report has no wizard to re-run in place.
+   */
+  onQuickRefine?: (fields: QuickRefineFields) => void;
+  quickRefineBusy?: boolean;
+  /**
+   * Entry-point label RefineValuePanel records its own exposure event
+   * under. Defaults per surface to what each fork used before the merge:
+   * a compare pane is "compare_a", the live report "instant", a saved
+   * report "workspace".
+   */
+  refineContext?: RefinePanelContext;
   isInstantMode?: boolean;
   /**
    * Persona lens visibility (Tier 1b, BM4). Deliberately decoupled from
-   * isInstantMode (which is snapshot-only — false on saved goal-refined
-   * reports): persona (audience) and goal (project outcome) are orthogonal
-   * lenses, so callers pass this for any location-anchored site report.
+   * isInstantMode: the live page passes isInstantMode diminished by
+   * hasRefinedInstantReport (hiding the refine pitch after refining is
+   * intentional) and a saved report is snapshot-only, but persona
+   * (audience) and goal (project outcome) are orthogonal — the lens must
+   * stay available on the goal-refined report the email gate funnels every
+   * real user into, and on any location-anchored saved site report.
    */
   showPersonaLens?: boolean;
+  /**
+   * Persona lens value + committer, CONTROLLED when `persona` is supplied.
+   *
+   * /report lifts this state to `ReportWizardPage` (gate-persona-lens-sunset
+   * round) so `ReportEmailGate` — a SIBLING of this component, not a child —
+   * can commit a persona choice into the same value this renders from.
+   * Saved reports have no such sibling, so omitting `persona` leaves this
+   * component owning it: it resolves `?persona=` / the stored session choice
+   * after mount and calls `storePersona` on every selection. See
+   * docs/report-renderer-unification.md section 4.
+   */
+  persona?: PersonaId;
+  onPersonaSelect?: (next: PersonaId) => void;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -182,26 +315,79 @@ export function ReportDisplay({
   setCompareAddressInput?: (v: string) => void;
   compareGeocoding?: boolean;
   onCompareGeocode?: () => void;
+  /**
+   * R1 finding 1: a failed comparison generation used to leave the compare
+   * panel spinning with nothing said. True when that generation failed; the
+   * panel then states it and offers the same lookup again (re-running the
+   * compare geocode re-arms the generation effect, which is the SAME path).
+   * Compare is a live-surface flow; a saved report never sets this.
+   */
+  comparisonFailed?: boolean;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
   // review7 S20 (MEDIUM): `programs?: Program[]` removed — see
   // ReportNavigationLinks.tsx's own comment on why it was already dead
   // (no real caller ever populated it; `programReportItem()` already
   // sets every field the `programById` lookup below used to fall back
   // to, confirmed during review6 S11).
+  /**
+   * WHICH REPORT SURFACE THIS IS. The one seam left by the fork merge.
+   *
+   * "live"  — /report: the wizard's own result and its two compare panes.
+   * "saved" — a stored snapshot (/workspace/reports/[id]) and the default,
+   *           so every existing caller and test keeps today's behavior.
+   *
+   * Five reader-visible differences derive from this, in ONE block at the
+   * top of the body. Do not add a second mode prop or a className escape
+   * hatch: that is how this component became two files the first time.
+   * docs/report-renderer-unification.md section 3 lists all five with the
+   * evidence for keeping each.
+   */
+  surface?: "live" | "saved";
   /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
   analyticsSource?: string;
 }) {
+  // ── Surface differences (the whole of them) ──────────────────────────
+  // Each line below is one reader-visible way /report and a saved report
+  // differ, and each is what the corresponding fork rendered before the
+  // merge. docs/report-renderer-unification.md section 3 carries the
+  // evidence and the test that pins each.
+  const isLiveSurface = surface === "live";
+  /** 3.1 Sections collapse past the first two, behind an Expand/Collapse head. */
+  const progressiveDisclosure = isLiveSurface;
+  /** 3.2 Probe the Owner Files admin session and mount AdminOwnershipPanel. */
+  const showAdminOwnership = isLiveSurface;
+  /** 3.3 + 3.4 Support hero band above the TOC, partner strip under the verdict. */
+  const elevateSupportNetwork = isLiveSurface;
+  /** 3.5 The download gate offers a skip path. */
+  const allowDownloadGateSkip = isLiveSurface;
+  /** 3.6 The action row's afterSave slot carries a Watch Area control. */
+  const showWatchAreaAction = !isLiveSurface;
+  // Both forks' defaults, preserved exactly, now derived rather than
+  // hand-copied into two files.
+  const analyticsSource = analyticsSourceProp ?? (isLiveSurface ? "instant_report" : "workspace");
+  const refineContext =
+    refineContextProp ?? (compact ? "compare_a" : isLiveSurface ? "instant" : "workspace");
+
   const report = useMemo(() => normalizePublicReportForDisplay(rawReport), [rawReport]);
   const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const vacancy = useVacancySpreadsheetSection(report, reportWizardState, compact);
+  const { vacancySpreadsheetScope, isDrawnAreaReport, vacancySpreadsheetLocale } = vacancy;
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
-  const vacancy = useVacancySpreadsheetSection(report, reportWizardState, compact);
-  const { vacancySpreadsheetScope, isDrawnAreaReport, vacancySpreadsheetLocale } = vacancy;
+  // review6 S11 (CRITICAL, S1 reopened): the `programById` fallback map
+  // that used to live here (built from a client-side `programs: Program[]`
+  // prop) is gone. `programReportItem()` (lib/report-engine.ts) already
+  // sets applicationPortals/verificationSteps/sourceUrl/status directly on
+  // every program-linked report item at generation time — this was
+  // always the PRIMARY source (see ReportNavigationLinks's own
+  // `item.applicationPortals || program?.applicationPortals` fallback
+  // ordering); losing the secondary fallback only affects a report item
+  // built through some OTHER path that didn't set those fields itself.
   const supportSection = useMemo(
     () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
     [report.sections],
@@ -210,29 +396,55 @@ export function ReportDisplay({
     () => supportSection?.items.slice(1) ?? [],
     [supportSection],
   );
+  // The hero band's "Visit {org}" CTA (live surface only, section 3.3).
+  const supportCtaItem = useMemo(
+    () => supportItems.find((item) => item.sourceUrl || item.url) ?? null,
+    [supportItems],
+  );
+  const supportCtaUrl = supportCtaItem?.sourceUrl || supportCtaItem?.url;
   const viewedSupportKeyRef = useRef<string | null>(null);
 
   // ── Persona lens (Tier 1b, audit BM4) ──
   // A viewing lens over this snapshot: re-orders and collapses existing content
   // client-side. Canonical `report` stays untouched (save/email/PDF/refine use
   // it); only the on-screen sections + roadmap read the lensed copy.
-  const [persona, setPersona] = useState<PersonaId>(DEFAULT_PERSONA);
+  //
+  // Controlled when the caller supplies `persona` (see the prop's own doc);
+  // otherwise this slot owns it. The useState and the resolve effect run
+  // unconditionally either way — a conditional hook would break the ordinal
+  // seeding in app/report/__tests__/report-page-live-renderer.test.tsx as
+  // surely as it would break React.
+  const isPersonaControlled = personaProp !== undefined;
+  const [uncontrolledPersona, setUncontrolledPersona] = useState<PersonaId>(DEFAULT_PERSONA);
+  const persona = personaProp ?? uncontrolledPersona;
   useEffect(() => {
+    if (isPersonaControlled) return;
     // Resolve after mount to avoid a hydration mismatch; a forwarded ?persona=
     // (or the per-session choice) opens the snapshot in that lens.
-    setPersona(
+    setUncontrolledPersona(
       resolveInitialPersona(
         typeof window !== "undefined" ? window.location.search : null,
       ),
     );
-  }, []);
-  const handlePersonaSelect = useCallback((next: PersonaId) => {
-    setPersona(next);
-    storePersona(next);
-  }, []);
-  // Shared-link recipient experience (spec v2 deliverable 7) — see the live
-  // fork (app/report/page.tsx) for the full rationale on why this is a
-  // render-time derivation rather than its own useState slot.
+  }, [isPersonaControlled]);
+  const handlePersonaSelect = useCallback(
+    (next: PersonaId) => {
+      if (isPersonaControlled) {
+        // The owner of the state is a level up; it stores the choice itself.
+        onPersonaSelect?.(next);
+        return;
+      }
+      setUncontrolledPersona(next);
+      storePersona(next);
+    },
+    [isPersonaControlled, onPersonaSelect],
+  );
+  // Shared-link recipient experience (spec v2 deliverable 7): a framed link
+  // opens in the sender's chosen lens. Derived at render time (not its own
+  // state — avoids adding a useState slot, which would desync the
+  // ordinal-seeded test harness; see report-page-live-renderer.test.tsx's
+  // maintenance warning) from the same URL the persona-resolution effect
+  // above already reads.
   const isFramedPersonaLink =
     typeof window !== "undefined" && personaFromSearch(window.location.search) !== DEFAULT_PERSONA;
   const lensed = useMemo(
@@ -301,18 +513,96 @@ export function ReportDisplay({
     return entries;
   }, [lensed]);
 
+  /* ── Progressive disclosure (LIVE surface only — see the `surface` prop
+        and docs/report-renderer-unification.md section 3.1): long-tail
+        sections collapse by default. Open: the first two sections plus the
+        primary-story sections. Content stays in the DOM (CSS-hidden) so
+        print and #anchors work. A saved report renders every section open,
+        with no expand affordance, exactly as it always has. ── */
+  const ALWAYS_OPEN_SECTIONS = useMemo(
+    () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
+    []
+  );
+  // Keyed by sectionStateKey (section.id, falling back to the title
+  // anchor) — NOT array index. The persona lens reorders `lensed.sections`
+  // on every persona switch; an index-keyed map silently reattached a prior
+  // section's open/closed state to whatever different section now sits at
+  // that position (adversarial review finding #9).
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const isSectionOpen = useCallback(
+    (key: string, idx: number, title: string) =>
+      expandedSections[key] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
+    [expandedSections, ALWAYS_OPEN_SECTIONS]
+  );
+  useEffect(() => {
+    // Auto-expand a collapsed section when a TOC/anchor link targets it.
+    // Reads `lensed` (not canonical `report`) so a hash link opens the
+    // section that's actually rendered under the active persona. Inert
+    // where nothing collapses in the first place.
+    if (!progressiveDisclosure) return;
+    const openFromHash = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash || !lensed.sections) return;
+      const target = lensed.sections.find(
+        (s) => sectionToAnchor(s) === hash
+      );
+      if (target) setExpandedSections((prev) => ({ ...prev, [sectionStateKey(target)]: true }));
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, [lensed.sections, progressiveDisclosure]);
+
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
-  // The Brief (gate finding 8 — workspace-fork parity, spec v2 item 5): one
-  // state slot for the two-question ask + open/closed, matching
-  // app/report/page.tsx's own briefState exactly (no ordinal-useState
-  // harness constrains this file — only app/report/page.tsx's private
-  // inline ReportDisplay function is seeded by REPORT_DISPLAY_STATE_ORDER
-  // in report-page-live-renderer.test.tsx; this exported component has no
-  // such harness).
+  // The Brief (gate finding 8, spec v2 item 5): one state slot for the
+  // two-question ask + open/closed, so this only adds ONE ordinal useState
+  // slot. See report-page-live-renderer.test.tsx's maintenance warning —
+  // that harness seeds this component's useState calls by ordinal.
   const [briefState, setBriefState] = useState<BriefUiState>(DEFAULT_BRIEF_UI_STATE);
+
+  /* ── Admin-only ownership context (LIVE surface only, screen-only; never
+        PDF/email — see components/report/AdminOwnershipPanel.tsx). Probes
+        the Owner Files admin session once, then loads the private
+        per-parcel geo export for this report's ZIP only when the probe
+        confirms an admin session. ── */
+  const reportZip = useMemo(() => extractReportZipCode(report), [report]);
+  const [adminOwnershipStatus, setAdminOwnershipStatus] = useState<AdminOwnershipPanelStatus>("idle");
+  const [adminOwnershipMatch, setAdminOwnershipMatch] = useState<OwnerFileReportMatch | null>(null);
+  const [adminOwnershipTopClusters, setAdminOwnershipTopClusters] = useState<OwnerFileReportTopCluster[]>([]);
+
+  useEffect(() => {
+    if (!showAdminOwnership || compact || !reportZip) {
+      setAdminOwnershipStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchAdminOwnershipContext({
+      zip: reportZip,
+      address: report.metadata?.address,
+      signal: controller.signal,
+      onAdminConfirmed: () => setAdminOwnershipStatus("loading"),
+    })
+      .then((result) => {
+        setAdminOwnershipMatch(result.match);
+        setAdminOwnershipTopClusters(result.topClusters);
+        setAdminOwnershipStatus(result.status);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("[report] admin ownership context load failed:", err);
+        setAdminOwnershipStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [showAdminOwnership, compact, reportZip, report.metadata?.address]);
+
   // sm_ params (additive, spec v2 item 5): a link carrying sm_stage/
-  // sm_priority opens straight into the brief, skipping the ask — mirrors
-  // app/report/page.tsx's own effect exactly.
+  // sm_priority opens straight into the brief, skipping the ask — the
+  // Brief becomes a genuinely shareable URL, not only an in-page action.
+  // Effect (not a render-time read) to stay hydration-safe, matching the
+  // persona-resolution effect's own pattern.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -455,6 +745,23 @@ export function ReportDisplay({
       );
     },
     [analyticsSource, report],
+  );
+
+  // The support hero band's CTA (live surface only). Distinct `source` from
+  // trackSupportResourceClick's so "clicked the elevated CTA" can be told
+  // apart from "clicked an org inside the section".
+  const trackSupportCtaClick = useCallback(
+    (item: ReportItem) => {
+      trackEvent(
+        "support_resource_clicked",
+        reportAnalyticsPayload(report, "report_support_cta", {
+          organizationName: item.label,
+          organizationType: item.value || "local_support",
+          contactMethod: "website",
+        }),
+      );
+    },
+    [report],
   );
 
   const trackSectionLinkClick = useCallback(
@@ -640,17 +947,20 @@ export function ReportDisplay({
 
           <DrawnAreaScopeUnavailableBanner scope={vacancySpreadsheetScope} />
 
-          {/* Refine value preview (audit RF6/WU5/BM1): honestly sell what
-              refining unlocks instead of the old undersell disclaimer.
-              Rendered in compact (compare) mode too — audit RF4. The refine
-              path routes through handleRefineClick so PR #49's refine_clicked
-              keeps firing (location: banner) alongside the panel's own
-              refine_value_preview_shown exposure event. */}
+          {/* Refine value preview (audit RF6/WU5/BM1): explain what
+              refining unlocks — goal-based organization, action plan, and gap checklist —
+              with an inline goal-first quick refine where the caller supplies
+              one. Rendered in compact (compare) mode too — audit RF4. The
+              full-refine path routes through handleRefineClick so PR #49's
+              refine_clicked keeps firing (location: banner) alongside the
+              panel's own refine_value_preview_shown exposure event. */}
           {isInstantMode && !showPersonaView && (
             <RefineValuePanel
               report={report}
-              context={compact ? "compare_a" : "workspace"}
+              context={refineContext}
               onRefine={onRefine ? () => handleRefineClick("banner") : undefined}
+              onQuickRefine={onQuickRefine}
+              quickRefineBusy={quickRefineBusy}
               compact={compact}
             />
           )}
@@ -771,12 +1081,70 @@ export function ReportDisplay({
           </div>
           )}
 
+          {showAdminOwnership && !showPersonaView && !compact && (
+            <AdminOwnershipPanel
+              status={adminOwnershipStatus}
+              zip={reportZip}
+              match={adminOwnershipMatch}
+              topClusters={adminOwnershipTopClusters}
+            />
+          )}
+
           {!showPersonaView && (
             <CapitalPartnerHandoff
               report={report}
               source={analyticsSource}
               compact={compact}
             />
+          )}
+
+          {/* ── Support network, elevated (LIVE surface only — section 3.3).
+                A saved report leaves the support organizations in their
+                section, where they have always been. ── */}
+          {elevateSupportNetwork && !showPersonaView && supportItems.length > 0 && !compact && (
+            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 bg-[#FAF9F6]">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
+                    Local support organizations
+                  </div>
+                  <h2 className="font-editorial text-[22px] text-[#0C1B33] leading-snug">
+                    {SUPPORT_ORGANIZATIONS_SECTION_TITLE}
+                  </h2>
+                  <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed mt-1.5 max-w-2xl">
+                    {SUPPORT_ORGANIZATIONS_DESCRIPTION}
+                  </p>
+                  <p className="text-[#0C1B33]/35 text-[11px] leading-relaxed mt-1.5 max-w-2xl">
+                    {SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}
+                  </p>
+                  <p className="font-mono-bureau text-[9px] tracking-[0.08em] text-[#0C1B33]/30 mt-2 truncate">
+                    {supportItems.length} selected · {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
+                    {supportItems.length > 3 ? " · more below" : ""}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 md:justify-end">
+                  {supportCtaItem && supportCtaUrl && (
+                    <a
+                      href={supportCtaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackSupportCtaClick(supportCtaItem)}
+                      className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:bg-[#0C1B33]/80 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Visit {supportCtaItem.label}
+                    </a>
+                  )}
+                  <a
+                    href="#your-support-network"
+                    className="inline-flex items-center justify-center gap-2 border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:border-[#0C1B33]/25 hover:text-[#0C1B33] transition-colors"
+                  >
+                    See all organizations
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ── Table of Contents ── */}
@@ -856,6 +1224,17 @@ export function ReportDisplay({
               </div>
             )}
 
+            {/* ── Who can help — support network elevated to the top
+                  (LIVE surface only, section 3.4). ── */}
+            {elevateSupportNetwork && !showPersonaView && supportSection && supportItems.length > 0 && (
+              <VerdictPartnerStrip
+                items={supportItems}
+                onPartnerClick={(item) =>
+                  trackSectionLinkClick(supportSection, item)
+                }
+              />
+            )}
+
             {/* ── Executive Summary from Confidence Engine ── */}
             {!showPersonaView && report.executiveSummary && (
               <div id="executive-summary">
@@ -873,7 +1252,21 @@ export function ReportDisplay({
             {/* Action-first hierarchy: orient the user before detailed evidence. */}
             {!showPersonaView && lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
               <div id="action-roadmap">
-                <ActionRoadmapSection items={lensed.actionRoadmap} />
+                <ActionRoadmapSection
+                  items={lensed.actionRoadmap}
+                  onContactClick={(item, contactMethod) =>
+                    trackEvent(
+                      "support_resource_clicked",
+                      reportAnalyticsPayload(report, "action_roadmap", {
+                        organizationName: item.contact?.agency || item.programName || item.label,
+                        organizationType: item.contact?.role || "program_contact",
+                        contactMethod,
+                        programId: item.programId || null,
+                        programName: item.programName || null,
+                      })
+                    )
+                  }
+                />
               </div>
             )}
 
@@ -900,9 +1293,33 @@ export function ReportDisplay({
                 const sectionNumber = showPersonaView
                   ? String(++personaSectionCounter).padStart(2, "0")
                   : String(sectionIdx + sectionOffset + 1).padStart(2, "0");
+                const sectionKey = sectionStateKey(section);
                 const guidepostPart = showPersonaView
                   ? guidepostPartForSection(section, persona)
                   : null;
+                const band =
+                  guidepostPart !== null && guidepostPart !== guidepostBandTracker
+                    ? renderGuidepostBand(guidepostPart)
+                    : null;
+                guidepostBandTracker = guidepostPart;
+
+                // Progressive disclosure (section 3.1), live surface only.
+                // On a persona board every section is pinned open; on a saved
+                // report nothing collapses at all, so the head renders without
+                // an expand affordance and this is always true.
+                //
+                // The `collapsedByPersona` arm below is the live fork's
+                // shipped expression and is kept verbatim, but it is
+                // unreachable: applyPersonaLens only sets that flag for a REAL
+                // persona, and a real persona means showPersonaView. See
+                // docs/report-renderer-unification.md section 6, finding 2.
+                const sectionOpen = !progressiveDisclosure
+                  ? true
+                  : showPersonaView
+                  ? true
+                  : section.collapsedByPersona
+                  ? (expandedSections[sectionKey] ?? false)
+                  : isSectionOpen(sectionKey, sectionIdx, section.title);
                 const isPersonaProgramSection =
                   showPersonaView && section.guidepostBucket === "programs";
                 // Owner ruling 2026-08-31 (routing-first supporter cards):
@@ -915,58 +1332,72 @@ export function ReportDisplay({
                   ["siteFacts", "logisticsAccess", "civicRepresentation", "zoning"].includes(
                     section.guidepostBucket ?? "",
                   );
-                const band =
-                  guidepostPart !== null && guidepostPart !== guidepostBandTracker
-                    ? renderGuidepostBand(guidepostPart)
-                    : null;
-                guidepostBandTracker = guidepostPart;
-                // Persona lens: the "Also at this address" group collapses (never
-                // hides) into a native disclosure. Print/PDF is generated from the
-                // canonical report, so this only affects the on-screen view.
-                const Wrapper = !showPersonaView && section.collapsedByPersona ? "details" : "div";
-                const handleSectionToggle = !showPersonaView && section.collapsedByPersona
-                  ? (event: React.SyntheticEvent<HTMLDetailsElement>) => {
-                      trackEvent("section_expanded", {
-                        reportType: report.reportType,
-                        source: "report_section_toggle",
-                        metadata: {
-                          sectionId: sectionToAnchor(section),
-                          sectionTitle: section.title,
-                          sectionIndex: sectionIdx,
-                          state: event.currentTarget.open ? "expanded" : "collapsed",
-                        },
-                      });
-                    }
-                  : undefined;
+                // Number + title. Shared by both head variants below so the
+                // one thing that genuinely differs between the surfaces —
+                // whether the head is an interactive control — is the only
+                // thing that is written twice.
+                const sectionHeading = (
+                  <>
+                    <span className={showPersonaView ? "font-mono-bureau text-[10px] text-[#2563EB]" : "font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8"}>
+                      {sectionNumber}
+                    </span>
+                    <h2 className={showPersonaView ? "font-editorial text-[15.5px] font-semibold normal-case tracking-normal text-[#0C1B33]" : "font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]"}>
+                      {section.title}
+                    </h2>
+                  </>
+                );
 
                 const sectionElement = (
-                  <Wrapper
-                    key={sectionStateKey(section)}
+                  <div
+                    key={sectionKey}
                     id={sectionToAnchor(section)}
-                    data-persona-section-open={showPersonaView ? "true" : undefined}
-                    className={`report-section ${showPersonaView ? "mb-0 border-b border-[#D8DDE6] py-4" : "mb-14"} ${!showPersonaView && section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}
-                    {...(handleSectionToggle
-                      ? // The dynamic Wrapper type ("details" | "div") makes JSX validate
-                        // onToggle against both element prop types; it only ever renders
-                        // on the "details" branch, where the handler's element type is
-                        // exact.
-                        ({ onToggle: handleSectionToggle } as unknown as Record<string, unknown>)
-                      : {})}
+                    data-persona-section-open={showPersonaView ? sectionOpen : undefined}
+                    className={`report-section ${
+                      showPersonaView
+                        ? "mb-0 border-b border-[#D8DDE6] py-4"
+                        : sectionOpen
+                          ? "mb-14"
+                          : "report-section-collapsed mb-6"
+                    }`}
                   >
-                    {!showPersonaView && section.collapsedByPersona && (
-                      <summary className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] cursor-pointer select-none">
-                        {section.title} · {section.items.length} more
-                      </summary>
+                    {progressiveDisclosure ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (showPersonaView) return;
+                          setExpandedSections((prev) => ({
+                            ...prev,
+                            [sectionKey]: !sectionOpen,
+                          }));
+                          trackEvent("section_expanded", {
+                            reportType: report.reportType,
+                            source: "report_section_toggle",
+                            metadata: {
+                              sectionId: sectionToAnchor(section),
+                              sectionTitle: section.title,
+                              sectionIndex: sectionIdx,
+                              state: sectionOpen ? "collapsed" : "expanded",
+                            },
+                          });
+                        }}
+                        aria-expanded={sectionOpen}
+                        className={`section-head group mb-4 flex w-full items-baseline text-left ${showPersonaView ? "gap-2.5 cursor-default" : "gap-4 cursor-pointer print:cursor-auto"}`}
+                      >
+                        {sectionHeading}
+                        {!showPersonaView && <span className="ml-auto font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 group-hover:text-[#2563EB] transition-colors print:hidden">
+                          {sectionOpen
+                            ? "Collapse"
+                            : `Expand${section.items?.length ? ` · ${section.items.length}` : ""}`}
+                        </span>}
+                      </button>
+                    ) : (
+                      <>
+                        <div className={`flex items-baseline mb-4 ${showPersonaView ? "gap-2.5" : "gap-4"}`}>
+                          {sectionHeading}
+                        </div>
+                        {!showPersonaView && <hr className="border-[#0C1B33]/8 mb-5" />}
+                      </>
                     )}
-                    <div className={`flex items-baseline mb-4 ${showPersonaView ? "gap-2.5" : "gap-4"}`}>
-                      <span className={showPersonaView ? "font-mono-bureau text-[10px] text-[#2563EB]" : "font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8"}>
-                        {sectionNumber}
-                      </span>
-                      <h2 className={showPersonaView ? "font-editorial text-[15.5px] font-semibold normal-case tracking-normal text-[#0C1B33]" : "font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]"}>
-                        {section.title}
-                      </h2>
-                    </div>
-                    {!showPersonaView && <hr className="border-[#0C1B33]/8 mb-5" />}
 	                    {!showPersonaView && section.description && (
 	                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
 	                        {section.description}
@@ -1324,11 +1755,9 @@ export function ReportDisplay({
                         })}
                       </div>
                     )}
-                    {showPersonaView &&
-                      section.guidepostBucket === "programs" &&
-                      personaAlsoSection && (
-                        <PersonaAlsoAtAddress items={personaAlsoSection.items} />
-                      )}
+                    {isPersonaProgramSection && personaAlsoSection && (
+                      <PersonaAlsoAtAddress items={personaAlsoSection.items} />
+                    )}
                     {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
                       <>
                         {/* Owner ruling A2: every view — the kitchen sink AND
@@ -1354,7 +1783,7 @@ export function ReportDisplay({
                         )}
                       </>
                     )}
-                  </Wrapper>
+                  </div>
                 );
                 // Owner ruling 2026-08-31 (who-to-call pointer): PART 02 ends
                 // by pointing the supporter at the Contact Sheet in PART 03.
@@ -1363,7 +1792,7 @@ export function ReportDisplay({
                 const whoToCall =
                   isRoutingProgramSection && boardPersona ? (
                     <ContactSheetPointerRow
-                      key={`${sectionStateKey(section)}-who-to-call`}
+                      key={`${sectionKey}-who-to-call`}
                       report={lensed}
                       persona={boardPersona}
                     />
@@ -1372,7 +1801,7 @@ export function ReportDisplay({
                   isPersonaProgramSection && boardPersona
                     ? (
                         <PersonaProgramSupplements
-                          key={`${sectionStateKey(section)}-supplements`}
+                          key={`${sectionKey}-supplements`}
                           report={report}
                           lensedReport={lensed}
                           persona={boardPersona}
@@ -1667,15 +2096,20 @@ export function ReportDisplay({
                     source={`${analyticsSource}_report_actions`}
                     className="w-full sm:w-auto px-8 py-3.5 shadow-md"
                   />
-                  {report.metadata?.lat != null && report.metadata?.lon != null && (
-                    <WatchAreaButton
-                      lat={report.metadata.lat}
-                      lon={report.metadata.lon}
-                      label={report.metadata?.address || report.title}
-                      callbackUrl={`/map?lat=${report.metadata.lat}&lon=${report.metadata.lon}&label=${encodeURIComponent(report.metadata?.address || report.title)}`}
-                      variant="action"
-                    />
-                  )}
+                  {/* Saved-report surface only — section 3.6. /report has
+                      never carried this control; adding it there is a
+                      visible change and a separate decision. */}
+                  {showWatchAreaAction &&
+                    report.metadata?.lat != null &&
+                    report.metadata?.lon != null && (
+                      <WatchAreaButton
+                        lat={report.metadata.lat}
+                        lon={report.metadata.lon}
+                        label={report.metadata?.address || report.title}
+                        callbackUrl={`/map?lat=${report.metadata.lat}&lon=${report.metadata.lon}&label=${encodeURIComponent(report.metadata?.address || report.title)}`}
+                        variant="action"
+                      />
+                    )}
                 </>
               )}
               afterEmail={<VacancySpreadsheetCsvCtaButton vacancy={vacancy} />}
@@ -1744,6 +2178,31 @@ export function ReportDisplay({
             </div>
           )}
 
+          {/* R1 finding 1: a failed comparison generation used to say nothing
+              at all. It says so here, and offers the same lookup again — which
+              re-arms the comparison generation effect on the same address. */}
+          {compareMode && comparisonFailed && (
+            <div
+              data-testid="comparison-generation-error"
+              className="mt-5 mx-auto max-w-md border border-[#0C1B33]/15 bg-white px-4 py-3"
+            >
+              <p className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/45">
+                {REPORT_GENERATION_FAILURE_COPY.comparison.eyebrow}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/65">
+                {REPORT_GENERATION_FAILURE_COPY.comparison.body}
+              </p>
+              <button
+                type="button"
+                onClick={onCompareGeocode}
+                disabled={compareGeocoding}
+                className="mt-3 inline-flex min-h-9 items-center bg-[#2563EB] px-3 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-white transition-colors hover:bg-[#1D4ED8] disabled:opacity-40"
+              >
+                {REPORT_GENERATION_FAILURE_COPY.comparison.retryLabel}
+              </button>
+            </div>
+          )}
+
           {/* Compare loading state */}
           {compareMode && compareGeoResult && !compareGeoResult && (
             <div className="mt-5 text-center">
@@ -1766,6 +2225,7 @@ export function ReportDisplay({
           reportTitle={report.title}
           onDownload={handleDownloadAfterCapture}
           onClose={() => setDownloadGateOpen(false)}
+          allowSkip={allowDownloadGateSkip}
         />
       )}
       {/* Email Report Dialog */}

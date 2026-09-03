@@ -1,16 +1,19 @@
 /**
- * Fork duplication ratchet: the two report renderers may only converge.
+ * Fork duplication ratchet: the two report renderers may only converge —
+ * and, since 2026-09-03, may not diverge again.
  *
- * lib/__tests__/fork-parity-guard.test.ts fences ONE already-unified slice
- * (drawn-area rendering, generic report actions). This test covers the
- * rest: the raw volume of byte-identical markup still pasted between
+ * lib/__tests__/fork-parity-guard.test.ts fences already-unified slices
+ * (drawn-area rendering, generic report actions). This test covered the
+ * rest: the raw volume of byte-identical markup pasted between
  * app/report/page.tsx's local `ReportDisplay` and
- * components/report/ReportDisplay.tsx. See
+ * components/report/ReportDisplay.tsx. That local `ReportDisplay` has now
+ * been deleted — /report renders the exported component — so the measured
+ * number is 0 and the baseline is 0. See
  * lib/source-guard/fork-similarity-ratchet.ts for the counting
- * methodology, which is fixed — changing it invalidates the baseline
- * below.
+ * methodology, which is fixed, and docs/report-renderer-unification.md for
+ * the merge itself.
  */
-import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -28,6 +31,20 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 /**
  * Duplicated lines shared by the two fork files.
  *
+ * ── 2026-09-03: 0 lines, 0 blocks. The fork was merged. ───────────────
+ * app/report/page.tsx's private `ReportDisplay` (1,936 lines) was deleted
+ * and /report now renders components/report/ReportDisplay.tsx with
+ * `surface="live"`; everything the two copies did differently is derived
+ * from that one prop. The number went 1,275 -> 0 because the duplication
+ * was REMOVED, not because the scanner stopped working — which is exactly
+ * the distinction #258 built the counter-lock below to enforce, and which
+ * the "zero is honest" test now verifies directly against the reason.
+ *
+ * From here the constant is a RE-FORK guard: paste a block of report markup
+ * from the renderer back into app/report/page.tsx and the number rises
+ * above 0 and this suite goes red in the same commit.
+ *
+ * ── History ───────────────────────────────────────────────────────────
  * Measured 2026-09-02, AFTER the metric was hardened: 1,275 significant
  * lines across 22 contiguous blocks, largest 261.
  *
@@ -49,12 +66,11 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
  * one longer block, which is why the block count fell and the largest
  * block grew. No markup was unified in the commit that moved this number.
  *
- * THIS NUMBER MAY ONLY GO DOWN from here. Unify a block, watch the number
- * drop, and lower this constant in the same commit with a dated note of your
- * own. RAISING it means a paste-back landed and requires an explicit owner
- * ruling recorded here — it is not a way to get a red test green.
+ * THIS NUMBER MAY ONLY GO DOWN from here. It is now at the floor. RAISING
+ * it means a paste-back landed and requires an explicit owner ruling
+ * recorded here — it is not a way to get a red test green.
  */
-const FORK_DUPLICATION_BASELINE = 1275;
+const FORK_DUPLICATION_BASELINE = 0;
 
 describe("fork duplication ratchet: app/report/page.tsx vs components/report/ReportDisplay.tsx", () => {
   const report = measureForkSimilarity(ROOT_DIR);
@@ -77,22 +93,47 @@ describe("fork duplication ratchet: app/report/page.tsx vs components/report/Rep
   });
 
   /**
-   * The counter-lock on the ratchet's one remaining escape: driving the
-   * measured number down without removing duplication. Zero blocks between
-   * two fork files that both still exist means the SCANNER stopped working
-   * (a metric change, an accidental normalization bug, a deliberate
-   * run-splitting edit), not that the forks were unified. The only honest
-   * way to reach zero is to delete or merge a fork file, which this test
-   * detects by looking for it on disk.
+   * #258's counter-lock, inverted now that zero has actually been reached.
+   *
+   * The ratchet's one remaining escape was driving the measured number down
+   * WITHOUT removing duplication: a metric change, a normalization bug, or a
+   * deliberate run-splitting edit would each report zero while 1,275 pasted
+   * lines sat untouched. #258 refused zero outright, on the reasoning that
+   * "the only honest way to reach zero is to delete or merge a fork file."
+   *
+   * That is what happened on 2026-09-03. Both PATHS still exist on disk —
+   * app/report/page.tsx is still the /report route — so the disk check #258
+   * used cannot tell the honest zero from the dishonest one any more. The
+   * check that can is the REASON for zero: the second renderer is gone.
+   * app/report/page.tsx declares no `ReportDisplay` of its own, and it
+   * renders the shared one instead. Both halves matter: without the second,
+   * deleting the report body outright would also read as "unified".
    */
-  it("refuses a collapse to zero blocks while both fork files still exist", () => {
-    const forksStillExist = RATCHET_FORK_FILE_PATHS.every((relPath) =>
-      existsSync(path.join(ROOT_DIR, relPath)),
-    );
-    expect(forksStillExist).toBe(true);
+  it("zero is honest: the second renderer is gone, and /report renders the shared one", () => {
+    const [pagePath, rendererPath] = RATCHET_FORK_FILE_PATHS;
+    const page = readFileSync(path.join(ROOT_DIR, pagePath), "utf8");
+    const renderer = readFileSync(path.join(ROOT_DIR, rendererPath), "utf8");
 
-    expect(report.blocks.length).toBeGreaterThan(0);
-    expect(report.duplicatedLineCount).toBeGreaterThan(0);
+    expect(report.duplicatedLineCount).toBe(0);
+    expect(report.blocks.length).toBe(0);
+
+    // No second renderer...
+    expect(
+      /\bfunction ReportDisplay\b/.test(page),
+      `${pagePath} declares a ReportDisplay again. The two report renderers ` +
+        "were merged deliberately (docs/report-renderer-unification.md); a " +
+        "second copy is the exact debt this ratchet exists to keep out. " +
+        "Render the shared component with the props your surface needs.",
+    ).toBe(false);
+
+    // ...and the route still renders the surviving one, so a zero produced
+    // by deleting the report body instead of sharing it fails here.
+    expect(page).toContain(
+      'import { ReportDisplay } from "@/components/report/ReportDisplay";',
+    );
+    expect(page).toContain('<ReportDisplay');
+    expect(page).toContain('surface="live"');
+    expect(renderer).toContain("export function ReportDisplay(");
   });
 
   it("is fast enough to stay in the default suite (<2s)", () => {
@@ -115,14 +156,17 @@ describe("fork duplication ratchet: app/report/page.tsx vs components/report/Rep
     );
   });
 
-  it("still finds real, substantial blocks (sanity: the scanner has not silently stopped matching)", () => {
-    expect(report.blocks.length).toBeGreaterThan(5);
-    expect(Math.max(...report.blocks.map((block) => block.lineCount))).toBeGreaterThan(
-      MIN_BLOCK_LINES,
-    );
-    // Every counted block must contain at least one substantial line —
-    // a run of bare closing braces is structure, not duplication.
+  // The scanner's "has it silently stopped matching?" sanity check used to
+  // run against the real repo (blocks.length > 5), which only worked while
+  // the repo HAD duplication. It moves to a fixture in the second describe
+  // below ("still finds real, substantial blocks"), where it proves the same
+  // thing — the scanner still finds substantial pasted runs — against input
+  // that does not change when the codebase improves. The per-block
+  // invariants stay here and hold vacuously at zero, so they turn back on
+  // the moment a paste-back reintroduces a block.
+  it("every counted block is substantial (a run of bare closing braces is structure, not duplication)", () => {
     for (const block of report.blocks) {
+      expect(block.lineCount).toBeGreaterThanOrEqual(MIN_BLOCK_LINES);
       expect(block.preview.length).toBeGreaterThan(MIN_LINE_LENGTH);
     }
   });
@@ -217,6 +261,20 @@ describe("fork duplication ratchet: the measurement survives interleaved cosmeti
   }
 
   const clean = measureForkSimilarityBetween(fixtureA, fixtureB);
+
+  // The real-codebase sanity check, relocated here (see the note in the
+  // first describe). It proves the scanner still finds substantial pasted
+  // runs — the property that made a zero on the real repo meaningful in the
+  // first place — against a fixture that cannot be improved away.
+  it("still finds real, substantial blocks (sanity: the scanner has not silently stopped matching)", () => {
+    expect(clean.blocks.length).toBeGreaterThan(0);
+    expect(Math.max(...clean.blocks.map((block) => block.lineCount))).toBeGreaterThan(
+      MIN_BLOCK_LINES,
+    );
+    for (const block of clean.blocks) {
+      expect(block.preview.length).toBeGreaterThan(MIN_LINE_LENGTH);
+    }
+  });
 
   it("measures the fixture's pasted block in the first place", () => {
     // One run, covering the pasted block plus the identical wrapper lines

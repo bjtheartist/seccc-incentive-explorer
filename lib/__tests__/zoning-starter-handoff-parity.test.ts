@@ -9,33 +9,33 @@ import { join } from "path";
  * questionnaire is excluded from every persona lens (present only on
  * "all"), and its one-pager handoff button never renders on a persona
  * view. Structural-only assertions (no DOM environment in this repo — see
- * report-page-live-renderer.test.tsx's own note on that constraint):
- * both forks import and mount the shared ZoningStarterHandoff
- * unconditionally alongside the zoneClass check, and gate
+ * report-page-live-renderer.test.tsx's own note on that constraint): the
+ * renderer imports and mounts the shared ZoningStarterHandoff
+ * unconditionally alongside the zoneClass check, and gates
  * ZoningReviewQuestions (which alone carries StageHandoffButton) on
  * `!showPersonaLens || persona === DEFAULT_PERSONA`.
+ *
+ * Fork-unification round: these were two-fork parity greps, run against
+ * app/report/page.tsx's private ReportDisplay and the exported component.
+ * The private copy is gone — /report renders the exported one — so each
+ * assertion is kept and applied once, to the renderer that survived.
  */
-describe("zoning starter handoff — fork parity (A2/A3)", () => {
+describe("zoning starter handoff (A2/A3)", () => {
   const root = process.cwd();
-  const liveFork = readFileSync(join(root, "app/report/page.tsx"), "utf8");
-  const workspaceFork = readFileSync(
+  const renderer = readFileSync(
     join(root, "components/report/ReportDisplay.tsx"),
     "utf8",
   );
 
-  it("both forks mount ZoningStarterHandoff unconditionally whenever zoneClass is present (never bare zoneClass)", () => {
-    for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("import { ZoningStarterHandoff }");
-      expect(fork).toMatch(
-        /report\.metadata\?\.zoneClass && \(\s*<>\s*\{\/\*[^]*?<ZoningStarterHandoff/,
-      );
-    }
+  it("the renderer mounts ZoningStarterHandoff unconditionally whenever zoneClass is present (never bare zoneClass)", () => {
+    expect(renderer).toContain("import { ZoningStarterHandoff }");
+    expect(renderer).toMatch(
+      /report\.metadata\?\.zoneClass && \(\s*<>\s*\{\/\*[^]*?<ZoningStarterHandoff/,
+    );
   });
 
-  it("both forks gate ZoningReviewQuestions (and its StageHandoffButton) to the 'all' lens only", () => {
-    for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("(!showPersonaLens || persona === DEFAULT_PERSONA) && (");
-    }
+  it("the renderer gates ZoningReviewQuestions (and its StageHandoffButton) to the 'all' lens only", () => {
+    expect(renderer).toContain("(!showPersonaLens || persona === DEFAULT_PERSONA) && (");
   });
 
   it("ZoningStarterHandoff itself never renders StageHandoffButton (that stays inside ZoningReviewQuestions, 'all'-only)", () => {

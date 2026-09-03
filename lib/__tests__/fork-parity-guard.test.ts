@@ -18,6 +18,7 @@ import {
   collectDrawnAreaSignatures,
   collectReportSurfaceFilePaths,
   FORK_FILE_PATHS,
+  REPORT_RENDERER_FILE_PATH,
   KNOWN_UNMIGRATED_ACTION_ROWS,
   REPORT_ACTION_COPY_OWNERS,
   REPORT_ACTION_POLICY_NAMES,
@@ -45,10 +46,16 @@ describe("fork parity: drawn-area surfaces are shared components only — real c
     ).toBe(true);
   });
 
-  it.each(FORK_FILE_PATHS)("%s imports the shared drawn-area module(s) and carries none of their signature copy locally", (relPath) => {
+  it.each(FORK_FILE_PATHS)("%s carries none of the shared drawn-area signature copy locally (and, if it is the renderer, imports every shared module)", (relPath) => {
     const sourceFile = forkSourceFiles.find((f) => f.getFilePath().endsWith(relPath));
     if (!sourceFile) throw new Error(`Fork file not found in project: ${relPath}`);
-    const violations = checkForkFileParity(sourceFile, signatures);
+    // Fork-unification round: only the surviving renderer owes the shared
+    // IMPORTS. app/report/page.tsx renders no report body any more; what it
+    // still owes — and what this test still checks for it — is the copy
+    // fence, which is what stops a second renderer being pasted back into it.
+    const violations = checkForkFileParity(sourceFile, signatures, {
+      requireSharedImports: relPath === REPORT_RENDERER_FILE_PATH,
+    });
     if (violations.length > 0) {
       const report = violations
         .map((v) => `  [${v.kind}] ${v.filePath}\n    ${v.detail}`)
@@ -180,11 +187,15 @@ describe("fork parity guard — synthetic self-tests (scanner mechanics, in-memo
 describe("fork parity: generic report actions are shared by construction", () => {
   const { project, forkSourceFiles } = buildForkParityProject(ROOT_DIR);
 
-  it.each(FORK_FILE_PATHS)("%s imports and renders the shared generic action component without local action copy", (relPath) => {
+  it.each(FORK_FILE_PATHS)("%s carries no local action copy or vacancy predicate (and, if it is the renderer, renders the shared action component)", (relPath) => {
     const sourceFile = forkSourceFiles.find((file) => file.getFilePath().endsWith(relPath));
     if (!sourceFile) throw new Error(`Fork file not found in project: ${relPath}`);
 
-    expect(checkReportActionForkParity(sourceFile)).toEqual([]);
+    expect(
+      checkReportActionForkParity(sourceFile, {
+        requireSharedRow: relPath === REPORT_RENDERER_FILE_PATH,
+      }),
+    ).toEqual([]);
   });
 
   it("the vacancy spreadsheet scope imports the neutral vacancy predicate instead of declaring another copy", () => {

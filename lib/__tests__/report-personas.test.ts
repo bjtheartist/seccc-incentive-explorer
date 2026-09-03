@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
+
+/** Every .ts/.tsx file under `dir`, recursively. */
+function listSourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "node_modules" ? [] : listSourceFiles(full);
+    }
+    return /\.tsx?$/.test(entry.name) ? [full] : [];
+  });
+}
 import {
   ALSO_AT_ADDRESS_TITLE,
   applyPersonaLens,
@@ -139,6 +150,50 @@ describe("applyPersonaLens", () => {
     expect(result.report).toBe(report);
     expect(result.matchedBefore).toBe(4);
     expect(result.matchedAfter).toBe(4);
+  });
+
+  /**
+   * Fork-unification round: the saved-report renderer used to wrap a section
+   * in `<details>` when `!showPersonaView && section.collapsedByPersona`.
+   * That branch was unreachable on every real input and was removed with the
+   * merge (docs/report-renderer-unification.md section 6, finding 1). Its
+   * unreachability rests on an INPUT-SHAPE invariant, not on the renderer:
+   * `collapsedByPersona` has exactly one writer, and that writer never runs
+   * for the 'all' lens — so a section can only carry the flag when the lens
+   * is a real persona, which is exactly when `showPersonaView` is true.
+   *
+   * Pinned here so the removal cannot regress silently: if a second writer
+   * appears, or the 'all' lens starts producing a new report, the deleted
+   * branch becomes reachable and this test says so before a reader finds an
+   * un-collapsible section.
+   */
+  it("'all' produces no collapsedByPersona section, and lib/report-personas.ts is its only writer", () => {
+    const report = reportFixture();
+    const all = applyPersonaLens(report, "all").report;
+
+    // Same reference in, same reference out — so 'all' cannot add the flag.
+    expect(all).toBe(report);
+    expect(all.sections?.some((section) => section.collapsedByPersona)).toBe(false);
+
+    // ...and a real persona DOES set it, so the assertion above is not
+    // vacuous on a fixture that simply never collapses anything.
+    expect(
+      applyPersonaLens(report, "developer").report.sections?.some(
+        (section) => section.collapsedByPersona,
+      ),
+    ).toBe(true);
+
+    // One writer, in this module. A second one anywhere in app/ or
+    // components/ could set the flag outside the lens, on a report the
+    // renderer draws with showPersonaView false.
+    const writers = listSourceFiles(join(process.cwd(), "lib"))
+      .concat(listSourceFiles(join(process.cwd(), "app")))
+      .concat(listSourceFiles(join(process.cwd(), "components")))
+      .filter((filePath) => !filePath.includes("__tests__"))
+      .filter((filePath) => readFileSync(filePath, "utf8").includes("collapsedByPersona:"))
+      .map((filePath) => filePath.slice(process.cwd().length + 1));
+
+    expect(writers).toEqual(["lib/report-personas.ts"]);
   });
 
   it("never mutates the canonical report (print/export stays 'All')", () => {

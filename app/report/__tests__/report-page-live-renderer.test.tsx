@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Node, Project, type JsxAttribute, type JsxOpeningElement, type JsxSelfClosingElement } from "ts-morph";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,11 +40,20 @@ import {
 } from "@/lib/capital-partner-report";
 
 /**
- * Characterization coverage for the LIVE report route's own renderer —
- * the unexported `ReportDisplay` function inside app/report/page.tsx
- * (3643-5865), a fork of components/report/ReportDisplay.tsx that is
- * otherwise untested. See components/report/__tests__/public-report-display.test.tsx
- * for the shared saved-report component this is NOT the same code as.
+ * Characterization coverage for the LIVE report route — app/report/page.tsx
+ * rendering a report end to end.
+ *
+ * This file predates the fork merge, when the route had its own unexported
+ * `ReportDisplay` (a copy of components/report/ReportDisplay.tsx). That copy
+ * is gone: the route now renders the one exported component with
+ * `surface="live"`. Everything below still asserts on the LIVE route's real
+ * output — through the real page, the real props, and the real persona lens
+ * — which is exactly what it was for. What it no longer proves is that a
+ * second renderer agrees; there is no second renderer.
+ * components/report/__tests__/public-report-display.test.tsx covers the same
+ * component on the SAVED surface (`surface="saved"`), where several of the
+ * branches below deliberately render differently — see
+ * docs/report-renderer-unification.md section 3.
  *
  * WHY THIS FILE LOOKS THE WAY IT DOES
  *
@@ -349,6 +359,17 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
  * `REPORT_WIZARD_PAGE_STATE_ORDER` above. `ReportDisplay` no longer calls
  * `useState` for it; it receives `persona` as a prop instead.
  *
+ * Fork-unification round (the merge): this list now describes
+ * components/report/ReportDisplay.tsx, not a function inside
+ * app/report/page.tsx — see STATE_ORDER_TARGETS above. One slot is NEW:
+ * `uncontrolledPersona`. The survivor supports both the live surface
+ * (persona supplied as a prop by `ReportWizardPage`, whose own `persona`
+ * slot is still the one seeded above) and a saved report (which owns the
+ * value itself). The `useState` backing the uncontrolled case runs
+ * unconditionally — a conditional hook would break the ordinals here as
+ * surely as it would break React — so it takes a slot on BOTH surfaces and
+ * is simply ignored on the live one.
+ *
  * Fork-unification round: `isExportingVacancySpreadsheet` through
  * `vacancySpreadsheetError` (4 slots) used to be `ReportDisplay`'s own
  * `useState` calls; they're now dispatched from INSIDE the shared
@@ -383,6 +404,9 @@ const REPORT_DISPLAY_STATE_ORDER = [
   "isLoadingSavedAreaPermit",
   "savedAreaVisibleVacancyCount",
   "editedSummaryText",
+  // Uncontrolled-persona fallback (see the note above). Inert here: the
+  // page passes `persona` as a prop, so this slot's value is never read.
+  "uncontrolledPersona",
   "expandedSections",
   "downloadGateOpen",
   // spec v2 item 5 (The Brief): a single new useState slot, added
@@ -407,7 +431,16 @@ const FULL_STATE_ORDER = [
  */
 const STATE_ORDER_TARGETS = [
   { filePath: "app/report/page.tsx", functionName: "ReportWizardPage" },
-  { filePath: "app/report/page.tsx", functionName: "ReportDisplay" },
+  // Fork-unification round: `ReportDisplay` no longer lives in
+  // app/report/page.tsx. The private copy was deleted and /report now
+  // renders the one exported component, so the second half of the seeded
+  // slot walk reads that file instead. The render path this harness walks
+  // is unchanged — `ReportWizardPage` still renders `ReportDisplay` as a
+  // child inside the same synchronous pass, and the mocked `useState` is
+  // still one shared module-level counter, so the ordinals continue across
+  // the file boundary exactly as they continued across the function
+  // boundary before.
+  { filePath: "components/report/ReportDisplay.tsx", functionName: "ReportDisplay" },
 ] as const;
 
 const STATE_ORDER_EXPANDED_HOOKS = [
@@ -416,6 +449,94 @@ const STATE_ORDER_EXPANDED_HOOKS = [
     filePath: "components/report/useVacancySpreadsheetSection.ts",
   },
 ] as const;
+
+/**
+ * Fork-unification follow-up (parity review, 2026-09-03).
+ *
+ * The survivor supports a CONTROLLED persona (this page owns the state, so
+ * `ReportEmailGate` — a SIBLING of the renderer, not a child — can commit
+ * into it) and an UNCONTROLLED one (a saved report resolves `?persona=` and
+ * the stored session choice itself, in a mount effect). The live route must
+ * be controlled at EVERY call site: the private renderer this replaced
+ * defaulted `persona` to DEFAULT_PERSONA with no state and no effect behind
+ * it, so its two `compact` compare panes never read the URL. Leaving those
+ * panes without the prop drops them into the uncontrolled mode, where the
+ * mount effect reads `?persona=` into a pane that renders no chips and
+ * offers no escape back to "All".
+ *
+ * This is pinned structurally rather than by render because a render cannot
+ * see it: the uncontrolled read lives in a `useEffect`, and every test in
+ * this file renders with `renderToStaticMarkup`, where no effect body runs.
+ * A new call site that forgets the prop fails here.
+ */
+describe("every live ReportDisplay call site is persona-CONTROLLED", () => {
+  const PAGE_PATH = "app/report/page.tsx";
+  const pageSource = new Project({
+    skipAddingFilesFromTsConfig: true,
+    compilerOptions: { allowJs: false },
+  }).addSourceFileAtPath(path.resolve(__dirname, "../../..", PAGE_PATH));
+
+  const callSites: (JsxOpeningElement | JsxSelfClosingElement)[] = [];
+  for (const node of pageSource.getDescendants()) {
+    const element = Node.isJsxSelfClosingElement(node)
+      ? node
+      : Node.isJsxElement(node)
+        ? node.getOpeningElement()
+        : null;
+    if (element && element.getTagNameNode().getText() === "ReportDisplay") {
+      callSites.push(element);
+    }
+  }
+
+  const attributesOf = (
+    element: JsxOpeningElement | JsxSelfClosingElement,
+  ): JsxAttribute[] => element.getAttributes().filter(Node.isJsxAttribute);
+
+  it("finds the route's real call sites (sanity: the report plus both compare panes)", () => {
+    expect(callSites.length).toBe(3);
+  });
+
+  it("passes `persona` at every one, so the uncontrolled mount effect never runs on /report", () => {
+    for (const callSite of callSites) {
+      const attributeNames = attributesOf(callSite).map((attribute) =>
+        attribute.getNameNode().getText(),
+      );
+
+      expect(
+        attributeNames,
+        "A ReportDisplay on /report is missing `persona`. Without it the " +
+          "renderer falls back to its UNCONTROLLED persona mode, whose mount " +
+          "effect reads ?persona= off the URL — correct for a saved report, " +
+          "wrong for every surface on this page. The compare panes pass " +
+          "persona={DEFAULT_PERSONA}, which is what the private renderer " +
+          "this replaced did by construction. See " +
+          "docs/report-renderer-unification.md section 4.",
+      ).toContain("persona");
+    }
+  });
+
+  it("hands the compare panes the default lens and no committer, exactly as the private renderer did", () => {
+    const comparePanes = callSites.filter((callSite) =>
+      attributesOf(callSite).some(
+        (attribute) => attribute.getNameNode().getText() === "compact",
+      ),
+    );
+    expect(comparePanes.length).toBe(2);
+
+    for (const pane of comparePanes) {
+      const attributes = attributesOf(pane);
+      const persona = attributes.find(
+        (attribute) => attribute.getNameNode().getText() === "persona",
+      );
+      expect(persona?.getInitializer()?.getText()).toBe("{DEFAULT_PERSONA}");
+      // No committer either: a compare pane shows no chips, so there is
+      // nothing to commit — the private renderer defaulted this to a no-op.
+      expect(
+        attributes.map((attribute) => attribute.getNameNode().getText()),
+      ).not.toContain("onPersonaSelect");
+    }
+  });
+});
 
 describe("ordinal useState harness stays in sync with the real source (R3)", () => {
   const derived = deriveStateSlotOrder(
@@ -530,6 +651,7 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     savedAreaVisibleVacancyCount: 24,
     editedSummaryText: "",
     persona: DEFAULT_PERSONA,
+    uncontrolledPersona: DEFAULT_PERSONA,
     // Left at the real default ({}) deliberately: this is exactly what lets
     // `isSectionOpen` fall through to its idx<2 / ALWAYS_OPEN_SECTIONS rule,
     // which is the behavior under test.

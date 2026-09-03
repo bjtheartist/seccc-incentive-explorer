@@ -29,7 +29,22 @@
 import { readdirSync } from "node:fs";
 import { Node, Project, type SourceFile } from "ts-morph";
 
-/** Fork files this guard protects — relative to the repo root. */
+/**
+ * The ONE report renderer, as of the fork-unification round. It must import
+ * every shared drawn-area module and render the shared action row: it is the
+ * file that actually draws a report.
+ */
+export const REPORT_RENDERER_FILE_PATH = "components/report/ReportDisplay.tsx";
+
+/**
+ * Files fenced against locally re-declaring the shared drawn-area copy.
+ *
+ * app/report/page.tsx is still on this list after the merge deleted its
+ * private `ReportDisplay`. It renders no report body any more, so it is no
+ * longer required to IMPORT the shared modules — but the fence is exactly
+ * what stops it growing a report body again by paste, which is how the fork
+ * came to exist in the first place. See docs/report-renderer-unification.md.
+ */
 export const FORK_FILE_PATHS = [
   "app/report/page.tsx",
   "components/report/ReportDisplay.tsx",
@@ -276,11 +291,17 @@ function importsAllSharedDrawnAreaModules(sourceFile: SourceFile): boolean {
 export function checkForkFileParity(
   forkSourceFile: SourceFile,
   signatures: Set<string>,
+  // Fork-unification round: only the file that actually RENDERS a report
+  // has to import the shared drawn-area modules. The copy fence below still
+  // applies to every fenced file, renderer or not — that half is what stops
+  // a second renderer being pasted into existence.
+  options: { requireSharedImports?: boolean } = {},
 ): ForkParityViolation[] {
+  const { requireSharedImports = true } = options;
   const violations: ForkParityViolation[] = [];
   const filePath = forkSourceFile.getFilePath();
 
-  if (!importsAllSharedDrawnAreaModules(forkSourceFile)) {
+  if (requireSharedImports && !importsAllSharedDrawnAreaModules(forkSourceFile)) {
     violations.push({
       filePath,
       kind: "missing-shared-import",
@@ -347,11 +368,16 @@ function locallyDeclaredPolicyNames(sourceFile: SourceFile): string[] {
  */
 export function checkReportActionForkParity(
   forkSourceFile: SourceFile,
+  // As above: after the merge only the renderer owes the shared row. A file
+  // that renders no row still owes the copy fence and the policy fence,
+  // which is what the rest of this function checks.
+  options: { requireSharedRow?: boolean } = {},
 ): ReportActionForkParityViolation[] {
+  const { requireSharedRow = true } = options;
   const violations: ReportActionForkParityViolation[] = [];
   const filePath = forkSourceFile.getFilePath();
 
-  if (!importsSharedReportActionComponent(forkSourceFile)) {
+  if (requireSharedRow && !importsSharedReportActionComponent(forkSourceFile)) {
     violations.push({
       filePath,
       kind: "missing-shared-action-import",
@@ -359,7 +385,7 @@ export function checkReportActionForkParity(
     });
   }
 
-  if (!rendersSharedReportActionComponent(forkSourceFile)) {
+  if (requireSharedRow && !rendersSharedReportActionComponent(forkSourceFile)) {
     violations.push({
       filePath,
       kind: "missing-shared-action-render",
