@@ -17,6 +17,21 @@
  * baseline in the same commit. Paste a block back and the number rises and
  * the test fails immediately.
  *
+ * ── STATUS: THE FORK IS GONE (2026-09-03) ─────────────────────────────
+ * The merge landed. app/report/page.tsx's private `ReportDisplay` was
+ * deleted; /report renders components/report/ReportDisplay.tsx with
+ * `surface="live"`. The measurement is 0 lines across 0 blocks and
+ * `FORK_DUPLICATION_BASELINE` is 0.
+ *
+ * The ratchet is NOT retired, because at 0 it is no longer measuring debt —
+ * it is guarding against the debt coming back. Any block of report markup
+ * pasted from the renderer into app/report/page.tsx (the exact motion that
+ * created the fork) makes the number rise above 0 and turns the paired test
+ * red on the spot. It costs ~50ms and needs no maintenance. See
+ * docs/report-renderer-unification.md, and the paired test's own note on
+ * why "zero" is now verified against the REASON for zero rather than
+ * refused outright.
+ *
  * Deliberately a line-level measurement, not an AST one: the failure mode
  * being ratcheted is literal copy-paste between two `.tsx` files, and a
  * line count is the metric a reviewer can reproduce with `diff` by hand.
