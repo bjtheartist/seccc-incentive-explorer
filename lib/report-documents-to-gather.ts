@@ -5,6 +5,10 @@
 // (lib/incentive-preparation.ts `buildPreparationTasks`) supply an explicitly
 // labeled shared-preparation fallback.
 
+import {
+  classifyDocumentPreparationCost,
+  type DocumentPreparationCostSignal,
+} from "@/lib/document-preparation-cost";
 import { buildPreparationTasks, type PreparationTaskOwner } from "@/lib/incentive-preparation";
 import { personaSummaryProgramNames } from "@/lib/report-personas";
 import type { GeneratedReport, ReportItem } from "@/lib/report-engine";
@@ -17,6 +21,25 @@ export interface DocumentToGatherRow {
   estimatedWeeks?: string;
   programReferences?: Array<{ programId: string; label: string }>;
   whyLine?: string;
+  /**
+   * Preparation-cost tier for this row, classified from the row TITLE alone —
+   * the same input the canonical engine sections use (lib/report-engine.ts
+   * classifies `d.doc` for "Required Documents" and `doc.label` for the
+   * "Document Readiness Checklist"), so one document cannot be published as
+   * "$$$" on the All view and "$" on a persona board. The row DESCRIPTION is
+   * deliberately excluded: it is boilerplate ("...among the documents to
+   * gather...") shared by every program-linked row, and feeding it to the
+   * keyword classifier would let one row's wording leak into another's tier.
+   *
+   * Regression this closes: #211 dropped the "rest"/"documentReadiness"
+   * buckets from every PERSONA_SECTION_ORDER — the two canonical sections
+   * that PRINT the tier — and in the same commit renamed this supplement's
+   * heading to "Document readiness". The section kept the name and lost the
+   * dollar value. `?` stays a first-class tier here (see
+   * lib/document-preparation-cost.ts): an unclassified document is published
+   * as undetermined, never as cheap.
+   */
+  preparationCost: DocumentPreparationCostSignal;
 }
 
 const OWNER_LABELS: Record<PreparationTaskOwner, string> = {
@@ -47,6 +70,7 @@ export function buildDocumentsToGather(): DocumentToGatherRow[] {
     description: task.description,
     owner: task.owner,
     estimatedWeeks: weekRange(task.estimatedMinWeeks, task.estimatedMaxWeeks),
+    preparationCost: classifyDocumentPreparationCost(task.title),
   }));
 }
 
@@ -101,6 +125,7 @@ export function buildProgramLinkedDocumentsToGather(
         "This appears because the published program record lists it among the documents to gather. Confirm the current checklist before applying.",
       programReferences: row.programReferences,
       whyLine: "The published program record lists this document for the surfaced program.",
+      preparationCost: classifyDocumentPreparationCost(row.title),
     }));
   }
 
