@@ -1,0 +1,43 @@
+name: Investment manifest drift
+
+# Weekly read-only check that data/curated/investment-inputs/manifest.json on
+# MAIN still describes the files committed beside it. ci.yml runs the same
+# script on every PR and push, which catches drift a commit introduces; this
+# job exists because a stale manifest can also arrive without a commit to the
+# manifest itself (a merge of two branches that each touched a different input,
+# a revert, a hand-edit). Nothing here writes — it only fails loudly.
+
+on:
+  schedule:
+    # 07:20 UTC every Monday — off-peak, and 20 minutes clear of the monthly
+    # data-refresh cron so the two never contend for the same runner window.
+    - cron: "20 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Node setup mirrors ci.yml so drift is judged on the same toolchain.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify the investment input manifest
+        run: npm run data:manifest:verify
+
+      - name: Announce the drift
+        if: failure()
+        run: |
+          echo "::error::data/curated/investment-inputs/manifest.json has DRIFTED on main — the export is blocked until it is regenerated (npm run data:manifest:generate). See the failing step above for the per-file detail."

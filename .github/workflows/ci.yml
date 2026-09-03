@@ -25,6 +25,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Read-only gate: the committed input manifest must still describe the
+      # files on disk. A stale manifest is what broke the 2026-09-02 monthly
+      # refresh (fixed by #260); running it here means it can never merge, or
+      # sit on main, unnoticed. .github/workflows/manifest-drift.yml runs the
+      # same script weekly against main.
+      - name: Verify the investment input manifest
+        run: npm run data:manifest:verify
+
       - name: Test
         run: npm test
 
