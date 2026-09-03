@@ -322,6 +322,45 @@ export async function lookupChicagoZba(
   }
 }
 
+/**
+ * The attribute fingerprint of a ZBA record, derived from the record itself.
+ *
+ * The SINGLE definition of the fingerprinted field set: the normalizer writes
+ * it into the snapshot and `diffChicagoZbaSnapshots` recomputes it at diff
+ * time, so the two cannot drift. `id`, `globalId` and the two fingerprint
+ * fields are excluded — `globalId` is the join key (a re-key is not an
+ * attribute change), `id` is derived from it, and a fingerprint cannot cover
+ * itself.
+ *
+ * Derived rather than read off `record.attributeFingerprint` for the same
+ * reason as the zoning map layer: the previous snapshot is loaded from disk and
+ * carries whatever formula was in force the day it was written. Comparing a
+ * stored hash against a freshly computed one reports the formula change as
+ * every record having changed. This layer has not had such a change yet; the
+ * exposure is identical, so it is closed the same way.
+ */
+export function chicagoZbaAttributeFingerprint(
+  record: Omit<
+    ChicagoZbaSnapshotRecord,
+    "id" | "globalId" | "attributeFingerprint" | "geometryFingerprint"
+  >,
+): string {
+  return sha256({
+    caseReference: record.caseReference,
+    caseYear: record.caseYear,
+    caseSequence: record.caseSequence,
+    caseType: record.caseType,
+    caseTypeRaw: record.caseTypeRaw,
+    address: record.address,
+    judgment: record.judgment,
+    description: record.description,
+    pin10: record.pin10,
+    pinAccuracy: record.pinAccuracy,
+    publishedYearField: record.publishedYearField,
+    publishedCaseField: record.publishedCaseField,
+  });
+}
+
 export function normalizeChicagoZbaSnapshotFeature(
   value: unknown,
 ): ChicagoZbaSnapshotRecord | null {
@@ -330,23 +369,11 @@ export function normalizeChicagoZbaSnapshotFeature(
   }
   const normalized = normalizeChicagoZbaFeature(value);
   if (!normalized?.globalId) return null;
-  const attributesForFingerprint = {
-    caseReference: normalized.caseReference,
-    caseYear: normalized.caseYear,
-    caseSequence: normalized.caseSequence,
-    caseType: normalized.caseType,
-    caseTypeRaw: normalized.caseTypeRaw,
-    address: normalized.address,
-    judgment: normalized.judgment,
-    description: normalized.description,
-    pin10: normalized.pin10,
-    pinAccuracy: normalized.pinAccuracy,
-    publishedYearField: normalized.publishedYearField,
-    publishedCaseField: normalized.publishedCaseField,
-  };
   return {
     ...normalized,
-    attributeFingerprint: sha256(attributesForFingerprint),
+    // Informational: the comparator recomputes both sides rather than trusting
+    // what any snapshot stored.
+    attributeFingerprint: chicagoZbaAttributeFingerprint(normalized),
     geometryFingerprint: sha256(value.geometry),
   };
 }
@@ -417,7 +444,9 @@ export function diffChicagoZbaSnapshots(
       } else if (oldRow && !newRow) {
         changes.push({ globalId, change: "removed", before: changeFacts(oldRow), after: null });
       } else if (oldRow && newRow) {
-        if (oldRow.attributeFingerprint !== newRow.attributeFingerprint) {
+        if (
+          chicagoZbaAttributeFingerprint(oldRow) !== chicagoZbaAttributeFingerprint(newRow)
+        ) {
           changes.push({
             globalId,
             change: "attributes_changed",

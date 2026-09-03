@@ -143,6 +143,38 @@ describe("Chicago ZBA source snapshot", () => {
     });
   });
 
+  it("ignores the stored attributeFingerprint and recomputes both sides", () => {
+    // Same exposure the zoning map layer was bitten by: `previous` is loaded
+    // from disk and its stored fingerprint is whatever formula was in force
+    // when it was written. Nothing on either side of this comparison changed,
+    // so a stored value that disagrees must not manufacture a change.
+    const record = normalizeChicagoZbaSnapshotFeature(feature())!;
+    const stale = { ...record, attributeFingerprint: "0".repeat(64) };
+    const unchanged = { added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0 };
+
+    expect(
+      diffChicagoZbaSnapshots(
+        buildChicagoZbaSnapshot([stale]),
+        buildChicagoZbaSnapshot([record]),
+      ).counts,
+    ).toEqual(unchanged);
+    expect(
+      diffChicagoZbaSnapshots(
+        buildChicagoZbaSnapshot([record]),
+        buildChicagoZbaSnapshot([stale]),
+      ).counts,
+    ).toEqual(unchanged);
+
+    // ...and a real judgment change is still reported through stale storage.
+    const decided = normalizeChicagoZbaSnapshotFeature(feature({ JUDGMENT: "DENIED" }))!;
+    expect(
+      diffChicagoZbaSnapshots(
+        buildChicagoZbaSnapshot([stale]),
+        buildChicagoZbaSnapshot([decided]),
+      ).counts.attributesChanged,
+    ).toBe(1);
+  });
+
   it("does not invent a source refresh timestamp", () => {
     const snapshot = buildChicagoZbaSnapshot([
       normalizeChicagoZbaSnapshotFeature(feature())!,

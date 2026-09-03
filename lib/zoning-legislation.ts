@@ -590,6 +590,55 @@ export function buildZoningLegislationArtifact(
   };
 }
 
+/** The published ZONING attributes the fingerprint covers, in the one canonical
+ * field order. `globalId` is deliberately absent — see
+ * `zoningMapAttributeFingerprint`. `attributeFingerprint` and
+ * `geometryFingerprint` are absent because a fingerprint cannot cover itself.
+ *
+ * This is the SINGLE definition of the fingerprinted field set. Both the
+ * normalizer (which writes the value into the snapshot) and the comparator
+ * (which recomputes it at diff time) go through it, so the two cannot drift
+ * into disagreeing about what "the attributes" are. */
+function zoningMapFingerprintedAttributes(
+  record: Omit<ZoningMapSnapshotRecord, "attributeFingerprint" | "geometryFingerprint">,
+) {
+  return {
+    zoningId: record.zoningId,
+    zoneClass: record.zoneClass,
+    zoneTypeCode: record.zoneTypeCode,
+    pdNumber: record.pdNumber,
+    pmdSubArea: record.pmdSubArea,
+    ordinanceNumber: record.ordinanceNumber,
+    ordinanceDate: record.ordinanceDate,
+    clerkDocumentNumber: record.clerkDocumentNumber,
+    clerkUrl: record.clerkUrl,
+    recordUpdatedAt: record.recordUpdatedAt,
+  };
+}
+
+/**
+ * The attribute fingerprint of a record, derived from the record itself.
+ *
+ * The fingerprint covers the published ZONING attributes and deliberately
+ * EXCLUDES `globalId`. It used to hash the record whole, which meant the City
+ * rotating its GLOBALIDs changed every fingerprint in the layer even though not
+ * one published attribute moved.
+ *
+ * Callers must derive rather than read `record.attributeFingerprint`. The
+ * stored value is whatever formula was in force on the day that snapshot was
+ * written, and a snapshot on disk outlives the code that wrote it: the first
+ * refresh after the globalId exclusion shipped compared 14,652 legacy-hashed
+ * previous rows against 14,652 newly-hashed current rows and called every one
+ * of them `attributes_changed`, because the two sides were not answering the
+ * same question. Recomputing both sides here makes the comparison independent
+ * of what any snapshot happens to have stored.
+ */
+export function zoningMapAttributeFingerprint(
+  record: Omit<ZoningMapSnapshotRecord, "attributeFingerprint" | "geometryFingerprint">,
+): string {
+  return sha256(zoningMapFingerprintedAttributes(record));
+}
+
 export function normalizeZoningMapFeature(value: unknown): ZoningMapSnapshotRecord | null {
   if (!isRecord(value) || !isRecord(value.attributes) || !isRecord(value.geometry)) {
     return null;
@@ -611,15 +660,11 @@ export function normalizeZoningMapFeature(value: unknown): ZoningMapSnapshotReco
     clerkUrl: nullableText(attributes.CLERK_URL),
     recordUpdatedAt: nullableIsoDate(attributes.UPDATE_TIMESTAMP),
   };
-  // The fingerprint covers the published ZONING attributes and deliberately
-  // EXCLUDES `globalId`. It used to hash `normalized` whole, which meant the
-  // City rotating its GLOBALIDs changed every fingerprint in the layer even
-  // though not one published attribute moved — 14,656 records read as
-  // "attributesChanged: 0" because the comparator had already written them
-  // off as added+removed. Attribute drift must be observable independently
-  // of whatever key the source happens to be handing out today.
-  const { globalId: _rotatingKey, ...fingerprintedAttributes } = normalized;
-  const attributeFingerprint = sha256(fingerprintedAttributes);
+  // Written into the snapshot for readers (and for a cheap eyeball diff of the
+  // committed file). The comparator does NOT trust it — it recomputes both
+  // sides through the same helper, so a formula change cannot make an
+  // already-committed snapshot disagree with a freshly fetched one.
+  const attributeFingerprint = zoningMapAttributeFingerprint(normalized);
   const geometryFingerprint = sha256(value.geometry);
   return { ...normalized, attributeFingerprint, geometryFingerprint };
 }
@@ -758,7 +803,12 @@ export function diffZoningMapSnapshots(
       if (wasRekeyed) rekeyed += 1;
 
       let reportedSubstantiveChange = false;
-      if (oldRow.attributeFingerprint !== newRow.attributeFingerprint) {
+      // Derived, not read off the rows: `previous` is a snapshot loaded from
+      // disk whose stored fingerprints were produced by whatever formula was
+      // current the day it was written.
+      if (
+        zoningMapAttributeFingerprint(oldRow) !== zoningMapAttributeFingerprint(newRow)
+      ) {
         changes.push({
           globalId: newRow.globalId,
           previousGlobalId,
@@ -768,6 +818,12 @@ export function diffZoningMapSnapshots(
         });
         reportedSubstantiveChange = true;
       }
+      // The one stored value that cannot be re-derived: the snapshot records
+      // the polygon's fingerprint, not the polygon. It is also the join key,
+      // so changing `sha256(value.geometry)` would not merely mis-report a
+      // field — it would dissolve the join and read as a full replacement of
+      // the layer. That formula is frozen; a change to it needs a re-baselined
+      // snapshot committed in the same PR.
       if (oldRow.geometryFingerprint !== newRow.geometryFingerprint) {
         changes.push({
           globalId: newRow.globalId,

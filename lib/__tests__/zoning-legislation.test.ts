@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import type { ZoningMapSnapshotRecord } from "@/lib/zoning-legislation";
 import {
   assessZoningMapChurn,
   buildZoningLegislationArtifact,
@@ -387,6 +389,124 @@ describe("versioned zoning map snapshot", () => {
     );
     expect(added[0].previousGlobalId).toBeNull();
     expect(removed[0].previousGlobalId).toBeNull();
+  });
+
+  // ── Stored fingerprints are informational ─────────────────────────────────
+  // The previous snapshot is read off disk. Its stored `attributeFingerprint`
+  // is whatever formula was in force the day it was written, and the committed
+  // snapshot on `main` predates the globalId exclusion. Comparing that stored
+  // hash against a freshly computed one made every geometry-matched pair
+  // mismatch: the first refresh after #264 reported attributesChanged 14652
+  // against rekeyed 14652 — the two numbers equal, which is the signature of a
+  // formula mismatch rather than of the ~113 real attribute changes in that
+  // event. The comparator must derive both sides.
+  describe("stored fingerprints are informational, never joined on", () => {
+    /** The pre-#264 formula: the whole normalized record, GLOBALID included. */
+    const legacyAttributeFingerprint = (row: ZoningMapSnapshotRecord) => {
+      const {
+        attributeFingerprint: _a,
+        geometryFingerprint: _g,
+        ...withGlobalId
+      } = row;
+      return createHash("sha256").update(JSON.stringify(withGlobalId)).digest("hex");
+    };
+
+    it("reads a LEGACY-fingerprinted previous snapshot as re-keyed, not changed", () => {
+      const N = 25;
+      // Written by the old code: fingerprints that hashed the GLOBALID too.
+      const previous = buildZoningMapSnapshot(
+        Array.from({ length: N }, (_, i) => {
+          const row = normalizeZoningMapFeature({
+            ...mapFeature(`old-${String(i).padStart(3, "0")}`, "RS-3"),
+            geometry: polygonAt(i),
+          })!;
+          return { ...row, attributeFingerprint: legacyAttributeFingerprint(row) };
+        }),
+      );
+      // Fetched today: identical published attributes, rotated ids, current
+      // formula. Not one attribute moved.
+      const current = buildZoningMapSnapshot(
+        Array.from({ length: N }, (_, i) =>
+          normalizeZoningMapFeature({
+            ...mapFeature(`new-${String(i).padStart(3, "0")}`, "RS-3"),
+            geometry: polygonAt(i),
+          })!,
+        ),
+      );
+      // Precondition: the two sides really do disagree on the stored value, so
+      // this test would fail against a comparator that trusted it.
+      expect(previous.records[0].attributeFingerprint).not.toBe(
+        current.records[0].attributeFingerprint,
+      );
+
+      const delta = diffZoningMapSnapshots(previous, current);
+      expect(delta.counts).toEqual({
+        added: 0,
+        removed: 0,
+        attributesChanged: 0,
+        geometryChanged: 0,
+        rekeyed: N,
+      });
+    });
+
+    it("still sees a real attribute change through legacy stored fingerprints", () => {
+      const previous = buildZoningMapSnapshot(
+        [0, 1].map((i) => {
+          const row = normalizeZoningMapFeature({
+            ...mapFeature(`old-${i}`, "RS-3"),
+            geometry: polygonAt(i),
+          })!;
+          return { ...row, attributeFingerprint: legacyAttributeFingerprint(row) };
+        }),
+      );
+      const current = buildZoningMapSnapshot(
+        [0, 1].map((i) =>
+          normalizeZoningMapFeature({
+            ...mapFeature(`new-${i}`, i === 0 ? "B3-2" : "RS-3"),
+            geometry: polygonAt(i),
+          })!,
+        ),
+      );
+      const delta = diffZoningMapSnapshots(previous, current);
+      expect(delta.counts.attributesChanged).toBe(1);
+      expect(delta.counts.rekeyed).toBe(2);
+      const change = delta.changes.find((row) => row.change === "attributes_changed")!;
+      expect(change.previousGlobalId).toBe("old-0");
+      expect(change.after?.zoneClass).toBe("B3-2");
+    });
+
+    it("ignores a stored fingerprint that is arbitrarily wrong on either side", () => {
+      const base = [0, 1, 2].map((i) =>
+        normalizeZoningMapFeature({
+          ...mapFeature(`g-${i}`, "RS-3"),
+          geometry: polygonAt(i),
+        })!,
+      );
+      const truth = diffZoningMapSnapshots(
+        buildZoningMapSnapshot(base),
+        buildZoningMapSnapshot(base),
+      );
+      expect(truth.counts).toEqual({
+        added: 0,
+        removed: 0,
+        attributesChanged: 0,
+        geometryChanged: 0,
+        rekeyed: 0,
+      });
+
+      const corrupt = (rows: readonly ZoningMapSnapshotRecord[]) =>
+        buildZoningMapSnapshot(
+          rows.map((row) => ({ ...row, attributeFingerprint: "0".repeat(64) })),
+        );
+      // Garbage on the previous side, on the current side, and on both.
+      expect(diffZoningMapSnapshots(corrupt(base), buildZoningMapSnapshot(base)).counts)
+        .toEqual(truth.counts);
+      expect(diffZoningMapSnapshots(buildZoningMapSnapshot(base), corrupt(base)).counts)
+        .toEqual(truth.counts);
+      expect(diffZoningMapSnapshots(corrupt(base), corrupt(base)).counts).toEqual(
+        truth.counts,
+      );
+    });
   });
 
   // ── Churn bound ───────────────────────────────────────────────────────────
