@@ -1,0 +1,160 @@
+name: Prod synthetic check
+
+# Black-box check that production is actually serving: the three pages a
+# visitor lands on, the two data routes behind them, the admin gate, and ONE
+# real report generation driven exactly the way the wizard drives it. Read-only
+# — no email, no lead written, no support-request route touched.
+#
+# Alerting is GitHub issues and nothing else: on failure this opens (or comments
+# on) one issue labelled `prod-degraded`, and on recovery it comments and closes
+# it. One issue per outage, never one per run.
+
+on:
+  schedule:
+    # Every 90 minutes. GitHub cron has no "every 90 minutes" expression, so the
+    # cadence is two alternating lines: the even three-hour marks, and the odd
+    # ones offset by 30 minutes. Together: 00:00, 01:30, 03:00, 04:30, …
+    - cron: "0 0,3,6,9,12,15,18,21 * * *"
+    - cron: "30 1,4,7,10,13,16,19,22 * * *"
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Add an always-failing check, to exercise the issue/alert path"
+        type: boolean
+        required: false
+        default: false
+
+# Least privilege: the checkout is read-only, and the only write this job needs
+# is the issue it files when production is degraded.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # A scheduled run and a manual one must never overlap — two runs in flight
+  # would race on the same `prod-degraded` issue and could file a duplicate.
+  group: prod-synthetic-check
+  cancel-in-progress: false
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_LABEL: prod-degraded
+      ISSUE_TITLE: "Prod degraded: synthetic check failing"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Node setup mirrors ci.yml so the check runs on the same toolchain.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The check only needs tsx; `--ignore-scripts` skips the Puppeteer/browser
+      # postinstall this job has no use for.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "1"
+
+      # `continue-on-error` is not used here on purpose: the exit code is
+      # captured explicitly so the alert steps below can branch on it, and the
+      # job is failed at the very end with that same code.
+      - name: Run the synthetic check
+        id: check
+        run: |
+          set +e
+          npm run ops:synthetic-check -- ${{ inputs.force_fail && '--force-fail' || '' }} \
+            | tee "$RUNNER_TEMP/summary.md"
+          code=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          echo "Synthetic check exited $code"
+
+      # The label has to exist before `gh issue create --label` can use it, and
+      # creating it is idempotent enough to do inline rather than as setup a
+      # human has to remember.
+      - name: Ensure the prod-degraded label exists
+        run: |
+          gh label create "$ISSUE_LABEL" \
+            --color B60205 \
+            --description "Production synthetic check is failing" \
+            --repo "$GITHUB_REPOSITORY" 2>/dev/null \
+            || echo "Label $ISSUE_LABEL already exists."
+
+      - name: Open or update the prod-degraded issue
+        if: steps.check.outputs.exit_code != '0'
+        run: |
+          now="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          {
+            echo "Synthetic check FAILED at $now."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+            echo
+            echo "[Workflow run]($run_url)"
+          } > "$RUNNER_TEMP/body.md"
+
+          existing="$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "$ISSUE_LABEL" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -n "$existing" ]; then
+            # One issue per outage: a still-failing check comments on the open
+            # one rather than filing another.
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file "$RUNNER_TEMP/body.md"
+            echo "Commented on existing issue #$existing."
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$ISSUE_TITLE" \
+              --label "$ISSUE_LABEL" \
+              --assignee bjtheartist \
+              --body-file "$RUNNER_TEMP/body.md"
+            echo "Opened a new $ISSUE_LABEL issue."
+          fi
+
+      - name: Close the prod-degraded issue on recovery
+        if: steps.check.outputs.exit_code == '0'
+        run: |
+          existing="$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "$ISSUE_LABEL" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -z "$existing" ]; then
+            echo "All checks passing and no open $ISSUE_LABEL issue — nothing to do."
+            exit 0
+          fi
+
+          now="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          gh issue comment "$existing" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body "Recovered at $now: all checks passing"
+          gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          echo "Closed issue #$existing."
+
+      # Last, so the alerting above always runs first: the run itself must be
+      # red when production is degraded, not quietly green with an issue filed.
+      - name: Fail the run if any check failed
+        if: steps.check.outputs.exit_code != '0'
+        run: |
+          echo "::error::Production synthetic check failed — see the job summary and the $ISSUE_LABEL issue."
+          exit ${{ steps.check.outputs.exit_code }}
