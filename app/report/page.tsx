@@ -3594,12 +3594,23 @@ function ComparisonDisplay({
             affordance — refine used to be unreachable in compare mode
             (audit RF4). */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* persona is passed EXPLICITLY, even though these panes show no
+              chips (no showPersonaLens). It puts them in the renderer's
+              CONTROLLED persona mode, which is what the private renderer
+              they replaced did by construction: it defaulted the prop to
+              DEFAULT_PERSONA and had no state or effect behind it. Omitting
+              it here would drop each pane into the UNCONTROLLED mode the
+              saved-report surface uses, whose mount effect reads `?persona=`
+              off the URL — a lens a compare pane cannot show or escape.
+              Inert today only because showPersonaLens is absent; pinned by
+              report-page-live-renderer.test.tsx so it stays a decision. */}
           <ReportDisplay
             surface="live"
             report={reportA}
             onStartOver={onStartOver}
             compact
             isInstantMode={isInstantMode}
+            persona={DEFAULT_PERSONA}
             onRefine={onRefineA}
             refineContext="compare_a"
           />
@@ -3609,6 +3620,7 @@ function ComparisonDisplay({
             onStartOver={onStartOver}
             compact
             isInstantMode={isInstantMode}
+            persona={DEFAULT_PERSONA}
             onRefine={onRefineB}
             refineContext="compare_b"
           />

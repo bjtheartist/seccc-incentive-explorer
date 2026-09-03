@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Node, Project, type JsxAttribute, type JsxOpeningElement, type JsxSelfClosingElement } from "ts-morph";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -448,6 +449,94 @@ const STATE_ORDER_EXPANDED_HOOKS = [
     filePath: "components/report/useVacancySpreadsheetSection.ts",
   },
 ] as const;
+
+/**
+ * Fork-unification follow-up (parity review, 2026-09-03).
+ *
+ * The survivor supports a CONTROLLED persona (this page owns the state, so
+ * `ReportEmailGate` — a SIBLING of the renderer, not a child — can commit
+ * into it) and an UNCONTROLLED one (a saved report resolves `?persona=` and
+ * the stored session choice itself, in a mount effect). The live route must
+ * be controlled at EVERY call site: the private renderer this replaced
+ * defaulted `persona` to DEFAULT_PERSONA with no state and no effect behind
+ * it, so its two `compact` compare panes never read the URL. Leaving those
+ * panes without the prop drops them into the uncontrolled mode, where the
+ * mount effect reads `?persona=` into a pane that renders no chips and
+ * offers no escape back to "All".
+ *
+ * This is pinned structurally rather than by render because a render cannot
+ * see it: the uncontrolled read lives in a `useEffect`, and every test in
+ * this file renders with `renderToStaticMarkup`, where no effect body runs.
+ * A new call site that forgets the prop fails here.
+ */
+describe("every live ReportDisplay call site is persona-CONTROLLED", () => {
+  const PAGE_PATH = "app/report/page.tsx";
+  const pageSource = new Project({
+    skipAddingFilesFromTsConfig: true,
+    compilerOptions: { allowJs: false },
+  }).addSourceFileAtPath(path.resolve(__dirname, "../../..", PAGE_PATH));
+
+  const callSites: (JsxOpeningElement | JsxSelfClosingElement)[] = [];
+  for (const node of pageSource.getDescendants()) {
+    const element = Node.isJsxSelfClosingElement(node)
+      ? node
+      : Node.isJsxElement(node)
+        ? node.getOpeningElement()
+        : null;
+    if (element && element.getTagNameNode().getText() === "ReportDisplay") {
+      callSites.push(element);
+    }
+  }
+
+  const attributesOf = (
+    element: JsxOpeningElement | JsxSelfClosingElement,
+  ): JsxAttribute[] => element.getAttributes().filter(Node.isJsxAttribute);
+
+  it("finds the route's real call sites (sanity: the report plus both compare panes)", () => {
+    expect(callSites.length).toBe(3);
+  });
+
+  it("passes `persona` at every one, so the uncontrolled mount effect never runs on /report", () => {
+    for (const callSite of callSites) {
+      const attributeNames = attributesOf(callSite).map((attribute) =>
+        attribute.getNameNode().getText(),
+      );
+
+      expect(
+        attributeNames,
+        "A ReportDisplay on /report is missing `persona`. Without it the " +
+          "renderer falls back to its UNCONTROLLED persona mode, whose mount " +
+          "effect reads ?persona= off the URL — correct for a saved report, " +
+          "wrong for every surface on this page. The compare panes pass " +
+          "persona={DEFAULT_PERSONA}, which is what the private renderer " +
+          "this replaced did by construction. See " +
+          "docs/report-renderer-unification.md section 4.",
+      ).toContain("persona");
+    }
+  });
+
+  it("hands the compare panes the default lens and no committer, exactly as the private renderer did", () => {
+    const comparePanes = callSites.filter((callSite) =>
+      attributesOf(callSite).some(
+        (attribute) => attribute.getNameNode().getText() === "compact",
+      ),
+    );
+    expect(comparePanes.length).toBe(2);
+
+    for (const pane of comparePanes) {
+      const attributes = attributesOf(pane);
+      const persona = attributes.find(
+        (attribute) => attribute.getNameNode().getText() === "persona",
+      );
+      expect(persona?.getInitializer()?.getText()).toBe("{DEFAULT_PERSONA}");
+      // No committer either: a compare pane shows no chips, so there is
+      // nothing to commit — the private renderer defaulted this to a no-op.
+      expect(
+        attributes.map((attribute) => attribute.getNameNode().getText()),
+      ).not.toContain("onPersonaSelect");
+    }
+  });
+});
 
 describe("ordinal useState harness stays in sync with the real source (R3)", () => {
   const derived = deriveStateSlotOrder(

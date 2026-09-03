@@ -236,6 +236,24 @@ effect resolves it; when it is supplied the effect is inert and selection
 delegates to `onPersonaSelect`. `/workspace/reports/[id]` is unchanged and
 passes neither.
 
+**All three live call sites are controlled.** The report itself passes
+`persona`/`onPersonaSelect` from `ReportWizardPage`. The two `compact`
+compare panes pass `persona={DEFAULT_PERSONA}` and no `onPersonaSelect` —
+which is exactly what the private renderer did by construction (`persona =
+DEFAULT_PERSONA` and `onPersonaSelect = () => {}` as destructuring
+defaults, with no state or effect behind either). Corrected after the
+parity review: an earlier revision of this round left the panes without the
+prop, which would have dropped them into the UNCONTROLLED mode and started
+reading `?persona=` off the URL into a pane that renders no chips and
+offers no escape to "All". Inert in practice — the panes pass no
+`showPersonaLens`, so the lens never applies — but it made this section's
+claim false, and the fix is one prop. Pinned by
+`app/report/__tests__/report-page-live-renderer.test.tsx`
+("every live ReportDisplay call site is persona-CONTROLLED"), because a
+render assertion cannot see it: the uncontrolled read happens in a mount
+effect and that suite renders with `renderToStaticMarkup`, where no effect
+body runs.
+
 ---
 
 ## 5. Invisible drift — resolved to one answer (classification **(a)**)
