@@ -9,7 +9,12 @@
  * The committed artifacts are deterministic. They intentionally omit a
  * wall-clock "checked at" timestamp, so an unchanged source produces no diff.
  * Git provides the reviewed version history; the map snapshot stores separate
- * attribute and geometry fingerprints keyed by the City's stable GLOBALID.
+ * attribute and geometry fingerprints.
+ *
+ * The GLOBALID is NOT stable and is not the comparator's key. On 2026-09-02
+ * the City rotated every GLOBALID in the zoning layer at once; the snapshot
+ * comparator joins on published geometry instead, and reports an id rotation
+ * as its own `rekeyed` count. See `diffZoningMapSnapshots`.
  *
  * No parcel geometry is derived from eLMS titles or attachments.
  * ZBA case judgments remain historical source records, not current-use findings.
@@ -27,6 +32,7 @@ import {
   buildZoningLegislationArtifact,
   buildZoningMapSnapshot,
   CHICAGO_ZONING_LAYER_URL,
+  assessZoningMapChurn,
   diffZoningMapSnapshots,
   fetchElmsZoningLedger,
   normalizeZoningMapFeature,
@@ -269,8 +275,24 @@ async function main() {
       `  map: ${current.featureCount} features; ` +
         `${delta.counts.added} added; ${delta.counts.removed} removed; ` +
         `${delta.counts.attributesChanged} attribute changes; ` +
-        `${delta.counts.geometryChanged} geometry changes`,
+        `${delta.counts.geometryChanged} geometry changes; ` +
+        `${delta.counts.rekeyed} re-keyed`,
     );
+
+    // Fail closed on implausible churn. These counts are geometry-keyed, so
+    // an id rotation no longer inflates them; a trip here means the City
+    // really did republish a large share of the map, and that is a claim a
+    // human reviews before it becomes the admin ledger's "latest map delta".
+    const churn = assessZoningMapChurn(delta, previous, current);
+    if (!churn.withinBounds) {
+      throw new Error(
+        `Zoning map churn out of bounds: ${churn.churned} of ${churn.total} features ` +
+          `added or removed (${(churn.ratio * 100).toFixed(1)}%, limit ` +
+          `${(churn.limit * 100).toFixed(1)}%). The geometry-keyed join still ` +
+          `cannot account for this much movement, so the refresh is not being ` +
+          `published. Inspect the source layer before overriding.`,
+      );
+    }
     if (!dryRun) {
       mapChanged = await writeIfChanged(MAP_SNAPSHOT_PATH, current);
       // ALWAYS write the delta — it describes the MOST RECENT comparison, and
