@@ -16,7 +16,19 @@
  * 2. `report_pdf_downloaded`, `share_link_copied` and
  *    `program_link_clicked` fired on the live fork only, so the same
  *    actions taken on a saved Workspace report were dark in the funnel.
- *    The second block pins the two renderer forks to one event set.
+ *    The second block pinned the two renderer forks to one event set.
+ *
+ * FORK-UNIFICATION ROUND. There is one renderer now:
+ * app/report/page.tsx's private `ReportDisplay` was deleted and /report
+ * renders components/report/ReportDisplay.tsx. Drift 2 is therefore
+ * structurally impossible — one function cannot fire an event on one
+ * surface and not the other — and "neither fork fires an event the other
+ * does not" has nothing left to compare. What is NOT structurally
+ * impossible is losing one of the three events that RF2 had to add, so the
+ * second block below is kept as a presence check on the surviving renderer,
+ * plus a guard against a second renderer reappearing. Drift 1 (local copies
+ * of the helpers) is still perfectly possible in any of the callers, so the
+ * first block is unchanged.
  */
 import path from "node:path";
 import { Node, Project, type SourceFile } from "ts-morph";
@@ -115,6 +127,9 @@ describe("report analytics helpers live in one module", () => {
   });
 });
 
+/** The one renderer left. */
+const REPORT_RENDERER_PATH = "components/report/ReportDisplay.tsx";
+
 /** The trackEvent event-type literals fired inside one `ReportDisplay`. */
 function rendererEventTypes(sourceFile: SourceFile): Set<string> {
   const renderer =
@@ -133,32 +148,46 @@ function rendererEventTypes(sourceFile: SourceFile): Set<string> {
   return events;
 }
 
-describe("both report-renderer forks fire the same event set", () => {
-  const liveEvents = rendererEventTypes(get("app/report/page.tsx"));
-  const workspaceEvents = rendererEventTypes(get("components/report/ReportDisplay.tsx"));
+describe("the one report renderer fires the whole event set", () => {
+  const rendererEvents = rendererEventTypes(get(REPORT_RENDERER_PATH));
 
-  it("finds a real event set in both forks (sanity: the scan located the renderers)", () => {
-    expect(liveEvents.size).toBeGreaterThan(8);
-    expect(workspaceEvents.size).toBeGreaterThan(8);
+  it("finds a real event set (sanity: the scan located the renderer)", () => {
+    expect(rendererEvents.size).toBeGreaterThan(8);
   });
 
   it.each(["report_pdf_downloaded", "share_link_copied", "program_link_clicked"])(
-    "%s fires on BOTH forks (each was live-fork-only before RF2)",
+    "%s still fires (each was live-fork-only before RF2, and mirroring them is what RF2 bought)",
     (eventType) => {
-      expect(liveEvents.has(eventType)).toBe(true);
-      expect(workspaceEvents.has(eventType)).toBe(true);
+      expect(rendererEvents.has(eventType)).toBe(true);
     },
   );
 
-  it("neither fork fires an event the other does not", () => {
-    const onlyLive = [...liveEvents].filter((event) => !workspaceEvents.has(event)).sort();
-    const onlyWorkspace = [...workspaceEvents].filter((event) => !liveEvents.has(event)).sort();
+  // Replaces "neither fork fires an event the other does not". That
+  // assertion compared two renderers; with one renderer it is vacuously
+  // true, and deleting it silently would leave nothing watching for the
+  // condition that made it necessary. What it becomes is the structural
+  // guarantee underneath it: exactly ONE component named ReportDisplay
+  // exists, so no event can be surface-dependent in the first place.
+  it("there is exactly one ReportDisplay renderer, so no event can be surface-dependent", () => {
+    const renderers = ANALYTICS_CALLER_PATHS.filter((relPath) =>
+      Boolean(get(relPath).getFunction("ReportDisplay")),
+    );
     expect(
-      { onlyLive, onlyWorkspace },
-      "Instrumentation added to one report renderer must be mirrored into the " +
-        "other in the same commit — the forks are two renderings of one report, " +
-        "and an event on only one of them makes the funnel depend on which " +
-        "surface the user happened to be on.",
-    ).toEqual({ onlyLive: [], onlyWorkspace: [] });
+      renderers,
+      "A second ReportDisplay has appeared. The two report renderers were " +
+        "merged precisely because instrumentation added to one and not the " +
+        "other made the funnel depend on which surface the user happened to " +
+        "be on. Render the shared component with the props your surface " +
+        "needs — see docs/report-renderer-unification.md — rather than " +
+        "forking it again.",
+    ).toEqual([REPORT_RENDERER_PATH]);
+  });
+
+  it("the live route reaches the renderer's instrumentation by RENDERING it, not by re-declaring events", () => {
+    const page = get("app/report/page.tsx");
+    expect(page.getFullText()).toContain(
+      'import { ReportDisplay } from "@/components/report/ReportDisplay";',
+    );
+    expect(rendererEventTypes(get(REPORT_RENDERER_PATH)).size).toBeGreaterThan(8);
   });
 });

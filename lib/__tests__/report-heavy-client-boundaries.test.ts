@@ -183,12 +183,26 @@ describe("report heavy client boundaries", () => {
     ({ path }) => {
       const root = project.getSourceFileOrThrow(path);
 
+      // The bundle property both roots must hold: jsPDF is reachable, but
+      // only across a dynamic edge, so it never enters the initial chunk.
       expect(findStaticPathToFile(root, pdfReport.getFilePath())).toBeNull();
       expect(findPathToFile(root, pdfReport.getFilePath())).not.toBeNull();
-      expect(hasLiteralDynamicImport(root, "@/lib/pdf-report")).toBe(true);
-      expect(root.getFullText()).toContain("generateReportPdf(report)");
     },
   );
+
+  // Fork-unification round: the literal `import("@/lib/pdf-report")` and the
+  // download call were written into BOTH roots while /report had its own
+  // renderer. There is one renderer now and it owns them; /report reaches
+  // them through it, which the graph assertions above still pin in both
+  // directions for both roots.
+  it("the report renderer owns the dynamic PDF boundary and the download call", () => {
+    const renderer = project.getSourceFileOrThrow(
+      resolve(process.cwd(), "components/report/ReportDisplay.tsx"),
+    );
+
+    expect(hasLiteralDynamicImport(renderer, "@/lib/pdf-report")).toBe(true);
+    expect(renderer.getFullText()).toContain("generateReportPdf(report)");
+  });
 
   it.each(REPORT_ROOTS)(
     "$label reaches the zoning shell without statically reaching Mapbox",

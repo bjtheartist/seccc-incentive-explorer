@@ -51,26 +51,28 @@ describe("MapPolygonPanel: the area PDF download cannot fail silently again", ()
   });
 });
 
-describe("both ReportDisplay forks hand the gate a PROMISE, so failures are observable", () => {
-  const forks = ["app/report/page.tsx", "components/report/ReportDisplay.tsx"] as const;
+// Fork-unification round: this used to iterate two renderer files —
+// app/report/page.tsx's private ReportDisplay and the exported component.
+// The private copy is gone; /report renders the exported one. Both
+// assertions are kept, applied once, to the renderer that survived.
+describe("the ReportDisplay renderer hands the gate a PROMISE, so failures are observable", () => {
+  const RENDERER = "components/report/ReportDisplay.tsx";
 
-  for (const fork of forks) {
-    it(`${fork}'s handleDownloadAfterCapture stays async and does not swallow its error`, () => {
-      const text = source(fork);
-      const start = text.indexOf("const handleDownloadAfterCapture");
-      expect(start, `${fork} should still define handleDownloadAfterCapture`).toBeGreaterThan(-1);
-      const handler = text.slice(start, start + 700);
+  it(`${RENDERER}'s handleDownloadAfterCapture stays async and does not swallow its error`, () => {
+    const text = source(RENDERER);
+    const start = text.indexOf("const handleDownloadAfterCapture");
+    expect(start, `${RENDERER} should still define handleDownloadAfterCapture`).toBeGreaterThan(-1);
+    const handler = text.slice(start, start + 700);
 
-      expect(handler).toContain("async ()");
-      // A local try/catch here would re-create the exact defect: the gate
-      // would see a resolved promise and move to "done" for a file that was
-      // never produced. The rejection must reach DownloadGateModal.
-      expect(handler).not.toContain("catch");
-    });
-  }
+    expect(handler).toContain("async ()");
+    // A local try/catch here would re-create the exact defect: the gate
+    // would see a resolved promise and move to "done" for a file that was
+    // never produced. The rejection must reach DownloadGateModal.
+    expect(handler).not.toContain("catch");
+  });
 
-  it("the live /report fork fires report_pdf_downloaded only AFTER the PDF is generated", () => {
-    const text = source("app/report/page.tsx");
+  it("fires report_pdf_downloaded only AFTER the PDF is generated", () => {
+    const text = source(RENDERER);
     const start = text.indexOf("const handleDownloadAfterCapture");
     const handler = text.slice(start, start + 700);
     const generateAt = handler.indexOf("generateReportPdf(report)");

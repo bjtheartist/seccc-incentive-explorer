@@ -39,11 +39,20 @@ import {
 } from "@/lib/capital-partner-report";
 
 /**
- * Characterization coverage for the LIVE report route's own renderer —
- * the unexported `ReportDisplay` function inside app/report/page.tsx
- * (3643-5865), a fork of components/report/ReportDisplay.tsx that is
- * otherwise untested. See components/report/__tests__/public-report-display.test.tsx
- * for the shared saved-report component this is NOT the same code as.
+ * Characterization coverage for the LIVE report route — app/report/page.tsx
+ * rendering a report end to end.
+ *
+ * This file predates the fork merge, when the route had its own unexported
+ * `ReportDisplay` (a copy of components/report/ReportDisplay.tsx). That copy
+ * is gone: the route now renders the one exported component with
+ * `surface="live"`. Everything below still asserts on the LIVE route's real
+ * output — through the real page, the real props, and the real persona lens
+ * — which is exactly what it was for. What it no longer proves is that a
+ * second renderer agrees; there is no second renderer.
+ * components/report/__tests__/public-report-display.test.tsx covers the same
+ * component on the SAVED surface (`surface="saved"`), where several of the
+ * branches below deliberately render differently — see
+ * docs/report-renderer-unification.md section 3.
  *
  * WHY THIS FILE LOOKS THE WAY IT DOES
  *
@@ -349,6 +358,17 @@ const REPORT_WIZARD_PAGE_STATE_ORDER = [
  * `REPORT_WIZARD_PAGE_STATE_ORDER` above. `ReportDisplay` no longer calls
  * `useState` for it; it receives `persona` as a prop instead.
  *
+ * Fork-unification round (the merge): this list now describes
+ * components/report/ReportDisplay.tsx, not a function inside
+ * app/report/page.tsx — see STATE_ORDER_TARGETS above. One slot is NEW:
+ * `uncontrolledPersona`. The survivor supports both the live surface
+ * (persona supplied as a prop by `ReportWizardPage`, whose own `persona`
+ * slot is still the one seeded above) and a saved report (which owns the
+ * value itself). The `useState` backing the uncontrolled case runs
+ * unconditionally — a conditional hook would break the ordinals here as
+ * surely as it would break React — so it takes a slot on BOTH surfaces and
+ * is simply ignored on the live one.
+ *
  * Fork-unification round: `isExportingVacancySpreadsheet` through
  * `vacancySpreadsheetError` (4 slots) used to be `ReportDisplay`'s own
  * `useState` calls; they're now dispatched from INSIDE the shared
@@ -383,6 +403,9 @@ const REPORT_DISPLAY_STATE_ORDER = [
   "isLoadingSavedAreaPermit",
   "savedAreaVisibleVacancyCount",
   "editedSummaryText",
+  // Uncontrolled-persona fallback (see the note above). Inert here: the
+  // page passes `persona` as a prop, so this slot's value is never read.
+  "uncontrolledPersona",
   "expandedSections",
   "downloadGateOpen",
   // spec v2 item 5 (The Brief): a single new useState slot, added
@@ -407,7 +430,16 @@ const FULL_STATE_ORDER = [
  */
 const STATE_ORDER_TARGETS = [
   { filePath: "app/report/page.tsx", functionName: "ReportWizardPage" },
-  { filePath: "app/report/page.tsx", functionName: "ReportDisplay" },
+  // Fork-unification round: `ReportDisplay` no longer lives in
+  // app/report/page.tsx. The private copy was deleted and /report now
+  // renders the one exported component, so the second half of the seeded
+  // slot walk reads that file instead. The render path this harness walks
+  // is unchanged — `ReportWizardPage` still renders `ReportDisplay` as a
+  // child inside the same synchronous pass, and the mocked `useState` is
+  // still one shared module-level counter, so the ordinals continue across
+  // the file boundary exactly as they continued across the function
+  // boundary before.
+  { filePath: "components/report/ReportDisplay.tsx", functionName: "ReportDisplay" },
 ] as const;
 
 const STATE_ORDER_EXPANDED_HOOKS = [
@@ -530,6 +562,7 @@ function defaultSlotValues(): Record<StateSlotName, unknown> {
     savedAreaVisibleVacancyCount: 24,
     editedSummaryText: "",
     persona: DEFAULT_PERSONA,
+    uncontrolledPersona: DEFAULT_PERSONA,
     // Left at the real default ({}) deliberately: this is exactly what lets
     // `isSectionOpen` fall through to its idx<2 / ALWAYS_OPEN_SECTIONS rule,
     // which is the behavior under test.

@@ -203,8 +203,15 @@ describe("buildBriefData", () => {
 });
 
 describe("sm_ params wiring (structural — no DOM environment for the effect itself)", () => {
-  it("app/report/page.tsx reads sm_stage/sm_priority through the real validators and writes them back via replaceState on brief-complete", () => {
-    const source = readFileSync(join(process.cwd(), "app/report/page.tsx"), "utf8");
+  // Fork-unification round: this read app/report/page.tsx, whose private
+  // ReportDisplay carried the sm_ wiring. That copy is gone; /report renders
+  // components/report/ReportDisplay.tsx, which now owns the one copy. Same
+  // assertions, pointed at the file that holds the code.
+  it("the report renderer reads sm_stage/sm_priority through the real validators and writes them back via replaceState on brief-complete", () => {
+    const source = readFileSync(
+      join(process.cwd(), "components/report/ReportDisplay.tsx"),
+      "utf8",
+    );
     expect(source).toContain('params.get("sm_stage")');
     expect(source).toContain('params.get("sm_priority")');
     expect(source).toContain("isBriefStage(stageParam) && isBriefPriority(priorityParam)");

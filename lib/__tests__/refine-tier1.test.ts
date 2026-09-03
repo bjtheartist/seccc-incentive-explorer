@@ -150,43 +150,45 @@ describe("isSnapshotWizardState", () => {
   });
 });
 
-// ─── Fork sync regression (audit RF2 — forks intentionally NOT merged;
-//     the shared refine surface must stay wired into both) ─────────────
+// ─── Shared refine/persona surface, pinned by source grep ────────────
+//
+// Fork-unification round: this block was "ReportDisplay forks keep the
+// shared refine panel" and asserted each string below TWICE — once against
+// app/report/page.tsx's private ReportDisplay and once against
+// components/report/ReportDisplay.tsx. That private copy is gone; /report
+// renders the one exported component. Every assertion is kept, applied once,
+// against the renderer that survived. Assertions about the live route's CALL
+// SITE (which props /report passes) still read the page, as `livePage`.
 
-describe("ReportDisplay forks keep the shared refine panel", () => {
+describe("the report renderer keeps the shared refine panel", () => {
   const root = process.cwd();
-  const liveFork = readFileSync(join(root, "app/report/page.tsx"), "utf8");
-  const workspaceFork = readFileSync(
+  const renderer = readFileSync(
     join(root, "components/report/ReportDisplay.tsx"),
     "utf8",
   );
+  const livePage = readFileSync(join(root, "app/report/page.tsx"), "utf8");
   const supplementRenderer = readFileSync(
     join(root, "components/report/PersonaSectionSupplements.tsx"),
     "utf8",
   );
 
-  it("both forks render RefineValuePanel", () => {
-    expect(liveFork).toContain("RefineValuePanel");
-    expect(workspaceFork).toContain("RefineValuePanel");
+  it("the renderer renders RefineValuePanel", () => {
+    expect(renderer).toContain("RefineValuePanel");
   });
 
-  it("neither fork renders modeled deal-total estimates", () => {
-    expect(liveFork).not.toContain("BenefitEstimatesBlock");
-    expect(workspaceFork).not.toContain("BenefitEstimatesBlock");
-    expect(liveFork).not.toContain("Estimated Incentive Value");
-    expect(workspaceFork).not.toContain("Estimated Incentive Value");
+  it("the renderer renders no modeled deal-total estimates", () => {
+    expect(renderer).not.toContain("BenefitEstimatesBlock");
+    expect(renderer).not.toContain("Estimated Incentive Value");
   });
 
-  it("the old undersell banner copy is gone from both forks", () => {
+  it("the old undersell banner copy is gone", () => {
     const oldCopy = "does not yet account for your project goals";
-    expect(liveFork).not.toContain(oldCopy);
-    expect(workspaceFork).not.toContain(oldCopy);
+    expect(renderer).not.toContain(oldCopy);
   });
 
   // ─── Tier 1b: ONE shared persona chip component wired into BOTH forks ──
-  it("both forks render the shared PersonaChips component", () => {
-    expect(liveFork).toContain("PersonaChips");
-    expect(workspaceFork).toContain("PersonaChips");
+  it("the renderer renders the shared PersonaChips component", () => {
+    expect(renderer).toContain("PersonaChips");
   });
 
   // Live-smoke regression (2026-07-12): the email gate forces every real
@@ -198,13 +200,10 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   // wizard shape. On a real persona board the board header owns the switch-
   // to-All affordance, so the old chip row is intentionally hidden there.
   // RefineValuePanel keeps the diminished prop by design.
-  it("chips gate on showPersonaLens and stay out of the board chrome in both forks", () => {
-    expect(liveFork).toContain("{showPersonaLens && !showPersonaView && !compact && (");
-    expect(workspaceFork).toContain("{showPersonaLens && !showPersonaView && !compact && (");
-    expect(liveFork).toContain("{showPersonaLens && showPersonaView && !compact && (");
-    expect(workspaceFork).toContain("{showPersonaLens && showPersonaView && !compact && (");
-    expect(liveFork).not.toContain("{isInstantMode && !compact && (");
-    expect(workspaceFork).not.toContain("{isInstantMode && !compact && (");
+  it("chips gate on showPersonaLens and stay out of the board chrome", () => {
+    expect(renderer).toContain("{showPersonaLens && !showPersonaView && !compact && (");
+    expect(renderer).toContain("{showPersonaLens && showPersonaView && !compact && (");
+    expect(renderer).not.toContain("{isInstantMode && !compact && (");
   });
 
   it("the live flow feeds showPersonaLens from derivePersonaLensVisible(wizardState) — not isInstantMode, dead on every shared/goal-refined link (BLOCKER #2)", () => {
@@ -213,9 +212,9 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     // lens) and on every goal-refined report (the shape the email gate funnels
     // every real user into). The prop must derive from wizardState the same
     // way the (already-correct) workspace fork does.
-    expect(liveFork).toContain("showPersonaLens={derivePersonaLensVisible(wizardState)}");
-    expect(liveFork).not.toContain("showPersonaLens={isInstantMode}");
-    expect(liveFork).not.toContain(
+    expect(livePage).toContain("showPersonaLens={derivePersonaLensVisible(wizardState)}");
+    expect(livePage).not.toContain("showPersonaLens={isInstantMode}");
+    expect(livePage).not.toContain(
       "showPersonaLens={isInstantMode && !hasRefinedInstantReport}",
     );
   });
@@ -236,41 +235,36 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     );
   });
 
-  it("neither fork applies an invisible lens when the chips are hidden", () => {
+  it("the renderer applies no invisible lens when the chips are hidden", () => {
     // A stored session persona must never silently reorder a report that
     // cannot render the chip row.
     const guard =
       "showPersonaLens ? applyPersonaLens(report, persona).report : report";
-    expect(liveFork).toContain(guard);
-    expect(workspaceFork).toContain(guard);
+    expect(renderer).toContain(guard);
   });
 
-  it("both forks drive the on-screen body from the persona-lensed report", () => {
-    expect(liveFork).toContain("lensed.sections");
-    expect(workspaceFork).toContain("lensed.sections");
-    expect(liveFork).toContain("lensed.actionRoadmap");
-    expect(workspaceFork).toContain("lensed.actionRoadmap");
+  it("the renderer drives the on-screen body from the persona-lensed report", () => {
+    expect(renderer).toContain("lensed.sections");
+    expect(renderer).toContain("lensed.actionRoadmap");
   });
 
-  it("both forks export the PDF from the canonical report (print = 'All')", () => {
+  it("the renderer exports the PDF from the canonical report (print = 'All')", () => {
     // The lens only re-shapes the on-screen `lensed` copy; PDF/export must read
     // the untouched `report` so a forwarded/printed snapshot is the full view.
-    expect(liveFork).toContain("generateReportPdf(report)");
-    expect(workspaceFork).toContain("generateReportPdf(report)");
-    expect(liveFork).not.toContain("generateReportPdf(lensed)");
-    expect(workspaceFork).not.toContain("generateReportPdf(lensed)");
+    expect(renderer).toContain("generateReportPdf(report)");
+    expect(renderer).not.toContain("generateReportPdf(lensed)");
   });
 
   // ─── spec v2: guidepost bands + Contact Sheet, both forks ─────────────
-  it("both forks render the guidepost band via the shared guidepostPartForSection lookup, never a hardcoded persona check", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer renders the guidepost band via the shared guidepostPartForSection lookup, never a hardcoded persona check", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("guidepostPartForSection(section, persona)");
       expect(fork).toContain("renderGuidepostBand(guidepostPart)");
     }
   });
 
-  it("both forks render the shared ContactSheet component, gated to a real persona lens (never on 'all')", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer renders the shared ContactSheet component, gated to a real persona lens (never on 'all')", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("import { ContactSheet }");
       expect(fork).toContain('boardPersona && boardPersona !== "looking" && (');
       // The Contact Sheet numbers itself off the render loop's OWN running
@@ -285,39 +279,45 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  it("both forks feed the shared executive-summary panel the lensed report (strict cards first, disclosure fill handled by the shared panel)", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer feeds the shared executive-summary panel the lensed report (strict cards first, disclosure fill handled by the shared panel)", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("PersonaExecutiveSummary");
       expect(fork).toContain('report={boardPersona === "looking" ? report : lensed}');
     }
   });
 
-  it("both forks feed the shared Also disclosure the collapsed lensed items, not a dead count-only line", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer feeds the shared Also disclosure the collapsed lensed items, not a dead count-only line", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("<PersonaAlsoAtAddress items={personaAlsoSection.items} />");
       expect(fork).not.toContain("<PersonaAlsoAtAddress count=");
     }
   });
 
-  it("Part-03 correction: both forks suppress raw support sections, and the live fork also suppresses both elevated support bands", () => {
-    for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toMatch(
-        /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaView\s*\) \{\s*return \[\];/,
-      );
-    }
-    expect(liveFork).toContain("{!showPersonaView && supportItems.length > 0 && !compact && (");
-    expect(liveFork).toContain("{!showPersonaView && supportSection && supportItems.length > 0 && (");
+  it("Part-03 correction: the renderer suppresses raw support sections, and both elevated support bands, on a real persona lens", () => {
+    expect(renderer).toMatch(
+      /isSupportOrganizationSectionTitle\(section\.title\) &&\s*showPersonaView\s*\) \{\s*return \[\];/,
+    );
+    // Both elevated bands are LIVE-surface features (see
+    // docs/report-renderer-unification.md sections 3.3 and 3.4) AND stay
+    // suppressed on a persona board — the `!showPersonaView` half of each
+    // gate is the assertion this test has always been about.
+    expect(renderer).toContain(
+      "{elevateSupportNetwork && !showPersonaView && supportItems.length > 0 && !compact && (",
+    );
+    expect(renderer).toContain(
+      "{elevateSupportNetwork && !showPersonaView && supportSection && supportItems.length > 0 && (",
+    );
   });
 
-  it("both forks render shared ProgramCardExtras on the one expanded persona card", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer renders shared ProgramCardExtras on the one expanded persona card", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("import { ProgramCardExtras }");
       expect(fork).toContain("<ProgramCardExtras item={item} />");
     }
   });
 
-  it("both forks mount the shared board supplement renderer for owner/supporter documents", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer mounts the shared board supplement renderer for owner/supporter documents", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("PersonaProgramSupplements");
       expect(fork).toContain("lensedReport={lensed}");
     }
@@ -325,8 +325,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(supplementRenderer).not.toContain("<DocumentsToGather report={report}");
   });
 
-  it("both forks mount charts only through the shared supplements at their blessed board positions", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer mounts charts only through the shared supplements at their blessed board positions", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("PersonaNeighborhoodSupplement");
       expect(fork).toContain("PersonaProgramSupplements");
       expect(fork).not.toContain("<FundingWindowChart");
@@ -341,8 +341,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   // list that had NO fork-parity assertion at all. Closed: the workspace/
   // saved-report fork now mounts the identical Brief (button, ask,
   // overlay, print-2up) off the same lensed report + persona.
-  it("both forks render The Brief — the 'Build My Brief' trigger, the two-question ask, and the open overlay with BriefPage", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer renders The Brief — the 'Build My Brief' trigger, the two-question ask, and the open overlay with BriefPage", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("import { BriefStageAsk }");
       expect(fork).toContain("import { BriefPage }");
       expect(fork).toContain(
@@ -371,8 +371,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   // more than this test actually checks. The real, render-level proof of
   // full board order lives in
   // components/report/__tests__/program-card-order.test.tsx.
-  it("both forks MOUNT ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in that order, none inside the accordion (source-grep mount-order check — see program-card-order.test.tsx for the real render-level board-order proof)", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer MOUNTS ProgramCardFace, then ReasonChips, then ProgramCardExtras on the card face, in that order, none inside the accordion (source-grep mount-order check — see program-card-order.test.tsx for the real render-level board-order proof)", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("import { ReasonChips }");
       expect(fork).toContain("import { ProgramCardFace }");
       expect(fork).toContain("import { ProgramCardExtras }");
@@ -381,7 +381,7 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
       const faceIdx = fork.indexOf("<ProgramCardFace item={item} />");
       const chipsIdx = fork.indexOf("<ReasonChips explanation={item.matchExplanation} />");
       const extrasIdx = fork.indexOf("<ProgramCardExtras item={item} />");
-      expect(faceIdx, `${fork === liveFork ? "live" : "workspace"} fork: ProgramCardFace present`).toBeGreaterThan(-1);
+      expect(faceIdx, "report renderer: ProgramCardFace present").toBeGreaterThan(-1);
       expect(chipsIdx, "ReasonChips present").toBeGreaterThan(-1);
       expect(extrasIdx, "ProgramCardExtras present").toBeGreaterThan(-1);
       expect(faceIdx).toBeLessThan(chipsIdx);
@@ -408,8 +408,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
   // app/report/__tests__/report-page-live-renderer.test.tsx; this is the
   // fork-parity half — the workspace fork has no live-renderer harness, so
   // the two surfaces are pinned here by source identity instead.
-  it("both forks gate the supporter routing card on the SAME condition, and every other lens keeps the full face", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer gates the supporter routing card, and every other lens keeps the full face", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain("import { ProgramRoutingCard, ProgramRoutingViewNote }");
       expect(fork).toContain(
         'const isRoutingProgramSection =\n                  isPersonaProgramSection && boardPersona === "supporter";',
@@ -424,8 +424,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  it("both forks mount the who-to-call pointer after the programs section, fed the lensed report", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer mounts the who-to-call pointer after the programs section, fed the lensed report", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain(
         'import { ContactSheetPointerRow } from "@/components/report/ContactSheetPointerRow";',
       );
@@ -441,8 +441,8 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     }
   });
 
-  it("both forks render the looking board in its exact three-part sequence with no contact sheet", () => {
-    for (const fork of [liveFork, workspaceFork]) {
+  it("the renderer renders the looking board in its exact three-part sequence with no contact sheet", () => {
+    for (const fork of [renderer]) {
       expect(fork).toContain('boardPersona === "looking" && renderGuidepostBand(1)');
       expect(fork).toContain('boardPersona === "looking" && (');
       expect(fork).toContain('<WhatsNotablePanel report={report} sectionNumber="03" />');

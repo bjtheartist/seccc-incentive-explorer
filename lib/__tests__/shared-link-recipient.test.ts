@@ -30,10 +30,14 @@ describe("projectGoalsAreComplete", () => {
   });
 });
 
-describe("shared-link recipient — fork parity", () => {
+// Fork-unification round: this block asserted each string TWICE — once
+// against app/report/page.tsx's private ReportDisplay and once against
+// components/report/ReportDisplay.tsx. That private copy is gone; /report
+// renders the one exported component. Every assertion below is kept,
+// applied once, against the renderer that survived.
+describe("shared-link recipient — the framed-link notice", () => {
   const root = process.cwd();
-  const liveFork = readFileSync(join(root, "app/report/page.tsx"), "utf8");
-  const workspaceFork = readFileSync(
+  const renderer = readFileSync(
     join(root, "components/report/ReportDisplay.tsx"),
     "utf8",
   );
@@ -50,21 +54,19 @@ describe("shared-link recipient — fork parity", () => {
   // rendered output never shows the email-gate stub, with a CONTROL test
   // proving the same assertion fails without a resolved share link (so the
   // positive assertion isn't vacuous). This file keeps the remaining
-  // fork-parity source-greps below — they check something a single-fork
-  // render test can't (that BOTH forks carry the same wiring), which is a
-  // legitimate use of a source check, not a substitute for a real render.
+  // source-greps below. They used to check something a single-fork render
+  // test could not — that BOTH forks carried the same wiring. There is one
+  // renderer now, so what they still buy is cheap coverage of a surface no
+  // render test in this file exercises; they are not a substitute for a
+  // real render.
 
-  it("both forks render the framed-persona-link notice with a one-tap escape to 'All'", () => {
-    for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain('data-testid="framed-persona-notice"');
-      expect(fork).toContain("Switch to All for everything");
-      expect(fork).toContain("isFramedPersonaLink");
-    }
+  it("the renderer renders the framed-persona-link notice with a one-tap escape to 'All'", () => {
+    expect(renderer).toContain('data-testid="framed-persona-notice"');
+    expect(renderer).toContain("Switch to All for everything");
+    expect(renderer).toContain("isFramedPersonaLink");
   });
 
   it("the notice never renders on 'all' itself (no escape hatch to offer)", () => {
-    for (const fork of [liveFork, workspaceFork]) {
-      expect(fork).toContain("isFramedPersonaLink && persona !== DEFAULT_PERSONA");
-    }
+    expect(renderer).toContain("isFramedPersonaLink && persona !== DEFAULT_PERSONA");
   });
 });

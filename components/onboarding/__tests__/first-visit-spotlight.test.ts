@@ -18,6 +18,14 @@ const refinePanelSource = readFileSync(
   new URL("../../report/RefineValuePanel.tsx", import.meta.url),
   "utf8",
 );
+// Fork-unification round: the report leg's anchors used to sit in
+// app/report/page.tsx's private ReportDisplay. That copy is gone — the page
+// renders components/report/ReportDisplay.tsx — so the surface a report-leg
+// step can legitimately anchor to now spans both files.
+const reportRendererSource = readFileSync(
+  new URL("../../report/ReportDisplay.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("first visit spotlight contract", () => {
   it("anchors every home-leg step to a stable homepage hook", () => {
@@ -27,7 +35,7 @@ describe("first visit spotlight contract", () => {
   });
 
   it("anchors every report-leg step to a stable report surface", () => {
-    const reportSources = reportPageSource + refinePanelSource;
+    const reportSources = reportPageSource + reportRendererSource + refinePanelSource;
     for (const step of SPOTLIGHT_REPORT_STEPS) {
       const anchor = step.selector.startsWith("#")
         ? `id="${step.selector.slice(1)}"`
