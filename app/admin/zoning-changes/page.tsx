@@ -243,6 +243,18 @@ export default async function ZoningChangesPage({
             City's map had not moved. Rail 7: an absence of evidence must never
             be published as evidence of absence.
           */}
+          {/*
+            "Re-keyed" is the count the 2026-09-02 refresh needed and did not
+            have. The City rotated every GLOBALID in its zoning layer that
+            day; because the comparator joined on that id, it published
+            "14,986 added, 14,920 removed, 0 attribute changes" — a total
+            replacement of Chicago's zoning map that had not happened, with
+            14,656 unchanged parcels hidden inside it. The comparator now
+            joins on published geometry and reports an id rotation on its own
+            line, so a re-key can neither inflate added/removed nor suppress a
+            real attribute change. Rail 7 again: a change in the City's
+            bookkeeping is not a change in the City's map.
+          */}
           <p className="mt-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/35">
             eLMS published through {formatDate(legislation.source.sourceUpdatedThrough)} ·{" "}
             {mapDelta.comparedFrom === null ? (
@@ -252,7 +264,8 @@ export default async function ZoningChangesPage({
               <>latest reviewed map delta (compared against {formatDate(mapDelta.comparedFrom)}):{" "}
                 {mapDelta.counts.added} added, {mapDelta.counts.removed} removed,{" "}
                 {mapDelta.counts.attributesChanged} attribute and{" "}
-                {mapDelta.counts.geometryChanged} geometry changes</>
+                {mapDelta.counts.geometryChanged} geometry changes,{" "}
+                {mapDelta.counts.rekeyed} re-keyed</>
             )}
             {" · "}
             {zbaDelta.comparedFromFeatureCount === null ? (
@@ -265,6 +278,12 @@ export default async function ZoningChangesPage({
                 {zbaDelta.counts.attributesChanged} attribute and{" "}
                 {zbaDelta.counts.geometryChanged} geometry changes</>
             )}
+          </p>
+          <p className="mt-2 max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/45">
+            &ldquo;Re-keyed&rdquo; counts parcels the City republished under a new internal id
+            with the same boundary and the same published attributes: a change to the source&rsquo;s
+            bookkeeping, not to Chicago&rsquo;s zoning map. They are listed separately precisely so
+            they are not read as parcels added or removed.
           </p>
         </section>
 

@@ -123,8 +123,14 @@ export interface ZoningMapSnapshot {
 }
 
 export interface ZoningMapChange {
+  /** The id this record carries in the NEWER snapshot (the older one, for a
+   * removal). Reported, never joined on — see `diffZoningMapSnapshots`. */
   globalId: string;
-  change: "added" | "removed" | "attributes_changed" | "geometry_changed";
+  /** Set when the join matched a record whose GLOBALID the City rotated
+   * underneath it: the id this same polygon carried in the older snapshot.
+   * Absent on artifacts written before the re-key was understood. */
+  previousGlobalId?: string | null;
+  change: "added" | "removed" | "attributes_changed" | "geometry_changed" | "rekeyed";
   before: Pick<
     ZoningMapSnapshotRecord,
     | "zoneClass"
@@ -153,6 +159,11 @@ export interface ZoningMapDelta {
     removed: number;
     attributesChanged: number;
     geometryChanged: number;
+    /** Records the join matched by geometry whose GLOBALID changed anyway.
+     * An upstream id rotation is a bookkeeping event, not a change to the
+     * City's map — it gets its own line so it can never again masquerade as
+     * added+removed, nor hide a real attribute change behind a churned key. */
+    rekeyed: number;
   };
   changes: ZoningMapChange[];
 }
@@ -236,6 +247,10 @@ export function classifyZoningLifecycle(
   if (combined.includes("repealed")) return "repealed";
   if (combined.includes("placed on file")) return "closed_without_adoption";
   if (
+    // "2-Submitted to Clerk / Accepted": filed with the Clerk and accepted
+    // onto a future Council agenda, but not yet introduced. That is the
+    // earliest pending state, not an unclassifiable one.
+    combined.includes("submitted to clerk") ||
     combined.includes("introduction") ||
     combined.includes("committee") ||
     combined.includes("referred") ||
@@ -596,7 +611,15 @@ export function normalizeZoningMapFeature(value: unknown): ZoningMapSnapshotReco
     clerkUrl: nullableText(attributes.CLERK_URL),
     recordUpdatedAt: nullableIsoDate(attributes.UPDATE_TIMESTAMP),
   };
-  const attributeFingerprint = sha256(normalized);
+  // The fingerprint covers the published ZONING attributes and deliberately
+  // EXCLUDES `globalId`. It used to hash `normalized` whole, which meant the
+  // City rotating its GLOBALIDs changed every fingerprint in the layer even
+  // though not one published attribute moved — 14,656 records read as
+  // "attributesChanged: 0" because the comparator had already written them
+  // off as added+removed. Attribute drift must be observable independently
+  // of whatever key the source happens to be handing out today.
+  const { globalId: _rotatingKey, ...fingerprintedAttributes } = normalized;
+  const attributeFingerprint = sha256(fingerprintedAttributes);
   const geometryFingerprint = sha256(value.geometry);
   return { ...normalized, attributeFingerprint, geometryFingerprint };
 }
@@ -625,6 +648,46 @@ export function buildZoningMapSnapshot(
   };
 }
 
+/**
+ * How one polygon is followed from one snapshot to the next.
+ *
+ * NOT by `globalId`. On 2026-09-02 the City rotated 100% of the zoning
+ * layer's GLOBALIDs in a single publish: id overlap between consecutive
+ * snapshots was 0 of 14,986, while 97.8% of the published geometry was
+ * byte-identical. A GLOBALID-keyed comparator has no way to describe that
+ * except as a total replacement of Chicago's zoning map — 14,986 added,
+ * 14,920 removed — which is what it reported to admins.
+ *
+ * NOT by `zoningId` either, notwithstanding that it was "100% stable"
+ * across the rotation. It is stable because it is not an identity: there
+ * are only 69 distinct ZONING_ID values across ~15,000 polygons (it is the
+ * zone-class code — 61 = RS-3, and so on), so it cannot address a record.
+ *
+ * `geometryFingerprint` is the identity that actually survived, and it is
+ * the thing the artifact is about: a polygon IS its published boundary.
+ * It is not quite unique — a few records share a fingerprint (14,917
+ * distinct across 14,920 rows) — so the join pairs rows WITHIN a
+ * fingerprint bucket instead of assuming a 1:1 map.
+ *
+ * `globalId` is still recorded on every row, and is still consulted as a
+ * SECONDARY key, but only over the leftovers: see pass 2 below.
+ */
+function groupByGeometry(
+  records: readonly ZoningMapSnapshotRecord[],
+): Map<string, ZoningMapSnapshotRecord[]> {
+  const out = new Map<string, ZoningMapSnapshotRecord[]>();
+  for (const row of records) {
+    const bucket = out.get(row.geometryFingerprint);
+    if (bucket) bucket.push(row);
+    else out.set(row.geometryFingerprint, [row]);
+  }
+  // Deterministic pairing within a shared-geometry bucket.
+  for (const bucket of out.values()) {
+    bucket.sort((a, b) => a.globalId.localeCompare(b.globalId));
+  }
+  return out;
+}
+
 function mapChangeFacts(row: ZoningMapSnapshotRecord | undefined) {
   if (!row) return null;
   return {
@@ -636,45 +699,123 @@ function mapChangeFacts(row: ZoningMapSnapshotRecord | undefined) {
   };
 }
 
+const CHANGE_ORDER: Record<ZoningMapChange["change"], number> = {
+  added: 0,
+  removed: 1,
+  attributes_changed: 2,
+  geometry_changed: 3,
+  rekeyed: 4,
+};
+
 export function diffZoningMapSnapshots(
   previous: ZoningMapSnapshot | null,
   current: ZoningMapSnapshot,
 ): ZoningMapDelta {
   const changes: ZoningMapChange[] = [];
-  if (previous) {
-    const before = new Map(previous.records.map((row) => [row.globalId, row]));
-    const after = new Map(current.records.map((row) => [row.globalId, row]));
-    const ids = [...new Set([...before.keys(), ...after.keys()])].sort();
+  let rekeyed = 0;
 
-    for (const globalId of ids) {
-      const oldRow = before.get(globalId);
-      const newRow = after.get(globalId);
-      if (!oldRow && newRow) {
-        changes.push({ globalId, change: "added", before: null, after: mapChangeFacts(newRow) });
+  if (previous) {
+    const matched: Array<[ZoningMapSnapshotRecord, ZoningMapSnapshotRecord]> = [];
+    const leftoverBefore: ZoningMapSnapshotRecord[] = [];
+    const leftoverAfter: ZoningMapSnapshotRecord[] = [];
+
+    // ── Pass 1: geometry-keyed join. Survives a GLOBALID rotation. ──
+    const beforeByGeometry = groupByGeometry(previous.records);
+    const afterByGeometry = groupByGeometry(current.records);
+    const fingerprints = [
+      ...new Set([...beforeByGeometry.keys(), ...afterByGeometry.keys()]),
+    ].sort();
+    for (const fingerprint of fingerprints) {
+      const olds = beforeByGeometry.get(fingerprint) ?? [];
+      const news = afterByGeometry.get(fingerprint) ?? [];
+      const pairs = Math.min(olds.length, news.length);
+      for (let i = 0; i < pairs; i++) matched.push([olds[i], news[i]]);
+      leftoverBefore.push(...olds.slice(pairs));
+      leftoverAfter.push(...news.slice(pairs));
+    }
+
+    // ── Pass 2: GLOBALID join, over ONLY what geometry could not match. ──
+    // A polygon whose boundary was genuinely redrawn has no geometry
+    // counterpart; when its id did not rotate it is still the same record,
+    // and calling it added+removed would bury a real geometry change. This
+    // is the one place globalId is joined on, and it can never mask a
+    // re-key: by construction the ids it matches are equal.
+    const leftoverAfterById = new Map(leftoverAfter.map((row) => [row.globalId, row]));
+    const removed: ZoningMapSnapshotRecord[] = [];
+    for (const oldRow of leftoverBefore) {
+      const newRow = leftoverAfterById.get(oldRow.globalId);
+      if (!newRow) {
+        removed.push(oldRow);
         continue;
       }
-      if (oldRow && !newRow) {
-        changes.push({ globalId, change: "removed", before: mapChangeFacts(oldRow), after: null });
-        continue;
-      }
-      if (!oldRow || !newRow) continue;
+      leftoverAfterById.delete(oldRow.globalId);
+      matched.push([oldRow, newRow]);
+    }
+
+    for (const [oldRow, newRow] of matched) {
+      const wasRekeyed = oldRow.globalId !== newRow.globalId;
+      const previousGlobalId = wasRekeyed ? oldRow.globalId : null;
+      if (wasRekeyed) rekeyed += 1;
+
+      let reportedSubstantiveChange = false;
       if (oldRow.attributeFingerprint !== newRow.attributeFingerprint) {
         changes.push({
-          globalId,
+          globalId: newRow.globalId,
+          previousGlobalId,
           change: "attributes_changed",
           before: mapChangeFacts(oldRow),
           after: mapChangeFacts(newRow),
         });
+        reportedSubstantiveChange = true;
       }
       if (oldRow.geometryFingerprint !== newRow.geometryFingerprint) {
         changes.push({
-          globalId,
+          globalId: newRow.globalId,
+          previousGlobalId,
           change: "geometry_changed",
+          before: mapChangeFacts(oldRow),
+          after: mapChangeFacts(newRow),
+        });
+        reportedSubstantiveChange = true;
+      }
+      // A pure re-key changed nothing an admin can act on, but it must still
+      // appear, or the ledger would silently drop 14,656 records off both
+      // sides of the comparison and read as a quiet day.
+      if (!reportedSubstantiveChange && wasRekeyed) {
+        changes.push({
+          globalId: newRow.globalId,
+          previousGlobalId,
+          change: "rekeyed",
           before: mapChangeFacts(oldRow),
           after: mapChangeFacts(newRow),
         });
       }
     }
+
+    for (const oldRow of removed) {
+      changes.push({
+        globalId: oldRow.globalId,
+        previousGlobalId: null,
+        change: "removed",
+        before: mapChangeFacts(oldRow),
+        after: null,
+      });
+    }
+    for (const newRow of leftoverAfterById.values()) {
+      changes.push({
+        globalId: newRow.globalId,
+        previousGlobalId: null,
+        change: "added",
+        before: null,
+        after: mapChangeFacts(newRow),
+      });
+    }
+
+    changes.sort(
+      (a, b) =>
+        a.globalId.localeCompare(b.globalId) ||
+        CHANGE_ORDER[a.change] - CHANGE_ORDER[b.change],
+    );
   }
 
   return {
@@ -687,7 +828,56 @@ export function diffZoningMapSnapshots(
       removed: changes.filter((row) => row.change === "removed").length,
       attributesChanged: changes.filter((row) => row.change === "attributes_changed").length,
       geometryChanged: changes.filter((row) => row.change === "geometry_changed").length,
+      rekeyed,
     },
     changes,
+  };
+}
+
+/** Ceiling on how much of the layer may be added+removed in one refresh
+ * before the sync refuses to publish the result unreviewed.
+ *
+ * Calibrated from the data: a normal day moves a few hundred polygons, and
+ * the largest genuine movement observed — the 2026-09-02 refresh, once
+ * re-joined on geometry — was 330 added + 264 removed against 14,986
+ * features, or 4.0%. 10% leaves better than 2x headroom over the busiest
+ * real day while still catching the failure this bound exists for: the
+ * GLOBALID rotation scored 200%. */
+export const MAX_ZONING_MAP_CHURN_RATIO = 0.1;
+
+export interface ZoningMapChurnAssessment {
+  /** added + removed: records with no counterpart on the other side. */
+  churned: number;
+  /** Layer size the churn is measured against. */
+  total: number;
+  ratio: number;
+  limit: number;
+  withinBounds: boolean;
+}
+
+/**
+ * Bound how much of the zoning layer a single refresh may claim changed.
+ *
+ * `added` and `removed` here are already the geometry-keyed numbers, so an
+ * id rotation no longer inflates them — a trip means the City really did
+ * republish a large share of the map, which is a thing a human must look at
+ * before it reaches the admin ledger, not something to publish and hope.
+ * A first-run baseline has nothing to compare against and never trips.
+ */
+export function assessZoningMapChurn(
+  delta: ZoningMapDelta,
+  previous: ZoningMapSnapshot | null,
+  current: ZoningMapSnapshot,
+  limit: number = MAX_ZONING_MAP_CHURN_RATIO,
+): ZoningMapChurnAssessment {
+  const churned = delta.counts.added + delta.counts.removed;
+  const total = Math.max(previous?.featureCount ?? 0, current.featureCount);
+  const ratio = total > 0 ? churned / total : 0;
+  return {
+    churned,
+    total,
+    ratio,
+    limit,
+    withinBounds: previous === null || total === 0 ? true : ratio <= limit,
   };
 }

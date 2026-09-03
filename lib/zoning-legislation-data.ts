@@ -32,7 +32,26 @@ export function loadZoningSourceLedger() {
   const mapSnapshot = JSON.parse(
     readFileSync(MAP_SNAPSHOT_PATH, "utf8"),
   ) as ZoningMapSnapshot;
-  const mapDelta = JSON.parse(readFileSync(MAP_DELTA_PATH, "utf8")) as ZoningMapDelta;
+  // `counts.rekeyed` postdates the artifacts already committed: deltas
+  // written before the 2026-09-02 GLOBALID rotation was understood have no
+  // such field. Default it to 0 on read rather than letting `undefined`
+  // reach the admin page as "NaN rekeyed" — the next scheduled refresh
+  // regenerates the file with the field present.
+  const rawMapDelta = JSON.parse(readFileSync(MAP_DELTA_PATH, "utf8")) as Omit<
+    ZoningMapDelta,
+    "counts"
+  > & { counts: Partial<ZoningMapDelta["counts"]> };
+  const mapDelta: ZoningMapDelta = {
+    ...rawMapDelta,
+    counts: {
+      added: 0,
+      removed: 0,
+      attributesChanged: 0,
+      geometryChanged: 0,
+      rekeyed: 0,
+      ...rawMapDelta.counts,
+    },
+  };
   const zbaSnapshot = JSON.parse(
     readFileSync(ZBA_SNAPSHOT_PATH, "utf8"),
   ) as ChicagoZbaSnapshot;

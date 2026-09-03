@@ -75,18 +75,23 @@ describe("committed zoning source artifacts", () => {
         removed: 0,
         attributesChanged: 0,
         geometryChanged: 0,
+        rekeyed: 0,
       });
     } else {
       // A comparison actually ran. Changes are allowed — and the published
       // counts must be a true tally of the list beneath them, so the headline
       // can never drift from the records it summarises.
       expect(typeof mapDelta.comparedFrom).toBe("string");
-      const tally = { added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0 };
+      const tally = {
+        added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0, rekeyed: 0,
+      };
       for (const change of mapDelta.changes) {
         if (change.change === "added") tally.added += 1;
         else if (change.change === "removed") tally.removed += 1;
         else if (change.change === "attributes_changed") tally.attributesChanged += 1;
         else if (change.change === "geometry_changed") tally.geometryChanged += 1;
+        // Independent dimension — see the contract test at the foot of this file.
+        if (change.previousGlobalId != null) tally.rekeyed += 1;
       }
       expect(mapDelta.counts).toEqual(tally);
     }
@@ -155,17 +160,25 @@ describe("delta contract survives a real change", () => {
     sourceUrl: "https://example.invalid/zoning",
     comparedFrom: null,
     comparedThrough: "2026-07-23T21:36:35.000Z",
-    counts: { added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0 },
+    counts: { added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0, rekeyed: 0 },
     changes: [],
   };
 
   const realComparison: ZoningMapDelta = {
     ...baseline,
     comparedFrom: "2026-07-23T21:36:35.000Z",
-    counts: { added: 1, removed: 0, attributesChanged: 1, geometryChanged: 0 },
+    counts: { added: 1, removed: 0, attributesChanged: 1, geometryChanged: 0, rekeyed: 1 },
     changes: [
-      { globalId: "a", change: "added", before: null, after: null },
-      { globalId: "b", change: "attributes_changed", before: null, after: null },
+      { globalId: "a", previousGlobalId: null, change: "added", before: null, after: null },
+      // Re-keyed AND genuinely changed: it is reported under its real change,
+      // and `previousGlobalId` is what makes the re-key countable.
+      {
+        globalId: "b",
+        previousGlobalId: "b-was",
+        change: "attributes_changed",
+        before: null,
+        after: null,
+      },
     ],
   };
 
@@ -174,16 +187,23 @@ describe("delta contract survives a real change", () => {
     if (delta.comparedFrom === null) {
       expect(delta.changes).toEqual([]);
       expect(delta.counts).toEqual({
-        added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0,
+        added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0, rekeyed: 0,
       });
       return;
     }
-    const tally = { added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0 };
+    const tally = {
+      added: 0, removed: 0, attributesChanged: 0, geometryChanged: 0, rekeyed: 0,
+    };
     for (const c of delta.changes) {
       if (c.change === "added") tally.added += 1;
       else if (c.change === "removed") tally.removed += 1;
       else if (c.change === "attributes_changed") tally.attributesChanged += 1;
       else if (c.change === "geometry_changed") tally.geometryChanged += 1;
+      // `rekeyed` is an INDEPENDENT dimension, not a fifth bucket. A record
+      // whose id rotated and whose attributes also moved is reported under the
+      // attribute change and still counted here — which is precisely what the
+      // GLOBALID-keyed comparator could not do.
+      if (c.previousGlobalId != null) tally.rekeyed += 1;
     }
     expect(delta.counts).toEqual(tally);
   };
@@ -209,7 +229,7 @@ describe("delta contract survives a real change", () => {
     expect(() =>
       assertDeltaHonest({
         ...realComparison,
-        counts: { added: 99, removed: 0, attributesChanged: 1, geometryChanged: 0 },
+        counts: { added: 99, removed: 0, attributesChanged: 1, geometryChanged: 0, rekeyed: 1 },
       }),
     ).toThrow();
   });
