@@ -172,3 +172,14 @@ Zone layers support two rendering paths:
 | `ANALYTICS_ADMIN_PASSWORD` | For private analytics dashboard | Password required for `/admin/analytics`. Sets a signed HTTP-only session cookie. |
 | `ANALYTICS_ADMIN_TOKEN` | For private analytics API | Optional token for direct `/api/admin/analytics` script/API access. |
 | `OWNER_FILES_ADMIN_PASSWORD` | For the Owner Files admin tool | Password required for `/admin/owner-files`. Sets its own signed HTTP-only session cookie (`cie_owner_files_admin`), separate from the analytics dashboard gate — an Owner File is a named-entity dossier. MVP stopgap; see `lib/owner-files-admin-auth.ts`. |
+
+## A claimed user-visible behavior needs a test that renders it, not one that greps for it
+
+If a PR description claims the user can now see or do something, the PR must contain a test that reaches that behavior through the real entry point — render the component, call the route handler, run the CLI — and assert on what comes out. A test that greps the source for a string, or asserts that an export exists, proves only that the plumbing was written; it passes just as happily when nothing calls the plumbing, which is exactly how four PRs shipped a claim with no behavior behind it. New modules need a production caller, or the description has to say why they ship uncalled.
+
+For the claim "the zoning vintage block is shown on the report page":
+
+- **Grep-test (not acceptable):** `expect(readFileSync("components/report/ZoningCard.tsx", "utf8")).toMatch(/vintage/)` — passes whether or not `ZoningCard` is ever rendered, and whether or not the block reaches it.
+- **Render-test (acceptable):** render the report page with a fixture report whose `locationContext.geography.cityZoning.value` carries a vintage block, then `expect(screen.getByText(/dataset updated/i)).toBeVisible()`.
+
+This is a review norm, not a mechanical check — deliberately no lint rule and no guard test enforces it.
