@@ -81,6 +81,7 @@
     "data:export:investment": "npx tsx scripts/export-community-investment.ts",
     "data:manifest:generate": "npx tsx scripts/generate-investment-manifest.ts",
     "data:manifest:check": "npx tsx scripts/generate-investment-manifest.ts --check",
+    "data:manifest:verify": "npx tsx scripts/verify-investment-manifest.ts",
     "data:docs:generate": "npx tsx scripts/generate-investment-docs.ts",
     "data:docs:check": "npx tsx scripts/generate-investment-docs.ts --check",
     "data:audit:foundation-fresh": "python3 scripts/foundation/fresh_srs_audit.py && python3 scripts/foundation/chicago_prize_census_check.py",
