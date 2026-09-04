@@ -10,12 +10,25 @@ const COMPLETED_GUIDE = JSON.stringify({
   updatedAt: "2026-08-30T00:00:00.000Z",
 });
 
+// The two tours version their preferences INDEPENDENTLY on purpose, so the
+// fixtures cannot share one object: lib/map-guide.ts is at v2 after the
+// walkthrough rebuild, and a v1 map preference reads as "never seen" — which
+// would auto-start the tour over these smoke assertions.
+const COMPLETED_MAP_GUIDE = JSON.stringify({
+  version: 2,
+  status: "completed",
+  updatedAt: "2026-09-04T00:00:00.000Z",
+});
+
 async function dismissGuides(page: Page) {
-  await page.addInitScript((completed) => {
-    window.localStorage.setItem("cie:first-visit-guide", completed);
-    window.localStorage.setItem("cie:map-guide", completed);
-    window.sessionStorage.removeItem("cie:first-visit-spotlight-pending");
-  }, COMPLETED_GUIDE);
+  await page.addInitScript(
+    ([completed, mapCompleted]) => {
+      window.localStorage.setItem("cie:first-visit-guide", completed);
+      window.localStorage.setItem("cie:map-guide", mapCompleted);
+      window.sessionStorage.removeItem("cie:first-visit-spotlight-pending");
+    },
+    [COMPLETED_GUIDE, COMPLETED_MAP_GUIDE],
+  );
 }
 
 test.describe("Mobile Safari / WebKit smoke", () => {

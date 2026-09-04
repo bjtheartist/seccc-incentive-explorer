@@ -107,7 +107,7 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
   it("keeps the global map search from covering the open workstation header", () => {
     const searchOverlay = sourceBetween(
       "{/* Search bar */}",
-      "{/* Legend toggle button",
+      "{/* Map header cluster",
     );
 
     expect(searchOverlay).toContain("loaded && !polygonPanelOpen");

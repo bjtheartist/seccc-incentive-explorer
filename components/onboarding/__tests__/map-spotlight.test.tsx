@@ -13,21 +13,35 @@ vi.mock("driver.js", () => {
   throw new Error("driver.js chunk failed to load");
 });
 
-describe("MapTourButton — persistent replay affordance", () => {
+describe("MapTourButton — the map's one entry point", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
   });
 
-  it("renders a labeled, always-visible replay control", () => {
+  it("renders the 'Show me around' pill, which is a real labelled control", async () => {
     render(<MapTourButton />);
-    expect(screen.getByRole("button", { name: "How to use this map" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Show me around" })).toBeTruthy();
   });
 
-  it("dispatches the map guide's own open event on click, not another tour's", () => {
+  it("dispatches the map guide's own open event on click, not another tour's", async () => {
     const handler = vi.fn();
     window.addEventListener(MAP_GUIDE_OPEN_EVENT, handler);
     render(<MapTourButton />);
-    screen.getByRole("button", { name: "How to use this map" }).click();
+    (await screen.findByRole("button", { name: "Show me around" })).click();
+    expect(handler).toHaveBeenCalledTimes(1);
+    window.removeEventListener(MAP_GUIDE_OPEN_EVENT, handler);
+  });
+
+  it("still dispatches that event from the demoted replay control", async () => {
+    window.localStorage.setItem(
+      MAP_GUIDE_STORAGE_KEY,
+      JSON.stringify({ version: 2, status: "skipped", updatedAt: "2026-09-01T00:00:00.000Z" }),
+    );
+    const handler = vi.fn();
+    window.addEventListener(MAP_GUIDE_OPEN_EVENT, handler);
+    render(<MapTourButton />);
+    (await screen.findByRole("button", { name: "Replay the map tour" })).click();
     expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(MAP_GUIDE_OPEN_EVENT, handler);
   });

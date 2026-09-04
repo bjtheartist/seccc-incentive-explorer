@@ -18,10 +18,15 @@ const RESOLVED_SITEWIDE = JSON.stringify({
   status: "completed",
   updatedAt: "2026-08-10T00:00:00.000Z",
 });
+// lib/map-guide.ts's MAP_GUIDE_VERSION — bumped to 2 for the rebuilt
+// five-stop walkthrough, which by design re-offers itself once to anyone
+// holding a v1 preference. A stale v1 fixture here does NOT dismiss the tour:
+// it auto-starts, types its demo address into the search box and takes over
+// the page this spec is trying to tap on.
 const RESOLVED_MAP = JSON.stringify({
-  version: 1,
+  version: 2,
   status: "completed",
-  updatedAt: "2026-08-10T00:00:00.000Z",
+  updatedAt: "2026-09-04T00:00:00.000Z",
 });
 
 /** A phone visitor who has dismissed both guided tours. */

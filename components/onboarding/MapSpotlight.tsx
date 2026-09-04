@@ -1,13 +1,24 @@
 "use client";
 
-import type { Config, Driver } from "driver.js";
+import type { Config, Driver, DriveStep } from "driver.js";
 import { readFirstVisitGuidePreference } from "@/lib/first-visit-guide";
 import { useCallback, useEffect, useRef } from "react";
 import {
   MAP_GUIDE_OPEN_EVENT,
+  MAP_GUIDE_RESOLVED_EVENT,
+  MAP_TOUR_END_EVENT,
+  MAP_TOUR_START_EVENT,
   MAP_TOUR_STEPS,
+  chooseTourSide,
+  mapTourPopoverHtml,
+  mountMapTourHint,
   readMapGuidePreference,
+  removeDemoBadge,
+  removeMapTourHint,
+  resolveTourAnchor,
+  scrollTourAnchorIntoView,
   writeMapGuidePreference,
+  type MapTourStepContext,
 } from "@/lib/map-guide";
 
 /** Delay before the first-visit auto-start. The map mounts through a dynamic
@@ -42,6 +53,10 @@ function prefersReducedMotion() {
  * bail-out safety net for a genuinely dead map while letting a slow one still
  * get its tour. */
 const ANCHOR_READY_TIMEOUT_MS = 120000;
+
+/** Settle time after the pre-stop scroll, so driver.js positions the popover
+ * against the anchor's final rect rather than a mid-scroll one. */
+const LAYOUT_SETTLE_MS = 80;
 
 /**
  * Resolves TRUE once the selector exists with layout, or FALSE after the
@@ -91,12 +106,21 @@ function waitForAnchor(
 }
 
 /**
- * Single-page spotlight tour for the public /map page, following
- * InvestmentSpotlight's conventions and the public tour's two hard-won fixes:
- * a failed dynamic import of driver.js is never recorded as a skip or a
- * completion (storage stays untouched so the tour can offer itself again next
- * visit), and the popover styling rides the same `cie-driver-popover` class
- * already held to WCAG AA.
+ * The rebuilt map walkthrough: five stops that each DO the thing they name.
+ *
+ * Flow control stays with driver.js rather than being re-implemented here —
+ * its keyboard handling (arrows, Escape) and its overlay-click behaviour both
+ * route through the same per-step next/previous hooks the buttons use, so
+ * hanging the tour's own work off `onHighlightStarted` (scroll the anchor
+ * clear of the sticky nav, choose a side with room) and `onHighlighted` (run
+ * the stop's `perform`) covers every way a visitor can move, including the
+ * keyboard, with no bespoke navigation to keep in sync.
+ *
+ * Two hard-won behaviours from the public tour are preserved: a failed dynamic
+ * import of driver.js is never recorded as a skip or a completion (storage
+ * stays untouched so the tour can offer itself again next visit), and the
+ * popover styling rides the same `cie-driver-popover` class already held to
+ * WCAG AA.
  */
 export function MapSpotlight() {
   const driverRef = useRef<Driver | null>(null);
@@ -104,12 +128,19 @@ export function MapSpotlight() {
   const outcomeRecordedRef = useRef(false);
   const autoStartHandledRef = useRef(false);
   const mountedRef = useRef(false);
+  /** Which stops have already run their `perform` in this run. */
+  const performedRef = useRef<Set<string>>(new Set());
+  const runActiveRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       driverRef.current?.destroy();
+      // A route change mid-run must not leave the injected demo furniture on
+      // the page for the next mount to find.
+      removeMapTourHint();
+      removeDemoBadge();
     };
   }, []);
 
@@ -117,12 +148,14 @@ export function MapSpotlight() {
     if (outcomeRecordedRef.current) return;
     outcomeRecordedRef.current = true;
     writeMapGuidePreference(window.localStorage, status);
+    window.dispatchEvent(new Event(MAP_GUIDE_RESOLVED_EVENT));
   }, []);
 
   const startTour = useCallback(async () => {
     if (startingRef.current || driverRef.current?.isActive()) return;
     startingRef.current = true;
     outcomeRecordedRef.current = false;
+    performedRef.current = new Set();
     const reduceMotion = prefersReducedMotion();
 
     try {
@@ -152,31 +185,78 @@ export function MapSpotlight() {
         return;
       }
 
+      runActiveRef.current = true;
+      const stepContext: MapTourStepContext = {
+        reduceMotion,
+        isCancelled: () => !runActiveRef.current || !mountedRef.current,
+      };
+
+      // MapView snapshots the pre-tour camera on this, and restores it (plus
+      // removing the demo marker and closing the demo dossier) on the end
+      // event dispatched from the teardown below.
+      window.dispatchEvent(new Event(MAP_TOUR_START_EVENT));
+      // Created hidden so driver.js can resolve the stop-four anchor before
+      // that stop's `perform` reveals it.
+      mountMapTourHint();
+
+      const teardown = () => {
+        runActiveRef.current = false;
+        // Reverse order, and only for stops that actually ran, so an undo
+        // never fires against state its perform never touched.
+        for (let i = MAP_TOUR_STEPS.length - 1; i >= 0; i -= 1) {
+          const step = MAP_TOUR_STEPS[i];
+          if (!step.undo || !performedRef.current.has(step.key)) continue;
+          try {
+            step.undo(stepContext);
+          } catch (error) {
+            console.error(`[map-spotlight] undo failed for ${step.key}:`, error);
+          }
+        }
+        performedRef.current = new Set();
+        removeMapTourHint();
+        removeDemoBadge();
+        window.dispatchEvent(new Event(MAP_TOUR_END_EVENT));
+      };
+
       const releaseRun = () => {
         driverRef.current = null;
         startingRef.current = false;
       };
 
+      const steps: DriveStep[] = MAP_TOUR_STEPS.map((step, index) => ({
+        // A function, not the raw selector: driver.js re-evaluates it for its
+        // `waitForElement` observer and its `skipMissingElement` check, so
+        // resolveTourAnchor's "present but not rendered is the same as
+        // missing" rule applies to both. That is what keeps the nav's
+        // Generate Report link — which exists inside a CLOSED mobile sheet —
+        // from being highlighted as a zero-box element on a phone.
+        element: (() => resolveTourAnchor(step.selector)) as () => Element,
+        data: { key: step.key },
+        skipMissingElement: true,
+        waitForElement: step.waitForElementMs ?? 1500,
+        // Stop one leaves the search box interactive so a visitor can type
+        // their own address over the demo one.
+        disableActiveInteraction: index !== 0,
+        popover: {
+          title: step.title,
+          description: mapTourPopoverHtml(step),
+          side: step.side,
+          align: step.align ?? "center",
+          progressText: `Step ${index + 1} of ${MAP_TOUR_STEPS.length}`,
+          // Nothing precedes the first stop, so it hides Back instead of
+          // showing a dead control.
+          ...(index === 0 ? { showButtons: ["next", "close"] as const } : {}),
+        },
+      }));
+
       const config: Config = {
-        steps: MAP_TOUR_STEPS.map((step, index) => ({
-          element: step.selector,
-          data: { key: step.key },
-          skipMissingElement: true,
-          waitForElement: 1500,
-          disableActiveInteraction: true,
-          popover: {
-            title: step.title,
-            description: step.description,
-            side: step.side,
-            align: "center",
-            progressText: `Step ${index + 1} of ${MAP_TOUR_STEPS.length}`,
-            // Nothing precedes the first stop, so it hides Back instead of
-            // showing a dead control.
-            ...(index === 0 ? { showButtons: ["next", "close"] as const } : {}),
-          },
-        })),
+        steps,
         animate: !reduceMotion,
-        smoothScroll: !reduceMotion,
+        // driver.js's own scroll only fires when an anchor is fully outside
+        // the viewport, which counts an element parked UNDER the 56px sticky
+        // nav as "already visible" — the exact production bug where stop one
+        // pointed at nothing. onHighlightStarted below does the scrolling.
+        smoothScroll: false,
         allowClose: true,
         allowScroll: true,
         // A stray click on the dark overlay advances instead of ending the
@@ -193,6 +273,38 @@ export function MapSpotlight() {
         prevBtnText: "Back",
         doneBtnText: "Done",
         allowKeyboardControl: true,
+        onHighlightStarted: (element, step) => {
+          if (!(element instanceof HTMLElement)) return;
+          scrollTourAnchorIntoView(element);
+          // Re-pick the side against the anchor's post-scroll rect. Mutating
+          // the step here lands before driver.js reads it back to position
+          // the popover, and its own clamping still owns the case where no
+          // side has room at all (it centres the popover over the page).
+          const definition = MAP_TOUR_STEPS.find((s) => s.key === step.data?.key);
+          if (definition && step.popover) {
+            step.popover.side = chooseTourSide(
+              element.getBoundingClientRect(),
+              { width: window.innerWidth, height: window.innerHeight },
+              definition.side,
+            );
+          }
+        },
+        onHighlighted: (_element, step) => {
+          const key = step.data?.key as string | undefined;
+          if (!key || performedRef.current.has(key)) return;
+          const definition = MAP_TOUR_STEPS.find((s) => s.key === key);
+          if (!definition?.perform) return;
+          performedRef.current.add(key);
+          // Fire-and-forget on purpose: the stop is already on screen, so the
+          // visitor WATCHES the typing, the preset flip and the dossier open
+          // rather than waiting on a blank pause for them.
+          window.setTimeout(() => {
+            if (stepContext.isCancelled()) return;
+            void definition.perform?.(stepContext).catch((error) => {
+              console.error(`[map-spotlight] step ${key} failed:`, error);
+            });
+          }, LAYOUT_SETTLE_MS);
+        },
         onDoneClick: () => {
           recordOutcome("completed");
           driverRef.current?.destroy();
@@ -208,6 +320,7 @@ export function MapSpotlight() {
           // onCloseClick/onDoneClick above. recordOutcome is idempotent, so a
           // finished run does not get double-recorded here.
           recordOutcome("skipped");
+          teardown();
           releaseRun();
         },
       };
@@ -224,7 +337,10 @@ export function MapSpotlight() {
       // cannot record over it, but leave storage untouched so the tour can
       // try again on the next visit. Never throw past this boundary.
       outcomeRecordedRef.current = true;
+      runActiveRef.current = false;
       console.error("[map-spotlight] driver.js failed to load:", error);
+      removeMapTourHint();
+      removeDemoBadge();
       driverRef.current = null;
       startingRef.current = false;
     }
@@ -249,8 +365,8 @@ export function MapSpotlight() {
     return () => window.clearTimeout(timer);
   }, [startTour]);
 
-  // Persistent replay: the "How to use this map" button dispatches this
-  // event, forever, regardless of any stored preference.
+  // Persistent replay: the map header's entry point dispatches this event,
+  // forever, regardless of any stored preference.
   useEffect(() => {
     const replay = () => void startTour();
     window.addEventListener(MAP_GUIDE_OPEN_EVENT, replay);

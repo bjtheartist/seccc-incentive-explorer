@@ -350,6 +350,12 @@ export default function MapLegendPanel({
           {MAP_PRESETS.map((preset) => (
             <button
               key={preset.id}
+              // data-preset-id + aria-pressed are the chip's identity and
+              // state in the DOM: the map tour reads them to flip one preset
+              // live and hand the original back, and a screen reader gets the
+              // toggle state it was previously only signalled by colour.
+              data-preset-id={preset.id}
+              aria-pressed={activePreset === preset.id}
               onClick={() => onApplyPreset(preset.id)}
               className={`px-2.5 py-1.5 md:px-2 md:py-1 font-mono-bureau text-[10px] md:text-[8px] tracking-[0.08em] uppercase border transition-colors ${
                 activePreset === preset.id
