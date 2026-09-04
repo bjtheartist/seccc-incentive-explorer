@@ -67,6 +67,8 @@ export interface MapDossierCardProps {
 interface DossierSectionProps {
   title: string;
   badge?: string | null;
+  /** Optional `data-tour` hook — the map tour anchors a stop to one section. */
+  tourAnchor?: string;
   children: ReactNode;
 }
 
@@ -94,9 +96,9 @@ const VACANCY_TYPE_LABELS = {
   vacant_building: "Vacant building",
 } as const;
 
-function DossierSection({ title, badge, children }: DossierSectionProps) {
+function DossierSection({ title, badge, tourAnchor, children }: DossierSectionProps) {
   return (
-    <details className="group border-t border-[#0C1B33]/10">
+    <details data-tour={tourAnchor} className="group border-t border-[#0C1B33]/10">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5A6478] transition-colors hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563EB] [&::-webkit-details-marker]:hidden">
         <span>
           {title}
@@ -567,6 +569,9 @@ export default function MapDossierCard({
       {hasProgramsAndZones ? (
         <DossierSection
           title="Programs and zones"
+          // The map tour's second stop anchors here: this one section holds
+          // both the zone/program list and the Nearby records block.
+          tourAnchor="map-dossier"
           badge={contextPrograms.length > 0 ? `${contextPrograms.length} mapped` : "location context"}
         >
           {zoningInfo ? <FactRow label="Zoning" value={zoningInfo} /> : null}

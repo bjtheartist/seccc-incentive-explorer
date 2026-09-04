@@ -411,6 +411,11 @@ export function Header() {
 
           <Link
             href={PRIMARY_ITEM.href}
+            // The map tour's last stop anchors here. Only the DESKTOP CTA
+            // carries the hook: the mobile copy below lives inside a closed
+            // sheet, and a tour stop pointing at a zero-box element is worse
+            // than a skipped one.
+            data-tour="nav-report"
             className={`ml-2 px-4 py-1.5 font-mono-bureau text-[10px] tracking-[0.2em] uppercase transition-colors bg-[#2563EB] text-white hover:bg-[#1d4ed8] ${
               primaryActive ? "ring-2 ring-[#2563EB]/30 ring-offset-1" : ""
             }`}

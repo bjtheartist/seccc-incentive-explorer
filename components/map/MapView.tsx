@@ -22,6 +22,8 @@ import MapDossierCard from "./MapDossierCard";
 import { buildMapVacancySelectionEvidence } from "./map-vacancy-selection";
 import { DESKTOP_DOSSIER_WRAPPER_CLASS, MOBILE_DOSSIER_WRAPPER_CLASS } from "./map-overlay-layout";
 import MapSnapshotPanel from "./MapSnapshotPanel";
+import { MapTourButton } from "@/components/onboarding/MapTourButton";
+import { MAP_TOUR_END_EVENT, MAP_TOUR_START_EVENT } from "@/lib/map-guide";
 import MapPolygonPanel from "./MapPolygonPanel";
 import {
   DRAWN_AREA_ANALYSIS_FILL_LAYER_ID,
@@ -216,6 +218,13 @@ export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  /** Camera captured when the map tour starts, restored when it ends. */
+  const preTourViewRef = useRef<{
+    center: [number, number];
+    zoom: number;
+    bearing: number;
+    pitch: number;
+  } | null>(null);
   const [loaded, setLoaded] = useState(false);
   // Hardening round: e2e (tests/e2e/map-mobile-overlays.spec.ts) previously
   // waited a flat 2500ms before tapping the map, hoping tiles + interaction
@@ -275,6 +284,58 @@ export default function MapView() {
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
   const [, setCopiedLink] = useState(false);
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
+
+  /* ── Map tour: hand the page back exactly as it was found ──────────
+   *
+   * The walkthrough (lib/map-guide.ts + components/onboarding/MapSpotlight.tsx)
+   * DEMONSTRATES: it types a demo address into the real search box and submits
+   * it, which flies the camera, drops a marker and opens a dossier. Undoing the
+   * DOM-level part of that is the tour's own job; undoing the MAP part cannot
+   * be — the Mapbox instance lives here and is deliberately not exposed. So the
+   * tour dispatches a start event (snapshot the camera) and an end event
+   * (restore it, drop the demo marker, close the demo dossier), and this is the
+   * only coupling between the two.
+   */
+  useEffect(() => {
+    const onTourStart = () => {
+      const map = mapRef.current;
+      if (!map) return;
+      const center = map.getCenter();
+      preTourViewRef.current = {
+        center: [center.lng, center.lat],
+        zoom: map.getZoom(),
+        bearing: map.getBearing(),
+        pitch: map.getPitch(),
+      };
+    };
+
+    const onTourEnd = () => {
+      if (searchMarkerRef.current) {
+        searchMarkerRef.current.remove();
+        searchMarkerRef.current = null;
+      }
+      setDossierSelection(null);
+      setZoningInfo(null);
+
+      const saved = preTourViewRef.current;
+      preTourViewRef.current = null;
+      const map = mapRef.current;
+      if (!map || !saved) return;
+      map.jumpTo({
+        center: saved.center,
+        zoom: saved.zoom,
+        bearing: saved.bearing,
+        pitch: saved.pitch,
+      });
+    };
+
+    window.addEventListener(MAP_TOUR_START_EVENT, onTourStart);
+    window.addEventListener(MAP_TOUR_END_EVENT, onTourEnd);
+    return () => {
+      window.removeEventListener(MAP_TOUR_START_EVENT, onTourStart);
+      window.removeEventListener(MAP_TOUR_END_EVENT, onTourEnd);
+    };
+  }, []);
 
   // Preset state
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -4636,13 +4697,21 @@ export default function MapView() {
         />
       )}
 
-      {/* Legend toggle button — desktop text button */}
-      <button
-        onClick={() => setLegendOpen((o) => !o)}
-        className="hidden md:block absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
-      >
-        {legendOpen ? "Hide Legend" : "Show Legend"}
-      </button>
+      {/* Map header cluster — the legend toggle (desktop) and the map tour's
+          single entry point. The tour control lives HERE, on the map itself,
+          rather than as a link under the map: the thing it explains is on
+          screen while it is offered. It is gated on `loaded` for the same
+          reason MapSearch is — the tour cannot start before the map's own
+          anchors exist. */}
+      <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
+        <button
+          onClick={() => setLegendOpen((o) => !o)}
+          className="hidden md:block bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+        >
+          {legendOpen ? "Hide Legend" : "Show Legend"}
+        </button>
+        {loaded && <MapTourButton />}
+      </div>
 
       {/* Mobile control cluster — compact icon buttons (top-right) */}
       {loaded && (

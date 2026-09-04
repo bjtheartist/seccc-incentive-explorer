@@ -1,7 +1,6 @@
 import MapShell from "@/components/map/MapShell";
 import IncentiveGlance from "@/components/map/IncentiveGlance";
 import { MapSpotlight } from "@/components/onboarding/MapSpotlight";
-import { MapTourButton } from "@/components/onboarding/MapTourButton";
 
 export default function MapPage() {
   return (
@@ -46,10 +45,13 @@ export default function MapPage() {
           <MapShell />
         </div>
 
+        {/* The tour's only entry point is the "Show me around" pill in the map
+            header (components/map/MapView.tsx). The old "How to use this map"
+            link that used to sit here is gone: three entry points for one tour
+            on one page taught nobody where to look. The footer's Site Tour
+            (the SITEWIDE tour) and the concierge bubble are different surfaces
+            and stay. */}
         <div className="max-w-6xl mx-auto px-3 md:px-0 pt-6 md:pt-0 pb-6 md:pb-0">
-        <div className="flex justify-end pt-3 md:pt-4">
-          <MapTourButton />
-        </div>
         <IncentiveGlance />
 
         <div className="mt-6 grid md:grid-cols-3 gap-0 border border-[#0C1B33]/10 bg-white">

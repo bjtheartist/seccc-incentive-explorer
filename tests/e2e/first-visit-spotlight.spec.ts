@@ -1,6 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectTourStep, waitForMapTourAnchor } from "./map-ready";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+
+// The handoff test at the bottom of this file lands on /map, and Mapbox GL
+// needs WebGL — which headless Chromium only provides through SwiftShader
+// software rendering. Playwright refuses launchOptions inside a describe (it
+// would force a new worker), so it is set for the file; the home-leg tests
+// above are unaffected by it.
+test.use({
+  launchOptions: {
+    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  },
+});
 
 async function openFreshGuide(page: Page) {
   await page.addInitScript(() => {
@@ -167,5 +179,64 @@ test.describe("mobile spotlight", () => {
         await popover.getByRole("button", { name: "Next" }).click();
       }
     }
+  });
+});
+
+/**
+ * The two tours' handoff rule, asserted from the SITEWIDE side: /map's own
+ * walkthrough deliberately stands down while the sitewide welcome is still
+ * unresolved (stacking two onboarding surfaces on one screen is the collision
+ * the investment tour documented from live verification), and picks up on the
+ * visit after. This test resolves the sitewide guide the way finishing it
+ * does, then confirms the map tour opens on its OWN rebuilt first stop — the
+ * one that types the demo address — rather than a cascade-skipped later one.
+ */
+test.describe("handoff to the map walkthrough", () => {
+  test("a visitor who finished the sitewide tour gets the map tour's first stop on /map", async ({
+    page,
+  }) => {
+    test.setTimeout(240000);
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "cie:first-visit-guide",
+        JSON.stringify({
+          version: 1,
+          status: "completed",
+          updatedAt: "2026-08-08T12:00:00.000Z",
+        }),
+      );
+      window.localStorage.removeItem("cie:map-guide");
+    });
+    // Third-party geocoding is not what this asserts; see the same note in
+    // tests/e2e/map-spotlight.spec.ts.
+    await page.route("**/api/geocode**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          lat: 41.7364,
+          lon: -87.5893,
+          displayName: "1500 E 87th St, Chicago, IL 60619",
+        }),
+      }),
+    );
+    await page.goto(`${baseURL}/map`);
+
+    // No second welcome dialog stacked under the map tour.
+    await expect(page.getByRole("dialog", { name: /find what may apply/i })).toHaveCount(0);
+
+    await waitForMapTourAnchor(page);
+    const popover = page.locator(".cie-driver-popover");
+    await expect(popover).toBeVisible({ timeout: 20000 });
+    await expectTourStep(popover, "Search this address");
+    await expect(popover.locator(".driver-popover-progress-text")).toHaveText("Step 1 of 5");
+
+    // And it performs: the demo address is typed into the real search box,
+    // flagged as an example while it is held there.
+    await expect(page.locator('[data-tour="map-search"] input')).toHaveValue(
+      "1500 E 87th St, Chicago, IL 60619",
+      { timeout: 30000 },
+    );
+    await expect(page.getByTestId("map-tour-demo-badge")).toBeVisible();
   });
 });

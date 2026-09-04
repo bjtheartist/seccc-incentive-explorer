@@ -215,6 +215,24 @@
   color: #fff;
 }
 
+/* The illustrative-only line the map tour appends to every stop that is
+   showing its demo address. Muted mono label style, so it reads as a standing
+   caveat on the example rather than as part of the instruction — and it is
+   visible on the stop, not buried in a footnote somewhere else on the page.
+   0.62 alpha on white is 4.87:1, the same AA floor the description holds. */
+.cie-driver-popover .driver-popover-description .cie-tour-note {
+  display: block;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(12, 27, 51, 0.1);
+  color: rgba(12, 27, 51, 0.62);
+  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
 @media (max-width: 480px) {
   .driver-popover.cie-driver-popover {
     padding: 16px;
