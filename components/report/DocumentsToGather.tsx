@@ -9,11 +9,26 @@
 import { ArrowRight } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import {
+  DOCUMENT_PREPARATION_COST_CAVEAT,
+  DOCUMENT_PREPARATION_COST_LEGEND,
+} from "@/lib/document-preparation-cost";
+import {
   buildProgramLinkedDocumentsToGather,
   documentOwnerLabel,
 } from "@/lib/report-documents-to-gather";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { PersonaReportSection } from "@/components/report/PersonaReportChrome";
+import { PreparationCostBadge } from "@/components/report/PreparationCostBadge";
+
+// The legend + caveat the canonical engine sections carry in their section
+// DESCRIPTION (lib/report-engine.ts, "Required Documents" and the "Document
+// Readiness Checklist"). PersonaReportSection takes no description, so they
+// render in this section's own footer note instead — a bare "$$$" on a report
+// whose subject is incentive money must never be published without the line
+// saying it measures preparation effort, not program value.
+const PREPARATION_COST_LEGEND_LINE = `${DOCUMENT_PREPARATION_COST_LEGEND.map(
+  (entry) => `${entry.tier} = ${entry.label.toLowerCase()}`,
+).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT}`;
 
 export function DocumentsToGather({
   report,
@@ -35,7 +50,10 @@ export function DocumentsToGather({
         {rows.map((row) => (
           <li key={row.id} className="py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <span className="text-[13px] font-medium text-[#0C1B33]">{row.title}</span>
+              <span className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[#0C1B33]">
+                {row.title}
+                <PreparationCostBadge signal={row.preparationCost} label="Prep" />
+              </span>
               {row.owner && row.estimatedWeeks && (
                 <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
                   {documentOwnerLabel(row.owner)} · {row.estimatedWeeks}
@@ -71,9 +89,14 @@ export function DocumentsToGather({
         ))}
       </ul>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#0C1B33]/10 pt-3">
-        <p className="text-[11px] leading-relaxed text-[#5A6478]">
-          Readiness is tied to the programs surfaced in this view and should be confirmed with each administrator.
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] leading-relaxed text-[#5A6478]">
+            Readiness is tied to the programs surfaced in this view and should be confirmed with each administrator.
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/45">
+            {PREPARATION_COST_LEGEND_LINE}
+          </p>
+        </div>
         <a
           href="/workspace/business-file"
           onClick={() =>

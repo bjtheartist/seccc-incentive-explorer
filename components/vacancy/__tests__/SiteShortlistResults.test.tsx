@@ -34,6 +34,17 @@ vi.mock("@/components/vacancy/SiteShortlistMap", () => ({
     <output data-testid="mock-map-keys">{visibleCandidateKeys.join(",")}</output>
   ),
 }));
+// SiteShortlistResults imports the map through SiteShortlistMapIsland, a
+// next/dynamic(ssr:false) wrapper. Under jsdom that dynamic import resolves on
+// a later tick, so mocking only the inner module leaves a real async boundary
+// between render and the synchronous getByTestId calls below; on a loaded CI
+// runner the mock had not mounted yet (3 deterministic failures on PR #272).
+// Mock the island itself so the map is synchronous in this test.
+vi.mock("@/components/vacancy/SiteShortlistMapIsland", () => ({
+  default: ({ visibleCandidateKeys }: { visibleCandidateKeys: readonly string[] }) => (
+    <output data-testid="mock-map-keys">{visibleCandidateKeys.join(",")}</output>
+  ),
+}));
 
 import SiteShortlistResults, {
   assessedValueCardText,
