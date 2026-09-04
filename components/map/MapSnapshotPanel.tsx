@@ -8,6 +8,8 @@ import type { SafeMapProgramMatch } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { SafeLocationContextMapSummary } from "@/lib/location-context";
 import { formatMiles } from "@/lib/transport-access";
+import { siteSignalRecordGroup } from "@/lib/site-signals";
+import NearbyRecordDisclosure from "./NearbyRecordDisclosure";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 
@@ -274,28 +276,39 @@ export default function MapSnapshotPanel({
             </div>
             <div className="space-y-1">
               {contextSiteSignals.nofAwardsNearby > 0 && (
-                <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50">NOF grants funded within 1/2 mi</span>
-                  <span className="font-mono-bureau text-[#047857] font-medium shrink-0">{contextSiteSignals.nofAwardsNearby}</span>
-                </div>
+                <NearbyRecordDisclosure
+                  variant="compact"
+                  label="NOF grants funded within 1/2 mi"
+                  value={contextSiteSignals.nofAwardsNearby}
+                  valueClassName="font-mono-bureau text-[#047857] font-medium"
+                  group={siteSignalRecordGroup(contextSiteSignals, "nofAwards")}
+                />
               )}
               {contextSiteSignals.incentiveParcelsNearby > 0 && (
-                <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50">County incentive parcels within 1/4 mi</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{contextSiteSignals.incentiveParcelsNearby}</span>
-                </div>
+                <NearbyRecordDisclosure
+                  variant="compact"
+                  label="County incentive parcels within 1/4 mi"
+                  value={contextSiteSignals.incentiveParcelsNearby}
+                  group={siteSignalRecordGroup(contextSiteSignals, "incentiveParcels")}
+                />
               )}
               {contextSiteSignals.brownfield && contextSiteSignals.brownfield.miles < 0.5 && (
-                <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50 truncate">Brownfield site ({contextSiteSignals.brownfield.name})</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(contextSiteSignals.brownfield.miles)}</span>
-                </div>
+                <NearbyRecordDisclosure
+                  variant="compact"
+                  truncateLabel
+                  label={`Brownfield site (${contextSiteSignals.brownfield.name})`}
+                  value={formatMiles(contextSiteSignals.brownfield.miles)}
+                  group={siteSignalRecordGroup(contextSiteSignals, "brownfields")}
+                />
               )}
               {contextSiteSignals.openLustNearby > 0 && (
-                <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50">Open tank-leak incidents within 1/4 mi</span>
-                  <span className="font-mono-bureau text-[#B91C1C] font-medium shrink-0">{contextSiteSignals.openLustNearby}</span>
-                </div>
+                <NearbyRecordDisclosure
+                  variant="compact"
+                  label="Open tank-leak incidents within 1/4 mi"
+                  value={contextSiteSignals.openLustNearby}
+                  valueClassName="font-mono-bureau text-[#B91C1C] font-medium"
+                  group={siteSignalRecordGroup(contextSiteSignals, "openLust")}
+                />
               )}
               {contextSiteSignals.nofAwardsNearby === 0 &&
                 contextSiteSignals.incentiveParcelsNearby === 0 &&

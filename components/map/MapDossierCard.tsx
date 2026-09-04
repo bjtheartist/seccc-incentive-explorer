@@ -27,6 +27,8 @@ import type {
   MapDossierSelection,
 } from "@/lib/map-dossier";
 import { formatMiles } from "@/lib/transport-access";
+import { siteSignalRecordGroup } from "@/lib/site-signals";
+import NearbyRecordDisclosure from "./NearbyRecordDisclosure";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 import {
@@ -701,24 +703,35 @@ export default function MapDossierCard({
               Nearby records
             </div>
             {contextSiteSignals.nofAwardsNearby > 0 ? (
-              <FactRow label="NOF grants funded within 1/2 mi" value={contextSiteSignals.nofAwardsNearby} />
+              <NearbyRecordDisclosure
+                variant="dossier"
+                label="NOF grants funded within 1/2 mi"
+                value={contextSiteSignals.nofAwardsNearby}
+                group={siteSignalRecordGroup(contextSiteSignals, "nofAwards")}
+              />
             ) : null}
             {contextSiteSignals.incentiveParcelsNearby > 0 ? (
-              <FactRow
+              <NearbyRecordDisclosure
+                variant="dossier"
                 label="County incentive parcels within 1/4 mi"
                 value={contextSiteSignals.incentiveParcelsNearby}
+                group={siteSignalRecordGroup(contextSiteSignals, "incentiveParcels")}
               />
             ) : null}
             {contextSiteSignals.brownfield && contextSiteSignals.brownfield.miles < 0.5 ? (
-              <FactRow
+              <NearbyRecordDisclosure
+                variant="dossier"
                 label={`Brownfield record (${contextSiteSignals.brownfield.name})`}
                 value={formatMiles(contextSiteSignals.brownfield.miles)}
+                group={siteSignalRecordGroup(contextSiteSignals, "brownfields")}
               />
             ) : null}
             {contextSiteSignals.openLustNearby > 0 ? (
-              <FactRow
+              <NearbyRecordDisclosure
+                variant="dossier"
                 label="Open tank-leak records within 1/4 mi"
                 value={contextSiteSignals.openLustNearby}
+                group={siteSignalRecordGroup(contextSiteSignals, "openLust")}
               />
             ) : null}
             <p className="text-[9px] text-[#8A93A6]">

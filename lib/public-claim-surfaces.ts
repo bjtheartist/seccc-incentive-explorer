@@ -376,6 +376,7 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: [
       "components/map/MapDossierCard.tsx",
       "components/map/MapSnapshotPanel.tsx",
+      "components/map/NearbyRecordDisclosure.tsx",
       "components/map/MapPolygonPanel.tsx",
       "components/map/MapView.tsx",
       "lib/constants.ts",

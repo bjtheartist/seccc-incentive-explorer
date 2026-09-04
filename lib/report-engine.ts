@@ -28,7 +28,7 @@ import {
 // imports real values from this file. A `string`-typed escape hatch was
 // never load-bearing here; only VALUE-level cycles are.
 import type { SectionBucketKey } from "./report-personas";
-import type { SiteSignals } from "./site-signals";
+import type { SiteSignalRecord, SiteSignalRecordGroup, SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
 import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
 import type { DrawnAreaReportScope } from "./drawn-area-report-scope";
@@ -5247,21 +5247,52 @@ function buildLogisticsAccessSection(
   };
 }
 
+/**
+ * One nearby public record as a single traceable line: what it is, where it
+ * is, how far, its identifiers, and the agency URL as literal text — the URL
+ * text is what makes the PDF back-traceable, since a printed page has no
+ * clickable anchor.
+ */
+function siteSignalRecordLine(record: SiteSignalRecord): string {
+  return [
+    record.name,
+    record.address,
+    formatMiles(record.miles),
+    ...record.facts,
+    record.sourceUrl
+      ? `Source: ${record.sourceLabel} — ${record.sourceUrl}`
+      : `Source: ${record.sourceLabel}`,
+  ]
+    .filter((part): part is string => typeof part === "string" && part.length > 0)
+    .join(" · ");
+}
+
+function siteSignalRecordItems(group: SiteSignalRecordGroup): string[] {
+  if (group.records.length === 0) {
+    return ["Individual records are not available for this location snapshot."];
+  }
+  const items = group.records.map(siteSignalRecordLine);
+  if (group.truncated > 0) {
+    items.push(`and ${group.truncated} more within the same radius`);
+  }
+  return items;
+}
+
 function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
-  const lines = [
-    siteSignals.nofAwardsNearby > 0
-      ? `NOF grants funded within 1/2 mi: ${siteSignals.nofAwardsNearby}`
-      : null,
-    siteSignals.incentiveParcelsNearby > 0
-      ? `County incentive parcels within 1/4 mi: ${siteSignals.incentiveParcelsNearby}`
-      : null,
-    siteSignals.brownfield && siteSignals.brownfield.miles < 0.5
-      ? `Nearest brownfield site: ${siteSignals.brownfield.name} (${formatMiles(siteSignals.brownfield.miles)})`
-      : null,
-    siteSignals.openLustNearby > 0
-      ? `Open tank-leak incidents within 1/4 mi: ${siteSignals.openLustNearby}`
-      : null,
-  ].filter(Boolean) as string[];
+  const nofLine = siteSignals.nofAwardsNearby > 0
+    ? `NOF grants funded within 1/2 mi: ${siteSignals.nofAwardsNearby}`
+    : null;
+  const parcelLine = siteSignals.incentiveParcelsNearby > 0
+    ? `County incentive parcels within 1/4 mi: ${siteSignals.incentiveParcelsNearby}`
+    : null;
+  const brownfieldLine = siteSignals.brownfield && siteSignals.brownfield.miles < 0.5
+    ? `Nearest brownfield site: ${siteSignals.brownfield.name} (${formatMiles(siteSignals.brownfield.miles)})`
+    : null;
+  const lustLine = siteSignals.openLustNearby > 0
+    ? `Open tank-leak incidents within 1/4 mi: ${siteSignals.openLustNearby}`
+    : null;
+
+  const lines = [nofLine, parcelLine, brownfieldLine, lustLine].filter(Boolean) as string[];
 
   const signalCount = [
     siteSignals.nofAwardsNearby > 0,
@@ -5270,6 +5301,23 @@ function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
     siteSignals.openLustNearby > 0,
   ].filter(Boolean).length;
 
+  const caveat = "Public-data proximity signals only; verify with DPD, Cook County, IEPA/EPA, or the administering agency before relying on them.";
+
+  // Each summary line becomes a group HEADING, with the records behind it as
+  // that group's entries — so every existing line survives verbatim and the
+  // reader can trace the count back to the individual records. `records` is
+  // absent on `SiteSignals` snapshots persisted before back-tracing shipped;
+  // those keep the original ungrouped plain-text detail.
+  const records = siteSignals.records;
+  const detailGroups: ReportDetailGroup[] = records
+    ? ([
+        nofLine ? { id: "nof-awards", label: nofLine, items: siteSignalRecordItems(records.nofAwards) } : null,
+        parcelLine ? { id: "incentive-parcels", label: parcelLine, items: siteSignalRecordItems(records.incentiveParcels) } : null,
+        brownfieldLine ? { id: "brownfields", label: brownfieldLine, items: siteSignalRecordItems(records.brownfields) } : null,
+        lustLine ? { id: "open-lust", label: lustLine, items: siteSignalRecordItems(records.openLust) } : null,
+      ].filter(Boolean) as ReportDetailGroup[])
+    : [];
+
   return {
     label: "Site Signals",
     value: signalCount > 0
@@ -5277,8 +5325,10 @@ function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
       : "No nearby signals",
     detail: [
       ...(lines.length > 0 ? lines : ["No nearby NOF funding, county incentive parcel, brownfield, or open tank-leak signal was found within the current proximity thresholds."]),
-      "Public-data proximity signals only; verify with DPD, Cook County, IEPA/EPA, or the administering agency before relying on them.",
+      caveat,
     ].join("\n"),
+    ...(detailGroups.length > 0 ? { detailGroups } : {}),
+    detailCaveat: caveat,
     sourceLabel: "Public site-signal layers",
   };
 }
