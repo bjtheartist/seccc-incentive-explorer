@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
+import SkylineCelebration from "@/components/learn/SkylineCelebration";
 
 import {
   LEARNING_CHECK_TOTAL,
@@ -72,6 +81,38 @@ function writeStoredAnswers(answers: AnswerMap): void {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
   } catch {
     // Progress is a convenience. Losing it must never break the lesson.
+  }
+}
+
+/**
+ * Whether the skyline card has already had its moment.
+ *
+ * The celebration is a surprise, and a surprise that fires on every visit
+ * is just a modal. This flag is set the first time a visitor answers the
+ * twelfth check — and also, silently, on any arrival that already has all
+ * twelve stored, so returning to a finished pathway never pops it. It is
+ * CLEARED whenever the pathway is arrived at incomplete, which is what
+ * makes a reset-and-finish-again earn the card a second time.
+ */
+const CELEBRATION_KEY = "cie:learning-pathway:celebrated:v1";
+
+function readCelebrationShown(): boolean {
+  try {
+    return window.localStorage.getItem(CELEBRATION_KEY) === "1";
+  } catch {
+    // An unreadable store means we cannot promise "already seen"; the
+    // worst case is one extra celebration, which is the kind side of the
+    // failure.
+    return false;
+  }
+}
+
+function writeCelebrationShown(shown: boolean): void {
+  try {
+    if (shown) window.localStorage.setItem(CELEBRATION_KEY, "1");
+    else window.localStorage.removeItem(CELEBRATION_KEY);
+  } catch {
+    // Same bargain as the answers: a flourish must never break a lesson.
   }
 }
 
@@ -312,6 +353,10 @@ function ModuleSection({
 
 export default function LearningPathway() {
   const [answers, setAnswers] = useState<AnswerMap>({});
+  const [celebrating, setCelebrating] = useState(false);
+  /** False until the stored answers have been read, so the celebration
+      cannot fire off the empty first render. */
+  const hydratedRef = useRef(false);
 
   // Read after mount, never during render: localStorage does not exist on
   // the server, and seeding state from it in a useState initializer would
@@ -322,10 +367,26 @@ export default function LearningPathway() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnswers(stored);
     }
+    // Arriving already finished is not an achievement to announce; arriving
+    // unfinished re-arms the card for whoever is about to finish.
+    writeCelebrationShown(Object.keys(stored).length >= LEARNING_CHECK_TOTAL);
+    hydratedRef.current = true;
   }, []);
 
   const completed = useMemo(() => Object.keys(answers).length, [answers]);
   const isComplete = completed >= LEARNING_CHECK_TOTAL;
+
+  // Fires only on the transition into completeness that a real check
+  // caused: the mount effect above has already claimed the flag for a
+  // page load that arrived with twelve stored.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (!isComplete) return;
+    if (readCelebrationShown()) return;
+    writeCelebrationShown(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCelebrating(true);
+  }, [isComplete]);
 
   const onChoose = useCallback((lessonId: string, optionKey: string) => {
     setAnswers((previous) => {
@@ -336,8 +397,14 @@ export default function LearningPathway() {
     });
   }, []);
 
+  const dismissCelebration = useCallback(() => setCelebrating(false), []);
+
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
+      {/* The skyline easter egg. It sits over the page, never in place of
+          it — the completion panel below renders on its own terms. */}
+      {celebrating && <SkylineCelebration onClose={dismissCelebration} />}
+
       {/* Hero */}
       <div className="relative border-b border-[#0C1B33]/10 overflow-hidden">
         <div className="absolute inset-0 bg-[#0C1B33]" />

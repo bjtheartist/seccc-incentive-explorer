@@ -18,6 +18,7 @@ import { ZONE_COLORS, LEVEL_COLORS } from "@/lib/constants";
 import type { ProgramLevel } from "@/lib/types";
 import { INDUSTRIES, getIndustryById } from "@/lib/industries-data";
 import LevelBadge from "@/components/LevelBadge";
+import LearningPathwayButton from "@/components/learn/LearningPathwayButton";
 // review5 S1: imported from lib/program-slug.ts, NOT lib/programs-data.ts —
 // that module also exports getProgramsSync(), which require()s the full
 // internal catalog. This client component must never be reachable to that
@@ -204,16 +205,11 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
           </div>
         </Link>
 
-        {/* Same quiet entry as the FAQ's: one muted mono line beneath the
-            quiz card, pointing at the unlisted Learning Pathway. Not
-            navigation — no icon, no button, no label. */}
-        <div className="-mt-7 mb-10">
-          <a
-            href="/learn"
-            className="font-mono-bureau text-[10px] tracking-[0.15em] text-[#0C1B33]/25 hover:text-[#2563EB]/60 transition-colors"
-          >
-            There&apos;s a longer answer.
-          </a>
+        {/* Same entry as the FAQ's, beneath the quiz card: an outlined mono
+            pill into the unlisted Learning Pathway, deliberately quieter
+            than the navy quiz card it sits under. */}
+        <div className="-mt-6 mb-10">
+          <LearningPathwayButton />
         </div>
 
         {/* Definitions: Incentive Zones vs Programs */}
