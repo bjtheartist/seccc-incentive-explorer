@@ -16,7 +16,7 @@ import { LEARNING_PATHWAY_STANDFIRST } from "@/lib/learning-pathway";
  * publish the path in a file anyone can fetch.
  */
 export const metadata: Metadata = {
-  title: "Learning Pathway | Chicago Incentive Explorer",
+  title: "Learning Pathway",
   description: LEARNING_PATHWAY_STANDFIRST,
   robots: { index: false, follow: false },
 };
