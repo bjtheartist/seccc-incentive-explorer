@@ -352,11 +352,67 @@
   will-change: transform;
 }
 
+/* ── Learning Pathway: skyline celebration at 12 of 12 ──────── */
+@keyframes skyline-pop {
+  0% { opacity: 0; transform: translateY(18px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes skyline-rise {
+  0% { opacity: 0; transform: translateY(130px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes skyline-twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 1; }
+}
+
+/* The animating class is added by SkylineCelebration only after a
+   matchMedia check, so reduced-motion visitors never reach these. */
+.skyline-anim {
+  animation: skyline-pop 380ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+.skyline-anim .skyline-building {
+  animation: skyline-rise 760ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+/* The staggered rise, left to right. Kept here rather than as inline
+   animation-delay on sixteen <g>s, to hold the SVG markup down. */
+.skyline-anim .skyline-building:nth-of-type(1) { animation-delay: 0ms; }
+.skyline-anim .skyline-building:nth-of-type(2) { animation-delay: 55ms; }
+.skyline-anim .skyline-building:nth-of-type(3) { animation-delay: 110ms; }
+.skyline-anim .skyline-building:nth-of-type(4) { animation-delay: 165ms; }
+.skyline-anim .skyline-building:nth-of-type(5) { animation-delay: 220ms; }
+.skyline-anim .skyline-building:nth-of-type(6) { animation-delay: 275ms; }
+.skyline-anim .skyline-building:nth-of-type(7) { animation-delay: 330ms; }
+.skyline-anim .skyline-building:nth-of-type(8) { animation-delay: 385ms; }
+.skyline-anim .skyline-building:nth-of-type(9) { animation-delay: 440ms; }
+.skyline-anim .skyline-building:nth-of-type(10) { animation-delay: 495ms; }
+.skyline-anim .skyline-building:nth-of-type(11) { animation-delay: 550ms; }
+.skyline-anim .skyline-building:nth-of-type(12) { animation-delay: 605ms; }
+.skyline-anim .skyline-building:nth-of-type(13) { animation-delay: 660ms; }
+.skyline-anim .skyline-building:nth-of-type(14) { animation-delay: 715ms; }
+.skyline-anim .skyline-building:nth-of-type(15) { animation-delay: 770ms; }
+.skyline-anim .skyline-building:nth-of-type(16) { animation-delay: 825ms; }
+
+.skyline-anim .skyline-lights rect {
+  animation: skyline-twinkle 2.6s ease-in-out infinite;
+}
+
+.skyline-anim .skyline-lights rect:nth-child(4n + 2) { animation-delay: 0.65s; }
+.skyline-anim .skyline-lights rect:nth-child(4n + 3) { animation-delay: 1.3s; }
+.skyline-anim .skyline-lights rect:nth-child(4n + 4) { animation-delay: 1.95s; }
+
 /* Respect reduced-motion: freeze decorative animation */
 @media (prefers-reduced-motion: reduce) {
   .ticker-track,
   .animate-hero-drift,
-  .bureau-pulse {
+  .bureau-pulse,
+  .skyline-anim,
+  .skyline-anim .skyline-building,
+  .skyline-anim .skyline-lights rect {
     animation: none !important;
   }
 }

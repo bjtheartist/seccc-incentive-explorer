@@ -49,6 +49,7 @@ function installStorage(seed: Record<string, string> = {}) {
 }
 
 const STORAGE_KEY = "cie:learning-pathway:checks:v1";
+const CELEBRATION_KEY = "cie:learning-pathway:celebrated:v1";
 
 /** Every lesson answered — the state that unlocks the completion panel. */
 function allTwelveAnswered(): string {
@@ -244,6 +245,136 @@ describe("the completion state", () => {
   });
 });
 
+describe("the skyline celebration", () => {
+  /** Seed eleven of twelve, so one click completes the pathway. */
+  function seedEleven(): Record<string, string> {
+    const seeded: Record<string, string> = {};
+    for (const lesson of LEARNING_LESSONS.slice(0, 11)) {
+      seeded[lesson.id] = lesson.check.options.find((o) => o.correct)!.key;
+    }
+    return seeded;
+  }
+
+  function answerTwelfth() {
+    const last = LEARNING_LESSONS[11];
+    fireEvent.click(
+      screen.getByRole("button", { name: new RegExp(last.check.options[0].text) }),
+    );
+  }
+
+  function installMatchMedia(prefersReducedMotion: boolean) {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: prefersReducedMotion && query.includes("prefers-reduced-motion"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  }
+
+  beforeEach(() => {
+    installMatchMedia(false);
+  });
+
+  it("pops up when the twelfth check is answered in-session", () => {
+    installStorage({ [STORAGE_KEY]: JSON.stringify(seedEleven()) });
+    render(<LearnPage />);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    answerTwelfth();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-labelledby")).toBe("skyline-celebration-title");
+    expect(
+      within(dialog).getByRole("heading", { name: "You made it to the top." }),
+    ).toBeTruthy();
+    expect(within(dialog).getByText("All twelve lessons, done.")).toBeTruthy();
+    // Focus is on the close control, not left behind on the lesson option.
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("button", { name: /close/i }),
+    );
+    // The page's own completion state stays underneath, unblocked.
+    expect(
+      screen.getByRole("link", { name: /take the incentive quiz/i }).getAttribute("href"),
+    ).toBe("/quiz");
+  });
+
+  it("does not pop up on a page load that already has all twelve stored", () => {
+    const { store } = installStorage({ [STORAGE_KEY]: allTwelveAnswered() });
+    render(<LearnPage />);
+
+    expect(screen.getByText("12 of 12 checks complete")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Arriving finished silently claims the flag, so a later re-render
+    // cannot surface it either.
+    expect(store.get(CELEBRATION_KEY)).toBe("1");
+  });
+
+  it("unmounts on close and records that it was shown", () => {
+    const { store } = installStorage({ [STORAGE_KEY]: JSON.stringify(seedEleven()) });
+    render(<LearnPage />);
+    answerTwelfth();
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(store.get(CELEBRATION_KEY)).toBe("1");
+
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(store.get(CELEBRATION_KEY)).toBe("1");
+  });
+
+  it("also dismisses on Escape and on a click outside the card", () => {
+    installStorage({ [STORAGE_KEY]: JSON.stringify(seedEleven()) });
+    const { unmount } = render(<LearnPage />);
+    answerTwelfth();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    unmount();
+
+    installStorage({ [STORAGE_KEY]: JSON.stringify(seedEleven()) });
+    render(<LearnPage />);
+    answerTwelfth();
+    fireEvent.mouseDown(screen.getByTestId("skyline-celebration-overlay"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("re-arms after a progress reset, and animates only when motion is welcome", () => {
+    // A visitor who arrives part-way through has had the flag cleared, so
+    // finishing again earns the card again.
+    const { store } = installStorage({
+      [STORAGE_KEY]: JSON.stringify(seedEleven()),
+      [CELEBRATION_KEY]: "1",
+    });
+    render(<LearnPage />);
+    expect(store.get(CELEBRATION_KEY)).toBeUndefined();
+
+    answerTwelfth();
+    expect(screen.getByRole("dialog").className).toContain("skyline-anim");
+  });
+
+  it("renders the finished skyline with no animating class under reduced motion", () => {
+    installMatchMedia(true);
+    installStorage({ [STORAGE_KEY]: JSON.stringify(seedEleven()) });
+    render(<LearnPage />);
+    answerTwelfth();
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).not.toContain("skyline-anim");
+    // Still a skyline: the buildings render, they just do not move.
+    expect(dialog.querySelectorAll("polygon.skyline-building, .skyline-building").length)
+      .toBeGreaterThan(0);
+  });
+});
+
 describe("the page stays unlisted", () => {
   it("tells crawlers not to index or follow it", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
@@ -258,21 +389,27 @@ describe("the page stays unlisted", () => {
     ).toHaveLength(0);
   });
 });
-describe("the two quiet entry points", () => {
-  it("the FAQ's 'Still have questions?' card ends with the one muted line", () => {
+describe("the two entry points", () => {
+  it("the FAQ's 'Still have questions?' card ends with the Learning Pathway button", () => {
     render(<FAQPage />);
-    const link = screen.getByRole("link", { name: /There's a longer answer\./ });
+    const link = screen.getByRole("link", { name: /Learning Pathway/i });
     expect(link.getAttribute("href")).toBe("/learn");
-    // Not navigation: plain text, no button role, no icon.
-    expect(link.tagName).toBe("A");
+    // A button, not the page's primary CTA: outlined pill, no icon, and
+    // the Call Us block above it keeps the solid navy treatment.
+    expect(link.className).toContain("rounded-full");
+    expect(link.className).toContain("border");
     expect(link.querySelector("svg")).toBeNull();
+    expect(
+      screen.getByText("Twelve short lessons on zoning, permits, and licenses."),
+    ).toBeTruthy();
   });
 
-  it("the program directory carries the same line beneath the quiz card", () => {
+  it("the program directory carries the same button beneath the quiz card", () => {
     const html = renderToStaticMarkup(
       <ProgramsCatalog initialNowIso="2026-08-10T12:00:00.000Z" />,
     );
     expect(html).toContain('href="/learn"');
-    expect(html).toContain("There&#x27;s a longer answer.");
+    expect(html).toContain("Learning Pathway");
+    expect(html).toContain("Twelve short lessons on zoning, permits, and licenses.");
   });
 });

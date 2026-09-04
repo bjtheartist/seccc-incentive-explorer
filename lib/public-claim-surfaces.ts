@@ -372,6 +372,12 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: [
       "app/learn/page.tsx",
       "components/learn/LearningPathway.tsx",
+      // The completion easter egg and the two entry buttons. Both carry
+      // visitor-facing copy, and both are deliberately claim-free: the
+      // celebration says only that twelve lessons are done, and the
+      // button says only what the pathway teaches.
+      "components/learn/SkylineCelebration.tsx",
+      "components/learn/LearningPathwayButton.tsx",
       "lib/learning-pathway.ts",
       "lib/learning-pathway-figures.ts",
     ],

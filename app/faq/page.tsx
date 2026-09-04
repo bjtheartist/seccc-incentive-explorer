@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { programFact, programQualifier } from "@/lib/program-fact";
 import { FAQ_ITEMS } from "./faq-items";
+import LearningPathwayButton from "@/components/learn/LearningPathwayButton";
 
 
 export default function FAQPage() {
@@ -91,16 +92,11 @@ export default function FAQPage() {
             </a>
           </div>
 
-          {/* Quiet way through to the unlisted Learning Pathway. Deliberately
-              not navigation: no icon, no button, no label — a single muted
-              line for the reader whose question outlasted the FAQ. */}
-          <div className="mt-8 text-center">
-            <a
-              href="/learn"
-              className="font-mono-bureau text-[10px] tracking-[0.15em] text-[#0C1B33]/25 hover:text-[#2563EB]/60 transition-colors"
-            >
-              There&apos;s a longer answer.
-            </a>
+          {/* Way through to the unlisted Learning Pathway, for the reader
+              whose question outlasted the FAQ. Outlined mono pill, kept
+              subordinate to the Call Us block above it. */}
+          <div className="mt-8">
+            <LearningPathwayButton align="center" />
           </div>
         </div>
       </div>
