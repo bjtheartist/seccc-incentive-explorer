@@ -7,8 +7,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+import { renderToStaticMarkup } from "react-dom/server";
+
 import LearnPage, { metadata } from "../learn/page";
 import sitemap from "../sitemap";
+import FAQPage from "../faq/page";
+import ProgramsCatalog from "@/components/programs/ProgramsCatalog";
 import { LEARNING_LESSONS, LEARNING_MODULES } from "@/lib/learning-pathway";
 
 /**
@@ -252,5 +256,23 @@ describe("the page stays unlisted", () => {
     expect(
       entries.filter((entry) => /\/learn(\/|$|\?)/.test(entry.url)),
     ).toHaveLength(0);
+  });
+});
+describe("the two quiet entry points", () => {
+  it("the FAQ's 'Still have questions?' card ends with the one muted line", () => {
+    render(<FAQPage />);
+    const link = screen.getByRole("link", { name: /There's a longer answer\./ });
+    expect(link.getAttribute("href")).toBe("/learn");
+    // Not navigation: plain text, no button role, no icon.
+    expect(link.tagName).toBe("A");
+    expect(link.querySelector("svg")).toBeNull();
+  });
+
+  it("the program directory carries the same line beneath the quiz card", () => {
+    const html = renderToStaticMarkup(
+      <ProgramsCatalog initialNowIso="2026-08-10T12:00:00.000Z" />,
+    );
+    expect(html).toContain('href="/learn"');
+    expect(html).toContain("There&#x27;s a longer answer.");
   });
 });

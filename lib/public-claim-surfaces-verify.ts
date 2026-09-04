@@ -801,7 +801,6 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/investment/[area]/page.tsx",
   "app/investment/compare/page.tsx",
   "app/investment/page.tsx",
-  "app/learn/page.tsx",
   "app/login/page.tsx",
   "app/map/page.tsx",
   "app/page.tsx",

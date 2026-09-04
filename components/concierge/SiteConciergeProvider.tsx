@@ -40,6 +40,7 @@ export function pageLabelForRoute(route: string): string {
   if (route.startsWith("/qualify")) return "Program review";
   if (route.startsWith("/quiz")) return "Incentive quiz";
   if (route.startsWith("/faq")) return "Frequently asked questions";
+  if (route.startsWith("/learn")) return "Learning Pathway";
   if (route.startsWith("/answers")) return "Incentive answers";
   if (route.startsWith("/check")) return "Address check";
   if (route.startsWith("/login")) return "Sign in";

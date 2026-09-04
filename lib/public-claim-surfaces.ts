@@ -356,6 +356,26 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
     files: ["app/quiz", "lib/quiz-bank-extension.ts"],
     findings: ["F9"],
   },
+  {
+    id: "learning-pathway",
+    // Unlisted (noindex, absent from PUBLIC_SEO_ROUTES, absent from nav)
+    // but publicly reachable, so it is a public claim surface like any
+    // other. Its copy is hand-authored zoning/permit education quoting
+    // linked City, ordinance, and FBI sources — it renders no program
+    // fact and no zone evidence, so "reviewed-copy" is the whole of its
+    // contract, and lib/__tests__/learning-pathway.test.ts plus
+    // app/__tests__/learn-page.test.tsx are the rendered-output tests
+    // that contract requires.
+    description:
+      "The unlisted /learn Learning Pathway — 12 authored zoning, permit, and licensing lessons.",
+    contracts: ["reviewed-copy"],
+    files: [
+      "app/learn/page.tsx",
+      "components/learn/LearningPathway.tsx",
+      "lib/learning-pathway.ts",
+      "lib/learning-pathway-figures.ts",
+    ],
+  },
   // review9 (sunset /qualify + vacant-sites report cross-links): the
   // "qualify-survey" entry (app/qualify, components/survey/SurveyResults.tsx,
   // lib/survey-engine.ts) was removed here — owner's ruling was "the
