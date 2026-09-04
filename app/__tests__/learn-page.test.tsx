@@ -247,7 +247,7 @@ describe("the completion state", () => {
 describe("the page stays unlisted", () => {
   it("tells crawlers not to index or follow it", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
-    expect(metadata.title).toBe("Learning Pathway | Chicago Incentive Explorer");
+    expect(metadata.title).toBe("Learning Pathway");
   });
 
   it("is absent from the sitemap", () => {
