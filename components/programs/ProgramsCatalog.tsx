@@ -204,6 +204,18 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
           </div>
         </Link>
 
+        {/* Same quiet entry as the FAQ's: one muted mono line beneath the
+            quiz card, pointing at the unlisted Learning Pathway. Not
+            navigation — no icon, no button, no label. */}
+        <div className="-mt-7 mb-10">
+          <a
+            href="/learn"
+            className="font-mono-bureau text-[10px] tracking-[0.15em] text-[#0C1B33]/25 hover:text-[#2563EB]/60 transition-colors"
+          >
+            There&apos;s a longer answer.
+          </a>
+        </div>
+
         {/* Definitions: Incentive Zones vs Programs */}
         <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border border-[#2563EB]/15 bg-[#EFF3FB] p-5">

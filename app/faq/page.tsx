@@ -90,6 +90,18 @@ export default function FAQPage() {
               </span>
             </a>
           </div>
+
+          {/* Quiet way through to the unlisted Learning Pathway. Deliberately
+              not navigation: no icon, no button, no label — a single muted
+              line for the reader whose question outlasted the FAQ. */}
+          <div className="mt-8 text-center">
+            <a
+              href="/learn"
+              className="font-mono-bureau text-[10px] tracking-[0.15em] text-[#0C1B33]/25 hover:text-[#2563EB]/60 transition-colors"
+            >
+              There&apos;s a longer answer.
+            </a>
+          </div>
         </div>
       </div>
     </div>
