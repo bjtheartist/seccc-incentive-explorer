@@ -38,8 +38,8 @@
       "zoning_code_amendment": 74
     },
     "byLifecycle": {
-      "pending": 905,
-      "adopted": 5774,
+      "pending": 906,
+      "adopted": 5773,
       "withdrawn": 29,
       "failed": 23,
       "repealed": 3,
@@ -50229,6 +50229,26 @@
       "attachments": []
     },
     {
+      "matterId": "FF4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "recordNumber": "SO2020-4568",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 6-G at 3022 S Archer Ave - App No. 20491T1",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": "2020-10-07T10:00:00.000Z",
+      "lastPublicationDate": "2024-06-13T17:51:36.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FF4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
       "matterId": "F64AEFF0-E10D-ED11-82E3-001DD80698CB",
       "recordNumber": "SO2020-4566",
       "fileYear": 2020,
@@ -50489,6 +50509,26 @@
       "attachments": []
     },
     {
+      "matterId": "2A4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "recordNumber": "SO2020-4452",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 1-E at 50 E Huron St - App No. 20477",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": "2020-12-16T12:00:00.000Z",
+      "lastPublicationDate": "2024-06-13T17:46:25.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=2A4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
       "matterId": "A7F293F2-E10D-ED11-82E3-001DD80693B4",
       "recordNumber": "O2020-4582",
       "fileYear": 2020,
@@ -50582,6 +50622,26 @@
       "lastPublicationDate": "2024-06-13T15:42:56.000Z",
       "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=6DF293F2-E10D-ED11-82E3-001DD80693B4",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "A0F293F2-E10D-ED11-82E3-001DD80693B4",
+      "recordNumber": "O2020-4555",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 8-I at 3101 S Kedzie Ave - App No. 20484",
+      "status": "3-Council Introduction",
+      "subStatus": "Council Introduction",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2024-06-13T15:44:30.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A0F293F2-E10D-ED11-82E3-001DD80693B4",
       "searchTerms": [
         "Zoning Reclassification"
       ],
@@ -50689,26 +50749,6 @@
       "attachments": []
     },
     {
-      "matterId": "6BF293F2-E10D-ED11-82E3-001DD80693B4",
-      "recordNumber": "O2020-4538",
-      "fileYear": 2020,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 9-F at 3343 N Halsted St - 20514T1",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2020-09-09T10:00:00.000Z",
-      "finalActionDate": "2020-10-07T10:00:00.000Z",
-      "lastPublicationDate": "2024-06-13T15:42:53.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=6BF293F2-E10D-ED11-82E3-001DD80693B4",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
       "matterId": "66F293F2-E10D-ED11-82E3-001DD80693B4",
       "recordNumber": "O2020-4537",
       "fileYear": 2020,
@@ -50722,26 +50762,6 @@
       "lastPublicationDate": "2024-06-13T15:42:46.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=66F293F2-E10D-ED11-82E3-001DD80693B4",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
-      "matterId": "9DF293F2-E10D-ED11-82E3-001DD80693B4",
-      "recordNumber": "O2020-4536",
-      "fileYear": 2020,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 4-H at 2152 W 21st St - App No. 20512T1",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2020-09-09T10:00:00.000Z",
-      "finalActionDate": "2020-10-07T10:00:00.000Z",
-      "lastPublicationDate": "2024-06-13T15:44:23.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9DF293F2-E10D-ED11-82E3-001DD80693B4",
       "searchTerms": [
         "Zoning Reclassification"
       ],
@@ -50782,26 +50802,6 @@
       "lastPublicationDate": "2024-06-13T15:43:49.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=8DF293F2-E10D-ED11-82E3-001DD80693B4",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
-      "matterId": "86F293F2-E10D-ED11-82E3-001DD80693B4",
-      "recordNumber": "O2020-4533",
-      "fileYear": 2020,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 20-H at 8536-8540 S Ashland Ave - App No. 20499",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2020-09-09T10:00:00.000Z",
-      "finalActionDate": "2020-10-07T10:00:00.000Z",
-      "lastPublicationDate": "2024-06-13T15:43:37.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=86F293F2-E10D-ED11-82E3-001DD80693B4",
       "searchTerms": [
         "Zoning Reclassification"
       ],
