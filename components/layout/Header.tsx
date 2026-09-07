@@ -192,6 +192,7 @@ function DesktopNavGroup({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={open ? null : false}
                 role="menuitem"
                 data-nav-item
                 aria-current={itemActive ? "page" : undefined}
@@ -312,6 +313,8 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [openState, setOpenState] = useState<OpenState>(null);
   const [mobileGroup, setMobileGroup] = useState<string | null>(null);
+  // On the map, reserve startup bandwidth for the canvas; hover/focus warms the report.
+  const [reportPrefetch, setReportPrefetch] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const { status } = useSession();
   const signedIn = status === "authenticated";
@@ -339,6 +342,7 @@ export function Header() {
   const [renderedPath, setRenderedPath] = useState(pathname);
   if (renderedPath !== pathname) {
     setRenderedPath(pathname);
+    if (reportPrefetch) setReportPrefetch(false);
     if (openState) setOpenState(null);
   }
 
@@ -347,7 +351,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#0C1B33]/10 bg-white/95 backdrop-blur-md">
       <div className="container mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/" prefetch={pathname === "/map" ? false : null} className="flex items-center gap-3 group">
           <div className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50 border border-[#0C1B33]/20 px-2 py-1 group-hover:text-[#2563EB] group-hover:border-[#2563EB]/40 transition-colors">
             CSIM
           </div>
@@ -411,6 +415,9 @@ export function Header() {
 
           <Link
             href={PRIMARY_ITEM.href}
+            prefetch={pathname === "/map" && !reportPrefetch ? false : null}
+            onPointerEnter={() => setReportPrefetch(true)}
+            onFocus={() => setReportPrefetch(true)}
             // The map tour's last stop anchors here. Only the DESKTOP CTA
             // carries the hook: the mobile copy below lives inside a closed
             // sheet, and a tour stop pointing at a zero-box element is worse

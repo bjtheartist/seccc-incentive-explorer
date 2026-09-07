@@ -1,14 +1,22 @@
 import MapShell from "@/components/map/MapShell";
 import IncentiveGlance from "@/components/map/IncentiveGlance";
 import { MapSpotlight } from "@/components/onboarding/MapSpotlight";
+import Image from "next/image";
+import { version as mapboxVersion } from "mapbox-gl/package.json";
 
 export default function MapPage() {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   return (
     <div className="min-h-screen">
+      <link rel="preconnect" href="https://api.mapbox.com" crossOrigin="anonymous" />
+      {/* Match the SDK request so the browser fetches the style while the map
+          bundle and graphics context initialize, without a second download. */}
+      {token && <link rel="preload" as="fetch" crossOrigin="anonymous"
+        href={`https://api.mapbox.com/styles/v1/mapbox/light-v11?sdk=js-${mapboxVersion}&access_token=${encodeURIComponent(token)}`} />}
       {/* Page Header — soft blue. Hidden on mobile so the map lands full-screen
           directly under the nav (controls stay pinned during use). */}
       <div className="relative border-b border-[#0C1B33]/10 overflow-hidden hidden md:block">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/chicago-map-hero.png')" }} />
+        <Image src="/chicago-map-hero.png" alt="" fill sizes="100vw" className="object-cover object-center" />
         <div className="absolute inset-0 bg-[#0C1B33]/80" />
         <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-16">
           <div className="flex items-center gap-4 mb-3 md:mb-6">

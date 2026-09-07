@@ -88,7 +88,8 @@ function MapLoader() {
 }
 
 const MapView = dynamic(() => import("./MapView"), {
-  ssr: false,
+  // Server rendering lets Next include the map chunks in the initial response.
+  // Mapbox itself is still created only inside MapView's client effect.
   loading: () => <MapLoader />,
 });
 

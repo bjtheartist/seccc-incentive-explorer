@@ -1204,7 +1204,9 @@ export default function MapView() {
       });
     } catch (error) {
       console.error("[MapView] mapbox constructor failed", error);
-      failMap("init-error");
+      failMap(error instanceof Error && error.message.includes("Failed to initialize WebGL")
+        ? "no-webgl2"
+        : "init-error");
       return;
     }
 
