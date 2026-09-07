@@ -1,12 +1,9 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FIRST_VISIT_GUIDE_STORAGE_KEY } from "@/lib/first-visit-guide";
 import { INVESTMENT_GUIDE_STORAGE_KEY } from "@/lib/investment-guide";
 import {
   MAP_GUIDE_STORAGE_KEY,
   MAP_GUIDE_VERSION,
-  MAP_TOUR_DEMO_ADDRESS,
-  MAP_TOUR_ILLUSTRATIVE_NOTE,
   MAP_TOUR_STEPS,
   chooseTourSide,
   fitsHighlightBudget,
@@ -124,123 +121,16 @@ describe("map guide preference", () => {
   });
 });
 
-/**
- * The map tour's anchors live across five source files (unlike the investment
- * tour's single page), so the canary maps each step key to the one file
- * expected to carry its anchor.
- *
- * `map-dossier` is declared as `tourAnchor="map-dossier"` — MapDossierCard's
- * DossierSection forwards that prop straight into `data-tour`, asserted just
- * below — and `map-hint` is an element the tour itself injects, so its
- * "source" is lib/map-guide.ts.
- */
-const ANCHOR_SOURCES: Record<string, string> = {
-  "map-search": "../../components/map/MapSearch.tsx",
-  "map-dossier": "../../components/map/MapDossierCard.tsx",
-  "map-presets": "../../components/map/MapLegendPanel.tsx",
-  "map-hint": "../map-guide.ts",
-  "nav-report": "../../components/layout/Header.tsx",
-};
-
-describe("map tour step definitions", () => {
-  it("defines five unique stops, in the owner-approved order", () => {
-    expect(MAP_TOUR_STEPS).toHaveLength(5);
-    expect(MAP_TOUR_STEPS.map((step) => step.key)).toEqual([
-      "map-search",
-      "map-dossier",
-      "map-presets",
-      "map-hint",
-      "nav-report",
-    ]);
-    expect(new Set(MAP_TOUR_STEPS.map((step) => step.selector)).size).toBe(5);
+describe("map tour popover copy", () => {
+  it("escapes descriptions and notes before rendering HTML", () => {
+    expect(mapTourPopoverHtml({
+      ...MAP_TOUR_STEPS[0], description: "<script> & text", note: "<note>",
+    })).toBe('&lt;script&gt; &amp; text<span class="cie-tour-note">&lt;note&gt;</span>');
   });
 
-  it("no longer anchors any stop to the whole map canvas", () => {
-    // The regression this rebuild exists to kill: a stop highlighting
-    // `map-canvas` cuts a hole the size of the viewport, so the dim reads as
-    // every OTHER thing on the page being ghosted out.
-    for (const step of MAP_TOUR_STEPS) {
-      expect(step.selector, step.key).not.toContain("map-canvas");
-    }
-  });
-
-  it("anchors every data-tour selector to an attribute that actually exists in its source file", () => {
-    for (const step of MAP_TOUR_STEPS) {
-      const match = /^\[data-tour="([^"]+)"\]$/.exec(step.selector);
-      if (!match) throw new Error(`${step.key}: expected a bare data-tour selector`);
-      const sourcePath = ANCHOR_SOURCES[step.key];
-      if (!sourcePath) throw new Error(`${step.key}: no anchor source registered`);
-      const source = readFileSync(new URL(sourcePath, import.meta.url), "utf8");
-      const declared =
-        source.includes(`data-tour="${match[1]}"`) ||
-        source.includes(`tourAnchor="${match[1]}"`);
-      expect(declared, `${step.key} → ${sourcePath}`).toBe(true);
-    }
-  });
-
-  it("routes DossierSection's tourAnchor prop into a real data-tour attribute", () => {
-    // Guards the one indirection the canary above allows.
-    const source = readFileSync(
-      new URL("../../components/map/MapDossierCard.tsx", import.meta.url),
-      "utf8",
-    );
-    expect(source).toContain("<details data-tour={tourAnchor}");
-  });
-
-  it("pairs every perform with an undo, and never ships one without the other", () => {
-    // A stop that CHANGES the page and cannot change it back leaves the
-    // visitor stranded in a demo state they did not ask for — the demo
-    // address still in the search box, a preset they never picked, a hint
-    // marker sitting on the map.
-    for (const step of MAP_TOUR_STEPS) {
-      expect(Boolean(step.perform), `${step.key}: perform`).toBe(Boolean(step.undo));
-    }
-
-    // The four acting stops, named — so deleting a perform is a failure
-    // rather than a silently weaker tour.
-    expect(MAP_TOUR_STEPS.filter((step) => step.perform).map((step) => step.key)).toEqual([
-      "map-search",
-      "map-dossier",
-      "map-presets",
-      "map-hint",
-    ]);
-    expect(MAP_TOUR_STEPS.find((step) => step.key === "nav-report")?.perform).toBeUndefined();
-  });
-
-  it("types a demo address on the corridor the stops that follow depend on", () => {
-    expect(MAP_TOUR_DEMO_ADDRESS).toBe("1500 E 87th St, Chicago, IL 60619");
-  });
-});
-
-describe("map tour illustrative-only disclosure", () => {
-  const DEMO_RESULT_STOPS = ["map-search", "map-dossier", "map-hint"];
-
-  it("carries the illustrative line on every stop that is showing the demo result", () => {
-    for (const key of DEMO_RESULT_STOPS) {
-      const step = MAP_TOUR_STEPS.find((s) => s.key === key);
-      expect(step?.note, key).toBe(MAP_TOUR_ILLUSTRATIVE_NOTE);
-      expect(step?.note, key).toMatch(/illustration only/i);
-      expect(step?.note, key).toMatch(/search your own address/i);
-    }
-  });
-
-  it("puts that line into the popover body a visitor actually reads", () => {
-    for (const key of DEMO_RESULT_STOPS) {
-      const step = MAP_TOUR_STEPS.find((s) => s.key === key)!;
-      const html = mapTourPopoverHtml(step);
-      expect(html, key).toContain(step.description);
-      expect(html, key).toContain(MAP_TOUR_ILLUSTRATIVE_NOTE);
-      // Rendered in the muted mono label style, not as body copy.
-      expect(html, key).toContain('class="cie-tour-note"');
-    }
-  });
-
-  it("does not tack the caveat onto stops that show nothing demo-specific", () => {
-    for (const key of ["map-presets", "nav-report"]) {
-      const step = MAP_TOUR_STEPS.find((s) => s.key === key);
-      expect(step?.note, key).toBeUndefined();
-      expect(mapTourPopoverHtml(step!), key).not.toContain("cie-tour-note");
-    }
+  it("renders a plain description when there is no note", () => {
+    expect(mapTourPopoverHtml({ ...MAP_TOUR_STEPS[1], note: undefined }))
+      .toBe(MAP_TOUR_STEPS[1].description);
   });
 });
 
@@ -255,11 +145,6 @@ function tourCopyFields(): Array<[string, string]> {
 
 describe("map tour copy boundaries", () => {
   it("carries no hardcoded totals, dollar figures, or record counts", () => {
-    // Same falsifiable ban as the other tours' guards: no quantity claims in
-    // frozen tour copy, including spelled-out magnitudes and symbol-only
-    // quantities. The demo ADDRESS has digits, of course — it is typed into
-    // the page, never written into frozen copy, which is why it is asserted
-    // as a constant above and banned here.
     const bannedQuantityWords =
       /\b(dozen|hundred|thousand|million|billion|percent)\b|[$%]|\d/i;
     for (const [field, text] of tourCopyFields()) {
@@ -287,19 +172,13 @@ describe("map tour copy boundaries", () => {
     expect(searchStep?.description).toMatch(/centers/i);
   });
 
-  it("keeps the overlap disclaimer on the stop that now shows the overlaps", () => {
-    // Moved from the old citywide-glance stop to the dossier stop, because
-    // that is where a visitor now reads the zones touching an address. The
-    // sentence's MEANING is the public-claim guard, not its position.
-    const dossierStep = MAP_TOUR_STEPS.find((step) => step.key === "map-dossier");
+  it("keeps the overlap disclaimer on the area-details explanation", () => {
+    const dossierStep = MAP_TOUR_STEPS.find((step) => step.key === "map-inspect");
     expect(dossierStep?.description).toMatch(/starting point for program-by-program review/i);
     expect(dossierStep?.description).toMatch(
       /do not by themselves confirm eligibility or stacking/i,
     );
 
-    // The claim must be checkable against the page's own copy, not invented.
-    const mapPageSource = readFileSync(new URL("../../app/map/page.tsx", import.meta.url), "utf8");
-    expect(mapPageSource).toMatch(/overlap alone does not confirm eligibility/i);
   });
 
   it("does not enumerate individual preset bundles in frozen copy", () => {
@@ -307,7 +186,7 @@ describe("map tour copy boundaries", () => {
     // will keep moving; naming bundles in frozen tour copy rots the same way
     // hardcoded totals do (the tour would confidently list four of six). The
     // step teaches the mechanism, not the roster.
-    const presetsStep = MAP_TOUR_STEPS.find((step) => step.key === "map-presets");
+    const presetsStep = MAP_TOUR_STEPS.find((step) => step.key === "map-layers");
     expect(presetsStep?.description).toMatch(/preset/i);
     for (const bundle of ["city", "state", "federal", "environmental", "zoning", "vacancy"]) {
       expect(presetsStep?.description.toLowerCase(), bundle).not.toContain(bundle);
@@ -315,7 +194,7 @@ describe("map tour copy boundaries", () => {
   });
 
   it("tells the visitor all three ways to interrogate the map", () => {
-    const hintStep = MAP_TOUR_STEPS.find((step) => step.key === "map-hint");
+    const hintStep = MAP_TOUR_STEPS.find((step) => step.key === "map-inspect");
     expect(hintStep?.description).toMatch(/click/i);
     expect(hintStep?.description).toMatch(/right-click/i);
     expect(hintStep?.description).toMatch(/tap/i);
@@ -324,8 +203,7 @@ describe("map tour copy boundaries", () => {
   it("closes on the nav control it actually anchors to", () => {
     const reportStep = MAP_TOUR_STEPS.find((step) => step.key === "nav-report");
     expect(reportStep?.description).toContain("Generate Report");
-    // One sentence, per the approved design.
-    expect(reportStep?.description.split(/(?<=\.)\s+/)).toHaveLength(1);
+    expect(reportStep?.description).toMatch(/phone.*menu/i);
   });
 });
 

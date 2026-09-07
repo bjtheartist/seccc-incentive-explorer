@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
-import { HexagonLayer } from "@deck.gl/aggregation-layers";
+import type { MapboxOverlay } from "@deck.gl/mapbox";
+import dynamic from "next/dynamic";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { Layers } from "lucide-react";
 import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, VACANT_COLORS } from "@/lib/constants";
@@ -18,13 +17,10 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
-import MapDossierCard from "./MapDossierCard";
 import { buildMapVacancySelectionEvidence } from "./map-vacancy-selection";
 import { DESKTOP_DOSSIER_WRAPPER_CLASS, MOBILE_DOSSIER_WRAPPER_CLASS } from "./map-overlay-layout";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import { MapTourButton } from "@/components/onboarding/MapTourButton";
-import { MAP_TOUR_END_EVENT, MAP_TOUR_START_EVENT } from "@/lib/map-guide";
-import MapPolygonPanel from "./MapPolygonPanel";
 import {
   DRAWN_AREA_ANALYSIS_FILL_LAYER_ID,
   DRAWN_AREA_ANALYSIS_LINE_LAYER_ID,
@@ -51,9 +47,7 @@ import {
   mapZoningFamilyVisibility,
   removeMapZoningLayers,
 } from "./zoning-map-filter";
-import CountyReliefRecipientsPanel, {
-  type CountyReliefRecipientsPanelStatus,
-} from "./CountyReliefRecipientsPanel";
+import type { CountyReliefRecipientsPanelStatus } from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch, cachedFetchWithMeta } from "@/lib/fetch-cache";
 import { fetchZoningLookup } from "@/lib/zoning-lookup";
@@ -212,20 +206,20 @@ import {
   type AreaVacancyWorkstationFilters,
 } from "@/lib/area-analysis-workstation";
 
+const MapDossierCard = dynamic(() => import("./MapDossierCard"));
+const MapPolygonPanel = dynamic(() => import("./MapPolygonPanel"));
+const CountyReliefRecipientsPanel = dynamic(() => import("./CountyReliefRecipientsPanel"));
+
 const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 30_000;
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  /** Camera captured when the map tour starts, restored when it ends. */
-  const preTourViewRef = useRef<{
-    center: [number, number];
-    zoom: number;
-    bearing: number;
-    pitch: number;
-  } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const zoneDataLoadedRef = useRef(new Set<string>());
+  const [zoneLoading, setZoneLoading] = useState<string[]>([]);
+  const [zoneLoadErrors, setZoneLoadErrors] = useState<string[]>([]);
   // Hardening round: e2e (tests/e2e/map-mobile-overlays.spec.ts) previously
   // waited a flat 2500ms before tapping the map, hoping tiles + interaction
   // handlers had settled — a magic number that flaked under CI runner load.
@@ -284,58 +278,6 @@ export default function MapView() {
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
   const [, setCopiedLink] = useState(false);
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
-
-  /* ── Map tour: hand the page back exactly as it was found ──────────
-   *
-   * The walkthrough (lib/map-guide.ts + components/onboarding/MapSpotlight.tsx)
-   * DEMONSTRATES: it types a demo address into the real search box and submits
-   * it, which flies the camera, drops a marker and opens a dossier. Undoing the
-   * DOM-level part of that is the tour's own job; undoing the MAP part cannot
-   * be — the Mapbox instance lives here and is deliberately not exposed. So the
-   * tour dispatches a start event (snapshot the camera) and an end event
-   * (restore it, drop the demo marker, close the demo dossier), and this is the
-   * only coupling between the two.
-   */
-  useEffect(() => {
-    const onTourStart = () => {
-      const map = mapRef.current;
-      if (!map) return;
-      const center = map.getCenter();
-      preTourViewRef.current = {
-        center: [center.lng, center.lat],
-        zoom: map.getZoom(),
-        bearing: map.getBearing(),
-        pitch: map.getPitch(),
-      };
-    };
-
-    const onTourEnd = () => {
-      if (searchMarkerRef.current) {
-        searchMarkerRef.current.remove();
-        searchMarkerRef.current = null;
-      }
-      setDossierSelection(null);
-      setZoningInfo(null);
-
-      const saved = preTourViewRef.current;
-      preTourViewRef.current = null;
-      const map = mapRef.current;
-      if (!map || !saved) return;
-      map.jumpTo({
-        center: saved.center,
-        zoom: saved.zoom,
-        bearing: saved.bearing,
-        pitch: saved.pitch,
-      });
-    };
-
-    window.addEventListener(MAP_TOUR_START_EVENT, onTourStart);
-    window.addEventListener(MAP_TOUR_END_EVENT, onTourEnd);
-    return () => {
-      window.removeEventListener(MAP_TOUR_START_EVENT, onTourStart);
-      window.removeEventListener(MAP_TOUR_END_EVENT, onTourEnd);
-    };
-  }, []);
 
   // Preset state
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -1739,11 +1681,15 @@ export default function MapView() {
     window.addEventListener("orientationchange", handleResize);
 
     let detachDrawEscapeHandler: (() => void) | null = null;
+    const boundaryController = new AbortController();
+    let abortZoningRequest: (() => void) | undefined;
 
-    map.on("load", async () => {
+    map.on("load", () => {
+      zoneDataLoadedRef.current.clear();
       /* ── Community Areas base layer (77 neighborhoods) ── */
       try {
-        const caData = await cachedFetch(COMMUNITY_AREAS_URL);
+        // Install the layer order now; populate optional boundaries independently.
+        const caData = EMPTY_FC;
         if (caData) {
           map.addSource("community-areas", { type: "geojson", data: caData as GeoJSON.FeatureCollection });
 
@@ -1812,104 +1758,38 @@ export default function MapView() {
       } catch {
         // Community areas layer is optional
       }
+      void cachedFetch<GeoJSON.FeatureCollection>(COMMUNITY_AREAS_URL, { signal: boundaryController.signal })
+        .then((data) => {
+          if (mapRef.current !== map) return;
+          (map.getSource("community-areas") as mapboxgl.GeoJSONSource | undefined)?.setData(data);
+        })
+        .catch(() => {});
 
       /* Add zone layers — vector tiles if configured, else DB API, else static GeoJSON */
-      const zoneLoadPromises = ZONE_KEYS.map(async (key) => {
-        const srcId = `zone-${key}`;
-        const tilesetId = ZONE_TILESET_IDS[key];
+      ZONE_KEYS.forEach((key) => {
+        try {
+          const srcId = `zone-${key}`;
+          const tilesetId = ZONE_TILESET_IDS[key];
 
-        // Heavy-coverage layers get reduced opacity so they don't block the whole
-        // map. On small screens, fills are toned down further (outlines stay) so
-        // the map reads cleanly instead of a saturated wash.
-        const mobileDensity = window.matchMedia("(max-width: 768px)").matches ? 0.55 : 1;
-        const baseOpacity = (HEAVY_COVERAGE_KEYS.has(key) ? 0.08 : 0.18) * mobileDensity;
-        const hoverOpacity = HEAVY_COVERAGE_KEYS.has(key) ? 0.2 : 0.4;
+          // Heavy-coverage layers get reduced opacity so they don't block the whole
+          // map. On small screens, fills are toned down further (outlines stay) so
+          // the map reads cleanly instead of a saturated wash.
+          const mobileDensity = window.matchMedia("(max-width: 768px)").matches ? 0.55 : 1;
+          const baseOpacity = (HEAVY_COVERAGE_KEYS.has(key) ? 0.08 : 0.18) * mobileDensity;
+          const hoverOpacity = HEAVY_COVERAGE_KEYS.has(key) ? 0.2 : 0.4;
 
-        if (tilesetId) {
-          // City-wide vector tile source
-          map.addSource(srcId, {
-            type: "vector",
-            url: `mapbox://${tilesetId}`,
-          });
-
-          map.addLayer({
-            id: `${srcId}-fill`,
-            type: "fill",
-            source: srcId,
-            "source-layer": key,
-            layout: {
-              visibility: "none",
-            },
-            paint: {
-              "fill-color": ZONE_COLORS[key],
-              "fill-opacity": [
-                "case",
-                ["boolean", ["feature-state", "hover"], false],
-                hoverOpacity,
-                baseOpacity,
-              ],
-            },
-          });
-
-          map.addLayer({
-            id: `${srcId}-line`,
-            type: "line",
-            source: srcId,
-            "source-layer": key,
-            layout: {
-              visibility: "none",
-            },
-            paint: {
-              "line-color": ZONE_COLORS[key],
-              "line-width": 1.5,
-              "line-opacity": HEAVY_COVERAGE_KEYS.has(key) ? 0.5 : 0.8,
-            },
-          });
-        } else {
-          // DB API first (city-wide), then static fallback (SSA #50 clipped)
-          const data = await fetchZoneGeoJSON(key);
-          if (!data) return;
-
-          map.addSource(srcId, {
-            type: "geojson",
-            data,
-          });
-
-          if (POINT_ZONE_KEYS.has(key)) {
-            // Point geometry → circle + symbol layers
-            map.addLayer({
-              id: `${srcId}-fill`,
-              type: "circle",
-              source: srcId,
-              layout: {
-                visibility: "none",
-              },
-              paint: {
-                "circle-radius": 8,
-                "circle-color": ZONE_COLORS[key],
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
-                "circle-opacity": 0.85,
-              },
+          if (tilesetId) {
+            // City-wide vector tile source
+            map.addSource(srcId, {
+              type: "vector",
+              url: `mapbox://${tilesetId}`,
             });
-            // Add a dummy line layer ID so toggle logic works (hidden, zero-width)
-            map.addLayer({
-              id: `${srcId}-line`,
-              type: "circle",
-              source: srcId,
-              layout: {
-                visibility: "none",
-              },
-              paint: {
-                "circle-radius": 0,
-                "circle-opacity": 0,
-              },
-            });
-          } else {
+
             map.addLayer({
               id: `${srcId}-fill`,
               type: "fill",
               source: srcId,
+              "source-layer": key,
               layout: {
                 visibility: "none",
               },
@@ -1928,6 +1808,7 @@ export default function MapView() {
               id: `${srcId}-line`,
               type: "line",
               source: srcId,
+              "source-layer": key,
               layout: {
                 visibility: "none",
               },
@@ -1937,90 +1818,157 @@ export default function MapView() {
                 "line-opacity": HEAVY_COVERAGE_KEYS.has(key) ? 0.5 : 0.8,
               },
             });
-          }
-        }
-      });
+          } else {
+            // All incentive overlays start hidden. Keep stable layer ordering and
+            // toggle targets, but fetch their geometry only after selection.
+            const data = EMPTY_FC;
 
-      // Promise.allSettled (not Promise.all): one zone's addSource/addLayer
-      // throwing must not abort the rest of map init — the zoning-districts
-      // fetch, the parcels/vacant-properties layers, the draw control, and
-      // setLoaded(true) all run after this line and would otherwise never
-      // run, permanently leaving the "Drawing zone boundaries" loading
-      // overlay up with no visible error.
-      const zoneLoadResults = await Promise.allSettled(zoneLoadPromises);
-      zoneLoadResults.forEach((result, i) => {
-        if (result.status === "rejected") {
-          console.warn(`[MapView] Zone layer "${ZONE_KEYS[i]}" failed to load:`, result.reason);
+            map.addSource(srcId, {
+              type: "geojson",
+              data,
+            });
+
+            if (POINT_ZONE_KEYS.has(key)) {
+              // Point geometry → circle + symbol layers
+              map.addLayer({
+                id: `${srcId}-fill`,
+                type: "circle",
+                source: srcId,
+                layout: {
+                  visibility: "none",
+                },
+                paint: {
+                  "circle-radius": 8,
+                  "circle-color": ZONE_COLORS[key],
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#ffffff",
+                  "circle-opacity": 0.85,
+                },
+              });
+              // Add a dummy line layer ID so toggle logic works (hidden, zero-width)
+              map.addLayer({
+                id: `${srcId}-line`,
+                type: "circle",
+                source: srcId,
+                layout: {
+                  visibility: "none",
+                },
+                paint: {
+                  "circle-radius": 0,
+                  "circle-opacity": 0,
+                },
+              });
+            } else {
+              map.addLayer({
+                id: `${srcId}-fill`,
+                type: "fill",
+                source: srcId,
+                layout: {
+                  visibility: "none",
+                },
+                paint: {
+                  "fill-color": ZONE_COLORS[key],
+                  "fill-opacity": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    hoverOpacity,
+                    baseOpacity,
+                  ],
+                },
+              });
+
+              map.addLayer({
+                id: `${srcId}-line`,
+                type: "line",
+                source: srcId,
+                layout: {
+                  visibility: "none",
+                },
+                paint: {
+                  "line-color": ZONE_COLORS[key],
+                  "line-width": 1.5,
+                  "line-opacity": HEAVY_COVERAGE_KEYS.has(key) ? 0.5 : 0.8,
+                },
+              });
+            }
+          }
+        } catch (error) {
+          console.warn(`[MapView] Zone layer "${key}" could not initialize:`, error);
         }
       });
 
       /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
-      const zoningRequestController = new AbortController();
-      const zoningRequestTimeout = window.setTimeout(
-        () => zoningRequestController.abort(),
-        OPTIONAL_ZONING_LAYER_TIMEOUT_MS
-      );
-      try {
-        const zoningSource = await loadMapZoningSource(() =>
-          cachedFetch(CHICAGO_ZONING_URL, {
-            signal: zoningRequestController.signal,
-          }),
+      // Reserve zoning's position below parcels, permits and selection layers.
+      // The fetch must not block search, drawing, presets or other data sources.
+      void (async () => {
+        const zoningRequestController = new AbortController();
+        abortZoningRequest = () => zoningRequestController.abort();
+        const zoningRequestTimeout = window.setTimeout(
+          () => zoningRequestController.abort(),
+          OPTIONAL_ZONING_LAYER_TIMEOUT_MS
         );
-        if (zoningSource.status === "available") {
-          const zoningData = zoningSource.data;
-          const publishedZoneClasses = zoningSource.publishedZoneClasses;
-          installMapZoningLayers(
-            map,
-            ZONING_CATEGORIES,
-            zoningData as GeoJSON.FeatureCollection,
-            publishedZoneClasses,
+        try {
+          installMapZoningLayers(map, ZONING_CATEGORIES, EMPTY_FC, []);
+          const zoningSource = await loadMapZoningSource(() =>
+            cachedFetch(CHICAGO_ZONING_URL, {
+              signal: zoningRequestController.signal,
+            }),
           );
+          if (mapRef.current !== map) return;
+          if (zoningSource.status === "available") {
+            const zoningData = zoningSource.data;
+            const publishedZoneClasses = zoningSource.publishedZoneClasses;
+            (map.getSource("chicago-zoning") as mapboxgl.GeoJSONSource)
+              .setData(zoningData as GeoJSON.FeatureCollection);
 
-          // Hover interaction across all zoning fill layers
-          const zoningFillLayers = ZONING_CATEGORIES.map((c) => `zoning-${c.key}-fill`);
-          let hoveredZoningId: number | null = null;
+            // Hover interaction across all zoning fill layers
+            const zoningFillLayers = ZONING_CATEGORIES.map((c) => `zoning-${c.key}-fill`);
+            let hoveredZoningId: number | null = null;
 
-          for (const layerId of zoningFillLayers) {
-            map.on("mousemove", layerId, (e) => {
-              if (!e.features?.length) return;
-              if (hoveredZoningId !== null) {
-                map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: false });
-              }
-              hoveredZoningId = e.features[0].id as number;
-              map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: true });
-              map.getCanvas().style.cursor = "pointer";
-            });
-            map.on("mouseleave", layerId, () => {
-              if (hoveredZoningId !== null) {
-                map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: false });
-                hoveredZoningId = null;
-              }
-            });
+            for (const layerId of zoningFillLayers) {
+              map.on("mousemove", layerId, (e) => {
+                if (!e.features?.length) return;
+                if (hoveredZoningId !== null) {
+                  map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: false });
+                }
+                hoveredZoningId = e.features[0].id as number;
+                map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: true });
+                map.getCanvas().style.cursor = "pointer";
+              });
+              map.on("mouseleave", layerId, () => {
+                if (hoveredZoningId !== null) {
+                  map.setFeatureState({ source: "chicago-zoning", id: hoveredZoningId }, { hover: false });
+                  hoveredZoningId = null;
+                }
+              });
 
-            // Public map clicks use the shared property dossier. Zoning is
-            // resolved into its Programs and zones section, avoiding a second
-            // popup for the same click.
+              // Public map clicks use the shared property dossier. Zoning is
+              // resolved into its Programs and zones section, avoiding a second
+              // popup for the same click.
+            }
+            setZoningDistrictClasses(publishedZoneClasses);
+            setZoningLayerStatus("available");
+          } else {
+            setZoningDistrictClasses([]);
+            setZoningVisible(
+              Object.fromEntries(ZONING_CATEGORIES.map((category) => [category.key, false])),
+            );
+            setZoningLayerStatus("unavailable");
           }
-          setZoningDistrictClasses(publishedZoneClasses);
-          setZoningLayerStatus("available");
-        } else {
+        } catch {
+          if (mapRef.current !== map) return;
+          // Zoning districts layer is optional
+          removeMapZoningLayers(map, ZONING_CATEGORIES);
           setZoningDistrictClasses([]);
           setZoningVisible(
             Object.fromEntries(ZONING_CATEGORIES.map((category) => [category.key, false])),
           );
           setZoningLayerStatus("unavailable");
+        } finally {
+          window.clearTimeout(zoningRequestTimeout);
         }
-      } catch {
-        // Zoning districts layer is optional
-        removeMapZoningLayers(map, ZONING_CATEGORIES);
-        setZoningDistrictClasses([]);
-        setZoningVisible(
-          Object.fromEntries(ZONING_CATEGORIES.map((category) => [category.key, false])),
-        );
-        setZoningLayerStatus("unavailable");
-      } finally {
-        window.clearTimeout(zoningRequestTimeout);
-      }
+
+      })();
 
       /* ── Parcel boundary layer (Cook County ArcGIS) ── */
       map.addSource("parcels", { type: "geojson", data: EMPTY_FC, generateId: true });
@@ -3045,6 +2993,8 @@ export default function MapView() {
     });
 
     return () => {
+      boundaryController.abort();
+      abortZoningRequest?.();
       polygonVacancyRequests.cancel();
       detachDrawEscapeHandler?.();
       resizeObserver.disconnect();
@@ -3138,6 +3088,36 @@ export default function MapView() {
       setDrawnAreaVacancySignals(mapRef.current, []);
     }
   }, [polygonPanelOpen]);
+
+  /* ── Load selected incentive layers only ────────────── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    let cancelled = false;
+    const pending = ZONE_KEYS.filter((key) =>
+      zoneVisible[key] && !ZONE_TILESET_IDS[key] && !zoneDataLoadedRef.current.has(key)
+    );
+    setZoneLoading(pending);
+    setZoneLoadErrors([]);
+    for (const key of pending) {
+      void fetchZoneGeoJSON(key).then((data) => {
+        if (cancelled || mapRef.current !== map) return;
+        const source = map.getSource(`zone-${key}`) as mapboxgl.GeoJSONSource | undefined;
+        if (!data || !source) throw new Error(`No geometry available for ${key}`);
+        source.setData(data);
+        zoneDataLoadedRef.current.add(key);
+      }).catch(() => {
+        if (!cancelled && mapRef.current === map) {
+          setZoneLoadErrors((keys) => [...keys, key]);
+        }
+      }).finally(() => {
+        if (!cancelled && mapRef.current === map) {
+          setZoneLoading((keys) => keys.filter((value) => value !== key));
+        }
+      });
+    }
+    return () => { cancelled = true; };
+  }, [loaded, zoneVisible]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -4500,107 +4480,116 @@ export default function MapView() {
       return;
     }
 
-    const activeFunderTypes = new Set<FunderType>(
-      FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
-    );
-    const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
-      MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
-        (purpose) => investmentGovernmentFundingPurposes[purpose],
-      ),
-    );
-    const filtered = excludeMegaprojectFeatures(
-      filterInvestmentPointFeatures(investmentFeaturesRef.current, {
-        yearRangeId: investmentYearRange,
-        activeFunderTypes,
-        activeGovernmentFundingPurposes,
-      }).filter(
-        (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
-      )
-    );
+    let cancelled = false;
+    void import("./investment-deck-runtime").then(({ MapboxOverlay, ArcLayer, ScatterplotLayer, HexagonLayer }) => {
+      if (cancelled || mapRef.current !== map) return;
+      const activeFunderTypes = new Set<FunderType>(
+        FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
+      );
+      const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
+        MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
+          (purpose) => investmentGovernmentFundingPurposes[purpose],
+        ),
+      );
+      const filtered = excludeMegaprojectFeatures(
+        filterInvestmentPointFeatures(investmentFeaturesRef.current, {
+          yearRangeId: investmentYearRange,
+          activeFunderTypes,
+          activeGovernmentFundingPurposes,
+        }).filter(
+          (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
+        )
+      );
 
-    let layers: Layer[] = [];
-    if (mode === "arcs") {
-      const hqIndex = indexFunderHqsByName(investmentFunderHqsRef.current);
-      const { arcs, fallbackFeatures, missingHqCount } = buildInvestmentArcData(filtered, hqIndex);
-      const fallbackDotRadius = (() => {
-        const scale = makeArcWidthScale(fallbackFeatures.map((f) => f.properties.amountAwarded));
-        return (f: InvestmentPointFeature) => scale(f.properties.amountAwarded);
-      })();
-      setInvestmentArcMissingHqCount(missingHqCount);
-      layers = [
-        new ArcLayer<InvestmentArcDatum>({
-          id: "investment-arcs",
-          data: arcs,
-          getSourcePosition: (d) => d.sourcePosition,
-          getTargetPosition: (d) => d.targetPosition,
-          getSourceColor: PHILANTHROPIC_ARC_COLOR,
-          getTargetColor: PHILANTHROPIC_ARC_COLOR,
-          getWidth: (d) => d.width,
-          widthUnits: "pixels",
-          greatCircle: true,
-          pickable: true,
-        }),
-        // Philanthropic grants with no mapped funder HQ fall back to dots.
-        new ScatterplotLayer<InvestmentPointFeature>({
-          id: "investment-arc-fallback",
-          data: fallbackFeatures,
-          getPosition: (f) => f.geometry.coordinates as [number, number],
-          getRadius: fallbackDotRadius,
-          radiusUnits: "pixels",
-          radiusMinPixels: 3,
-          radiusMaxPixels: 8,
-          getFillColor: PHILANTHROPIC_ARC_COLOR,
-          stroked: true,
-          getLineColor: [255, 255, 255, 220],
-          lineWidthMinPixels: 1,
-          pickable: true,
-        }),
-      ];
-    } else {
-      // density
-      setInvestmentArcMissingHqCount(0);
-      // In DOLLARS mode, exclude the null-amount government points (TIF / CDBG-HOME
-      // / LIHTC — amountAwarded=null) so a bin of only non-grant points does NOT
-      // paint a phantom $0 hexagon under the "$ awarded" ramp (and does not pin the
-      // color domain floor to 0). RECORDS mode keeps every point — it is a plain
-      // record-density count and the honest picture there includes all records.
-      const densityData =
-        investmentDensityMetric === "dollars"
-          ? filtered.filter((f) => (f.properties.amountAwarded ?? 0) > 0)
-          : filtered;
-      layers = [
-        new HexagonLayer<InvestmentPointFeature>({
-          id: "investment-hexagons",
-          data: densityData,
-          getPosition: (f) => f.geometry.coordinates as [number, number],
-          // dollars → AWARDED dollars only (never announcedInvestment — a
-          // development's announced capital must not heat a bin); records → a
-          // plain count (every point weight 1). densityWeightForMetric is the one
-          // selector the legend caption + the deck weight agree on.
-          getColorWeight: densityWeightForMetric(investmentDensityMetric),
-          colorAggregation: "SUM",
-          radius: HEXAGON_RADIUS_M,
-          extruded: false,
-          colorRange: DENSITY_COLOR_RANGE,
-          opacity: 0.65,
-          pickable: true,
-        }),
-      ];
-    }
+      let layers: Layer[] = [];
+      if (mode === "arcs") {
+        const hqIndex = indexFunderHqsByName(investmentFunderHqsRef.current);
+        const { arcs, fallbackFeatures, missingHqCount } = buildInvestmentArcData(filtered, hqIndex);
+        const fallbackDotRadius = (() => {
+          const scale = makeArcWidthScale(fallbackFeatures.map((f) => f.properties.amountAwarded));
+          return (f: InvestmentPointFeature) => scale(f.properties.amountAwarded);
+        })();
+        setInvestmentArcMissingHqCount(missingHqCount);
+        layers = [
+          new ArcLayer<InvestmentArcDatum>({
+            id: "investment-arcs",
+            data: arcs,
+            getSourcePosition: (d) => d.sourcePosition,
+            getTargetPosition: (d) => d.targetPosition,
+            getSourceColor: PHILANTHROPIC_ARC_COLOR,
+            getTargetColor: PHILANTHROPIC_ARC_COLOR,
+            getWidth: (d) => d.width,
+            widthUnits: "pixels",
+            greatCircle: true,
+            pickable: true,
+          }),
+          // Philanthropic grants with no mapped funder HQ fall back to dots.
+          new ScatterplotLayer<InvestmentPointFeature>({
+            id: "investment-arc-fallback",
+            data: fallbackFeatures,
+            getPosition: (f) => f.geometry.coordinates as [number, number],
+            getRadius: fallbackDotRadius,
+            radiusUnits: "pixels",
+            radiusMinPixels: 3,
+            radiusMaxPixels: 8,
+            getFillColor: PHILANTHROPIC_ARC_COLOR,
+            stroked: true,
+            getLineColor: [255, 255, 255, 220],
+            lineWidthMinPixels: 1,
+            pickable: true,
+          }),
+        ];
+      } else {
+        // density
+        setInvestmentArcMissingHqCount(0);
+        // In DOLLARS mode, exclude the null-amount government points (TIF / CDBG-HOME
+        // / LIHTC — amountAwarded=null) so a bin of only non-grant points does NOT
+        // paint a phantom $0 hexagon under the "$ awarded" ramp (and does not pin the
+        // color domain floor to 0). RECORDS mode keeps every point — it is a plain
+        // record-density count and the honest picture there includes all records.
+        const densityData =
+          investmentDensityMetric === "dollars"
+            ? filtered.filter((f) => (f.properties.amountAwarded ?? 0) > 0)
+            : filtered;
+        layers = [
+          new HexagonLayer<InvestmentPointFeature>({
+            id: "investment-hexagons",
+            data: densityData,
+            getPosition: (f) => f.geometry.coordinates as [number, number],
+            // dollars → AWARDED dollars only (never announcedInvestment — a
+            // development's announced capital must not heat a bin); records → a
+            // plain count (every point weight 1). densityWeightForMetric is the one
+            // selector the legend caption + the deck weight agree on.
+            getColorWeight: densityWeightForMetric(investmentDensityMetric),
+            colorAggregation: "SUM",
+            radius: HEXAGON_RADIUS_M,
+            extruded: false,
+            colorRange: DENSITY_COLOR_RANGE,
+            opacity: 0.65,
+            pickable: true,
+          }),
+        ];
+      }
 
-    if (!deckOverlayRef.current) {
-      deckOverlayRef.current = new MapboxOverlay({
-        interleaved: true,
-        layers,
-        getTooltip: getInvestmentDeckTooltip,
-      });
-      map.addControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
-    } else {
-      // Re-apply getTooltip too: it closes over investmentDensityMetric (records
-      // vs dollars wording), so a metric switch on an existing overlay must refresh
-      // it — otherwise a stale closure keeps the old bin text.
-      deckOverlayRef.current.setProps({ layers, getTooltip: getInvestmentDeckTooltip });
-    }
+      if (!deckOverlayRef.current) {
+        deckOverlayRef.current = new MapboxOverlay({
+          interleaved: true,
+          layers,
+          getTooltip: getInvestmentDeckTooltip,
+        });
+        map.addControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
+      } else {
+        // Re-apply getTooltip too: it closes over investmentDensityMetric (records
+        // vs dollars wording), so a metric switch on an existing overlay must refresh
+        // it — otherwise a stale closure keeps the old bin text.
+        deckOverlayRef.current.setProps({ layers, getTooltip: getInvestmentDeckTooltip });
+      }
+    }).catch(() => {
+      if (cancelled || mapRef.current !== map) return;
+      setCommunityInvestmentError("This investment view could not load. Try selecting it again.");
+      setInvestmentViewMode("dots");
+    });
+    return () => { cancelled = true; };
   }, [
     loaded,
     adminSessionActive,
@@ -4684,7 +4673,7 @@ export default function MapView() {
             ))}
           </div>
           <span className="font-mono-bureau text-[10px] tracking-[0.25em] uppercase text-[#0C1B33]/35">
-            Drawing zone boundaries
+            Loading the map
           </span>
         </div>
       )}
@@ -4705,6 +4694,7 @@ export default function MapView() {
           anchors exist. */}
       <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
         <button
+          data-tour="map-layer-control"
           onClick={() => setLegendOpen((o) => !o)}
           className="hidden md:block bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
         >
@@ -4718,6 +4708,7 @@ export default function MapView() {
         <div className="md:hidden absolute top-32 right-3 z-10 flex flex-col gap-2">
           <button
             onClick={() => { setLegendOpen((o) => !o); setSnapshotOpen(false); }}
+            data-tour="map-layer-control"
             aria-label="Map layers"
             className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors touch-manipulation ${
               legendOpen ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10"
@@ -4729,7 +4720,7 @@ export default function MapView() {
       )}
 
       {/* Interaction hint */}
-      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
+      <div data-tour="map-inspect" className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
         Click anywhere for area data &middot; Right-click for zoning
       </div>
       {/* Mobile hint */}
@@ -4756,6 +4747,8 @@ export default function MapView() {
       {legendOpen && (
         <MapLegendPanel
           zoneVisible={zoneVisible}
+          zoneLoading={zoneLoading}
+          zoneLoadErrors={zoneLoadErrors}
           poiVisible={poiVisible}
           zoningVisible={zoningVisible}
           zoningDistrictClasses={zoningDistrictClasses}
