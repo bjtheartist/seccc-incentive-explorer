@@ -42,7 +42,7 @@ export default function MapMobileSheet({
       </button>
 
       <div className="px-4 pt-2 pb-3">
-        <div className="flex items-start justify-between gap-3">
+        <div data-tour="map-inspect" className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50">
               Map Discovery

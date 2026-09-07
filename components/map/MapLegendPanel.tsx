@@ -82,6 +82,8 @@ const EMPTY_ZONING_DISTRICT_CLASSES: readonly string[] = [];
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
+  zoneLoading?: readonly string[];
+  zoneLoadErrors?: readonly string[];
   poiVisible: Record<string, boolean>;
   zoningVisible: Record<string, boolean>;
   zoningDistrictClasses?: readonly string[];
@@ -181,6 +183,8 @@ interface MapLegendPanelProps {
 
 export default function MapLegendPanel({
   zoneVisible,
+  zoneLoading = [],
+  zoneLoadErrors = [],
   poiVisible,
   zoningVisible,
   zoningDistrictClasses = EMPTY_ZONING_DISTRICT_CLASSES,
@@ -383,6 +387,16 @@ export default function MapLegendPanel({
       {/* Divider */}
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
 
+      {zoneLoading.length > 0 && (
+        <p role="status" className="px-3 py-2 text-xs text-[#0C1B33]/60">
+          Loading {zoneLoading.map((key) => ZONE_LABELS[key]).join(", ")}…
+        </p>
+      )}
+      {zoneLoadErrors.length > 0 && (
+        <p role="status" className="px-3 py-2 text-xs text-amber-800">
+          Could not load {zoneLoadErrors.map((key) => ZONE_LABELS[key]).join(", ")}. Toggle the layer off and on to retry.
+        </p>
+      )}
       {/* Incentive Zones — grouped by gov level */}
       <ZoneLayerSection
         zoneVisible={zoneVisible}

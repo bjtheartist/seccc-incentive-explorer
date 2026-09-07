@@ -189,7 +189,7 @@ test.describe("mobile spotlight", () => {
  * the investment tour documented from live verification), and picks up on the
  * visit after. This test resolves the sitewide guide the way finishing it
  * does, then confirms the map tour opens on its OWN rebuilt first stop — the
- * one that types the demo address — rather than a cascade-skipped later one.
+ * location-search explanation — rather than a cascade-skipped later one.
  */
 test.describe("handoff to the map walkthrough", () => {
   test("a visitor who finished the sitewide tour gets the map tour's first stop on /map", async ({
@@ -207,19 +207,6 @@ test.describe("handoff to the map walkthrough", () => {
       );
       window.localStorage.removeItem("cie:map-guide");
     });
-    // Third-party geocoding is not what this asserts; see the same note in
-    // tests/e2e/map-spotlight.spec.ts.
-    await page.route("**/api/geocode**", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          lat: 41.7364,
-          lon: -87.5893,
-          displayName: "1500 E 87th St, Chicago, IL 60619",
-        }),
-      }),
-    );
     await page.goto(`${baseURL}/map`);
 
     // No second welcome dialog stacked under the map tour.
@@ -228,15 +215,10 @@ test.describe("handoff to the map walkthrough", () => {
     await waitForMapTourAnchor(page);
     const popover = page.locator(".cie-driver-popover");
     await expect(popover).toBeVisible({ timeout: 20000 });
-    await expectTourStep(popover, "Search this address");
-    await expect(popover.locator(".driver-popover-progress-text")).toHaveText("Step 1 of 5");
+    await expectTourStep(popover, "Start with your location");
+    await expect(popover.locator(".driver-popover-progress-text")).toHaveText("Step 1 of 4");
 
-    // And it performs: the demo address is typed into the real search box,
-    // flagged as an example while it is held there.
-    await expect(page.locator('[data-tour="map-search"] input')).toHaveValue(
-      "1500 E 87th St, Chicago, IL 60619",
-      { timeout: 30000 },
-    );
-    await expect(page.getByTestId("map-tour-demo-badge")).toBeVisible();
+    await expect(page.locator('[data-tour="map-search"] input')).toHaveValue("");
+    await expect(page.getByTestId("map-tour-demo-badge")).toHaveCount(0);
   });
 });

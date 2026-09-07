@@ -26,12 +26,10 @@ export async function waitForMapIdle(page: Page, timeout = 15000) {
  * element components/onboarding/MapSpotlight.tsx polls for in `waitForAnchor`
  * before it will call driver.js's `drive()`. It is NOT the map merely being
  * on screen: MapView renders MapSearch behind its `loaded` state, and
- * `setLoaded(true)` is the last line of a `map.on("load")` handler that first
- * fetches and adds every zone layer, the zoning districts, parcels and vacant
- * properties. So the popover's latency is the whole data boot, not Mapbox's
- * style load — which is why `data-map-idle` (mapbox's own `idle` event, fired
- * much earlier) is the wrong gate here and `waitForMapIdle` above is not used
- * by the tour specs.
+ * `setLoaded(true)` follows synchronous source/control installation after the
+ * base style loads. Optional boundaries and zoning populate independently;
+ * hidden incentive geometry loads only after selection. The anchor therefore
+ * measures usable controls, while `data-map-idle` also waits for rendering.
  *
  * The three CI flakes this replaces were all the same shape: a spec waiting
  * on a DOWNSTREAM signal (the driver.js popover) with a budget SMALLER than

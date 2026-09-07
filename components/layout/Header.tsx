@@ -433,7 +433,7 @@ export function Header() {
           }}
         >
           <SheetTrigger asChild className="md:hidden">
-            <button aria-label="Open menu" className="text-[#0C1B33]/60 hover:text-[#0C1B33] p-2">
+            <button data-tour="nav-menu" aria-label="Open menu" className="text-[#0C1B33]/60 hover:text-[#0C1B33] p-2">
               <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
           </SheetTrigger>
