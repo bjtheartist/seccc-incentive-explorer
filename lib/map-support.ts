@@ -16,7 +16,9 @@ export type MapFailureReason =
   | "context-lost";
 
 /**
- * True when a WebGL2 context can actually be created.
+ * Cheap check for the WebGL2 API. Mapbox creates the real context and its
+ * constructor failure is handled by MapView. Creating a throwaway context
+ * here duplicates GPU initialization before the map can request its style.
  *
  * `?mapgl=0` forces the unsupported path — a support and testing escape
  * so this state can be seen in any browser without hunting for a device
@@ -28,9 +30,7 @@ export function webgl2Available(): boolean {
     if (new URLSearchParams(window.location.search).get("mapgl") === "0") {
       return false;
     }
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("webgl2");
-    return context !== null;
+    return typeof window.WebGL2RenderingContext !== "undefined";
   } catch {
     return false;
   }

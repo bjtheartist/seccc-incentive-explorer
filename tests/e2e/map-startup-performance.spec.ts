@@ -33,7 +33,70 @@ async function prepare(page: Page) {
 async function openMap(page: Page) {
   await page.goto("/map");
   await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator("[data-map-fallback]")).toHaveCount(0);
 }
+
+test("renders the map shell on the server and creates only the map's graphics context", async ({ page }) => {
+  await prepare(page);
+  const styleRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/styles/v1/mapbox/light-v11") styleRequests.push(request.url());
+  });
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    let count = 0;
+    Object.defineProperty(window, "__mapContextCount", { get: () => count });
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof getContext>) {
+      if (args[0] === "webgl2") count++;
+      return getContext.apply(this, args);
+    } as typeof getContext;
+  });
+  const response = await page.goto("/map");
+  expect(await response!.text()).toContain('data-tour="map-canvas"');
+  await expect(page.getByTestId("map-search")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator("[data-map-fallback]")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __mapContextCount: number }).__mapContextCount)).toBe(1);
+  expect(styleRequests).toHaveLength(1);
+});
+
+test("shows the existing fallback when WebGL2 exists but context creation fails", async ({ page }) => {
+  await prepare(page);
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof getContext>) {
+      return args[0] === "webgl2" ? null : getContext.apply(this, args);
+    } as typeof getContext;
+  });
+  await page.goto("/map");
+  await expect(page.locator('[data-map-fallback="no-webgl2"]')).toBeVisible();
+  await expect(page.getByRole("link", { name: "Generate a report without the map" })).toHaveAttribute("href", "/report");
+});
+
+test("hidden navigation does not preload analysis pages; opening it enables navigation", async ({ page }) => {
+  await prepare(page);
+  const analysisRequests: string[] = [];
+  const reportRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/public-investment-analysis") analysisRequests.push(request.url());
+    if (new URL(request.url()).pathname === "/report") reportRequests.push(request.url());
+  });
+  await openMap(page);
+  expect(analysisRequests).toEqual([]);
+  expect(reportRequests).toEqual([]);
+  await page.locator('[data-tour="nav-report"]').focus();
+  await expect.poll(() => reportRequests.length).toBeGreaterThan(0);
+  const trigger = page.getByRole("button", { name: "Neighborhood Analysis", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Permit Activity Analysis" })).toBeFocused();
+  await expect.poll(() => analysisRequests.length).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.click();
+  await page.getByRole("menuitem", { name: "Permit Activity Analysis" }).click();
+  await expect(page).toHaveURL(/\/permit-activity/);
+});
 
 test("search and controls work while boundaries and zoning are still pending", async ({ page }) => {
   const { errors, optional } = await prepare(page);

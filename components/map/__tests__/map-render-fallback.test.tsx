@@ -5,7 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MapRenderFallback } from "../MapRenderFallback";
 import { webgl2Available, type MapFailureReason } from "@/lib/map-support";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const REASONS: MapFailureReason[] = [
   "no-token",
@@ -52,9 +56,16 @@ describe("MapRenderFallback", () => {
 });
 
 describe("webgl2Available", () => {
-  it("returns false when the browser cannot create a webgl2 context (jsdom)", () => {
+  it("returns false when the browser has no WebGL2 API (jsdom)", () => {
     // jsdom has no WebGL at all, which stands in for the in-app-browser case.
     expect(webgl2Available()).toBe(false);
+  });
+
+  it("leaves graphics context creation to the map constructor", () => {
+    vi.stubGlobal("WebGL2RenderingContext", class {});
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+    expect(webgl2Available()).toBe(true);
+    expect(getContext).not.toHaveBeenCalled();
   });
 
   it("respects the ?mapgl=0 testing escape", () => {
