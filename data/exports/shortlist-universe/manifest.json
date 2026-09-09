@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 2,
-  "buildId": "shortlist-universe-area-normalized-v1-2026-08-15T19:06:17.970Z",
-  "generatedAt": "2026-08-15T19:06:17.970Z",
+  "schemaVersion": 3,
+  "buildId": "shortlist-universe-building-violations-2026-09-09T02:26:05.895Z",
+  "generatedAt": "2026-09-09T02:26:05.895Z",
   "zips": [
     "60617",
     "60619",
@@ -17,47 +17,47 @@
   "files": {
     "60617": {
       "path": "60617.json",
-      "checksum": "9fbcdbb7b7e929ae3031000428012d07e33a9e6160c19ba5f279d291f562d5e3",
-      "rowCount": 3726
+      "checksum": "36a8643063e5e588f46d0c0de40f429c69135951aa49886286757ae07a1e6b87",
+      "rowCount": 3727
     },
     "60619": {
       "path": "60619.json",
-      "checksum": "0884eadc72ae091907a5974b0d930fe89d48b46405e7d6091ac7369bc4c1490d",
-      "rowCount": 2879
+      "checksum": "6c14c53dc12f00754d00d2b98ea856418ebe54e11b2dfda5fd6639249042632b",
+      "rowCount": 2880
     },
     "60621": {
       "path": "60621.json",
-      "checksum": "5cc7e8edcc9b42d6caacb747ffb0c18579d830a7f17155aa071bf26c6dc499df",
+      "checksum": "d52f2222decb622d6f4fc138b34d05dd60ca99dac37ef51e31e6b5e466cbb35b",
       "rowCount": 6363
     },
     "60623": {
       "path": "60623.json",
-      "checksum": "2389c98cd81be9ecc4e6244ae15576f13f930b16ca6bbca2745b3b14c9598fa4",
-      "rowCount": 3736
+      "checksum": "e0565845ebfb3a4689ec353e4b1da267eff0401302c1f7d906eb0b381156d710",
+      "rowCount": 3737
     },
     "60624": {
       "path": "60624.json",
-      "checksum": "d9ead0169e50c41f1dd3156a3b7c19c8d44799195003eebbaab891454474737c",
+      "checksum": "3ec5966d5d51b99569496be3e3ba86061212ab42f6d1e3dcfedc9b715de13153",
       "rowCount": 4160
     },
     "60636": {
       "path": "60636.json",
-      "checksum": "0848ce4aae038d7a1412ab0e522f5cb3c774f0d10d5a2d5d92d3431763e8cd71",
+      "checksum": "65d6dfe416354253b29f3de6b2ad6fb2a43732538063698496217b5094523ee1",
       "rowCount": 5689
     },
     "60644": {
       "path": "60644.json",
-      "checksum": "b5fdb6118a8944c7007b9141766898362dd56e23f9d3ea7b126c73ad79752f28",
+      "checksum": "6a805919327e3156a700b63bf115f50835dd98afed92e652d40e8f4aa0cc7cc2",
       "rowCount": 2247
     },
     "60649": {
       "path": "60649.json",
-      "checksum": "102cfc9081439f0de6200180e1b8d06ba9ff9423b0052db11afef5c5d1059b15",
-      "rowCount": 1033
+      "checksum": "b55c7d9e32dd33919309b38251dff1e9bdbf9f44680eac99565a967aaeabd915",
+      "rowCount": 1038
     },
     "60651": {
       "path": "60651.json",
-      "checksum": "10bd3a8569efed1bfc09ec0f18f95ee7e58d9d015b10e39154afa7d98cea2f8c",
+      "checksum": "50d8cd1149b7c6b4f5fda40d855865672e7b46df671c2799699cab41711802b4",
       "rowCount": 1463
     }
   }

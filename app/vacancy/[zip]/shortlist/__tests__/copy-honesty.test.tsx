@@ -46,7 +46,7 @@ import ShortlistPage from "../page";
  *  realistic screening scenario. */
 function fixtureUniverseFile(): ShortlistUniverseFile {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     buildId: "build-1",
     generatedAt: "2026-08-01T00:00:00.000Z",
     zip: "60619",
@@ -63,7 +63,7 @@ function fixtureUniverseFile(): ShortlistUniverseFile {
         city_land: 0,
         "311_building": 5,
         "311_land": 0,
-        assessor_vacant_land: 0,
+        assessor_vacant_land: 0, building_violation: 0,
       },
       canonicalSites: 0,
       buildings: 0,

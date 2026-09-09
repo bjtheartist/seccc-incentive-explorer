@@ -799,3 +799,23 @@ describe("SiteShortlistResults — a precomputed exact-match PIN behaves like a 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+
+describe("building-vacancy citation evidence", () => {
+  it("renders the City source link, date, status and partial-building scope", () => {
+    vi.stubGlobal("fetch", neverResolvingFetchMock());
+    const sourceUrl = "https://data.cityofchicago.org/resource/22u3-xenr.json?id=1";
+    render(<SiteShortlistResults zip="60619" criteria={baseCriteria()} scored={false}
+      source={null} buildId="build-1" boundary={null} centroid={{ lat: 41.75, lon: -87.605 }}
+      ranked={[candidate({ violation: true, vacancyCitations: [{
+        id: "violation-1", sourceRowId: "1", sourceUrl,
+        recordDate: "2024-01-01T00:00:00.000Z", status: "OPEN",
+        scope: "Vacancy citation: REAR UNIT VACANT", sourceAsOf: null,
+        retrievedAt: "2026-09-08T20:00:00.000Z",
+      }] })]} />);
+    expect(screen.getByRole("link", { name: "Building-vacancy citation · 2024-01-01" }).getAttribute("href")).toBe(sourceUrl);
+    expect(screen.getByText("Vacancy citation: REAR UNIT VACANT")).toBeTruthy();
+    expect(screen.getByText(/City status: OPEN/)).toBeTruthy();
+    expect(screen.getByText(/may concern only part of the building/)).toBeTruthy();
+  });
+});

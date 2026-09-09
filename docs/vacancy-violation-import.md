@@ -39,4 +39,4 @@ This is an operator-reviewed addition, not a recurring source reconciliation job
 
 The live database and vacancy API are updated. No application redeployment was required. Existing cached map responses may retain their normal cache lifetime.
 
-The committed vacancy-index and ranked Site Matchmaker universe were not rebuilt by this database addition. Their legacy exporter currently maps violation sources into the `311_building` evidence category; a future snapshot refresh must first model building-violation evidence explicitly so it is not mislabeled as a 311 report. Do not imply the saved ranked shortlist has incorporated these additions.
+The initial database addition did not rebuild the ranked universe. The follow-up release described in [Ranked vacancy citation release](ranked-vacancy-citation-release.md) adds a distinct `building_violation` evidence type and incorporates the nine records inside ranked Matchmaker's existing ZIP coverage. Sixteen records remain outside those nine ZIPs. The separate legacy vacancy-index remains on its prior source snapshot; its exporter now excludes violation records rather than mislabeling them as 311 reports.

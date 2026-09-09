@@ -73,12 +73,15 @@ import {
   validateEnvelopeCounts,
   type ShortlistUniverseFile,
   type ShortlistUniverseRow,
+  VacancyCitationSchema,
 } from "../lib/shortlist-universe-schema";
 import { normalizePublishedArea } from "../lib/published-area";
 import {
   filterLegacyCity311Rows,
   legacyShortlistEvidenceType,
 } from "../lib/legacy-vacancy-derived-sources";
+
+import { chicagoCalendarDay, shiftCalendarDayYears, VACANCY_RETENTION_YEARS } from "../lib/vacancy-evidence";
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -175,6 +178,12 @@ interface VacantRow {
   property_type: string;
   square_feet: number | string | null;
   status: string | null;
+  property_status: string | null;
+  source_record_date: string | null;
+  source_row_id: string | null;
+  source_url: string | null;
+  source_as_of: string | null;
+  source_retrieved_at: string | null;
   owner_type: string | null;
   owner_name: string | null;
   owner_mailing_address: string | null;
@@ -185,7 +194,8 @@ interface VacantRow {
 async function fetchAllVacantRows(): Promise<VacantRow[]> {
   return (await sql`
     SELECT id, source, pin, address, lat, lon, property_type, square_feet, status,
-           owner_type, owner_name, owner_mailing_address, incentive_count, zoning_class
+           owner_type, owner_name, owner_mailing_address, incentive_count, zoning_class,
+           property_status, source_record_date, source_row_id, source_url, source_as_of, source_retrieved_at
     FROM vacant_properties
     WHERE lat IS NOT NULL AND lon IS NOT NULL
   `) as VacantRow[];
@@ -324,7 +334,21 @@ async function main() {
 
   console.log("\nQuerying vacant_properties...");
   const fetchedVacantRows = await fetchAllVacantRows();
-  const allVacantRows = filterLegacyCity311Rows(fetchedVacantRows);
+  const reviewDay = chicagoCalendarDay(new Date());
+  const cutoff = shiftCalendarDayYears(reviewDay, -VACANCY_RETENTION_YEARS);
+  const violationRows = fetchedVacantRows.filter((row) => row.source === "violations" &&
+    row.property_type === "vacant_building" && row.status === "OPEN" &&
+    row.source_record_date != null && row.source_record_date.slice(0, 10) >= cutoff &&
+    row.source_record_date.slice(0, 10) <= reviewDay);
+  const citationsByRecordId = new Map(violationRows.map((row) => [
+    `vacant_properties:${row.id}`,
+    VacancyCitationSchema.parse({
+      id: row.id, sourceRowId: row.source_row_id, sourceUrl: row.source_url,
+      recordDate: row.source_record_date, status: row.status, scope: row.property_status,
+      sourceAsOf: row.source_as_of, retrievedAt: row.source_retrieved_at,
+    }),
+  ]));
+  const allVacantRows = [...filterLegacyCity311Rows(fetchedVacantRows), ...violationRows];
   console.log(
     `  ${allVacantRows.length} City/311 rows with coordinates` +
       ` (${fetchedVacantRows.length - allVacantRows.length} unmodeled-source row(s) excluded pending an explicit evidence type)`,
@@ -390,7 +414,7 @@ async function main() {
         lon: toNumOrNull(row.lon),
         propertyType: resolvedPropertyType,
         status: row.status,
-        statusDate: null, // vacant_properties carries no per-row status date
+        statusDate: row.source_record_date,
         lotSqft:
           resolvedPropertyType === "vacant_land"
             ? normalizePublishedArea(row.square_feet)
@@ -445,6 +469,7 @@ async function main() {
       "311_building": 0,
       "311_land": 0,
       assessor_vacant_land: 0,
+      building_violation: 0,
     };
     for (const record of records) sourceRecordsByEvidenceType[record.evidenceType] += 1;
 
@@ -509,9 +534,10 @@ async function main() {
       const saleYear = site.pin && saleYearsByPin
         ? (saleYearsByPin.get(site.pin) ?? []).reduce<number | null>((max, y) => (max == null || y > max ? y : max), null)
         : null;
-      const violation = violationAddressSet != null && normalizeAddressKey(site.address).length > 0
+      const vacancyCitations = site.sourceRecordIds.flatMap((id) => citationsByRecordId.has(id) ? [citationsByRecordId.get(id)!] : []);
+      const violation = vacancyCitations.length > 0 || (violationAddressSet != null && normalizeAddressKey(site.address).length > 0
         ? violationAddressSet.has(normalizeAddressKey(site.address))
-        : false;
+        : false);
 
       rows.push({
         canonicalKey: site.canonicalKey,
@@ -520,6 +546,7 @@ async function main() {
         lat: site.lat,
         lon: site.lon,
         evidenceTypes: site.evidenceTypes,
+        ...(vacancyCitations.length > 0 ? { vacancyCitations } : {}),
         hasVacantLandEvidence: site.hasVacantLandEvidence,
         hasVacantBuildingEvidence: site.hasVacantBuildingEvidence,
         conflictingPropertyTypes: site.conflictingPropertyTypes,

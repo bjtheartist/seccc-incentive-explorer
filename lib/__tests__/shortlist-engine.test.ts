@@ -78,7 +78,7 @@ function criteria(overrides: Partial<SiteMatchCriteria> = {}): SiteMatchCriteria
   };
 }
 
-const ZERO_EVIDENCE_COUNTS = { city_land: 0, "311_building": 0, "311_land": 0, assessor_vacant_land: 0 };
+const ZERO_EVIDENCE_COUNTS = { city_land: 0, "311_building": 0, "311_land": 0, assessor_vacant_land: 0, building_violation: 0, };
 
 const CTA_NEAR: ShortlistStation = { name: "79th", system: "CTA", lat: BASE_LAT + 0.001, lon: BASE_LON };
 const CTA_FAR: ShortlistStation = { name: "95th", system: "CTA", lat: BASE_LAT + 0.05, lon: BASE_LON };
@@ -1239,7 +1239,7 @@ describe("runShortlistEngine", () => {
       rows,
       criteria: criteria(),
       stations: [],
-      sourceRecordsByEvidenceType: { city_land: 0, "311_building": 9, "311_land": 0, assessor_vacant_land: 0 },
+      sourceRecordsByEvidenceType: { city_land: 0, "311_building": 9, "311_land": 0, assessor_vacant_land: 0, building_violation: 0, },
     });
     expect(funnel.trackedEvidence).toBe(9); // raw pre-dedup count from the envelope
     expect(funnel.canonicalSites).toBe(2); // post-dedup row count
@@ -1898,7 +1898,8 @@ describe("60636 fixture — building and land search sanity", () => {
       stations: [],
       sourceRecordsByEvidenceType: universe.counts.sourceRecordsByEvidenceType as never,
     });
-    expect(funnel.trackedEvidence).toBe(842);
+    // 842 original records plus the vacancy citation attached to an existing site.
+    expect(funnel.trackedEvidence).toBe(843);
     expect(funnel.canonicalSites).toBe(776);
   });
 

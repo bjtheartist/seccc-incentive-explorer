@@ -770,6 +770,7 @@ export interface RankedShortlistCandidate {
   incentiveCount: number | null;
   saleYear: number | null;
   violation: boolean;
+  vacancyCitations?: ShortlistUniverseRow["vacancyCitations"];
   /** True when this site carries BOTH land and building evidence (Finding
    *  3) — screened using whichever evidence made it eligible for THIS
    *  search, reported explicitly rather than silently resolved. */
@@ -916,12 +917,12 @@ function trackedEvidenceCount(
   propertyType: SiteMatchCriteria["propertyType"],
   counts: Readonly<Record<EvidenceType, number>>,
 ): number {
-  if (propertyType === "existing-building") return counts["311_building"];
+  if (propertyType === "existing-building") return counts["311_building"] + counts.building_violation;
   if (propertyType === "vacant-land") {
     return counts.city_land + counts["311_land"] + counts.assessor_vacant_land;
   }
   if (propertyType === "either") {
-    return counts.city_land + counts["311_building"] + counts["311_land"] + counts.assessor_vacant_land;
+    return counts.city_land + counts["311_building"] + counts["311_land"] + counts.assessor_vacant_land + counts.building_violation;
   }
   return 0;
 }
@@ -1030,6 +1031,7 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       incentiveCount: row.incentiveCount,
       saleYear: row.saleYear,
       violation: row.violation,
+      vacancyCitations: row.vacancyCitations,
       conflictingPropertyTypes: row.conflictingPropertyTypes,
       screenedPropertyType: screenedPropertyTypeFor(row, propertyType),
       overlays: { ...row.overlays },

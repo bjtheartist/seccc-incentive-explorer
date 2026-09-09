@@ -186,7 +186,7 @@ describe("Finding 10, layer (a)(2) — BEHAVIORAL: an adversarial enrichment pas
       rows,
       criteria: criteria as never,
       stations,
-      sourceRecordsByEvidenceType: { city_land: 0, "311_building": 3, "311_land": 0, assessor_vacant_land: 0 },
+      sourceRecordsByEvidenceType: { city_land: 0, "311_building": 3, "311_land": 0, assessor_vacant_land: 0, building_violation: 0, },
     });
   }
 

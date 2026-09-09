@@ -33,7 +33,8 @@ import { normalizePublishedArea } from "./published-area";
  * fail closed (zod literal mismatch) rather than parse with `undefined`
  * holes the loader/engine would otherwise have to guess about.
  */
-export const SHORTLIST_UNIVERSE_SCHEMA_VERSION = 2 as const;
+// v3 adds distinct building-violation evidence, raw counts and dated citations.
+export const SHORTLIST_UNIVERSE_SCHEMA_VERSION = 3 as const;
 /**
  * Bumped alongside the schema version because the ranking ALGORITHM itself
  * changed in this same round (Finding 1: baseline scoring removed; Finding
@@ -48,7 +49,7 @@ export const RANKING_INPUTS_VERSION = 2 as const;
 
 // ── Envelope schema ─────────────────────────────────────────────────────────
 
-const EvidenceTypeSchema = z.enum(["city_land", "311_building", "311_land", "assessor_vacant_land"]);
+const EvidenceTypeSchema = z.enum(["city_land", "311_building", "311_land", "assessor_vacant_land", "building_violation"]);
 export type EvidenceType = z.infer<typeof EvidenceTypeSchema>;
 
 const SourceVintageSchema = z.object({
@@ -68,6 +69,7 @@ const SourceRecordsByEvidenceTypeSchema = z.object({
   city_land: z.number().int().nonnegative(),
   "311_building": z.number().int().nonnegative(),
   "311_land": z.number().int().nonnegative(),
+  building_violation: z.number().int().nonnegative(),
   assessor_vacant_land: z.number().int().nonnegative(),
 });
 
@@ -167,6 +169,23 @@ export const PublishedAreaSchema = z.preprocess(
   z.number().positive().nullable(),
 );
 
+/** Dated City vacancy citations, including any partial-building scope. */
+export const VacancyCitationSchema = z.object({
+  id: z.string().min(1),
+  sourceRowId: z.string().min(1),
+  sourceUrl: z.url().refine((value) => {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "data.cityofchicago.org" &&
+      url.pathname === "/resource/22u3-xenr.json";
+  }),
+  recordDate: z.iso.datetime(),
+  status: z.literal("OPEN"),
+  scope: z.string().min(1),
+  sourceAsOf: z.iso.datetime().nullable(),
+  retrievedAt: z.iso.datetime(),
+});
+export type VacancyCitation = z.infer<typeof VacancyCitationSchema>;
+
 export const ShortlistUniverseRowSchema = z.object({
   canonicalKey: z.string().min(1),
   pin: z.string().refine((pin) => normalizePin14(pin) !== null, {
@@ -176,6 +195,7 @@ export const ShortlistUniverseRowSchema = z.object({
   lat: z.number().nullable(),
   lon: z.number().nullable(),
   evidenceTypes: z.array(EvidenceTypeSchema),
+  vacancyCitations: z.array(VacancyCitationSchema).optional(),
   hasVacantLandEvidence: z.boolean(),
   hasVacantBuildingEvidence: z.boolean(),
   conflictingPropertyTypes: z.boolean(),
@@ -207,6 +227,7 @@ export const ShortlistUniverseFileSchema = z.object({
   rankingInputsVersion: z.literal(RANKING_INPUTS_VERSION),
   sources: z.object({
     vacancy: SourceVintageSchema,
+    buildingViolations: SourceVintageSchema.optional(),
     zoning: SourceVintageSchema,
     overlays: SourceVintageSchema,
   }),
@@ -289,7 +310,8 @@ export function validateEnvelopeCounts(file: ShortlistUniverseFile): string[] {
     file.counts.sourceRecordsByEvidenceType.city_land +
     file.counts.sourceRecordsByEvidenceType["311_building"] +
     file.counts.sourceRecordsByEvidenceType["311_land"] +
-    file.counts.sourceRecordsByEvidenceType.assessor_vacant_land;
+    file.counts.sourceRecordsByEvidenceType.assessor_vacant_land +
+    file.counts.sourceRecordsByEvidenceType.building_violation;
   if (evidenceTypeSum !== file.counts.sourceRecords) {
     issues.push(
       `counts.sourceRecordsByEvidenceType sums to ${evidenceTypeSum} !== counts.sourceRecords (${file.counts.sourceRecords})`,

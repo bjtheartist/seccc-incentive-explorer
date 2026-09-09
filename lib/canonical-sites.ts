@@ -58,7 +58,7 @@ export const MERGE_DISTANCE_METERS = 15;
  * vacant-lot records as building evidence and corrupted the buildings/land
  * counts this whole overhaul exists to make honest.
  */
-export type EvidenceType = "city_land" | "311_building" | "311_land" | "assessor_vacant_land";
+export type EvidenceType = "city_land" | "311_building" | "311_land" | "assessor_vacant_land" | "building_violation";
 
 /** Source authority order for picking a single measurement/owner-type value
  * when multiple sources disagree. Assessor `parcels` data is a measured,
@@ -70,6 +70,7 @@ const SOURCE_PRECEDENCE: readonly EvidenceType[] = [
   "city_land",
   "311_building",
   "311_land",
+  "building_violation",
 ];
 
 function precedenceRank(evidenceType: EvidenceType): number {

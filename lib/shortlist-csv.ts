@@ -71,6 +71,11 @@ export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Cook County Clerk recorded documents",
   "Google Maps",
   "Screening score",
+  "Vacancy citation source",
+  "Vacancy citation dates",
+  "Vacancy citation status",
+  "Vacancy citation scope",
+  "Vacancy citation URLs",
 ];
 
 function csvCell(value: string | number | null | undefined): string {
@@ -298,6 +303,11 @@ export function shortlistCsv(
           zip,
         }) ?? "Location unavailable",
         candidate.score,
+        candidate.vacancyCitations?.length ? "Chicago Building Violations (22u3-xenr)" : "",
+        (candidate.vacancyCitations ?? []).map((citation) => citation.recordDate.slice(0, 10)).join("; "),
+        (candidate.vacancyCitations ?? []).map((citation) => citation.status).join("; "),
+        (candidate.vacancyCitations ?? []).map((citation) => citation.scope).join("; "),
+        (candidate.vacancyCitations ?? []).map((citation) => citation.sourceUrl).join("; "),
       ]
         .map(csvCell)
         .join(","),

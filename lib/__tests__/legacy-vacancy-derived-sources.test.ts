@@ -31,6 +31,12 @@ describe("legacy City/311 derived vacancy source boundary", () => {
     );
   });
 
+  it("models building violations explicitly and keeps them out of the legacy index", () => {
+    expect(legacyShortlistEvidenceType("violations", "vacant_building")).toBe("building_violation");
+    expect(legacyShortlistEvidenceType("violations", "vacant_land")).toBeNull();
+    expect(filterLegacyCity311Rows([{ source: "violations" }])).toEqual([]);
+  });
+
   it("fails closed for an unmodeled future source", () => {
     const evidenceType = legacyShortlistEvidenceType(
       "future_county_source",

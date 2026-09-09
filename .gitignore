@@ -73,6 +73,7 @@ yarn-error.log*
 !/data/exports/shortlist-universe/
 /data/exports/shortlist-universe/*
 !/data/exports/shortlist-universe/manifest.json
+!/data/exports/shortlist-universe/building-violations.json
 !/data/exports/shortlist-universe/60617.json
 !/data/exports/shortlist-universe/60619.json
 !/data/exports/shortlist-universe/60621.json

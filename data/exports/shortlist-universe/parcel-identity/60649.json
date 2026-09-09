@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "zip": "60649",
- "universeBuildId": "shortlist-universe-area-normalized-v1-2026-08-15T19:06:17.970Z",
+ "universeBuildId": "shortlist-universe-building-violations-2026-09-09T02:26:05.895Z",
  "generatedAt": "2026-08-16T05:10:19.531Z",
  "source": "cook_county_current_parcels",
  "matchMethod": "exact_intersection",

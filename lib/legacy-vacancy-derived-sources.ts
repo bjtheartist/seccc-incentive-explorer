@@ -5,11 +5,12 @@
  * excluded instead of being coerced into either legacy category. The source
  * boundary is an allowlist so an unmodeled future source fails closed too.
  */
+// Building citations are excluded from the legacy vacancy-index export. The
+// ranked exporter includes them separately with dates and citation provenance.
 const MODELED_LEGACY_SOURCES = new Set([
   "cols",
   "dpd_vacant",
   "311_clean_lot",
-  "violations",
 ]);
 
 export function includeInLegacyCity311Export(source: unknown): boolean {
@@ -19,7 +20,8 @@ export function includeInLegacyCity311Export(source: unknown): boolean {
 export function legacyShortlistEvidenceType(
   source: unknown,
   resolvedPropertyType: "vacant_land" | "vacant_building",
-): "city_land" | "311_building" | "311_land" | null {
+): "city_land" | "311_building" | "311_land" | "building_violation" | null {
+  if (source === "violations") return resolvedPropertyType === "vacant_building" ? "building_violation" : null;
   if (!includeInLegacyCity311Export(source)) return null;
   if (source === "cols") return "city_land";
   return resolvedPropertyType === "vacant_land" ? "311_land" : "311_building";

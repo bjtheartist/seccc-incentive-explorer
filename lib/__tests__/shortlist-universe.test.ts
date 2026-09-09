@@ -31,7 +31,7 @@ function validFile(overrides: Partial<ShortlistUniverseFile> = {}): ShortlistUni
     },
     counts: {
       sourceRecords: 2,
-      sourceRecordsByEvidenceType: { city_land: 1, "311_building": 0, "311_land": 0, assessor_vacant_land: 1 },
+      sourceRecordsByEvidenceType: { city_land: 1, "311_building": 0, "311_land": 0, assessor_vacant_land: 1, building_violation: 0, },
       canonicalSites: 1,
       buildings: 0,
       land: 1,
@@ -211,7 +211,7 @@ describe("validateEnvelopeCounts", () => {
     const file = validFile({
       counts: {
         ...validFile().counts,
-        sourceRecordsByEvidenceType: { city_land: 1, "311_building": 0, "311_land": 0, assessor_vacant_land: 0 },
+        sourceRecordsByEvidenceType: { city_land: 1, "311_building": 0, "311_land": 0, assessor_vacant_land: 0, building_violation: 0, },
       },
     });
     const issues = validateEnvelopeCounts(file);

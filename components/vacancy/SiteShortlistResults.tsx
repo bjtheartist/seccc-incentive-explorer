@@ -537,6 +537,17 @@ function ShortlistCard({
         </div>
       )}
 
+      {(candidate.vacancyCitations ?? []).map((citation) => (
+        <div key={citation.id} className="mt-3 border-l-2 border-[#A45B00] bg-[#FFFBEB] px-3 py-2 text-[12px] leading-relaxed text-[#0C1B33]">
+          <a href={citation.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+            Building-vacancy citation · {citation.recordDate.slice(0, 10)}
+          </a>
+          <p>City status: {citation.status} · retrieved {citation.retrievedAt.slice(0, 10)}</p>
+          <p>{citation.scope}</p>
+          <p className="text-[#0C1B33]/70">A dated vacancy signal; it may concern only part of the building. Verify current occupancy and availability.</p>
+        </div>
+      ))}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {/* PRIMARY action, first in the row: everything else on this card sends
             the reader to a county or City record, while this one is the product

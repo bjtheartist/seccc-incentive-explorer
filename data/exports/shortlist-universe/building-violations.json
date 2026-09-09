@@ -1,0 +1,1357 @@
+{
+  "reviewedAt": "2026-09-09T02:26:05.585Z",
+  "source": "Chicago Building Violations 22u3-xenr; production vacancy records added 2026-09-08",
+  "zipBoundarySource": "https://data.cityofchicago.org/resource/unjd-c2ca.json",
+  "signals": [
+    {
+      "id": "violation-building-group-106187",
+      "address": "4923 W PARKER AVE",
+      "lat": 41.930473018,
+      "lon": -87.7499774711,
+      "zip": "60639",
+      "citation": {
+        "id": "violation-building-group-106187",
+        "sourceRowId": "7140840",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277140840%27",
+        "recordDate": "2024-03-28T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation; extent of building vacancy not specified",
+        "sourceAsOf": "2024-03-28T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-3",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:19.788Z",
+        "recordUpdatedAt": "2025-12-01T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 5
+    },
+    {
+      "id": "violation-building-group-13589",
+      "address": "6714 N NORTHWEST HWY",
+      "lat": 42.0030199676,
+      "lon": -87.816762206,
+      "zip": "60631",
+      "citation": {
+        "id": "violation-building-group-13589",
+        "sourceRowId": "7348831",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277348831%27",
+        "recordDate": "2025-06-16T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation; extent of building vacancy not specified",
+        "sourceAsOf": "2025-06-17T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "B3-1",
+        "zoneType": 1,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:19.780Z",
+        "recordUpdatedAt": "2024-10-30T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 1
+    },
+    {
+      "id": "violation-building-group-14919",
+      "address": "8 E CONGRESS PKWY",
+      "lat": 41.8757607038,
+      "lon": -87.6273441965,
+      "zip": "60605",
+      "citation": {
+        "id": "violation-building-group-14919",
+        "sourceRowId": "7529062",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277529062%27",
+        "recordDate": "2026-08-12T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: ENTIRE PROPERTY PROPERTY MUST BE REGISTERED VACANT WITH THE DEPARTMENT OF BUILDINGS. 14X-12-1205.5.7",
+        "sourceAsOf": "2026-08-12T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "DX-16",
+        "zoneType": 7,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:18.870Z",
+        "recordUpdatedAt": "2022-09-01T16:00:53.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "Red Line Extension (RLE) TIF (T-186)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-16582",
+      "address": "1948 S ST LOUIS AVE",
+      "lat": 41.8539413991,
+      "lon": -87.7125484291,
+      "zip": "60623",
+      "citation": {
+        "id": "violation-building-group-16582",
+        "sourceRowId": "6696987",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276696987%27",
+        "recordDate": "2021-10-22T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: REGISTER VACANT BUILDING",
+        "sourceAsOf": "2021-10-22T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "POS-2",
+        "zoneType": 12,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:19.849Z",
+        "recordUpdatedAt": "2021-10-27T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "Ogden/Pulaski TIF (T-161)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 9
+    },
+    {
+      "id": "violation-building-group-16702",
+      "address": "2540 S WABASH AVE",
+      "lat": 41.8461990881,
+      "lon": -87.6254884473,
+      "zip": "60616",
+      "citation": {
+        "id": "violation-building-group-16702",
+        "sourceRowId": "7147889",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277147889%27",
+        "recordDate": "2024-04-11T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 2 STORY COMMERCIAL BUILDING REGISTER VACANT COMMERCIAL BUILDING",
+        "sourceAsOf": "2024-04-11T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "PD 1496",
+        "zoneType": 5,
+        "pdNum": 1496,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:23.700Z",
+        "recordUpdatedAt": "2025-03-20T21:19:38.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "Bronzeville TIF (T-61)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 5
+    },
+    {
+      "id": "violation-building-group-17481",
+      "address": "3140 S CANAL ST",
+      "lat": 41.8369331207,
+      "lon": -87.6378713308,
+      "zip": "60616",
+      "citation": {
+        "id": "violation-building-group-17481",
+        "sourceRowId": "7396553",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277396553%27",
+        "recordDate": "2025-10-03T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: VACANT SECURE 3 STORY MASONRY BUILDING.",
+        "sourceAsOf": "2025-10-03T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "C2-3",
+        "zoneType": 2,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:23.833Z",
+        "recordUpdatedAt": "2026-03-12T17:17:38.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "Red Line Extension (RLE) TIF (T-186)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-19537",
+      "address": "6252 S WHIPPLE ST",
+      "lat": 41.7792855395,
+      "lon": -87.6996394091,
+      "zip": "60629",
+      "citation": {
+        "id": "violation-building-group-19537",
+        "sourceRowId": "6897028",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276897028%27",
+        "recordDate": "2023-01-09T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: SOUTH ELEVATION / COMMERCIAL SPACES -  UNOCCUPIED AND VACANT.",
+        "sourceAsOf": "2023-01-09T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "B1-1",
+        "zoneType": 1,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:23.831Z",
+        "recordUpdatedAt": "2024-11-13T17:09:38.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": true,
+          "name": "63rd Street (SSA #3)",
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 9
+    },
+    {
+      "id": "violation-building-group-20022",
+      "address": "6700 S MERRILL AVE",
+      "lat": 41.7733947289,
+      "lon": -87.5729716092,
+      "zip": "60649",
+      "citation": {
+        "id": "violation-building-group-20022",
+        "sourceRowId": "7285600",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277285600%27",
+        "recordDate": "2025-01-31T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 6704, 6706 AND 6708 IS VACANT AND BOARDED.",
+        "sourceAsOf": "2025-01-31T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RM-5",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:24.476Z",
+        "recordUpdatedAt": "2021-10-27T13:43:54.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-20643",
+      "address": "2534 E 76TH ST",
+      "lat": 41.7573301304,
+      "lon": -87.5625583195,
+      "zip": "60649",
+      "citation": {
+        "id": "violation-building-group-20643",
+        "sourceRowId": "7083906",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277083906%27",
+        "recordDate": "2023-12-07T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: APROX. 75% OF THE BUILDING IS CURRENTLY VACANT AND BOARDED.",
+        "sourceAsOf": "2023-12-07T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:24.758Z",
+        "recordUpdatedAt": "2026-08-26T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-21450",
+      "address": "9108 S BRANDON AVE",
+      "lat": 41.7298033419,
+      "lon": -87.5470699773,
+      "zip": "60617",
+      "citation": {
+        "id": "violation-building-group-21450",
+        "sourceRowId": "7171508",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277171508%27",
+        "recordDate": "2024-05-30T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: BUILDING APPEARS TO BE VACANT.",
+        "sourceAsOf": "2024-05-30T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-2",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:22:54.958Z",
+        "recordUpdatedAt": "2025-02-19T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": true,
+          "name": "South Chicago CCSA Corridor",
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "South Chicago TIF (T-93)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-26006",
+      "address": "8739 S BEVERLY AVE",
+      "lat": 41.7346861997,
+      "lon": -87.6717382535,
+      "zip": "60620",
+      "citation": {
+        "id": "violation-building-group-26006",
+        "sourceRowId": "7176328",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277176328%27",
+        "recordDate": "2024-06-11T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 8735 IS VACANT AND BOARDED. REGSTER VACNAT PART OF THE BUILDING.",
+        "sourceAsOf": "2024-06-11T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:25.235Z",
+        "recordUpdatedAt": "2026-06-30T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-320980",
+      "address": "5045 S JUSTINE ST",
+      "lat": 41.8018223314,
+      "lon": -87.6634274433,
+      "zip": "60609",
+      "citation": {
+        "id": "violation-building-group-320980",
+        "sourceRowId": "7048963",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277048963%27",
+        "recordDate": "2023-09-27T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: INSURE VACANT PROPERTY.",
+        "sourceAsOf": "2023-09-27T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:25.409Z",
+        "recordUpdatedAt": "2025-06-18T17:35:55.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 9
+    },
+    {
+      "id": "violation-building-group-330570",
+      "address": "5346 S PEORIA ST",
+      "lat": 41.7964497641,
+      "lon": -87.6478211123,
+      "zip": "60609",
+      "citation": {
+        "id": "violation-building-group-330570",
+        "sourceRowId": "7294383",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277294383%27",
+        "recordDate": "2025-02-20T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: VACANT BUILDING / NOT REGISTERED AND OR PROPERLY SECURED.",
+        "sourceAsOf": "2025-02-20T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-3",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:25.694Z",
+        "recordUpdatedAt": "2025-12-01T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 5
+    },
+    {
+      "id": "violation-building-group-348192",
+      "address": "5725 S LAFLIN ST",
+      "lat": 41.7896561485,
+      "lon": -87.6618873906,
+      "zip": "60636",
+      "citation": {
+        "id": "violation-building-group-348192",
+        "sourceRowId": "7527966",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277527966%27",
+        "recordDate": "2026-08-06T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: REGISTER VACANT BUILDING AND KEEP SECURE.",
+        "sourceAsOf": "2026-08-06T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-3",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:25.937Z",
+        "recordUpdatedAt": "2021-10-27T13:45:01.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 7
+    },
+    {
+      "id": "violation-building-group-394989",
+      "address": "7047 S MERRILL AVE",
+      "lat": 41.7666876687,
+      "lon": -87.5725052301,
+      "zip": "60649",
+      "citation": {
+        "id": "violation-building-group-394989",
+        "sourceRowId": "7137865",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277137865%27",
+        "recordDate": "2024-03-21T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 7043, 7045 AND 7047 APT 106 / UNITS ARE VACANT BUT MANY HAVE SQUATTERS.",
+        "sourceAsOf": "2024-03-21T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RM-5",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:26.121Z",
+        "recordUpdatedAt": "2021-10-27T13:43:54.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-408072",
+      "address": "2437 E 74TH ST",
+      "lat": 41.7607118769,
+      "lon": -87.5649522249,
+      "zip": "60649",
+      "citation": {
+        "id": "violation-building-group-408072",
+        "sourceRowId": "7453820",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277453820%27",
+        "recordDate": "2026-02-19T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 2435  IS VACANT AND BOARDED. 14X-3-301.3",
+        "sourceAsOf": "2026-02-19T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:26.384Z",
+        "recordUpdatedAt": "2026-08-26T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-421954",
+      "address": "2814 E 78TH ST",
+      "lat": 41.7537849424,
+      "lon": -87.5564288124,
+      "zip": "60649",
+      "citation": {
+        "id": "violation-building-group-421954",
+        "sourceRowId": "7339395",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277339395%27",
+        "recordDate": "2025-05-12T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: SECURE AND REGISTER VACANT BUILDING.14X-12-1205.5.4",
+        "sourceAsOf": "2025-05-12T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:26.651Z",
+        "recordUpdatedAt": "2026-08-26T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-426132",
+      "address": "7840 S WESTERN AVE",
+      "lat": 41.7507041586,
+      "lon": -87.6830116583,
+      "zip": "60652",
+      "citation": {
+        "id": "violation-building-group-426132",
+        "sourceRowId": "6896512",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276896512%27",
+        "recordDate": "2023-01-06T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: MULTIPLE COMMERCIAL  SPACES -  VACANT AT TTIME OF INSPECTION.",
+        "sourceAsOf": "2023-01-06T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "B3-1",
+        "zoneType": 1,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:26.902Z",
+        "recordUpdatedAt": "2021-10-27T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "Greater Southwest Industrial (East) TIF (T-66)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 2
+    },
+    {
+      "id": "violation-building-group-467148",
+      "address": "8803 S HARVARD AVE",
+      "lat": 41.7342915136,
+      "lon": -87.6329527447,
+      "zip": "60620",
+      "citation": {
+        "id": "violation-building-group-467148",
+        "sourceRowId": "7123684",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277123684%27",
+        "recordDate": "2024-02-17T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: REAR RESIDENTIAL BUILDING - VACANT AND BOARDED.",
+        "sourceAsOf": "2024-09-10T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-2",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:27.050Z",
+        "recordUpdatedAt": "2022-07-11T20:19:10.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 8
+    },
+    {
+      "id": "violation-building-group-493349",
+      "address": "10239 S YALE AVE",
+      "lat": 41.7077505153,
+      "lon": -87.6293825204,
+      "zip": "60628",
+      "citation": {
+        "id": "violation-building-group-493349",
+        "sourceRowId": "7108584",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277108584%27",
+        "recordDate": "2024-01-25T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: PROVIDE LIABILITY INSURANCE FOR VACANT PROPERTY.",
+        "sourceAsOf": "2024-01-25T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-2",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:27.350Z",
+        "recordUpdatedAt": "2026-03-17T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 5
+    },
+    {
+      "id": "violation-building-group-496244",
+      "address": "10169 S WINSTON AVE",
+      "lat": 41.7093417995,
+      "lon": -87.6553857393,
+      "zip": "60643",
+      "citation": {
+        "id": "violation-building-group-496244",
+        "sourceRowId": "7397544",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277397544%27",
+        "recordDate": "2025-10-03T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: EAS ELEVATION / 10168 S. VINCENNES IS VACANT AND BOARDED. BUILDING NEEDS TO BE REGISTERED AS SUCH.",
+        "sourceAsOf": "2025-10-03T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "C1-1",
+        "zoneType": 2,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:27.629Z",
+        "recordUpdatedAt": "2025-12-11T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-512950",
+      "address": "57 W 109TH ST",
+      "lat": 41.6960920305,
+      "lon": -87.625404882,
+      "zip": "60628",
+      "citation": {
+        "id": "violation-building-group-512950",
+        "sourceRowId": "6923422",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276923422%27",
+        "recordDate": "2023-03-03T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: REAR COACH HOUSE -  NOT REGISTERED AS VACANT.",
+        "sourceAsOf": "2023-03-03T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RS-3",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:27.916Z",
+        "recordUpdatedAt": "2025-12-01T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": true,
+          "name": "107th/Halsted TIF (T-176)",
+          "unknown": false
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 6
+    },
+    {
+      "id": "violation-building-group-535236",
+      "address": "214 E 121ST PL",
+      "lat": 41.6736546606,
+      "lon": -87.6170473326,
+      "zip": "60628",
+      "citation": {
+        "id": "violation-building-group-535236",
+        "sourceRowId": "6832087",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276832087%27",
+        "recordDate": "2022-08-09T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 220/18 E 121PL / VACANT APT - 1ST FL OPEN",
+        "sourceAsOf": "2022-08-09T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:28.234Z",
+        "recordUpdatedAt": "2025-05-06T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-535238",
+      "address": "232 E 121ST PL",
+      "lat": 41.6736642921,
+      "lon": -87.6163892424,
+      "zip": "60628",
+      "citation": {
+        "id": "violation-building-group-535238",
+        "sourceRowId": "6832168",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%276832168%27",
+        "recordDate": "2022-08-04T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: 228/APT 2 VACANT - AND OPEN",
+        "sourceAsOf": "2022-08-04T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": 0,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-data-portal-zoning",
+        "label": "City of Chicago Data Portal zoning boundaries",
+        "url": "https://data.cityofchicago.org/d/dj47-wfun",
+        "retrievedAt": "2026-09-09T02:24:28.535Z",
+        "recordUpdatedAt": "2025-05-06T00:00:00.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 4
+    },
+    {
+      "id": "violation-building-group-649715",
+      "address": "9158 S DAUPHIN AVE",
+      "lat": 41.72766223,
+      "lon": -87.6033956073,
+      "zip": "60619",
+      "citation": {
+        "id": "violation-building-group-649715",
+        "sourceRowId": "7339399",
+        "sourceUrl": "https://data.cityofchicago.org/resource/22u3-xenr.json?%24where=id%3D%277339399%27",
+        "recordDate": "2025-05-13T00:00:00.000Z",
+        "status": "OPEN",
+        "scope": "Vacancy citation: SECURE AND REGISTED VACANT BUILDING.14X-12-1205.5.4",
+        "sourceAsOf": "2025-05-13T00:00:00.000Z",
+        "retrievedAt": "2026-09-08T20:14:55.499Z"
+      },
+      "zoning": {
+        "status": "resolved",
+        "district": "RT-4",
+        "zoneType": 4,
+        "pdNum": null,
+        "pmdSubArea": null
+      },
+      "zoningSource": {
+        "id": "chicago-arcgis-zoning",
+        "label": "City of Chicago ArcGIS zoning boundaries",
+        "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+        "retrievedAt": "2026-09-09T02:24:28.444Z",
+        "recordUpdatedAt": "2025-12-08T20:25:11.000Z"
+      },
+      "overlays": {
+        "ssa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "ccsa": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        },
+        "tif": {
+          "present": false,
+          "name": null,
+          "unknown": true
+        },
+        "nof": {
+          "present": false,
+          "name": null,
+          "unknown": false
+        }
+      },
+      "incentiveCount": 6
+    }
+  ]
+}
