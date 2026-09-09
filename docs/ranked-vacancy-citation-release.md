@@ -36,4 +36,15 @@ Source ingestion remains an operator-reviewed process. Before a later release, r
 
 Verification for this release: 301 focused tests passed, covering aggregation, evidence provenance, ranking, CSV, cards, source exclusions, fail-closed loading, and parcel identity. All nine files passed the actual production loaders, with existing parcel identities still available. A complete before/after comparison confirmed that all original rows remained and exactly one gained citation evidence.
 
-Production smoke case: existing building, retail/service, CTA rail, ZIP 60623. The added 1948 S ST LOUIS AVE candidate ranks tenth in the reviewed data and carries its October 22, 2021 citation. Deployment and browser verification are recorded below when complete.
+Production smoke case: existing building, retail/service, CTA rail, ZIP 60623. The added 1948 S ST LOUIS AVE candidate ranks tenth and carries its October 22, 2021 citation.
+
+## Production verification — September 8, 2026
+
+- Deployed code revision: `5086828`, branch `feat/vacancy-violation-signals` (pushed; not merged to main).
+- Deployment: `dpl_AP4Mw5FkykHNz4Sax5X1W4pjeJZZ`, `https://seccc-incentive-explorer-3cslken84.vercel.app`.
+- The production build completed successfully, including TypeScript and 342 static pages. The existing Mapbox named-export warning remains unrelated to this release.
+- Authenticated pre-promotion HTTP checks verified the new candidate, date, scope, exact citation link, and derived build ID.
+- Promotion completed; inspecting `https://chicagoincentiveexplorer.com` resolved to that deployment with READY status.
+- A real browser on the live domain rendered 1948 S St Louis Ave at rank 10 with citation `6696987`, source date `2021-10-22`, OPEN status, and the scope/occupancy qualification. The existing private-access session continued to work.
+- The browser's CSV download contained 20 rows, the same candidate at rank 10, and matching source name, date, status, scope, and exact City citation URL. The rendered card was visually inspected.
+- All 18 universe/parcel-sidecar checksums matched their manifests. Actual production loaders read all nine ZIPs, 31,304 candidates, and 6,592 precomputed resolved parcel identities.
