@@ -15,8 +15,8 @@ import {
  * loadStaticOwnerClusters guard for public/data/corridor-owners.json.
  */
 describe("loadOwnerClusterGeoFile", () => {
-  it("loads the committed fixture with the documented shape", () => {
-    const fc = loadOwnerClusterGeoFile();
+  it("loads the committed fixture with the documented shape", async () => {
+    const fc = await loadOwnerClusterGeoFile();
     expect(fc).not.toBeNull();
     expect(fc!.type).toBe("FeatureCollection");
     expect(typeof fc!.generatedAt).toBe("string");
@@ -33,8 +33,8 @@ describe("loadOwnerClusterGeoFile", () => {
     expect(typeof feature.properties.vacant).toBe("boolean");
   });
 
-  it("every fixture feature carries a 5-digit zip matching its cluster's parcels", () => {
-    const fc = loadOwnerClusterGeoFile()!;
+  it("every fixture feature carries a 5-digit zip matching its cluster's parcels", async () => {
+    const fc = (await loadOwnerClusterGeoFile())!;
     for (const feature of fc.features) {
       expect(feature.properties.zip).toMatch(/^\d{5}$/);
     }

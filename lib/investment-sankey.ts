@@ -350,19 +350,21 @@ export function buildFunderFlow(
   };
 }
 
-// ── Server-only loader (fs) ───────────────────────────────────────────────────
+// ── Server-only loader ────────────────────────────────────────────────────────
 
 /**
  * Load one community's funder→program→recipient flow from the committed export.
  * Returns null when the export is absent (loadCommunityInvestment() → null) so a
- * route degrades to a clean empty state instead of throwing. Server-only —
- * touches `node:fs` via loadCommunityInvestment. Mirrors loadInvestmentAnalysis.
+ * route degrades to a clean empty state instead of throwing. Server-only and
+ * async — loadCommunityInvestment reads through lib/private-data.ts (local file
+ * in dev/tests/CI, private Vercel Blob in production). Mirrors
+ * loadInvestmentAnalysis.
  */
-export function loadFunderFlow(
+export async function loadFunderFlow(
   communityArea: string,
   opts?: { topFunders?: number; topRecipients?: number },
-): FunderFlow | null {
-  const data = loadCommunityInvestment();
+): Promise<FunderFlow | null> {
+  const data = await loadCommunityInvestment();
   if (!data) return null;
   const mine = data.records.filter((r) => r.communityArea === communityArea);
   return buildFunderFlow(mine, communityArea, opts);

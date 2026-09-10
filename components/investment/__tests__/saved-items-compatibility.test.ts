@@ -27,8 +27,8 @@ const EXPECTED_RECIPIENT = "START EARLY";
 const EXPECTED_FUNDER = "Arie and Ida Crown Memorial";
 
 describe("saved-items compatibility across PR1's identity change", () => {
-  it("the pre-PR1 baseline id is still present in the current committed export, pointing at the SAME grant", () => {
-    const data = loadCommunityInvestment();
+  it("the pre-PR1 baseline id is still present in the current committed export, pointing at the SAME grant", async () => {
+    const data = await loadCommunityInvestment();
     expect(data).not.toBeNull();
     const record = data!.records.find((r) => r.id === LEGACY_ID);
     expect(record, `expected ${LEGACY_ID} to still exist in the committed export`).toBeDefined();
@@ -44,7 +44,7 @@ describe("saved-items compatibility across PR1's identity change", () => {
       window.localStorage.clear();
     });
 
-    it("a shortlist entry saved under the legacy id round-trips through readShortlist/isRecordSaved", () => {
+    it("a shortlist entry saved under the legacy id round-trips through readShortlist/isRecordSaved", async () => {
       // Simulates an admin who saved this record to their working set BEFORE
       // PR1 shipped stableId — the shortlist only ever stored `id`.
       toggleShortlistRecord({
@@ -65,7 +65,7 @@ describe("saved-items compatibility across PR1's identity change", () => {
 
       // The live dataset record under that SAME id still describes the same
       // grant, so the saved row is not a stale reference to a renumbered record.
-      const liveRecord = loadCommunityInvestment()!.records.find((r) => r.id === LEGACY_ID)!;
+      const liveRecord = (await loadCommunityInvestment())!.records.find((r) => r.id === LEGACY_ID)!;
       expect(saved!.recipient).toBe(liveRecord.recipient);
       expect(saved!.funderName).toBe(liveRecord.funderName);
     });

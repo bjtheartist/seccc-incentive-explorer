@@ -36,8 +36,8 @@ vi.mock("@/lib/community-investment", async (importOriginal) => ({
 
 vi.mock("@/lib/investment-analysis", () => ({
   loadInvestmentIndex: vi.fn(),
-  loadMajorDevelopments: vi.fn(() => ({ count: 0, totalAnnounced: 0, developments: [] })),
-  loadIllinoisArtsCouncilAwards: vi.fn(() => null),
+  loadMajorDevelopments: vi.fn(async () => ({ count: 0, totalAnnounced: 0, developments: [] })),
+  loadIllinoisArtsCouncilAwards: vi.fn(async () => null),
 }));
 
 vi.mock("@/lib/investment-source-coverage", () => ({
@@ -65,8 +65,8 @@ const mockLoadCommunityInvestmentResult = vi.mocked(loadCommunityInvestmentResul
  * directly.
  */
 function syncInvestmentLoaders(): void {
-  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(() => {
-    const data = mockLoadCommunityInvestment();
+  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(async () => {
+    const data = await mockLoadCommunityInvestment();
     return data ? { ok: true, data } : { ok: false, reason: "export_missing" };
   });
 }
@@ -146,9 +146,9 @@ async function render(): Promise<string> {
 describe("/investment landing page — meta-driven contracts (Sol gate blocker 5)", () => {
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
-    mockLoadCommunityInvestment.mockReset().mockReturnValue(FIXTURE_INVESTMENT);
+    mockLoadCommunityInvestment.mockReset().mockResolvedValue(FIXTURE_INVESTMENT);
     syncInvestmentLoaders();
-    mockLoadInvestmentIndex.mockReset().mockReturnValue(FIXTURE_INDEX);
+    mockLoadInvestmentIndex.mockReset().mockResolvedValue(FIXTURE_INDEX);
   });
 
   it("renders the corrected headline — 'Where award recipients are located', never 'Where the money went'", async () => {
@@ -247,14 +247,14 @@ describe("/investment landing — a broken export is not reported as an ungenera
 
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
-    mockLoadInvestmentIndex.mockReset().mockReturnValue(null);
+    mockLoadInvestmentIndex.mockReset().mockResolvedValue(null);
     mockLoadCommunityInvestment.mockReset();
   });
 
   it("a malformed export renders the unavailability state instead", async () => {
     mockLoadCommunityInvestmentResult
       .mockReset()
-      .mockReturnValue({ ok: false, reason: "export_invalid_json" });
+      .mockResolvedValue({ ok: false, reason: "export_invalid_json" });
 
     const html = await render();
 
@@ -266,7 +266,7 @@ describe("/investment landing — a broken export is not reported as an ungenera
   it("a genuinely missing export keeps the accurate 'not generated yet' instruction", async () => {
     mockLoadCommunityInvestmentResult
       .mockReset()
-      .mockReturnValue({ ok: false, reason: "export_missing" });
+      .mockResolvedValue({ ok: false, reason: "export_missing" });
 
     const html = await render();
 

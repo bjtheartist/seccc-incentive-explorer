@@ -67,9 +67,9 @@ export default async function InvestmentComparePage({ searchParams }: { searchPa
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
   const areas = parseAreas(paramValue(sp.areas));
-  const analyses = areas
-    .map((name) => loadInvestmentAnalysis(name))
-    .filter((a): a is CommunityInvestmentAnalysis => a != null);
+  const analyses = (await Promise.all(areas.map((name) => loadInvestmentAnalysis(name)))).filter(
+    (a): a is CommunityInvestmentAnalysis => a != null,
+  );
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
