@@ -32,10 +32,13 @@ export function statements(input: string) {
   return parts;
 }
 async function main() {
-  const ddl = await readFile(
-    new URL("../../lib/grants/schema.sql", import.meta.url),
-    "utf8",
-  );
+  const ddl = (
+    await Promise.all(
+      ["catalog-schema.sql", "schema.sql", "catalog-links.sql"].map((file) =>
+        readFile(new URL(`../../lib/grants/${file}`, import.meta.url), "utf8"),
+      ),
+    )
+  ).join("\n");
   await sql.transaction(
     statements(ddl).map((statement) => sql.query(statement, [])),
   );

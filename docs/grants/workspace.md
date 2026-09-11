@@ -8,6 +8,8 @@ This adds `/admin/grants` to Chicago Incentive Explorer. Staff maintain program 
 - [x] Separate evergreen programs from dated rounds. Timing categories: one-time, recurring/rolling, recurring with windows, unknown.
 - [x] Distinguish cash grants, reimbursements, tax benefits, loans and in-kind support.
 - [x] Search/filter opportunities; maintain owners, tags, evidence, verification dates and next-review dates.
+- [x] Merge the imported 30,263-record inventory; browse with server pagination and match saved questionnaire answers to a bounded set of source leads.
+- [x] Idempotent source-to-review handoff; preserve staff edits and invalidate linked reviews when imported source payloads change.
 - [x] Four-step questionnaire, following Site Matchmaker: save a shared business profile and produce a narrow, explained shortlist.
 - [x] Require business name, business type, industry, primary goal and intake date in the questionnaire; capture an optional target funding date.
 - [x] Persist business and project facts, unknowns, match rationale, questions and next action.
@@ -21,7 +23,7 @@ Based on Billy's September 11 request and the local September 10 `grants-matchma
 
 ## Operating the workspace
 
-1. Maintain programs and assign a responsible team member. Archive obsolete records rather than rewriting prior-year rounds.
+1. Use **Funding database** to search the imported inventory by source, record type and timing. It displays 25 records per page. **Start staff review** preserves the source and creates an unverified round, using the existing program when its identity is known. Maintain programs and assign a responsible team member. Archive obsolete records rather than rewriting prior-year rounds.
 2. Add current application rounds with source evidence, dates, amount, eligibility/cost criteria and a next review date. Blank criteria remain unknown. “Any” must be supported by the source.
 3. Add sources. A program source checks for changed text; a directory source also extracts funding/application links. Staff review all findings. Creating a program from a lead does not mark any round verified.
 4. Use **Find funding matches** or **Start questionnaire**. Capture the five required core fields, then role/entity/stage, location and confirmed zones, expenses, funding preferences, reimbursement readiness, budget and target date. Use Unknown for facts requiring confirmation. Existing incomplete profiles can be completed with Update answers; preserve the original intake date. Use the facts-source field for confirmation and missing information; do not store bank statements, SSNs or client medical information here.
@@ -54,6 +56,10 @@ Launch sequence: approve the blocked preview credential configuration; create an
 
 Source scans are public HTML/text checks, not web-wide search or browser automation. Each run claims at most six due sources; each source has a 20-second total fetch budget, at most two redirects, a 1.5 MB response limit, a 100,000-character stored text limit and at most 80 candidate links. HTTP blocks, PDFs, JavaScript-only pages and oversize responses require manual review. No access protections are bypassed. Sources check weekly by default, configurable from one to 90 days. A failed source retries on the next day. Larger watchlists need a higher cron cadence or a durable queue.
 
-The main workspace currently loads the program/round/profile/match catalog together for the pilot. The review queue shows the latest 250 pending findings; activity shows the latest 100 database entries (40 rendered). Add server pagination before substantially increasing the catalog. No probability-of-award scoring, funder eligibility certification, document storage, CRM synchronization or automatic outbound communication is included.
+The 30,263 imported source records are queried on the server with indexed search and pages of 25. Questionnaire queries select up to five additional source leads; the UI fills only the remaining slots after maintained matches, keeping the combined list to five. The smaller staff-maintained program/round/profile/match catalog is still loaded together for the pilot. The review queue shows the latest 250 pending findings; activity shows the latest 100 database entries (40 rendered). Add server pagination before substantially increasing the catalog. No probability-of-award scoring, funder eligibility certification, document storage, CRM synchronization or automatic outbound communication is included.
 
 Prior data versions and source snapshots are preserved without an automatic retention deletion. Define the team's retention policy before large-scale ingestion. Exports contain the catalog and recent internal records and are restricted to staff. They are not a full database backup or a complete snapshot/audit-history export.
+
+## Merged source inventory
+
+See `merge-verification.md` for source counts, merge lineage, import commands and data-quality findings. The imported source snapshot remains distinct from staff-verified application rounds. Foundation filing text and standing program listings do not establish current intake. The configured source scanner still monitors its explicit watchlist; bulk-source acquisition scripts are operator-run snapshots, not a newly activated 30,000-source daily job.

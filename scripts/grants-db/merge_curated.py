@@ -3,7 +3,7 @@
 import json, re, csv, sys, glob, os, datetime, collections
 
 S = os.path.dirname(os.path.abspath(__file__))
-WT = "/Users/billyndizeye/seccc-wt/grants-db"
+WT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 AS_OF = datetime.date(2026, 9, 11)
 CLOSING_SOON_DAYS = 21
 

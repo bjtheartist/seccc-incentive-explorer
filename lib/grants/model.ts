@@ -71,6 +71,7 @@ export const programSchema = z.object({
 export const roundSchema = z
   .object({
     programId: name,
+    catalogId: z.string().max(200).nullable().default(null),
     name,
     availability: z.enum(["unknown", "announced", "open", "rolling", "closed"]),
     opensAt: instant.default(null),

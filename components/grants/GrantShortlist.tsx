@@ -1,5 +1,6 @@
 "use client";
 import { ArrowUpRight } from "lucide-react";
+import { CatalogSuggestionsPanel } from "./FundingCatalog";
 import {
   buildGrantShortlist,
   type FundingCandidate,
@@ -18,11 +19,13 @@ export function GrantShortlist({
   workspace,
   now,
   onReview,
+  onReviewImported,
 }: {
   applicant: GrantRecord<Applicant>;
   workspace: WorkspaceData;
   now: Date;
   onReview: (candidate: FundingCandidate, match?: GrantRecord<Match>) => void;
+  onReviewImported: (programId: string, roundId: string) => Promise<void>;
 }) {
   const results = buildGrantShortlist(
     applicant.data,
@@ -194,6 +197,13 @@ export function GrantShortlist({
           </div>
         </section>
       )}
+      <CatalogSuggestionsPanel
+        key={`${applicant.id}-${applicant.version}`}
+        applicant={applicant}
+        limit={Math.max(0, 5 - results.candidates.length)}
+        canEdit={canEdit}
+        onReview={onReviewImported}
+      />
       {results.totalRelevant > 5 && (
         <p className="mt-4 text-sm text-slate-500">
           Showing the five strongest of {results.totalRelevant} possible fits.

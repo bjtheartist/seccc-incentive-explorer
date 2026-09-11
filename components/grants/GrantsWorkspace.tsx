@@ -20,6 +20,7 @@ import { ConciergePageContextBridge } from "@/components/concierge/SiteConcierge
 import { RecordEditor, type EditorTarget } from "./RecordEditor";
 import { FundingQuestionnaire } from "./FundingQuestionnaire";
 import { GrantShortlist } from "./GrantShortlist";
+import { FundingCatalog } from "./FundingCatalog";
 import {
   cadenceLabels,
   fundingLabels,
@@ -35,10 +36,17 @@ import {
 } from "@/lib/grants/model";
 
 type View =
-  "overview" | "opportunities" | "queue" | "businesses" | "sources" | "team";
+  | "overview"
+  | "opportunities"
+  | "catalog"
+  | "queue"
+  | "businesses"
+  | "sources"
+  | "team";
 const views = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "opportunities", label: "Opportunities", icon: Library },
+  { id: "catalog", label: "Funding database", icon: Search },
   { id: "queue", label: "Review queue", icon: Inbox },
   { id: "businesses", label: "Businesses & matches", icon: Users },
   { id: "sources", label: "Sources", icon: Radio },
@@ -184,6 +192,18 @@ export function GrantsWorkspace({ initial }: { initial: WorkspaceData }) {
             r.data.programId === p.id && roundState(r.data, now) === status,
         )),
   );
+  const openImportedReview = async (programId: string) => {
+    await refresh();
+    setView("opportunities");
+    setSearch("");
+    setCadence("");
+    setFunding("");
+    setStatus("");
+    setActiveProgram(programId);
+    setNotice(
+      "Imported source is linked to a staff review. Confirm eligibility, dates and costs before marking the round verified.",
+    );
+  };
   const editMatch = (r: GrantRecord<Round>, m?: GrantRecord<Match>) => {
     if (!applicant) return;
     const s = screenMatch(applicant.data, r.data, now);
@@ -291,15 +311,17 @@ export function GrantsWorkspace({ initial }: { initial: WorkspaceData }) {
               <p>
                 {view === "overview"
                   ? "Discover opportunities. Keep the evidence current. Find the right fit."
-                  : view === "opportunities"
-                    ? "One program, every round, a clear source of truth."
-                    : view === "queue"
-                      ? "New links and source changes, ready for a human review."
-                      : view === "businesses"
-                        ? "Answer a few questions. Save the business profile. Find a focused shortlist."
-                        : view === "sources"
-                          ? "Maintain the watchlist that powers discovery and change detection."
-                          : "A shared workspace with accountable ownership and a visible history."}
+                  : view === "catalog"
+                    ? "Search imported opportunities, program listings and foundation profiles."
+                    : view === "opportunities"
+                      ? "One program, every round, a clear source of truth."
+                      : view === "queue"
+                        ? "New links and source changes, ready for a human review."
+                        : view === "businesses"
+                          ? "Answer a few questions. Save the business profile. Find a focused shortlist."
+                          : view === "sources"
+                            ? "Maintain the watchlist that powers discovery and change detection."
+                            : "A shared workspace with accountable ownership and a visible history."}
               </p>
             </div>
             {canEdit && (
@@ -897,6 +919,9 @@ export function GrantsWorkspace({ initial }: { initial: WorkspaceData }) {
               )}
             </div>
           )}
+          {view === "catalog" && (
+            <FundingCatalog canEdit={canEdit} onReview={openImportedReview} />
+          )}
           {view === "businesses" && (
             <>
               <div className="grant-filters">
@@ -938,6 +963,7 @@ export function GrantsWorkspace({ initial }: { initial: WorkspaceData }) {
                   applicant={applicant}
                   workspace={workspace}
                   now={now}
+                  onReviewImported={openImportedReview}
                   onReview={(candidate, match) =>
                     editMatch(candidate.round, match)
                   }

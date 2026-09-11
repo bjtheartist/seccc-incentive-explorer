@@ -284,6 +284,85 @@ async function main() {
   await expect(
     page.getByRole("heading", { name: "Kenneth Vanderbilt" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Funding database", exact: true })
+    .click();
+  await expect(page.getByText("30,263", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("catalog-row")).toHaveCount(25);
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await expect(page.getByText(/Page 2 of/)).toBeVisible();
+  await page.getByLabel("Funding database source").selectOption("curated");
+  await page.getByLabel("Search funding database").fill("SBIF");
+  await page
+    .getByRole("button", { name: "Search database", exact: true })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Small Business Improvement Fund (SBIF)",
+      exact: true,
+    })
+    .click();
+  await expect(
+    dialog.getByRole("heading", {
+      name: "Small Business Improvement Fund (SBIF)",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await dialog
+    .getByRole("button", { name: /^(Start staff review|Open staff review)$/ })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Small Business Improvement Fund",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const linked = await (
+    await context.request.get(
+      `${base}/api/admin/grants/catalog?id=chicago-sbif`,
+    )
+  ).json();
+  expect(linked.linkedProgramId).toBe("starter-sbif");
+  const merged = await (
+    await context.request.get(`${base}/api/admin/grants/workspace`)
+  ).json();
+  const imported = merged.rounds.find(
+    (r: { id: string }) => r.id === linked.linkedRoundId,
+  );
+  expect(imported.data.review).toBe("unverified");
+  expect(imported.data.closesAt).toBeNull();
+  const leadsResponse = await context.request.get(
+    `${base}/api/admin/grants/catalog?applicantId=pilot-ken`,
+  );
+  expect(leadsResponse.ok()).toBe(true);
+  const leads = await leadsResponse.json();
+  expect(leads.items.length).toBeGreaterThan(0);
+  expect(leads.items.length).toBeLessThanOrEqual(5);
+  expect(
+    leads.items.every(
+      (r: { recordType: string }) => r.recordType !== "foundation",
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Funding database", exact: true })
+    .click();
+  await expect(page.getByTestId("catalog-row")).toHaveCount(25);
+  await page.screenshot({
+    path: "output/grants/funding-database-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "output/grants/funding-database-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Sources", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Scan due sources", exact: true }),
@@ -315,7 +394,7 @@ async function main() {
   });
   expect(errors).toEqual([]);
   console.log(
-    "PASS: gate, staff UI, program/round creation, timezone inputs, second-session persistence, CSRF, questionnaire required fields and saved answers, role-sensitive shortlist, archival, pilot profile, sources, team view, mobile overflow and browser errors.",
+    "PASS: gate, staff UI, program/round creation, timezone inputs, second-session persistence, CSRF, questionnaire required fields and saved answers, role-sensitive shortlist, paginated 30,263-record funding database, source-to-review linking, landlord lead filtering, archival, pilot profile, sources, team view, mobile overflow and browser errors.",
   );
   await browser.close();
 }

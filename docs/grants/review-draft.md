@@ -4,7 +4,7 @@ Draft review text only; no PR has been opened.
 
 ## What this changes
 
-Staff can maintain grant programs and separate application rounds, keep dated source evidence, capture a business through a four-step questionnaire and review up to five explained funding matches at `/admin/grants`. Public funder pages feed a deduplicated review queue; closed or stale rounds cannot silently remain current, and changes to underlying records return affected matches for review. Existing Explorer account sign-in is reused with a separate owner/editor/viewer permission check.
+Staff can search a paginated 30,263-record funding inventory, start a source-backed review, and maintain grant programs and separate application rounds, keep dated source evidence, capture a business through a four-step questionnaire and review up to five explained funding matches at `/admin/grants`. Saved questionnaire answers also select a bounded set of imported source leads. Foundation and standing-program records stay distinct from current opportunities. Public funder pages feed a deduplicated review queue; closed or stale rounds cannot silently remain current, and changes to underlying records return affected matches for review. Existing Explorer account sign-in is reused with a separate owner/editor/viewer permission check.
 
 ## Why
 
@@ -16,11 +16,11 @@ No existing implementation issue was found. Related data-platform context: [BJT-
 
 ## Validation
 
-See `docs/grants/verification.md`. Production build, TypeScript, targeted lint, 38 tests and the real browser workflow pass. Browser smoke exercises the user-visible claims through the page and API. Postgres tests exercise persistence, constraints, history, competing edits and source processing. Auth route tests exercise anonymous, ordinary user, viewer and editor access boundaries. Fetch tests exercise DNS pinning, private-address rejection, oversize/aborted bodies and deadline handling.
+See `docs/grants/verification.md`. Production build, TypeScript, targeted lint, 48 tests and the real browser workflow pass. Browser smoke exercises the user-visible claims through the page and API. Postgres tests exercise persistence, constraints, history, competing edits and source processing. Auth route tests exercise anonymous, ordinary user, viewer and editor access boundaries. Fetch tests exercise DNS pinning, private-address rejection, oversize/aborted bodies and deadline handling.
 
 ## Migration, configuration and risks
 
-The additive grants schema and idempotent starter import are separate commands. The migration has been tested on an isolated Neon branch, not production. Required owner/cron configuration and a release sequence are documented. Hosted preview credential upload was rejected by automatic approval review and remains blocked pending user approval. Current source coverage is limited to readable public HTML/text; two tested sources need manual review. The pilot loads the catalog together; server pagination and retention policies should precede large ingestion volumes.
+The additive grants/source-inventory schemas, idempotent starter import and bulk source load are separate commands. Source completeness is not staff verification; imported-source changes withdraw linked-round verification. The import preserves existing staff records and does not truncate the inventory. The migration has been tested on an isolated Neon branch, not production. Required owner/cron configuration and a release sequence are documented. Hosted preview credential upload was rejected by automatic approval review and remains blocked pending user approval. Current source coverage is limited to readable public HTML/text; two tested sources need manual review. The pilot loads the catalog together; server pagination and retention policies should precede large ingestion volumes.
 
 ## How to test
 

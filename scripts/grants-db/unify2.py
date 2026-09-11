@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unify all sources into the Chamber's record spec: program / window / funding / applicants / uses / requirements / verification + readiness."""
 import json,glob,re,csv,os,datetime,collections
-B=os.path.dirname(os.path.abspath(__file__)); WT='/Users/billyndizeye/seccc-wt/grants-db'; OUT=os.path.join(WT,'output','grants-db'); os.makedirs(OUT,exist_ok=True)
+B=os.environ.get('GRANTS_RAW_DIR',os.path.dirname(os.path.abspath(__file__))); WT=os.path.abspath(os.path.join(os.path.dirname(__file__),'../..')); OUT=os.path.join(WT,'output','grants-db'); os.makedirs(OUT,exist_ok=True)
 TODAY=datetime.date(2026,9,11); ISO=TODAY.isoformat()
 def pd(s):
     m=re.match(r'(\d{4})-(\d{2})-(\d{2})',str(s or ''))
@@ -18,6 +18,17 @@ REIMB=re.compile(r'reimburs',re.I); MATCH=re.compile(r'\b(match(ing)?|cost[- ]sh
 ROLL=re.compile(r'\b(none|no deadline|no deadlines|any ?time|anytime|rolling|ongoing|continuous|throughout the year|year[- ]round|no specific|not applicable|n/?a)\b',re.I)
 MONTHS=re.compile(r'\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b',re.I)
 REQ_PATTERNS=[('licenses',r'\b(business license|licensed|licensure|DCFS[- ]licensed|contractor.{0,20}licensed)\b'),('taxStatus',r'\b(501\s?\(c\)\s?\(?3\)?|tax[- ]exempt|nonprofit status|for[- ]profit|good standing|property taxes? current|no (outstanding )?(city )?debt)\b'),('financialDocuments',r'\b(tax return|P&L|profit and loss|financial statements?|bank statement|projections|revenue (of|documentation)|business plan)\b'),('permits',r'\b(permit|zoning|building code)\b'),('bids',r'\b(two|2)\s+(comparable\s+)?bids\b')]
+
+INTL=re.compile(r"\b(U\.?S\.? (Mission|Embassy|Consulate)|Embassy|Consulate|USAID|Department of State|STATE, DEPARTMENT OF|Bureau of (Educational and Cultural|Democracy|International)|overseas|foreign (assistance|policy|government)|Panama|Africa|Asia|Europe|Middle East|Latin America)\b",re.I)
+LOWFED=re.compile(r"\b(Defense|DHACA|Army|Navy|Air Force|Marine Corps|NIH|National Institutes of Health|National Cancer Institute|Golden Field Office|Bureau of Land Management|Fish and Wildlife|Forest Service|NASA|NOAA|Geological Survey|Bureau of Reclamation|Federal Railroad|Federal Aviation|Federal Highway|Nuclear|Clinical Trial|R01|R21|R34|K99|Research Academy|Antarctic|Ocean|Fisheries)\b",re.I)
+LOCAL=re.compile(r"\b(Illinois|Chicago|Cook County)\b",re.I)
+def federal_relevance(base,*texts):
+    t=' '.join(x for x in texts if x); tags=[]
+    if LOCAL.search(t): return ('high' if base!='low' else 'medium'),['mentions_illinois_or_chicago']
+    if INTL.search(t): return 'low',['international']
+    if LOWFED.search(t): return 'low',['research_or_federal_agency_mission']
+    return base,tags
+
 rows=[]
 def readiness(r):
     miss=[]
@@ -69,6 +80,7 @@ for c in cur['active']:
 # ---------- 2. grants.gov ----------
 for line in open(os.path.join(B,'grantsgov_active.jsonl')):
     d=json.loads(line); e=d['eligibility']; ent=e['entityTypes']; fit=any(x in ent for x in ('small_business','for_profit','nonprofit','individual','unrestricted'))
+    rel,rtags=federal_relevance('medium' if fit else 'low',d.get('sponsor'),d.get('name'),d.get('description'),e.get('summary'))
     emit(id=d['id'],source='grants.gov',recordType='opportunity',
          program={'name':d['name'],'funder':d['sponsor'],'officialUrl':d['sourceUrl'],'applyUrl':d['applyUrl'],'fundingSource':'public','level':'Federal','opportunityNumber':d.get('opportunityNumber'),'cfda':d.get('cfda')},
          window={'status':d['status'],'opensAt':d['window'].get('opensAt'),'deadline':d['window'].get('closesAt'),'deadlineTime':None,'recurs':d['cadence'],'nextExpected':None,'label':d['window'].get('label')},
@@ -77,7 +89,7 @@ for line in open(os.path.join(B,'grantsgov_active.jsonl')):
          uses={'eligible':[],'exclusions':[],'summary':clean(d.get('description'),700)},
          requirements=req_from_text(e.get('summary'),d.get('description')),
          verification={'sourceUrl':d['sourceUrl'],'evidence':d['evidence'],'dateChecked':ISO,'checkedBy':'bulk:grants.gov','legitimacy':'official','isNew':d.get('isNew'),'newBecause':d.get('newBecause')},
-         chicagoRelevance='medium' if fit else 'low',tags=['federal','forecast' if d['status']=='scheduled' else 'posted']+[f"entity:{x}" for x in ent]+(['applicant_fit'] if fit else ['government_or_institution_only']))
+         chicagoRelevance=rel,tags=['federal','forecast' if d['status']=='scheduled' else 'posted']+rtags+[f"entity:{x}" for x in ent]+(['applicant_fit'] if fit else ['government_or_institution_only']))
 # ---------- 3. SAM ----------
 posted=collections.defaultdict(list)
 for r in rows:
@@ -101,6 +113,7 @@ for line in open(os.path.join(B,'sam_assistance_listings.jsonl')):
     types=[h.get('value') for a in (x.get('assistanceTypes') or []) for h in (a.get('hierarchy') or []) if h.get('level')==2]
     instr='grant' if any('grant' in (t or '').lower() for t in types) else ('cooperative_agreement' if any('cooperative' in (t or '').lower() for t in types) else 'other')
     fin=x.get('financial') or {}; agency=' / '.join(o.get('name','') for o in (x.get('organizationHierarchy') or [])[:2])
+    rel,rtags=federal_relevance('medium' if fit else 'low',agency,x.get('title'),x.get('objective'),(el.get('applicant') or {}).get('additionalInfo'))
     emit(id=f"sam-{pn}",source='sam.gov',recordType='standing_program',
          program={'name':x.get('title'),'funder':agency,'officialUrl':f"https://sam.gov/fal/{x.get('_id')}/view",'applyUrl':x.get('website') or f"https://sam.gov/fal/{x.get('_id')}/view",'fundingSource':'public','level':'Federal','cfda':[pn]},
          window={'status':'open' if open_now else 'standing','opensAt':None,'deadline':max([c for c in open_now if c] or [None]),'deadlineTime':None,'recurs':'recurring_scheduled' if live else 'recurring_unscheduled','nextExpected':None,'label':'open round on grants.gov' if open_now else 'no open round on grants.gov today','linkedOpportunities':[i for i,_,_ in live]},
@@ -109,7 +122,7 @@ for line in open(os.path.join(B,'sam_assistance_listings.jsonl')):
          uses={'eligible':[],'exclusions':[],'summary':clean(x.get('objective'),700)},
          requirements={**req_from_text(el.get('documentation')),'documentation':clean(el.get('documentation'),400)},
          verification={'sourceUrl':f"https://sam.gov/fal/{x.get('_id')}/view",'evidence':f"SAM.gov assistance listing, isActive=True, modified {str(x.get('modifiedDate'))[:10]}",'dateChecked':ISO,'checkedBy':'bulk:sam.gov','legitimacy':'official'},
-         chicagoRelevance='medium' if fit else 'low',tags=['federal','standing_program']+[f"entity:{x}" for x in sorted(ent)]+(['applicant_fit'] if fit else ['government_or_institution_only'])+(['open_round_now'] if open_now else []))
+         chicagoRelevance=rel,tags=['federal','standing_program']+rtags+[f"entity:{x}" for x in sorted(ent)]+(['applicant_fit'] if fit else ['government_or_institution_only'])+(['open_round_now'] if open_now else []))
 # ---------- 4. Illinois CSFA programs + NOFOs ----------
 def ent_from(s):
     s=(s or '').lower(); e=set()
