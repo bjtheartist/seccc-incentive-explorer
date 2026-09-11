@@ -1,42 +1,44 @@
-# Add an internal grants curation and matchmaking workspace
-
-Draft review text only; no PR has been opened.
-
 ## What this changes
 
-Staff can search a paginated 30,263-record funding inventory, start a source-backed review, and maintain grant programs and separate application rounds, keep dated source evidence, capture a business through a four-step questionnaire and review up to five explained funding matches at `/admin/grants`. Saved questionnaire answers also select a bounded set of imported source leads. Foundation and standing-program records stay distinct from current opportunities. Public funder pages feed a deduplicated review queue; closed or stale rounds cannot silently remain current, and changes to underlying records return affected matches for review. Existing Explorer account sign-in is reused with a separate owner/editor/viewer permission check.
+Adds a staff-gated grants workspace at `/admin/grants` using existing Explorer accounts. Staff can search a paginated funding inventory, verify application rounds, complete a four-step business questionnaire, and review up to five explained matches. Business structure is separate from NAICS business activity and derived industry sector; operators can own or lease their premises.
 
-## Why
+## Why and Linear issue
 
-The Chamber's grant research currently spans documents and individual conversations. Billy requested an internal, shared database that the team can keep current, with recurring versus time-bound opportunities, proactive discovery, and curated business matching.
+Billy requested shared, maintainable grant research and a curated matchmaker within Explorer. No dedicated implementation issue was found; related architecture context is [BJT-80](https://linear.app/bjtheartist/issue/BJT-80/data-model-expansion-property-and-corridor-intelligence-platform). This does not complete BJT-80.
 
-## Linear issue
+## Acceptance criteria checked
 
-No existing implementation issue was found. Related data-platform context: [BJT-80](https://linear.app/bjtheartist/issue/BJT-80/data-model-expansion-property-and-corridor-intelligence-platform). Acceptance criteria are documented in `docs/grants/workspace.md` and checked there; this change does not complete BJT-80.
+- [x] Owner/editor/viewer access, same-origin mutations, shared persistence, version checks, and audit history.
+- [x] Business name, legal structure, validated six-digit NAICS type, derived sector code/industry, goal, and date; unconfirmed classifications remain explicit.
+- [x] Role and premises are separate; legacy tenant and free-text records remain readable.
+- [x] Time-bound, recurring, and hybrid programs with separate rounds, evidence, and review dates.
+- [x] Indexed inventory search and pagination; source leads stay distinct from verified opportunities.
+- [x] Bounded, explained questionnaire shortlist; source changes invalidate reviewed matches.
+- [x] Public-source watchlist scanner and manual review queue, without automated outreach.
 
-## Validation
+## Validation and how to test
 
-See `docs/grants/verification.md`. Production build, TypeScript, targeted lint, 48 tests and the real browser workflow pass. Browser smoke exercises the user-visible claims through the page and API. Postgres tests exercise persistence, constraints, history, competing edits and source processing. Auth route tests exercise anonymous, ordinary user, viewer and editor access boundaries. Fetch tests exercise DNS pinning, private-address rejection, oversize/aborted bodies and deadline handling.
+54 targeted Vitest tests, TypeScript, targeted ESLint, and production build pass. The existing Mapbox named-export warning remains. `scripts/grants/browser-smoke.ts` runs against an isolated local database and exercises the staff gate, CRUD, shared sessions, CSRF, NAICS picker/derived sector, persisted answers, operator-plus-lease path, changed shortlist, 30,263-record pagination, source promotion, mobile overflow, and browser errors. `lib/grants/*.test.ts` and API route tests cover database constraints, source changes, matching, permissions, and fetch boundaries.
 
-## Migration, configuration and risks
+Sign in with a staff account, open `/admin/grants`, complete the questionnaire, select a NAICS code, and verify that industry fills automatically. Change the role or space arrangement and compare relevant leads. Search the funding database and start a review; imported records must remain unverified until staff adds evidence.
 
-The additive grants/source-inventory schemas, idempotent starter import and bulk source load are separate commands. Source completeness is not staff verification; imported-source changes withdraw linked-round verification. The import preserves existing staff records and does not truncate the inventory. The migration has been tested on an isolated Neon branch, not production. Required owner/cron configuration and a release sequence are documented. Hosted preview credential upload was rejected by automatic approval review and remains blocked pending user approval. Current source coverage is limited to readable public HTML/text; two tested sources need manual review. The pilot loads the catalog together; server pagination and retention policies should precede large ingestion volumes.
+Preview/release route: https://chicagoincentiveexplorer.com/admin/grants (production activation is tracked in the release documentation).
 
-## How to test
+## Migration, configuration, and risk
 
-Run the grants migration/seed against an isolated database with the existing auth tables, configure `GRANTS_OWNER_USER_ID`, and start the app. Confirm the gate with a signed-out browser, then sign in as the selected owner. Add a program and round, refresh in a second session, compare evidence, complete the questionnaire and verify all five required core fields. Change landlord to operator and confirm that an operator-only/landlord-only round changes the shortlist. Inspect the edit history. Run a source scan and review new links. Grant an existing test account viewer access and confirm mutation routes deny writes. Avoid production credentials in local smoke tests.
+Additive, idempotent schema migration; source inventory imports preserve existing data and staff edits. Initial 30,263-row load and explicitly selected working records are transferred separately from source code. Existing production database/auth/cron credentials are reused. Owner access is attached to an existing immutable account ID; `GRANTS_SCAN_ENABLED` enables the bounded scheduled scanner. No test credentials are uploaded. Source snapshots and past versions persist; large watchlists will need additional scheduling capacity and retention policy. Foundation filings and standing listings do not establish an open grant round.
 
-## Intentionally not included
+## Intentionally not done
 
-Public opportunity publication, automatic outreach or applications, medical/client document storage, award-probability scores, broad web crawling, and a production release.
+Public publication of internal opportunities, outbound communication, applications, medical/client document storage, award-probability scores, or automated scanning of every bulk-source record. The scanner watches the configured source list.
 
 ## Agent involvement and follow-up
 
-Codex implemented and verified this change; no subagents were used. No follow-up issues or outbound communications were created. Follow-up scope: hosted preview approval and review, reconciliation with currently deployed unmerged work, production activation, and pagination/retention as the catalog grows.
+Codex implemented and verified this change; no subagents were used. No follow-up issues were created. Follow-up scope is bulk-source refresh scheduling and retention/pagination as maintained records grow.
 
 ## Checklist
 
-- [x] User-visible behavior exercised through real page/route entry points.
-- [x] No tests assert on source text as a substitute for runtime behavior.
-- [x] New modules have production callers, except the explicit migration/seed/test tooling.
-- [x] Migrations, environment variables, data changes and verification are documented.
+- [x] User-visible claims exercised through real page/API/browser entry points named above.
+- [x] No source-text assertions substituted for runtime tests.
+- [x] Production callers exist; migration/import/transfer and test scripts are explicit operator tools.
+- [x] Migrations, environment variables, data changes, and verification documented.
