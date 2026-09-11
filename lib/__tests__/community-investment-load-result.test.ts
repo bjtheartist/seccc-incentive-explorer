@@ -1,14 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { existsSyncMock, readFileSyncMock } = vi.hoisted(() => ({
-  existsSyncMock: vi.fn(),
-  readFileSyncMock: vi.fn(),
-}));
+/**
+ * The loader reads through lib/private-data.ts now (local file first, private
+ * Vercel Blob second), so the seam this test mocks moved from the SYNC
+ * `node:fs` pair to `node:fs/promises`' `readFile`. The four failure reasons
+ * being pinned are unchanged — that is the whole point of the mock.
+ *
+ * `enoent()` is how "the file has never been generated" arrives at the loader:
+ * an ENOENT rejection, which private-data treats as absent (and, with no blob
+ * token in the test env, resolves to `{ ok: false, reason: "missing" }`).
+ */
+const { readFileMock } = vi.hoisted(() => ({ readFileMock: vi.fn() }));
 
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return { ...actual, existsSync: existsSyncMock, readFileSync: readFileSyncMock };
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...actual, default: { ...actual, readFile: readFileMock }, readFile: readFileMock };
 });
+
+function enoent(): NodeJS.ErrnoException {
+  const err: NodeJS.ErrnoException = new Error("ENOENT: no such file or directory");
+  err.code = "ENOENT";
+  return err;
+}
 
 import {
   COMMUNITY_INVESTMENT_UNAVAILABLE_COPY,
@@ -38,8 +51,7 @@ const VALID_EXPORT = JSON.stringify({
 });
 
 beforeEach(() => {
-  existsSyncMock.mockReset();
-  readFileSyncMock.mockReset();
+  readFileMock.mockReset();
   __resetCommunityInvestmentCacheForTests();
 });
 
@@ -48,69 +60,61 @@ afterEach(() => {
 });
 
 describe("loadCommunityInvestmentResult names the failure instead of collapsing it", () => {
-  it("a file that has never been generated reports export_missing", () => {
-    existsSyncMock.mockReturnValue(false);
-    expect(loadCommunityInvestmentResult()).toEqual({
+  it("a file that has never been generated reports export_missing", async () => {
+    readFileMock.mockRejectedValue(enoent());
+    expect(await loadCommunityInvestmentResult()).toEqual({
       ok: false,
       reason: "export_missing",
       detail: expect.stringContaining("community-investment.json"),
     });
   });
 
-  it("a file that cannot be read reports export_unreadable — NOT 'not generated yet'", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockImplementation(() => {
-      throw new Error("EACCES: permission denied");
-    });
-    const result = loadCommunityInvestmentResult();
+  it("a file that cannot be read reports export_unreadable — NOT 'not generated yet'", async () => {
+    readFileMock.mockRejectedValue(Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" }));
+    const result = await loadCommunityInvestmentResult();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("export_unreadable");
   });
 
-  it("a truncated / malformed file reports export_invalid_json", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockReturnValue('{"records": [');
-    const result = loadCommunityInvestmentResult();
+  it("a truncated / malformed file reports export_invalid_json", async () => {
+    readFileMock.mockResolvedValue('{"records": [');
+    const result = await loadCommunityInvestmentResult();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("export_invalid_json");
   });
 
-  it("parseable JSON that is not the documented envelope reports export_invalid_shape", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockReturnValue('{"records": "not an array"}');
-    const result = loadCommunityInvestmentResult();
+  it("parseable JSON that is not the documented envelope reports export_invalid_shape", async () => {
+    readFileMock.mockResolvedValue('{"records": "not an array"}');
+    const result = await loadCommunityInvestmentResult();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("export_invalid_shape");
   });
 
-  it("a good file loads as ok:true with its records intact", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockReturnValue(VALID_EXPORT);
-    const result = loadCommunityInvestmentResult();
+  it("a good file loads as ok:true with its records intact", async () => {
+    readFileMock.mockResolvedValue(VALID_EXPORT);
+    const result = await loadCommunityInvestmentResult();
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.records).toHaveLength(1);
   });
 
-  it("caches the settled result — a failure is not re-read once per call", () => {
-    existsSyncMock.mockReturnValue(false);
-    loadCommunityInvestmentResult();
-    loadCommunityInvestmentResult();
-    loadCommunityInvestmentResult();
-    expect(existsSyncMock).toHaveBeenCalledTimes(1);
+  it("caches the settled result — a failure is not re-read once per call", async () => {
+    readFileMock.mockRejectedValue(enoent());
+    await loadCommunityInvestmentResult();
+    await loadCommunityInvestmentResult();
+    await loadCommunityInvestmentResult();
+    expect(readFileMock).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("the null-returning wrapper stays behaviour-identical for its remaining callers", () => {
-  it("returns the export on success", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockReturnValue(VALID_EXPORT);
-    expect(loadCommunityInvestment()?.records).toHaveLength(1);
+  it("returns the export on success", async () => {
+    readFileMock.mockResolvedValue(VALID_EXPORT);
+    expect((await loadCommunityInvestment())?.records).toHaveLength(1);
   });
 
-  it("returns null on every failure mode, exactly as before", () => {
-    existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockReturnValue("not json at all");
-    expect(loadCommunityInvestment()).toBeNull();
+  it("returns null on every failure mode, exactly as before", async () => {
+    readFileMock.mockResolvedValue("not json at all");
+    expect(await loadCommunityInvestment()).toBeNull();
   });
 });
 

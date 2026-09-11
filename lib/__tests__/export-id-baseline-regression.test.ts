@@ -38,8 +38,8 @@ describe("export id baseline regression (Sol gate finding 8)", () => {
 
   it.each(["tif", "cdbg-home", "lihtc"] as const)(
     "every %s record that existed pre-PR1 keeps its EXACT prior id",
-    (source) => {
-      const data = loadCommunityInvestment()!;
+    async (source) => {
+      const data = (await loadCommunityInvestment())!;
       const current = data.records.filter((r) => r.source === source);
       const currentById = new Map(current.map((r) => [r.id, r]));
       const baselineForSource = baseline[source];
@@ -65,8 +65,8 @@ describe("export id baseline regression (Sol gate finding 8)", () => {
     },
   );
 
-  it("held rows (new in PR1) are APPENDED with a distinct -held- namespace, never interleaved into the old sequence", () => {
-    const data = loadCommunityInvestment()!;
+  it("held rows (new in PR1) are APPENDED with a distinct -held- namespace, never interleaved into the old sequence", async () => {
+    const data = (await loadCommunityInvestment())!;
     for (const source of ["tif", "cdbg-home", "lihtc"] as const) {
       const records = data.records.filter((r) => r.source === source);
       const baselineIds = new Set(Object.keys(baseline[source]));

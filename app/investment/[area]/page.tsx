@@ -116,7 +116,7 @@ function EvidencePanel({
 function FoundationConcentration({
   analysis,
 }: {
-  analysis: NonNullable<ReturnType<typeof loadInvestmentAnalysis>>;
+  analysis: NonNullable<Awaited<ReturnType<typeof loadInvestmentAnalysis>>>;
 }) {
   const stats = [
     {
@@ -175,13 +175,13 @@ export default async function InvestmentAreaPage({
   if (!name) notFound();
   const communityAreaId = CHICAGO_COMMUNITY_AREAS.find((community) => community.name === name)?.id;
 
-  const analysis = loadInvestmentAnalysis(name);
-  const developments = loadMajorDevelopments({ communityArea: name });
-  const flowRows = loadFlowRows(name);
+  const analysis = await loadInvestmentAnalysis(name);
+  const developments = await loadMajorDevelopments({ communityArea: name });
+  const flowRows = await loadFlowRows(name);
   // R1 finding 4: a failed LOAD and a community with genuinely no records both
   // used to arrive here as `null`, and the page published the second sentence
   // for both. Keep the two apart from the first read.
-  const investmentResult = loadCommunityInvestmentResult();
+  const investmentResult = await loadCommunityInvestmentResult();
   const investment = investmentResult.ok ? investmentResult.data : null;
   const datasetUnavailable = !investmentResult.ok;
   const meta = investment?.meta;

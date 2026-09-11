@@ -814,8 +814,8 @@ const REFRESHED_SOURCE_FLOORS: ReadonlyArray<{
 ];
 
 describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
-  it("loadCommunityInvestment returns the documented top-level shape", () => {
-    const data = loadCommunityInvestment();
+  it("loadCommunityInvestment returns the documented top-level shape", async () => {
+    const data = await loadCommunityInvestment();
     expect(data).not.toBeNull();
     expect(typeof data!.generatedAt).toBe("string");
     expect(Array.isArray(data!.records)).toBe(true);
@@ -827,8 +827,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     );
   });
 
-  it("every record uses only valid enum members and a coherent geometry", () => {
-    const data = loadCommunityInvestment()!;
+  it("every record uses only valid enum members and a coherent geometry", async () => {
+    const data = (await loadCommunityInvestment())!;
     for (const r of data.records) {
       expect(INVESTMENT_SOURCES).toContain(r.source);
       expect(FUNDER_TYPES).toContain(r.funderType);
@@ -846,21 +846,21 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     }
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("record ids are unique", () => {
-    const data = loadCommunityInvestment()!;
+  it("record ids are unique", async () => {
+    const data = (await loadCommunityInvestment())!;
     const ids = data.records.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("counts sum to the record total and dollars match the awarded sum", () => {
-    const data = loadCommunityInvestment()!;
+  it("counts sum to the record total and dollars match the awarded sum", async () => {
+    const data = (await loadCommunityInvestment())!;
     const summed = Object.values(data.meta.counts).reduce((a, b) => a + b, 0);
     expect(summed).toBe(data.records.length);
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("stores historical recovery lineage once and keeps its amounts out of amountAwarded", () => {
-    const data = loadCommunityInvestment()!;
+  it("stores historical recovery lineage once and keeps its amounts out of amountAwarded", async () => {
+    const data = (await loadCommunityInvestment())!;
     expect(Object.keys(data.recoverySources).sort()).toEqual([
       "cook-source-2023",
       "illinois-b2b",
@@ -898,7 +898,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(sumAwardedDollars(recoveryRecords)).toBe(0);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("PARTITIONS every 2020-relief source row into kept-for-Chicago or outside-Chicago", () => {
+  it("PARTITIONS every 2020-relief source row into kept-for-Chicago or outside-Chicago", async () => {
     // #97 added this identity for the DCEO counters after an out-of-bounds
     // geocode was found silently DELETING an appropriation while its counter
     // claimed the record was held. The same exposure exists here: both families
@@ -906,7 +906,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     // row the official source publishes. The totals are the ones reconciled
     // against the DCEO PDFs directly (BIG: 135pp / $276,275,000;
     // Hospitality: 12pp / $13,995,000).
-    const data = loadCommunityInvestment()!;
+    const data = (await loadCommunityInvestment())!;
 
     // Two rows are excluded by a deliberate cross-check rather than by a Chicago
     // municipality, and both land in the outside-Chicago counter rather than
@@ -923,8 +923,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     ).toBe(699);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("holds the 2020 relief families at exactly the precision their sources publish", () => {
-    const data = loadCommunityInvestment()!;
+  it("holds the 2020 relief families at exactly the precision their sources publish", async () => {
+    const data = (await loadCommunityInvestment())!;
 
     // BIG publishes municipality + ZIP and no street address, so every retained
     // Chicago row is a ZIP aggregate — never a point. A point here would be
@@ -958,8 +958,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     }
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
-    const data = loadCommunityInvestment()!;
+  it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", async () => {
+    const data = (await loadCommunityInvestment())!;
     expect(data.meta.announcedCapitalTotal).toBe(sumAnnouncedInvestment(data.records));
     // The two are truly separate — announced private capital dwarfs awarded grants
     // and is never folded in.
@@ -969,8 +969,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.announcedCapitalTotal).toBeLessThan(80_000_000_000);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("every development record carries NO awarded dollars (announced capital only)", () => {
-    const data = loadCommunityInvestment()!;
+  it("every development record carries NO awarded dollars (announced capital only)", async () => {
+    const data = (await loadCommunityInvestment())!;
     for (const r of data.records) {
       if (r.source === "development") {
         expect(r.amountAwarded).toBeNull();
@@ -990,8 +990,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
 
   // ── Capital-spine invariants over the committed export ──────────────────────
 
-  it("no non-grant dollar leaked: awarded total is EXACTLY the grant-class amountAwarded sum, and every non-grant record has null amountAwarded", () => {
-    const data = loadCommunityInvestment()!;
+  it("no non-grant dollar leaked: awarded total is EXACTLY the grant-class amountAwarded sum, and every non-grant record has null amountAwarded", async () => {
+    const data = (await loadCommunityInvestment())!;
     // (a) totalDollarsAwarded === Σ amountAwarded over capitalClass==="grant" records
     //     EXACTLY. This is the real invariant "no non-grant dollar leaked" — and it
     //     is refresh-proof: a legitimate grant-data refresh moves BOTH sides together,
@@ -1009,8 +1009,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     }
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("carries all five capital classes and each record's money lives in exactly one field", () => {
-    const data = loadCommunityInvestment()!;
+  it("carries all five capital classes and each record's money lives in exactly one field", async () => {
+    const data = (await loadCommunityInvestment())!;
     const seen = new Set<string>();
     for (const r of data.records) {
       expect(CAPITAL_CLASSES).toContain(r.capitalClass);
@@ -1055,8 +1055,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     ]);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("each new capital total matches an independent recompute from its own field", () => {
-    const data = loadCommunityInvestment()!;
+  it("each new capital total matches an independent recompute from its own field", async () => {
+    const data = (await loadCommunityInvestment())!;
     expect(data.meta.totalAuthorizedTif).toBe(sumAuthorizedByClass(data.records, "tif_subsidy"));
     expect(data.meta.totalFederalProgram).toBe(sumAuthorizedByClass(data.records, "federal_program"));
     expect(data.meta.totalCreditCapital).toBe(sumCreditCapital(data.records));
@@ -1074,8 +1074,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
    * Every OTHER geometry stays a plottable point; a citywide row in this trio
    * must always carry a reason, and a point row must never carry one.
    */
-  it("every tif/cdbg-home/lihtc record is either a PLOTTABLE point or an explicitly-reasoned citywide hold", () => {
-    const data = loadCommunityInvestment()!;
+  it("every tif/cdbg-home/lihtc record is either a PLOTTABLE point or an explicitly-reasoned citywide hold", async () => {
+    const data = (await loadCommunityInvestment())!;
     for (const r of data.records) {
       if (r.source === "tif" || r.source === "cdbg-home" || r.source === "lihtc") {
         expect(["point", "citywide"]).toContain(r.geometry.kind);
@@ -1091,8 +1091,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.heldLihtcUnlocatedRecords).toBeGreaterThan(0);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("NMTC is CA-stamped citywide: never a point, but carries a communityArea for analysis lists", () => {
-    const data = loadCommunityInvestment()!;
+  it("NMTC is CA-stamped citywide: never a point, but carries a communityArea for analysis lists", async () => {
+    const data = (await loadCommunityInvestment())!;
     const nmtc = data.records.filter((r) => r.source === "nmtc");
     expect(nmtc.length).toBeGreaterThan(0);
     for (const r of nmtc) {
@@ -1129,8 +1129,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
    * passes. The ≤2% ceiling preserves the original intent: a filter that starts
    * rejecting a flood is a bug, not a data update.
    */
-  it("HUD bbox drops PARTITION the curated input against the mapped records", () => {
-    const data = loadCommunityInvestment()!;
+  it("HUD bbox drops PARTITION the curated input against the mapped records", async () => {
+    const data = (await loadCommunityInvestment())!;
     const dropped = data.meta.droppedHudOutOfBbox;
     const mapped = countBySource(data.records)["cdbg-home"] ?? 0;
 
@@ -1153,8 +1153,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
    * stay green. A 2% shrink tolerance is the seam: wide enough for corrections
    * and de-duplication upstream, narrow enough that a dropped cohort trips it.
    */
-  it("no refreshed source has SHRUNK by more than 2% below its 2026-07 baseline", () => {
-    const counts = countBySource(loadCommunityInvestment()!.records);
+  it("no refreshed source has SHRUNK by more than 2% below its 2026-07 baseline", async () => {
+    const counts = countBySource((await loadCommunityInvestment())!.records);
     const regressions: string[] = [];
     for (const { source, floorAsOf202607 } of REFRESHED_SOURCE_FLOORS) {
       const actual = counts[source] ?? 0;
@@ -1170,8 +1170,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(regressions).toEqual([]);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("a DCEO out-of-bounds geocode is HELD CITYWIDE, never deleted from the export", () => {
-    const data = loadCommunityInvestment()!;
+  it("a DCEO out-of-bounds geocode is HELD CITYWIDE, never deleted from the export", async () => {
+    const data = (await loadCommunityInvestment())!;
     const dceo = data.records.filter((r) => r.source === "dceo-capital");
     // The counters must PARTITION the retained records, which is only true if
     // no path deletes a row. An out-of-bounds geocode previously ran `continue`,
@@ -1193,8 +1193,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.dceoAddressOutOfBounds).toBeGreaterThan(0);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("multi-site DCEO rows stay UNPLOTTED, per the README location-precision contract", () => {
-    const data = loadCommunityInvestment()!;
+  it("multi-site DCEO rows stay UNPLOTTED, per the README location-precision contract", async () => {
+    const data = (await loadCommunityInvestment())!;
     const dceo = data.records.filter((r) => r.source === "dceo-capital");
     // Two house numbers sharing one street suffix collapse to a single regex
     // match, so these two shipped as confident points at one of the two sites.
