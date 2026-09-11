@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { PendingReportSaver } from "@/components/workspace/PendingReportSaver";
+import { GrantsWorkspaceLink } from "@/components/grants/GrantsWorkspaceLink";
 import type { BusinessProject, SavedReportSummary } from "@/lib/workspace";
 import type { WatchedArea } from "@/lib/types/user-intel";
 
@@ -245,6 +246,7 @@ function WorkspaceContent() {
           </div>
         )}
 
+        <GrantsWorkspaceLink />
         <section className="mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
