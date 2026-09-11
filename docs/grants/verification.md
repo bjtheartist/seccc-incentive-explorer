@@ -35,3 +35,5 @@ Merge details and the reproducible data-quality notebook: `merge-verification.md
 - TypeScript, targeted ESLint, and the production build pass (existing Mapbox warning remains).
 - Local browser flow verifies searchable NAICS selection, derived industry, shared persisted fields, the separate structure/space controls, and questionnaire-driven matching.
 - Current production deployment `dpl_9skjKuC932AVkbozRshqVUqxiWnK` is from main commit `448a6fe070287fc7d753b0a14549775a1692c4c7`, an ancestor of this branch. Existing production database/auth/cron configuration can be reused; no test credentials are being uploaded.
+
+Release install repair: CI on Node 22/npm 10 found 15 missing optional Puppeteer proxy-dependency lock entries also absent from the starting main lockfile. Regenerated the lock using npm 10.9.4; no existing dependency versions or package declarations changed. `npm@10.9.4 ci --dry-run --ignore-scripts --no-audit --no-fund` passes.

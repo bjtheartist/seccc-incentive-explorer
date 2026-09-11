@@ -42,3 +42,5 @@ Codex implemented and verified this change; no subagents were used. No follow-up
 - [x] No source-text assertions substituted for runtime tests.
 - [x] Production callers exist; migration/import/transfer and test scripts are explicit operator tools.
 - [x] Migrations, environment variables, data changes, and verification documented.
+
+Release install repair: CI on Node 22/npm 10 found 15 missing optional Puppeteer proxy-dependency lock entries also absent from the starting main lockfile. Regenerated the lock using npm 10.9.4; no existing dependency versions or package declarations changed. `npm@10.9.4 ci --dry-run --ignore-scripts --no-audit --no-fund` passes.
