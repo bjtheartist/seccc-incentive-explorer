@@ -17,9 +17,9 @@ Browser screenshots include `output/grants/questionnaire-desktop.png`, `output/g
 
 ## Hosted status
 
-No hosted deployment was created. Automatic approval review rejected the command that would upload branch-specific test database/session credentials to Vercel. Production environment settings and production database contents were not modified. The new cron route is configured in code but scheduled scanning is inactive until an authorized production deployment and `GRANTS_SCAN_ENABLED=true`.
+Production is live at https://chicagoincentiveexplorer.com/admin/grants. The existing production database/auth/cron configuration was reused; no isolated test credentials were uploaded. The additive schema, 30,263 source records, 11 programs, three rounds, three working profiles, 15 sources, and owner membership were read back in production. Anonymous page/API access checks pass. See `production-release.md` for deployment IDs, account access, and the remaining authenticated-session and first scanner-batch checks.
 
-The local preview is `http://localhost:3107/admin/grants`. The verified Billy Ndizeye Chamber account is the configured owner in the local environment; other existing Explorer accounts can be granted editor/viewer access after owner review in the Team view. No email or client message is sent by the grants workspace.
+The local preview remains `http://localhost:3107/admin/grants`, connected to its isolated test database. Earlier preview-secret approval rejection did not result in an upload and does not describe the later authorized production release.
 
 ## Review scope
 
@@ -34,6 +34,10 @@ Merge details and the reproducible data-quality notebook: `merge-verification.md
 - 54 targeted tests pass, including complete NAICS sector derivation, invalid/old-edition code rejection, canonical server labels, legacy preservation, prefix/range matching, and operator/tenant overlap.
 - TypeScript, targeted ESLint, and the production build pass (existing Mapbox warning remains).
 - Local browser flow verifies searchable NAICS selection, derived industry, shared persisted fields, the separate structure/space controls, and questionnaire-driven matching.
-- Current production deployment `dpl_9skjKuC932AVkbozRshqVUqxiWnK` is from main commit `448a6fe070287fc7d753b0a14549775a1692c4c7`, an ancestor of this branch. Existing production database/auth/cron configuration can be reused; no test credentials are being uploaded.
+- The pre-release production deployment `dpl_9skjKuC932AVkbozRshqVUqxiWnK` was from main commit `448a6fe070287fc7d753b0a14549775a1692c4c7`, an ancestor of this branch. Existing production database/auth/cron configuration can be reused; no test credentials are being uploaded.
 
 Release install repair: CI on Node 22/npm 10 found 15 missing optional Puppeteer proxy-dependency lock entries also absent from the starting main lockfile. Regenerated the lock using npm 10.9.4; no existing dependency versions or package declarations changed. `npm@10.9.4 ci --dry-run --ignore-scripts --no-audit --no-fund` passes.
+
+## Repository CI
+
+After the lock repair, CI run 34615483445 passed end-to-end tests, browser smoke, lint, and manifest verification. Unit tests reported 6,402 passing and two skipped; one route-registration test identified the four new grants routes. Registered those routes and their reviewed-copy contract in the existing public-claim registry. The complete registry test file then passed locally (54 tests), and targeted registry lint passed. The corrected commit is submitted for the full CI rerun.

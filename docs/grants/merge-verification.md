@@ -2,7 +2,7 @@
 
 The internal workspace and `feat/grants-matchmaking-db` are merged on `codex/grants-workspace`. The source commit is `b01c9cf`; the source worktree's uncommitted federal-relevance correction was also preserved in this checkout. The original worktree was not edited. Related Linear architecture context is BJT-80; this integration does not complete that broader epic.
 
-The combined local app is `http://localhost:3107/admin/grants`. Data lives on the isolated Neon branch `br-old-salad-aekuxp9b` (`grants-workspace-20260911`). The original import test branch remains available. Production and public catalog dates were not changed.
+The combined local app is `http://localhost:3107/admin/grants`. Data lives on the isolated Neon branch `br-old-salad-aekuxp9b` (`grants-workspace-20260911`). The original import test branch remains available. The later production release is recorded in `production-release.md`; public catalog dates were not changed.
 
 ## Imported inventory
 
@@ -49,4 +49,4 @@ TypeScript and targeted ESLint passed. The production build passes with the exis
 
 Bulk acquisition remains operator-run and uses the source snapshot's acquisition date; do not present a script rerun as fresh source verification. The original raw acquisitions are not committed. Use `GRANTS_RAW_DIR` when unifying externally retained acquisition files. Reimports preserve historical rows; source retirement and retention policies remain future operating work. The smaller staff-maintained catalog will need its own pagination if it grows substantially.
 
-No hosted environment secrets were uploaded, no production release or recurring bulk job was activated, and no messages were sent. Hosted credential configuration remains blocked by the earlier automatic approval review pending the user's explicit authorization.
+The subsequent authorized production release reused existing hosted credentials and loaded the selected data into production; see `production-release.md`. No recurring bulk acquisition job or outbound messages were activated.
