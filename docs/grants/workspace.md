@@ -48,7 +48,7 @@ Required configuration:
 
 `GET /api/cron/grant-scan` is configured for 12:00 UTC daily, alongside existing jobs. [Vercel cron](https://vercel.com/docs/cron-jobs/manage-cron-jobs) runs on production deployments; preview environments support manual checks. The UI explicitly displays whether scheduled scanning is active. Confirm the deployed plan's current cron limits before activation.
 
-Production is deployed with owner membership for `billy@southeastchgochamber.org` and scheduled scanning enabled. The existing production source commit was verified as an ancestor before release. Owner-session and first scheduled-batch verification are tracked in `production-release.md`; no isolated test credentials were uploaded.
+Production is deployed with owner membership for `billy@southeastchgochamber.org` and scheduled scanning enabled. The existing production source commit was verified as an ancestor before release. The first production scanner batch passed; the remaining owner-session check is tracked in `production-release.md`; no isolated test credentials were uploaded.
 
 ## Verification and limits
 

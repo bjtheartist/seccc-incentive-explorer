@@ -19,12 +19,14 @@ Existing production database, authentication, and cron credentials were reused. 
 - Anonymous catalog and export requests return 403.
 - Unauthenticated cron requests return 401.
 - Local isolated-database browser smoke covers owner actions, shared persistence, questionnaire, NAICS selection and derived industry, operator plus leased premises, role-sensitive matching, inventory pagination, source promotion, and mobile layout.
-- Targeted grants tests (54), typecheck, lint, and build pass. See `verification.md` for repository CI and the route-registration repair.
+- Targeted grants tests (54), typecheck, lint, and build pass. Full repository CI run 34616905466 passed all jobs on application commit `b98ad4e`, including Chromium e2e and WebKit/Firefox smoke. The final follow-up updates release documentation only.
 
 ## Scanner and remaining verification
 
-The daily production schedule is 12:00 UTC. A run processes at most six due sources, so a newly loaded watchlist may take multiple daily runs. Discoveries and changed source text enter staff review; they do not become verified grant recommendations automatically.
+The daily production schedule is 12:00 UTC, within Vercel Hobby’s one-hour execution window. A run processes at most six due sources, so a newly loaded watchlist may take multiple daily runs. Discoveries and changed source text enter staff review; they do not become verified grant recommendations automatically.
 
-An authenticated owner browser session and one successful production scanner batch still need live verification. The configured cron secret is sensitive and cannot be read back; a manual request without its value returned 401 as expected. Use the existing Vercel cron Run action or the owner workspace scan control, rather than changing shared credentials. Do not trigger unrelated email jobs.
+The production scanner was triggered through Vercel’s existing cron Run action. The request returned HTTP 200 at 15:35:55 UTC; production read-back confirmed five source snapshots and 15 findings. Chicago Community Trust returned HTTP 403 and remains flagged for manual review. The shared cron secret was not read or changed, and unrelated jobs were not triggered.
+
+The remaining live check is an authenticated owner browser session. Chrome did not have the Chamber account signed in; the Explorer email sign-in page is prepared for the owner to complete. Existing owner/editor/viewer behavior was verified in the isolated local database/browser flow.
 
 No outreach, grant applications, or automatic client sharing were sent.

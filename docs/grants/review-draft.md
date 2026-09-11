@@ -22,7 +22,7 @@ Billy requested shared, maintainable grant research and a curated matchmaker wit
 
 Sign in with a staff account, open `/admin/grants`, complete the questionnaire, select a NAICS code, and verify that industry fills automatically. Change the role or space arrangement and compare relevant leads. Search the funding database and start a review; imported records must remain unverified until staff adds evidence.
 
-Live release route: https://chicagoincentiveexplorer.com/admin/grants. Production data read-back and anonymous access checks pass; owner-session and first scheduled scanner-batch checks remain pending (see `docs/grants/production-release.md`).
+Live release route: https://chicagoincentiveexplorer.com/admin/grants. Production data read-back and anonymous access checks pass; the first production scanner batch passed; the live owner-session check remains pending (see `docs/grants/production-release.md`).
 
 ## Migration, configuration, and risk
 
@@ -45,4 +45,4 @@ Codex implemented and verified this change; no subagents were used. No follow-up
 
 Release install repair: CI on Node 22/npm 10 found 15 missing optional Puppeteer proxy-dependency lock entries also absent from the starting main lockfile. Regenerated the lock using npm 10.9.4; no existing dependency versions or package declarations changed. `npm@10.9.4 ci --dry-run --ignore-scripts --no-audit --no-fund` passes.
 
-CI run 34615483445 passed e2e and browser-smoke jobs. The verify job passed lint and manifest checks, then reported 6,402 unit tests passed, two skipped, and one failure for the four new routes missing from the surface registry. Registered the internal grants surface with its existing reviewed-copy contract; all 54 registry tests and targeted lint now pass locally. Full CI is rerunning on the corrected commit.
+CI run 34615483445 passed e2e and browser-smoke jobs. The verify job passed lint and manifest checks, then reported 6,402 unit tests passed, two skipped, and one failure for the four new routes missing from the surface registry. Registered the internal grants surface with its existing reviewed-copy contract; all 54 registry tests and targeted lint now pass locally. The corrected application commit `b98ad4e` passed all jobs in CI run 34616905466, including lint, manifest checks, unit tests, typecheck, production build, Chromium e2e, and WebKit/Firefox smoke. The final commit only updates release notes; `git diff --check` passes.

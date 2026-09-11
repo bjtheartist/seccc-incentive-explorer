@@ -17,7 +17,7 @@ Browser screenshots include `output/grants/questionnaire-desktop.png`, `output/g
 
 ## Hosted status
 
-Production is live at https://chicagoincentiveexplorer.com/admin/grants. The existing production database/auth/cron configuration was reused; no isolated test credentials were uploaded. The additive schema, 30,263 source records, 11 programs, three rounds, three working profiles, 15 sources, and owner membership were read back in production. Anonymous page/API access checks pass. See `production-release.md` for deployment IDs, account access, and the remaining authenticated-session and first scanner-batch checks.
+Production is live at https://chicagoincentiveexplorer.com/admin/grants. The existing production database/auth/cron configuration was reused; no isolated test credentials were uploaded. The additive schema, 30,263 source records, 11 programs, three rounds, three working profiles, 15 sources, and owner membership were read back in production. Anonymous page/API access checks pass. See `production-release.md` for deployment IDs, account access, and the successful production scanner batch. Only the live authenticated owner-session check remains.
 
 The local preview remains `http://localhost:3107/admin/grants`, connected to its isolated test database. Earlier preview-secret approval rejection did not result in an upload and does not describe the later authorized production release.
 
@@ -40,4 +40,4 @@ Release install repair: CI on Node 22/npm 10 found 15 missing optional Puppeteer
 
 ## Repository CI
 
-After the lock repair, CI run 34615483445 passed end-to-end tests, browser smoke, lint, and manifest verification. Unit tests reported 6,402 passing and two skipped; one route-registration test identified the four new grants routes. Registered those routes and their reviewed-copy contract in the existing public-claim registry. The complete registry test file then passed locally (54 tests), and targeted registry lint passed. The corrected commit is submitted for the full CI rerun.
+After the lock repair, CI run 34615483445 passed end-to-end tests, browser smoke, lint, and manifest verification. Unit tests reported 6,402 passing and two skipped; one route-registration test identified the four new grants routes. Registered those routes and their reviewed-copy contract in the existing public-claim registry. The complete registry test file then passed locally (54 tests), and targeted registry lint passed. The corrected commit `b98ad4e` passed the complete CI rerun 34616905466: lint, manifest verification, unit tests, typecheck, production build, Chromium end-to-end tests, and WebKit/Firefox browser smoke. Final release-note changes are documentation only; `git diff --check` passes.
