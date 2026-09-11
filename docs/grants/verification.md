@@ -28,3 +28,10 @@ New code lives under `lib/grants`, `components/grants`, `app/admin/grants`, `app
 The source monitor deliberately fails closed for private network destinations, non-HTTPS sources, oversized responses and interrupted/time-limited requests. Staff authentication is separate from public report/shortlist access. There are no automatic client messages, funding applications, public opportunity publication, or eligibility certifications.
 
 Merge details and the reproducible data-quality notebook: `merge-verification.md` and `merge-data-quality.ipynb`.
+
+## NAICS and role update — September 11, 2026
+
+- 54 targeted tests pass, including complete NAICS sector derivation, invalid/old-edition code rejection, canonical server labels, legacy preservation, prefix/range matching, and operator/tenant overlap.
+- TypeScript, targeted ESLint, and the production build pass (existing Mapbox warning remains).
+- Local browser flow verifies searchable NAICS selection, derived industry, shared persisted fields, the separate structure/space controls, and questionnaire-driven matching.
+- Current production deployment `dpl_9skjKuC932AVkbozRshqVUqxiWnK` is from main commit `448a6fe070287fc7d753b0a14549775a1692c4c7`, an ancestor of this branch. Existing production database/auth/cron configuration can be reused; no test credentials are being uploaded.

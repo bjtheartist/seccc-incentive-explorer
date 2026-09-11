@@ -63,3 +63,9 @@ Prior data versions and source snapshots are preserved without an automatic rete
 ## Merged source inventory
 
 See `merge-verification.md` for source counts, merge lineage, import commands and data-quality findings. The imported source snapshot remains distinct from staff-verified application rounds. Foundation filing text and standing program listings do not establish current intake. The configured source scanner still monitors its explicit watchlist; bulk-source acquisition scripts are operator-run snapshots, not a newly activated 30,000-source daily job.
+
+## Business classification and premises
+
+Business structure is a separate legal-structure selection. Business type uses the Census 2022 six-digit NAICS catalog (1,012 types), with the broader industry sector code/title derived automatically on both client and server. `data/naics-2022.json` records the official download URL, retrieval date, and source checksum. Unconfirmed codes remain null and produce review gaps; legacy business-type and industry descriptions are retained as reference, never silently classified.
+
+The applicant role asks whether the applicant is the business operator or landlord. Space arrangement separately records owns, leases, seeking a location, or not applicable. Older tenant profiles normalize to operator plus leases. Staff round rules can record validated NAICS prefixes/sector ranges, structures, and space arrangements; older free-text criteria remain visible for review. Source-inventory text supplies research leads, not code-based eligibility findings.

@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  businessStructures,
+  spaceArrangements,
+  classificationFor,
+  isNaicsCriterion,
+  naicsMatches,
+  normalizeApplicantClassification,
+} from "./classification";
 
 export const cadenceLabels = {
   time_bound: "One-time deadline",
@@ -101,6 +109,32 @@ export const roundSchema = z
       stages: z.array(z.enum(stages)).default([]),
       industries: tags.default([]),
       businessTypes: tags.default([]),
+      businessStructures: z
+        .array(
+          z.enum(["any", ...Object.keys(businessStructures)] as [
+            string,
+            ...string[],
+          ]),
+        )
+        .max(30)
+        .default([]),
+      naicsCodes: z
+        .array(
+          z
+            .string()
+            .refine(isNaicsCriterion, "Use a valid 2022 NAICS code or any"),
+        )
+        .max(30)
+        .default([]),
+      spaceArrangements: z
+        .array(
+          z.enum(["any", ...Object.keys(spaceArrangements)] as [
+            string,
+            ...string[],
+          ]),
+        )
+        .max(30)
+        .default([]),
       geography: tags.default([]),
       costs: tags.default([]),
       exclusions: text.default(""),
@@ -153,46 +187,77 @@ export const roundSchema = z
         message: "Next review must follow verification",
       });
   });
-export const applicantSchema = z
-  .object({
-    name,
-    businessType: z.string().trim().max(200).default(""),
-    primaryGoal: z.string().trim().max(500).default(""),
-    intakeDate: z.iso.date().nullable().default(null),
-    targetDate: z.iso.date().nullable().default(null),
-    fundingTypes: z
-      .array(
-        z.enum(["grant", "reimbursement", "tax_benefit", "loan", "in_kind"]),
-      )
-      .max(5)
-      .default(["grant", "reimbursement", "tax_benefit", "loan", "in_kind"]),
-    reimbursementReady: z.enum(["yes", "no", "unknown"]).default("unknown"),
-    role: z.enum(["landlord", "operator", "tenant", "unknown"]),
-    entity: z.enum(["for_profit", "nonprofit", "individual", "unknown"]),
-    stage: z.enum(["pre_opening", "operating", "unknown"]),
-    geography: tags.default([]),
-    industry: z.string().max(200).default(""),
-    address: z.string().max(400).default(""),
-    project: text.default(""),
-    costs: tags.default([]),
-    budget: z.string().max(200).default(""),
-    factsSource: text.default(""),
-    archived: z.boolean().default(false),
-    ...common,
-  })
-  .superRefine((a, ctx) => {
-    // Older profiles may lack intake metadata. Once a dated intake is recorded,
-    // require the minimum information the team needs to maintain it.
-    if (a.intakeDate)
-      for (const key of ["businessType", "industry", "primaryGoal"] as const) {
-        if (!a[key].trim())
-          ctx.addIssue({
-            code: "custom",
-            path: [key],
-            message: `${key} is required for a dated intake`,
-          });
-      }
-  });
+export const applicantSchema = z.preprocess(
+  normalizeApplicantClassification,
+  z
+    .object({
+      name,
+      businessStructure: z
+        .enum(
+          Object.keys(businessStructures) as [
+            keyof typeof businessStructures,
+            ...Array<keyof typeof businessStructures>,
+          ],
+        )
+        .default("unknown"),
+      spaceArrangement: z
+        .enum(
+          Object.keys(spaceArrangements) as [
+            keyof typeof spaceArrangements,
+            ...Array<keyof typeof spaceArrangements>,
+          ],
+        )
+        .default("unknown"),
+      naicsCode: z
+        .string()
+        .refine(
+          (v) => !!classificationFor(v),
+          "Select a valid six-digit 2022 NAICS business type",
+        )
+        .nullable()
+        .default(null),
+      naicsEdition: z.literal("2022").default("2022"),
+      industryCode: z.string().default(""),
+      legacyBusinessType: z.string().max(200).default(""),
+      legacyIndustry: z.string().max(200).default(""),
+      businessType: z.string().trim().max(200).default(""),
+      primaryGoal: z.string().trim().max(500).default(""),
+      intakeDate: z.iso.date().nullable().default(null),
+      targetDate: z.iso.date().nullable().default(null),
+      fundingTypes: z
+        .array(
+          z.enum(["grant", "reimbursement", "tax_benefit", "loan", "in_kind"]),
+        )
+        .max(5)
+        .default(["grant", "reimbursement", "tax_benefit", "loan", "in_kind"]),
+      reimbursementReady: z.enum(["yes", "no", "unknown"]).default("unknown"),
+      role: z.enum(["landlord", "operator", "unknown"]),
+      entity: z.enum(["for_profit", "nonprofit", "individual", "unknown"]),
+      stage: z.enum(["pre_opening", "operating", "unknown"]),
+      geography: tags.default([]),
+      industry: z.string().max(200).default(""),
+      address: z.string().max(400).default(""),
+      project: text.default(""),
+      costs: tags.default([]),
+      budget: z.string().max(200).default(""),
+      factsSource: text.default(""),
+      archived: z.boolean().default(false),
+      ...common,
+    })
+    .superRefine((a, ctx) => {
+      // Older profiles may lack intake metadata. Once a dated intake is recorded,
+      // require the minimum information the team needs to maintain it.
+      if (a.intakeDate)
+        for (const key of ["primaryGoal"] as const) {
+          if (!a[key].trim())
+            ctx.addIssue({
+              code: "custom",
+              path: [key],
+              message: `${key} is required for a dated intake`,
+            });
+        }
+    }),
+);
 export const sourceSchema = z.object({
   name,
   url: sourceUrl,
@@ -313,6 +378,7 @@ export function roundState(
 
 /** A transparent screening aid. No score implies award probability or confirmed eligibility. */
 export function screenMatch(a: Applicant, r: Round, now = new Date()) {
+  a = applicantSchema.parse(a);
   const reasons: string[] = [],
     gaps: string[] = [],
     exclusions: string[] = [];
@@ -334,9 +400,28 @@ export function screenMatch(a: Applicant, r: Round, now = new Date()) {
       );
     else exclusions.push(`${label}: does not match recorded criteria`);
   };
-  test("Applicant role", [a.role], r.rules.roles);
+  const applicantRoles =
+    a.spaceArrangement === "leases" ? [a.role, "tenant"] : [a.role];
+  if (
+    a.role === "operator" &&
+    a.spaceArrangement === "unknown" &&
+    r.rules.roles.includes("tenant") &&
+    !r.rules.roles.includes("operator") &&
+    !r.rules.roles.includes("any")
+  )
+    gaps.push(
+      "Applicant role: confirm whether the operator leases the project space",
+    );
+  else test("Applicant role", applicantRoles, r.rules.roles);
   test("Entity", [a.entity], r.rules.entities);
   test("Business stage", [a.stage], r.rules.stages);
+  if (r.rules.spaceArrangements?.length)
+    test("Space arrangement", [a.spaceArrangement], r.rules.spaceArrangements);
+  test(
+    "Business structure",
+    [a.businessStructure],
+    r.rules.businessStructures ?? [],
+  );
   const textCriterion = (label: string, actual: string, allowed: string[]) => {
     if (!allowed.length) gaps.push(`${label}: program rules need review`);
     else if (allowed.includes("any"))
@@ -352,12 +437,29 @@ export function screenMatch(a: Applicant, r: Round, now = new Date()) {
         `${label}: confirm fit against the program's recorded categories`,
       );
   };
-  textCriterion("Industry", a.industry, r.rules.industries ?? []);
-  textCriterion(
-    "Business type",
-    a.businessType ?? "",
-    r.rules.businessTypes ?? [],
-  );
+  if (r.rules.naicsCodes?.length) {
+    if (r.rules.naicsCodes.includes("any"))
+      reasons.push("NAICS industry: unrestricted in recorded rules");
+    else if (!a.naicsCode)
+      gaps.push("NAICS industry: confirm the business's six-digit code");
+    else if (
+      r.rules.naicsCodes.some((code) => naicsMatches(a.naicsCode!, code))
+    )
+      reasons.push(
+        `NAICS industry: ${a.naicsCode} matches recorded code criteria`,
+      );
+    else
+      exclusions.push("NAICS industry: does not match recorded code criteria");
+  } else
+    textCriterion(
+      "Industry",
+      a.industry || a.legacyIndustry,
+      r.rules.industries ?? [],
+    );
+  if (r.rules.businessTypes?.length)
+    gaps.push(
+      "Legacy business-type criteria need staff review and conversion to structure or NAICS codes",
+    );
   test("Geography", a.geography, r.rules.geography);
   test("Project costs", a.costs, r.rules.costs);
   if (

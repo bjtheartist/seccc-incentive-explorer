@@ -1,4 +1,8 @@
 "use client";
+import {
+  businessStructures,
+  spaceArrangements,
+} from "@/lib/grants/classification";
 import { ArrowUpRight } from "lucide-react";
 import { CatalogSuggestionsPanel } from "./FundingCatalog";
 import {
@@ -141,8 +145,26 @@ export function GrantShortlist({
         </p>
         <dl className="grant-profile-facts">
           {[
-            ["Business type", applicant.data.businessType],
-            ["Industry", applicant.data.industry],
+            [
+              "Business structure",
+              businessStructures[applicant.data.businessStructure],
+            ],
+            [
+              "Business type",
+              applicant.data.naicsCode
+                ? `${applicant.data.naicsCode} — ${applicant.data.businessType}`
+                : "Needs NAICS confirmation",
+            ],
+            [
+              "Industry",
+              applicant.data.industryCode
+                ? `${applicant.data.industryCode} — ${applicant.data.industry}`
+                : "Not confirmed",
+            ],
+            [
+              "Space arrangement",
+              spaceArrangements[applicant.data.spaceArrangement],
+            ],
             ["Intake date", applicant.data.intakeDate],
             ["Target funding date", applicant.data.targetDate],
             ["Applicant role", applicant.data.role],

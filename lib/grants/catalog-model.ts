@@ -94,7 +94,7 @@ export function catalogMatchCriteria(a: Applicant) {
     ),
   ];
   const words =
-    `${a.industry} ${a.primaryGoal || ""} ${a.costs.join(" ")}`
+    `${a.businessType || ""} ${a.industry || a.legacyIndustry || ""} ${a.primaryGoal || ""} ${a.costs.join(" ")}`
       .toLowerCase()
       .match(/[a-z]{3,}/g) ?? [];
   const stop = new Set([

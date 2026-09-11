@@ -20,8 +20,8 @@ const record = <T>(id: string, data: T): GrantRecord<T> => ({
 const applicant = () =>
   applicantSchema.parse({
     name: "Business",
-    businessType: "LLC",
-    industry: "Retail",
+    businessStructure: "llc",
+    naicsCode: "459420",
     primaryGoal: "Repair roof",
     intakeDate: "2026-09-11",
     role: "landlord",
@@ -61,8 +61,8 @@ const round = (id: string, programId = id, changes: Partial<Round> = {}) =>
         roles: ["landlord"],
         entities: ["for_profit"],
         stages: ["any"],
-        businessTypes: ["LLC"],
-        industries: ["Retail"],
+        businessStructures: ["llc"],
+        industries: ["Retail Trade"],
         costs: ["roofing"],
         geography: ["Chicago"],
       },
@@ -71,13 +71,8 @@ const round = (id: string, programId = id, changes: Partial<Round> = {}) =>
   );
 
 describe("questionnaire-driven grant shortlist", () => {
-  it("requires the five core fields on dated intakes, without breaking older profiles", () => {
-    for (const key of [
-      "name",
-      "businessType",
-      "industry",
-      "primaryGoal",
-    ] as const)
+  it("requires dated intake facts while permitting explicitly unconfirmed classification", () => {
+    for (const key of ["name", "primaryGoal"] as const)
       expect(
         applicantSchema.safeParse({ ...applicant(), [key]: " " }).success,
       ).toBe(false);
@@ -141,7 +136,8 @@ describe("questionnaire-driven grant shortlist", () => {
       ...applicant(),
       role: "unknown" as const,
       geography: [],
-      industry: "Unknown",
+      naicsCode: null,
+      industry: "",
     };
     const candidate = buildGrantShortlist(
       unknown,

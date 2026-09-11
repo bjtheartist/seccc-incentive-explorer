@@ -96,8 +96,11 @@ async function main() {
     ["Roles: landlord, operator, tenant, any", "landlord"],
     ["Entities: for_profit, nonprofit, individual, any", "for_profit"],
     ["Stages: pre_opening, operating, any", "operating"],
-    ["Business types (or any)", "LLC"],
-    ["Industries (or any)", "Retail"],
+    [
+      "Structures: llc, corporation, sole_proprietor, partnership, cooperative, trust, other, any",
+      "llc",
+    ],
+    ["NAICS 2022 codes (2–6 digits, sector range, or any)", "44-45"],
     ["geography", "Chicago"],
     ["costs", "roofing"],
   ])
@@ -133,8 +136,23 @@ async function main() {
     .click();
   const businessName = `Questionnaire check ${suffix}`;
   await dialog.getByLabel("Business name", { exact: true }).fill(businessName);
-  await dialog.getByLabel("Business type", { exact: true }).fill("LLC");
-  await dialog.getByLabel("Business industry", { exact: true }).fill("Retail");
+  await dialog
+    .getByLabel("Business structure", { exact: true })
+    .selectOption("llc");
+  await dialog.getByLabel("Search NAICS business types").fill("459420");
+  await dialog
+    .getByLabel("Business type — NAICS 2022", { exact: true })
+    .selectOption("459420");
+  await expect(
+    dialog.getByLabel("Business industry — NAICS sector"),
+  ).toHaveValue("44-45 — Retail Trade");
+  await dialog
+    .getByLabel("Business name", { exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "output/grants/naics-classification-desktop.png",
+  });
+  await dialog.getByLabel("Owns the project space", { exact: true }).check();
   await dialog.getByLabel("Intake date", { exact: true }).fill("2026-09-11");
   await dialog.getByLabel("Property owner / landlord", { exact: true }).check();
   await dialog.getByLabel("For-profit business", { exact: true }).check();
@@ -204,8 +222,13 @@ async function main() {
     (a: { data: { name: string } }) => a.data.name === businessName,
   );
   expect(applicant.data).toMatchObject({
-    businessType: "LLC",
-    industry: "Retail",
+    businessStructure: "llc",
+    naicsCode: "459420",
+    naicsEdition: "2022",
+    businessType: "Gift, Novelty, and Souvenir Retailers",
+    industryCode: "44-45",
+    industry: "Retail Trade",
+    spaceArrangement: "owns",
     primaryGoal: "Repair the building roof",
     intakeDate: "2026-09-11",
     targetDate: "2026-11-01",
@@ -218,6 +241,7 @@ async function main() {
     .getByRole("button", { name: "Update answers", exact: true })
     .click();
   await dialog.getByLabel("Business operator", { exact: true }).check();
+  await dialog.getByLabel("Leases the project space", { exact: true }).check();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: "output/grants/questionnaire-mobile.png",
@@ -245,6 +269,7 @@ async function main() {
     (a: { id: string }) => a.id === applicant.id,
   );
   expect(applicant.data.role).toBe("operator");
+  expect(applicant.data.spaceArrangement).toBe("leases");
   expect(applicant.version).toBe(2);
   // Archive synthetic records after exercising real routes; no client data is touched.
   for (const [resource, record] of [

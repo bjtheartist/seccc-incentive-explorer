@@ -4,6 +4,7 @@ import { requireSQL } from "@/lib/db";
 import { GrantsError } from "./auth";
 import {
   schemas,
+  applicantSchema,
   screenMatch,
   matchNeedsReview,
   type Resource,
@@ -47,13 +48,23 @@ export class GrantsStore {
       [id],
     );
     if (!rows[0]) throw new GrantsError("Record not found", 404);
-    return record<T>(rows[0]);
+    return record<T>(
+      resource === "applicants"
+        ? { ...rows[0], data: applicantSchema.parse(rows[0].data) }
+        : rows[0],
+    );
   }
   async list(resource: Resource) {
     const rows = await this.sql(
       `SELECT * FROM ${tables[resource]} ORDER BY updated_at DESC`,
     );
-    return rows.map((row) => record(row));
+    return rows.map((row) =>
+      record(
+        resource === "applicants"
+          ? { ...row, data: applicantSchema.parse(row.data) }
+          : row,
+      ),
+    );
   }
   async save(
     resource: Resource,

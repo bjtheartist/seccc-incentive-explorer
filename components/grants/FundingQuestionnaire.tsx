@@ -9,6 +9,12 @@ import {
   type GrantRecord,
 } from "@/lib/grants/model";
 
+import { BusinessClassification } from "./BusinessClassification";
+import {
+  businessStructures,
+  spaceArrangements,
+} from "@/lib/grants/classification";
+
 const steps = ["Business", "Project", "Funding", "Review"];
 const costOptions: Record<string, string> = {
   roofing: "Roofing",
@@ -125,7 +131,8 @@ export function FundingQuestionnaire({
     </label>
   );
   const choose = (
-    key: "role" | "entity" | "stage" | "reimbursementReady",
+    key:
+      "role" | "entity" | "stage" | "reimbursementReady" | "spaceArrangement",
     label: string,
     choices: Record<string, string>,
   ) => (
@@ -159,13 +166,11 @@ export function FundingQuestionnaire({
       return;
     }
     if (
-      ![businessName, data.businessType, data.industry, data.primaryGoal].every(
-        (v) => v.trim(),
-      ) ||
+      ![businessName, data.primaryGoal].every((v) => v.trim()) ||
       !data.intakeDate
     ) {
       setError(
-        "Complete business name, business type, industry, primary goal and intake date before generating a shortlist.",
+        "Complete business name, primary goal and intake date before generating a shortlist. Unconfirmed classification will remain a follow-up.",
       );
       return;
     }
@@ -284,25 +289,23 @@ export function FundingQuestionnaire({
                         required
                       />
                     </label>
-                    {field(
-                      "businessType",
-                      "Business type",
-                      "e.g. LLC, sole proprietor, nonprofit, or Unknown",
-                      true,
-                    )}
-                    {field(
-                      "industry",
-                      "Business industry",
-                      "e.g. childcare, retail, manufacturing, or Unknown",
-                      true,
-                    )}
+                    <BusinessClassification
+                      data={data}
+                      onChange={(fields) =>
+                        setData((d) => ({ ...d, ...fields }))
+                      }
+                    />
                   </div>
                   {choose("role", "How is the applicant involved?", {
                     landlord: "Property owner / landlord",
                     operator: "Business operator",
-                    tenant: "Business tenant",
                     unknown: "Not confirmed",
                   })}
+                  {choose(
+                    "spaceArrangement",
+                    "What is the arrangement for the project space?",
+                    spaceArrangements,
+                  )}
                   {choose("entity", "Which applicant category is confirmed?", {
                     for_profit: "For-profit business",
                     nonprofit: "Nonprofit",
@@ -465,8 +468,26 @@ export function FundingQuestionnaire({
                   <dl className="grant-intake-summary">
                     {[
                       ["Business name", businessName],
-                      ["Business type", data.businessType],
-                      ["Business industry", data.industry],
+                      [
+                        "Business structure",
+                        businessStructures[data.businessStructure],
+                      ],
+                      [
+                        "Business type",
+                        data.naicsCode
+                          ? `${data.naicsCode} — ${data.businessType}`
+                          : "Not confirmed",
+                      ],
+                      [
+                        "Business industry",
+                        data.industryCode
+                          ? `${data.industryCode} — ${data.industry}`
+                          : "Not confirmed",
+                      ],
+                      [
+                        "Space arrangement",
+                        spaceArrangements[data.spaceArrangement],
+                      ],
                       ["Intake date", data.intakeDate],
                       ["Primary goal", data.primaryGoal],
                       [

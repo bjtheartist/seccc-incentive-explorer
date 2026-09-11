@@ -148,6 +148,7 @@ export class GrantsCatalog {
       c.entities,
       a.role,
       a.stage,
+      a.spaceArrangement,
     ];
     const rows = await this.sql(
       `SELECT ${columns} FROM ${joined}
@@ -155,6 +156,8 @@ export class GrantsCatalog {
       AND g.instrument=ANY($3::text[]) AND g.legitimacy='official'
       AND (cardinality($4::text[])=0 OR g.entity_types && $4::text[] OR cardinality(g.entity_types)=0)
       AND ($5<>'landlord' OR 'property_owner'=ANY(g.entity_types) OR g.landlord_or_tenant IN ('owner','either'))
+      AND ($7<>'leases' OR g.landlord_or_tenant IS NULL OR g.landlord_or_tenant<>'owner')
+      AND ($7<>'owns' OR g.landlord_or_tenant IS NULL OR g.landlord_or_tenant<>'tenant')
       AND ($6<>'pre_opening' OR g.operating_stage IS NULL OR g.operating_stage IN ('any','pre_revenue_ok'))
       AND (g.uses_eligible && $1::text[] OR ($2<>'' AND g.search @@ to_tsquery('english',$2)))
       AND r.id IS NULL

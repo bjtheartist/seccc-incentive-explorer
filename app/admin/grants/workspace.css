@@ -92,6 +92,7 @@
   font-weight: 600;
 }
 .grant-question-field > input,
+.grant-question-field > select,
 .grant-question-field > textarea {
   display: block;
   width: 100%;

@@ -4,6 +4,7 @@ import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
 import { instantFromLocal, localTime } from "@/lib/grants/time";
 import {
+  applicantSchema,
   cadenceLabels,
   fundingLabels,
   reviewLabels,
@@ -12,6 +13,9 @@ import {
   type GrantRecord,
   type WorkspaceData,
 } from "@/lib/grants/model";
+
+import { BusinessClassification } from "./BusinessClassification";
+import { spaceArrangements } from "@/lib/grants/classification";
 
 type FormData = Record<string, unknown>;
 export interface EditorTarget {
@@ -22,7 +26,12 @@ export interface EditorTarget {
 const options = (values: readonly string[]) =>
   Object.fromEntries(values.map((v) => [v, v.replaceAll("_", " ")]));
 const initial = (target: EditorTarget): FormData => {
-  if (target.record) return structuredClone(target.record.data) as FormData;
+  if (target.record)
+    return structuredClone(
+      target.resource === "applicants"
+        ? applicantSchema.parse(target.record.data)
+        : target.record.data,
+    ) as FormData;
   const common = { ownerId: null, notes: "", tags: [] };
   const data: Record<Resource, FormData> = {
     programs: {
@@ -259,11 +268,11 @@ export function RecordEditor({
                   {select(
                     "role",
                     "Applicant role",
-                    options(["unknown", "landlord", "operator", "tenant"]),
+                    options(["unknown", "landlord", "operator"]),
                   )}
                   {select(
                     "entity",
-                    "Legal entity",
+                    "Applicant category",
                     options([
                       "unknown",
                       "for_profit",
@@ -276,8 +285,30 @@ export function RecordEditor({
                     "Business stage",
                     options(["unknown", "pre_opening", "operating"]),
                   )}
-                  {field("businessType", "Business type")}
-                  {field("industry", "Business industry")}
+                  {select(
+                    "spaceArrangement",
+                    "Space arrangement",
+                    spaceArrangements,
+                  )}
+                  <BusinessClassification
+                    data={{
+                      naicsCode:
+                        typeof data.naicsCode === "string"
+                          ? data.naicsCode
+                          : null,
+                      businessStructure: (data.businessStructure ||
+                        "unknown") as import("@/lib/grants/model").Applicant["businessStructure"],
+                      legacyBusinessType: String(data.legacyBusinessType || ""),
+                      legacyIndustry: String(data.legacyIndustry || ""),
+                    }}
+                    onChange={(fields) =>
+                      setData((d) => ({
+                        ...d,
+                        ...fields,
+                        naicsEdition: "2022",
+                      }))
+                    }
+                  />
                   {field("primaryGoal", "Primary goal", "area")}
                   {field("address", "Project address / PINs")}
                   {field("budget", "Project budget / cash readiness")}
@@ -394,6 +425,9 @@ export function RecordEditor({
                       "stages",
                       "industries",
                       "businessTypes",
+                      "businessStructures",
+                      "naicsCodes",
+                      "spaceArrangements",
                       "geography",
                       "costs",
                     ].map((k) => (
@@ -408,10 +442,16 @@ export function RecordEditor({
                               : k === "stages"
                                 ? "Stages: pre_opening, operating, any"
                                 : k === "businessTypes"
-                                  ? "Business types (or any)"
+                                  ? "Legacy business-type text (review manually)"
                                   : k === "industries"
-                                    ? "Industries (or any)"
-                                    : k
+                                    ? "Legacy industry text (or any)"
+                                    : k === "naicsCodes"
+                                      ? "NAICS 2022 codes (2–6 digits, sector range, or any)"
+                                      : k === "businessStructures"
+                                        ? "Structures: llc, corporation, sole_proprietor, partnership, cooperative, trust, other, any"
+                                        : k === "spaceArrangements"
+                                          ? "Space: owns, leases, seeking, not_applicable, any"
+                                          : k
                         }
                         value={rules[k]}
                         onChange={(v) => setRule(k, v)}
