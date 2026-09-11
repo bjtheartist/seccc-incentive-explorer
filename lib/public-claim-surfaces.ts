@@ -53,6 +53,18 @@ export interface PublicClaimSurface {
 }
 
 export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
+  {
+    id: "internal-grants-workspace",
+    description: "Staff-only funding inventory, evidence review, and explained business shortlist. Source records and unverified rounds are labeled as research leads; no public eligibility determination. Anonymous routes expose only the sign-in gate or access error; the cron route requires its configured secret.",
+    contracts: ["reviewed-copy"],
+    files: [
+      "app/admin/grants/page.tsx",
+      "app/api/admin/grants/[resource]/route.ts",
+      "app/api/admin/grants/catalog/route.ts",
+      "app/api/cron/grant-scan/route.ts",
+      "components/grants",
+    ],
+  },
   // ── Address report (both forks) ──────────────────────────────────────
   {
     id: "report-live-route",

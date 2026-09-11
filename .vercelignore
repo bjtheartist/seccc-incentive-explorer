@@ -9,3 +9,5 @@ ds-bundle
 .playwright-cli
 test-results
 coverage
+.env*
+output
