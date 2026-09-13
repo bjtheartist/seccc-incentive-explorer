@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { loadVacancyIndex } from "@/lib/vacancy-index";
 import { loadCorridorRings } from "@/lib/vacancy-corridor-rings";
@@ -8,7 +8,7 @@ import { opportunityAreaById } from "@/lib/vacancy-opportunity-areas";
 import VacancyMapIsland from "@/components/vacancy/VacancyMapIsland";
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { OPPORTUNITY_AREA_DISCLAIMER } from "@/lib/vacancy-public-labels";
-import { buildSiteMatchmakerHref } from "@/lib/site-matchmaker";
+import { buildSiteMatchmakerHref, buildShortlistHref, decodeSiteMatchCriteria, siteMatchCriteriaVersionSupported } from "@/lib/site-matchmaker";
 import {
   applyCurrentAvailableSpaceToLandPoints,
   applyCurrentAvailableSpaceToSitePoints,
@@ -76,6 +76,18 @@ export default async function VacancyMapPage({
   const pilotEntry = getPilotZipEntry(zip);
   if (!pilotEntry) notFound();
 
+  const matchParams = toUrlSearchParams(rawSearchParams);
+  matchParams.set("zip", zip);
+  const handoff = decodeSiteMatchmakerVacancyHandoff(zip, matchParams);
+  if (!siteMatchCriteriaVersionSupported(matchParams)) {
+    return <main className="mx-auto max-w-3xl p-8"><h1 className="text-2xl font-semibold">These search criteria need review</h1><p className="mt-3">The map cannot apply this version or combination of filters.</p><Link className="mt-4 inline-block underline" href={`/locate?${matchParams.toString()}`}>Review criteria</Link></main>;
+  }
+  if (matchParams.get("sm_v") === "2") {
+    const target = buildShortlistHref(decodeSiteMatchCriteria(matchParams));
+    if (target) redirect(`${target}#shortlist-map`);
+    return <main className="mx-auto max-w-3xl p-8"><h1 className="text-2xl font-semibold">Complete your search criteria</h1><Link className="mt-4 inline-block underline" href={`/locate?${matchParams.toString()}`}>Review criteria</Link></main>;
+  }
+
   const exportData = loadVacancyIndex();
   const edition = exportData?.editions[zip] ?? null;
   const availability = edition
@@ -97,11 +109,6 @@ export default async function VacancyMapPage({
           availabilityIsAuthoritative,
         )
       : null;
-  const handoff = decodeSiteMatchmakerVacancyHandoff(
-    zip,
-    toUrlSearchParams(rawSearchParams),
-  );
-
   const trackedPrefilter =
     edition && handoff
       ? prefilterVacancyRecords(currentSitePoints, handoff.criteria, {

@@ -10,6 +10,7 @@ import {
   loadPrecomputedCountyParcelFacts,
   loadShortlistParcelIdentity,
   loadShortlistParcelIdentityEntries,
+  loadShortlistScreeningSidecar,
   type ResolvedShortlistParcelIdentity,
 } from "../shortlist-parcel-identity";
 import type { CandidateOverlays, DecoratedShortlistCandidate } from "../shortlist-engine";
@@ -491,5 +492,32 @@ describe("applyPrecomputedParcelIdentity", () => {
     const rows = [candidate(), candidate({ key: "site:2" })];
     const merged = applyPrecomputedParcelIdentity(rows, new Map());
     expect(merged.every((row) => row.pin === null && row.pinProvenance === undefined)).toBe(true);
+  });
+});
+
+
+describe("strict pre-selection evidence validity", () => {
+  it("accepts a valid explicitly empty facts block as sparse data", () => {
+    writeSidecar({ factsByPin: {} });
+    const loaded = loadShortlistScreeningSidecar("60619", BUILD_ID);
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) expect(loaded.facts.size).toBe(0);
+  });
+  it.each([
+    { breakChecksum: true, factsByPin: {} },
+    { manifestBuildId: "stale", factsByPin: {} },
+    { fileBuildId: "stale", factsByPin: {} },
+    { factsByPin: { "25023160330000": { ...facts(), checkedAt: "invalid-date" } } },
+    {},
+  ])("rejects failed or missing screening evidence instead of returning a successful empty map: %j", (options) => {
+    writeSidecar(options);
+    expect(loadShortlistScreeningSidecar("60619", BUILD_ID)).toEqual({ ok: false });
+  });
+  it("rejects a missing manifest or sidecar", () => {
+    expect(loadShortlistScreeningSidecar("60619", BUILD_ID)).toEqual({ ok: false });
+    __resetShortlistParcelIdentityCacheForTests();
+    writeSidecar({ factsByPin: {} });
+    rmSync(join(dir, "60619.json"));
+    expect(loadShortlistScreeningSidecar("60619", BUILD_ID)).toEqual({ ok: false });
   });
 });

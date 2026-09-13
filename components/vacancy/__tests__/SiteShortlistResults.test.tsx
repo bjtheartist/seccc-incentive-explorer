@@ -657,13 +657,17 @@ describe("SiteShortlistResults — shared zoning filters", () => {
     }
     vi.stubGlobal("URL", TestURL);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    fireEvent.click(screen.getByRole("button", { name: "Download the full shortlist (CSV)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export full shortlist (5) (CSV)" }));
     expect(shortlistCsvMock).toHaveBeenCalledWith(
       ranked,
       expect.any(Object),
       expect.any(Object),
       "60619",
+      expect.any(Map),
     );
+    fireEvent.click(screen.getByRole("button", { name: "Export visible results (1) (CSV)" }));
+    expect(shortlistCsvMock).toHaveBeenLastCalledWith([ranked[3]], expect.any(Object), expect.any(Object), "60619", new Map(ranked.map((r, i) => [r.key, i + 1])));
+    expect(screen.getByTestId("mock-map-keys").textContent).toBe(ranked[3].key);
   });
 });
 

@@ -71,6 +71,18 @@ export const SHORTLIST_CSV_HEADERS: readonly string[] = [
   "Cook County Clerk recorded documents",
   "Google Maps",
   "Screening score",
+  "Screening disposition",
+  "Recorded property type",
+  "Recorded type source year",
+  "Evidence checked at",
+  "Assessor total building area sq ft (screening evidence)",
+  "Lot area sq ft (screening evidence)",
+  "Available interior space sq ft (screening evidence)",
+  "Screening reasons",
+  "Screening community area",
+  "Screening identity status",
+  "Screening source keys",
+  "Building footprint sq ft (screening evidence)",
 ];
 
 function csvCell(value: string | number | null | undefined): string {
@@ -183,6 +195,7 @@ export function shortlistCsv(
   enrichment: Readonly<Record<string, ShortlistEnrichmentFacts>> = {},
   resolutions: Readonly<Record<string, CandidateParcelResolution>> = {},
   zip?: string,
+  originalRanks?: ReadonlyMap<string, number>,
 ): string {
   const lines = [SHORTLIST_CSV_HEADERS.map(csvCell).join(",")];
 
@@ -246,7 +259,7 @@ export function shortlistCsv(
     );
     lines.push(
       [
-        index + 1,
+        originalRanks?.get(candidate.key) ?? index + 1,
         candidate.address,
         formatPin14(savedPin) ?? "",
         formatPin14(effectivePin) ?? "",
@@ -298,6 +311,18 @@ export function shortlistCsv(
           zip,
         }) ?? "Location unavailable",
         candidate.score,
+        candidate.screeningDisposition ?? "Legacy broad screening",
+        candidate.screeningEvidence?.recordedType ?? "Not evaluated",
+        candidate.screeningEvidence?.sourceYear,
+        candidate.screeningEvidence?.checkedAt,
+        candidate.screeningEvidence?.measurements["assessor-building"]?.value,
+        candidate.screeningEvidence?.measurements.lot?.value,
+        candidate.screeningEvidence?.measurements["available-interior"]?.value,
+        candidate.screeningReasons?.join("; "),
+        candidate.screeningEvidence?.communityArea,
+        candidate.screeningEvidence?.identityStatus,
+        candidate.screeningEvidence?.sourceKeys.join("; "),
+        candidate.screeningEvidence?.measurements.footprint?.value,
       ]
         .map(csvCell)
         .join(","),

@@ -478,9 +478,9 @@ const TRANSPORTATION_DISTANCE_METERS: Record<
   number | null
 > = {
   flexible: null,
-  "quarter-mile": 400,
-  "half-mile": 800,
-  "one-mile": 1600,
+  "quarter-mile": 402.336,
+  "half-mile": 804.672,
+  "one-mile": 1609.344,
 };
 
 /** The score decays to zero at this distance — the largest configurable
@@ -743,6 +743,9 @@ function normalizeContextAddress(address: string | null): string {
 // the sliced top-N, never on the full screened universe (Finding 11).
 
 export interface RankedShortlistCandidate {
+  screeningEvidence?: import("./shortlist-screening-evidence").ShortlistScreeningEvidence;
+  screeningReasons?: readonly string[];
+  screeningDisposition?: "match" | "review" | "conversion";
   key: string;
   address: string;
   pin: string | null;

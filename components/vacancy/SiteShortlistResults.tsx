@@ -347,6 +347,7 @@ function ShortlistCard({
   enrichState,
   onSnapshotClick,
   dossierOverlay,
+  measurementBasis,
   onParcelDetails,
 }: {
   candidate: DecoratedShortlistCandidate;
@@ -356,6 +357,7 @@ function ShortlistCard({
   enrichState: EnrichState["status"];
   onSnapshotClick: (candidate: DecoratedShortlistCandidate) => void;
   dossierOverlay: DossierOverlay | null;
+  measurementBasis?: SiteMatchCriteria["measurementBasis"];
   onParcelDetails: (
     candidate: DecoratedShortlistCandidate,
     opener: HTMLButtonElement,
@@ -448,6 +450,13 @@ function ShortlistCard({
         <ZoneBadge badge={candidate.badge} />
       </div>
 
+      {candidate.screeningEvidence && (
+        <p className="mt-3 border-l-2 border-[#2563EB] pl-3 text-xs">
+          Recorded type: {candidate.screeningEvidence.recordedType}; source year: {candidate.screeningEvidence.sourceYear ?? "not published"}.
+          Matches evaluated filters only; current use, available space and permission require verification.
+          {measurementBasis && <span className="mt-1 block">Screened measurement ({measurementBasis}): {candidate.screeningEvidence.measurements[measurementBasis]?.value.toLocaleString() ?? "unavailable"} sq ft. This dated screening value may differ from later record updates.</span>}
+        </p>
+      )}
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Fact
           label={candidate.propertyType === "vacant_building" ? "Building" : "Building (none)"}
@@ -600,10 +609,10 @@ function ShortlistCard({
           </a>
         )}
         <Link
-          href={`/vacancy/${zip}/map`}
+          href={candidate.screeningEvidence ? "#shortlist-map" : `/vacancy/${zip}/map`}
           className="border border-[#0C1B33]/25 px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/60 transition-colors hover:border-[#0C1B33]/60 hover:text-[#0C1B33]"
         >
-          Property map
+          {candidate.screeningEvidence ? "Filtered shortlist map" : "Property map"}
         </Link>
       </div>
     </li>
@@ -933,7 +942,7 @@ export default function SiteShortlistResults({
       }
     : null;
 
-  function downloadCsv() {
+  function downloadCsv(visibleOnly = false) {
     const facts: Record<string, ShortlistEnrichmentFacts> = {};
     for (const [key, item] of Object.entries(byKey)) {
       const { key: _key, enrichmentUnavailable: _flag, ...rest } = item;
@@ -945,13 +954,13 @@ export default function SiteShortlistResults({
     const resolutionStates = Object.fromEntries(
       ranked.map((candidate) => [candidate.key, dossierByKey[candidate.key]?.resolution ?? { status: "not_checked" }]),
     );
-    const blob = new Blob([shortlistCsv(ranked, facts, resolutionStates, zip)], {
+    const blob = new Blob([shortlistCsv(visibleOnly ? visible : ranked, facts, resolutionStates, zip, new Map(ranked.map((candidate, index) => [candidate.key, index + 1])))], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = shortlistCsvFilename(zip);
+    anchor.download = visibleOnly ? `visible-${shortlistCsvFilename(zip)}` : shortlistCsvFilename(zip);
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -984,11 +993,15 @@ export default function SiteShortlistResults({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={downloadCsv}
+          onClick={() => downloadCsv(false)}
           disabled={ranked.length === 0}
           className="min-h-10 border border-[#2563EB] px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Download the full shortlist (CSV)
+          Export full shortlist ({ranked.length}) (CSV)
+        </button>
+        <button type="button" onClick={() => downloadCsv(true)} disabled={visible.length === 0}
+          className="min-h-10 border border-[#2563EB] px-4 py-2 text-xs text-[#2563EB] disabled:opacity-40">
+          Export visible results ({visible.length}) (CSV)
         </button>
         {allUnavailable && (
           <span className="text-[11px] leading-relaxed text-[#A45B00]">
@@ -1107,6 +1120,7 @@ export default function SiteShortlistResults({
         </div>
       </section>
 
+      <div id="shortlist-map">
       <SiteShortlistMap
         zip={zip}
         ranked={ranked}
@@ -1118,6 +1132,7 @@ export default function SiteShortlistResults({
           if (candidate) openParcelDossier(candidate, opener);
         }}
       />
+      </div>
 
       <section className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1127,7 +1142,9 @@ export default function SiteShortlistResults({
           </h2>
         </div>
         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">
-          {scored
+          {criteria.evidenceVersion === "2"
+            ? "Records passing your filters appear with more complete evidence first, then selected rail score and broad zoning alignment."
+            : scored
             ? "One ranked list, screened against your brief."
             : "One list, screened against your brief, ordered by record completeness — add a transit criterion to rank by fit."}{" "}
           The badge on every card is a broad project-to-district-family screen only. The zoning
@@ -1188,6 +1205,7 @@ export default function SiteShortlistResults({
               <ShortlistCard
                 key={candidate.key}
                 candidate={candidate}
+                measurementBasis={criteria.measurementBasis}
                 number={ranked.indexOf(candidate) + 1}
                 zip={zip}
                 enrichment={byKey[candidate.key] ?? null}
