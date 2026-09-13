@@ -399,3 +399,9 @@ describe("Site Shortlist — dispatch-coverage drift routes to the unavailable s
     expect(html).not.toMatch(/0 candidate records|no records match this brief/i);
   });
 });
+
+
+it("shows unavailable when refined screening sidecars cannot validate, rather than an empty or partial result", async () => {
+  loadShortlistUniverseMock.mockReturnValue({ ok: true, data: fixtureUniverseFile({ rows: [fixtureRow()] }) });
+  expect(await render({ ...READY_SEARCH_PARAMS, sm_v: "2", sm_building_types: "commercial" })).toContain("Ranked shortlist temporarily unavailable");
+});

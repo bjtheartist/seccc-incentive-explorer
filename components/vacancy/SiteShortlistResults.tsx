@@ -1142,7 +1142,9 @@ export default function SiteShortlistResults({
           </h2>
         </div>
         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">
-          {scored
+          {criteria.evidenceVersion === "2"
+            ? "Records passing your filters appear with more complete evidence first, then selected rail score and broad zoning alignment."
+            : scored
             ? "One ranked list, screened against your brief."
             : "One list, screened against your brief, ordered by record completeness — add a transit criterion to rank by fit."}{" "}
           The badge on every card is a broad project-to-district-family screen only. The zoning

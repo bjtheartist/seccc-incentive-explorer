@@ -73,6 +73,42 @@
       ],
       "checkedAt": "2026-09-13",
       "sourceUrl": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1/query?f=json&geometry=-87.56282557756127%2C41.75203608873158&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326"
+    },
+    {
+      "canonicalKey": "site:b0716074630d2109",
+      "zip": "60644",
+      "address": "4829 W RACE AVE",
+      "savedPin": null,
+      "lat": 41.89028890573051,
+      "lon": -87.74694599653672,
+      "kind": "land-building-disagreement",
+      "savedDistrict": "RS-3",
+      "observedPins": [
+        "16092230480000"
+      ],
+      "observedDistricts": [
+        "RS-3"
+      ],
+      "checkedAt": "2026-09-13",
+      "sourceUrl": "https://gis.cookcountyil.gov/traditional/rest/services/parcel_current_beta/FeatureServer/0/query?f=json&geometry=-87.74694599653672%2C41.89028890573051&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326"
+    },
+    {
+      "canonicalKey": "site:58976765150e5383",
+      "zip": "60649",
+      "address": "2825 E 77TH PL",
+      "savedPin": null,
+      "lat": 41.754911945663,
+      "lon": -87.554244286671,
+      "kind": "land-building-disagreement",
+      "savedDistrict": "RT-4",
+      "observedPins": [
+        "21304030080000"
+      ],
+      "observedDistricts": [
+        "RT-4"
+      ],
+      "checkedAt": "2026-09-13",
+      "sourceUrl": "https://gis.cookcountyil.gov/traditional/rest/services/parcel_current_beta/FeatureServer/0/query?f=json&geometry=-87.554244286671%2C41.754911945663&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=true&outSR=4326"
     }
   ]
 }

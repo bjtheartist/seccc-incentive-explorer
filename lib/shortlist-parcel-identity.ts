@@ -355,6 +355,34 @@ export function loadPrecomputedCountyParcelFacts(
   return result;
 }
 
+/** Selection must distinguish a valid sparse snapshot from a failed dataset.
+ * Unlike optional post-selection enrichment, screening cannot silently skip a
+ * missing/invalid facts block. Both maps come from the same validated file.
+ */
+export function loadShortlistScreeningSidecar(zip: string, universeBuildId: string):
+  | { ok: false }
+  | { ok: true; entries: ReadonlyMap<string, ShortlistParcelIdentityEntry>; facts: ReadonlyMap<string, PrecomputedCountyParcelFacts> } {
+  const file = readSidecarFile(zip, universeBuildId);
+  if (!file || file.factsByPin === undefined) return { ok: false };
+  const entries = new Map<string, ShortlistParcelIdentityEntry>();
+  for (const [key, entry] of Object.entries(file.entries)) {
+    if (entry.status !== "resolved") entries.set(key, entry);
+    else {
+      const pin = normalizePin14(entry.pin);
+      if (!pin) return { ok: false };
+      entries.set(key, { ...entry, pin, countyAddress: entry.countyAddress ?? null });
+    }
+  }
+  const facts = new Map<string, PrecomputedCountyParcelFacts>();
+  for (const [rawPin, value] of Object.entries(file.factsByPin)) {
+    const pin = normalizePin14(rawPin);
+    if (!pin) return { ok: false };
+    facts.set(pin, { countyClass: value.countyClass ?? null, lotAreaSqft: value.lotAreaSqft ?? null,
+      assessorBuildingSqft: value.assessorBuildingSqft ?? null, assessorBuildingYear: value.assessorBuildingYear ?? null, checkedAt: value.checkedAt });
+  }
+  return { ok: true, entries, facts };
+}
+
 /**
  * PURE. Stamp PIN provenance on an already-ranked, already-decorated slice,
  * filling in the PIN for rows the sidecar resolved.

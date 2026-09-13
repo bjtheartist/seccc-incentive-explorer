@@ -30,7 +30,7 @@ import ShortlistReviewGroup from "@/components/vacancy/ShortlistReviewGroup";
  */
 
 import Link from "next/link";
-import { loadScreeningRows, loadPreparedEvidenceShortlist } from "@/lib/shortlist-screening-data";
+import { loadScreeningRows, loadPreparedEvidenceShortlist, ScreeningDataUnavailable } from "@/lib/shortlist-screening-data";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
@@ -394,8 +394,17 @@ export default async function SiteShortlistPage({
   // ── Run the full-universe, criteria-relative engine (core pass only — no
   //    display-only geometry here, see Finding 11) ───────────────────────────
   const stations = railStations();
-  const screeningRows = criteria.evidenceVersion === "2" ? loadScreeningRows(universe.data) : null;
-  const preparedEvidence = screeningRows ? loadPreparedEvidenceShortlist(universe.data, criteria, stations) : null;
+  let screeningRows: ReturnType<typeof loadScreeningRows> | null = null;
+  let preparedEvidence: ReturnType<typeof loadPreparedEvidenceShortlist> | null = null;
+  try {
+    if (criteria.evidenceVersion === "2") {
+      screeningRows = loadScreeningRows(universe.data);
+      preparedEvidence = loadPreparedEvidenceShortlist(universe.data, criteria, stations);
+    }
+  } catch (error) {
+    if (error instanceof ScreeningDataUnavailable) return <UnavailableState zip={zip} />;
+    throw error;
+  }
   const evidenceResult = preparedEvidence?.result ?? null;
   const {
     ranked: allRanked,
@@ -507,19 +516,21 @@ export default async function SiteShortlistPage({
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
           Screened from this area&rsquo;s complete tracked vacant-property universe against your
-          brief, {scored ? scoredOrderClause : `then ${unscoredOrderLabel}.`} These are
+          brief, {evidenceResult ? "then ordered by evidence completeness, selected rail score, and broad zoning alignment." : scored ? scoredOrderClause : `then ${unscoredOrderLabel}.`} These are
           early possibilities from public records, not availability listings — no record here is
           offered for sale or lease.
           {allRanked.length > ranked.length && (
             <>
               {" "}
               {allRanked.length.toLocaleString("en-US")} records cleared the screens; {ranked.length}{" "}
-              are shown, {scored
+              are shown, {evidenceResult ? "more complete records first." : scored
                 ? scoredHighestFirstClause
                 : `${unscoredOrderLabel} — add a transit criterion to rank by fit.`}
             </>
           )}
         </p>
+
+        {evidenceResult && <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/60">Completeness counts a usable parcel ID, dated recorded type, a published typed measurement, resolved zoning and community area equally. It is not a property-quality rating. Missing optional facts lower the order; they do not exclude an otherwise matching record.</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {chips.map((chip) => (

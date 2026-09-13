@@ -56,3 +56,40 @@ describe("evidence shortlist through the full selection entry point", () => {
     expect(result.review.some((r) => r.badge === "planned-development")).toBe(true);
   });
 });
+
+
+describe("completeness-first refined ordering", () => {
+  const source = rows.find((row: typeof rows[number]) => row.hasVacantBuildingEvidence && !row.screeningEvidence?.conflictingPropertyEvidence && row.screeningEvidence?.recordedType === "commercial" && Object.values(row.screeningEvidence.measurements).some((measurement) => measurement != null))!;
+  const full = { ...source, canonicalKey: "z-full", zoning: { ...source.zoning, status: "resolved" as const, district: "RS-3" },
+    screeningEvidence: { ...source.screeningEvidence!, communityArea: "SOUTH CHICAGO" } };
+  const sparse = { ...source, canonicalKey: "a-sparse", zoning: { ...source.zoning, status: "resolved" as const, district: "B3-2" },
+    screeningEvidence: { ...source.screeningEvidence!, communityArea: null,
+      measurements: { lot: null, "assessor-building": null, footprint: null, "available-interior": null } } };
+  const criteria = { ...createEmptySiteMatchCriteria(), evidenceVersion: "2" as const, projectUse: "retail-service" as const,
+    propertyType: "existing-building" as const, buildingTypes: ["commercial"] as const };
+  it("puts documented records ahead of sparse aligned records without removing the sparse matches", () => {
+    const result = runEvidenceShortlist({ rows: [sparse, full], stations: [], sourceRecordsByEvidenceType: u.counts.sourceRecordsByEvidenceType, criteria });
+    expect(result.ranked.map((r) => r.key)).toEqual(["z-full", "a-sparse"]);
+    expect(result.ranked[0].badge).toBe("not-aligned");
+    expect(result.review).toHaveLength(0);
+  });
+  it("does not allow completeness to override a selected zoning requirement", () => {
+    const result = runEvidenceShortlist({ rows: [sparse, full], stations: [], sourceRecordsByEvidenceType: u.counts.sourceRecordsByEvidenceType,
+      criteria: { ...criteria, zoningAlignment: "aligned-only" } });
+    expect(result.ranked.map((r) => r.key)).toEqual(["a-sparse"]);
+    expect(result.excluded).toBe(1);
+  });
+  it("keeps optional rail preference behind completeness and orders ties deterministically", () => {
+    const station = stations.find((station: { system: string }) => station.system === "CTA") ?? stations[0];
+    const completeFar = { ...full, lat: station.lat + 0.05, lon: station.lon };
+    const sparseNear = { ...sparse, lat: station.lat, lon: station.lon };
+    const result = runEvidenceShortlist({ rows: [sparseNear, completeFar], stations,
+      sourceRecordsByEvidenceType: u.counts.sourceRecordsByEvidenceType, criteria: { ...criteria, transportation: ["cta-rail", "metra"] } });
+    expect(result.ranked.map((r) => r.key)).toEqual(["z-full", "a-sparse"]);
+    expect(result.ranked[1].score).toBeGreaterThan(result.ranked[0].score);
+    const tied = [{ ...full, canonicalKey: "z" }, { ...full, canonicalKey: "a" }];
+    const runTied = (input: typeof tied) => runEvidenceShortlist({ rows: input, stations: [], sourceRecordsByEvidenceType: u.counts.sourceRecordsByEvidenceType, criteria }).ranked.map((r) => r.key);
+    expect(runTied(tied)).toEqual(["a", "z"]);
+    expect(runTied([...tied].reverse())).toEqual(["a", "z"]);
+  });
+});

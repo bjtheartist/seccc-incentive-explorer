@@ -16,6 +16,8 @@ describe("refined shortlist page with actual committed screening data", () => {
     expect(html).not.toContain("9513 S OGLESBY AVE");
     expect(html).not.toContain("8100 S BRANDON AVE");
     expect(html).toContain("Evidence coverage across this ZIP");
+    expect(html).toContain("then ordered by evidence completeness, selected rail score, and broad zoning alignment");
+    expect(html).toContain("Missing optional facts lower the order");
     expect(html).toContain("Needs verification");
   });
   it("renders housing without presenting the commercial counterexample as a home", async () => {

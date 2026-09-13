@@ -229,7 +229,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60619",
@@ -241,7 +241,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60621",
@@ -349,7 +349,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60621",
@@ -433,7 +433,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60623",
@@ -565,7 +565,7 @@
       "landBuildingConflict": false,
       "countyClass": "100",
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60624",
@@ -805,7 +805,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60644",
@@ -1033,7 +1033,7 @@
       "landBuildingConflict": false,
       "countyClass": "100",
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60651",
@@ -1045,7 +1045,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60651",
@@ -1069,7 +1069,7 @@
       "landBuildingConflict": false,
       "countyClass": null,
       "countyBuildingSqft": null,
-      "mustReview": true
+      "mustReview": false
     },
     {
       "zip": "60651",

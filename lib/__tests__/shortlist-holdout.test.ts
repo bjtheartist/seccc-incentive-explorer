@@ -7,7 +7,7 @@ import { createEmptySiteMatchCriteria } from "../site-matchmaker";
 import { railStations } from "../rail-stations";
 
 describe("independent 90-record holdout frozen before source adjudication", () => {
-  it("keeps every observed contradiction or unresolved identity out of ordinary matches", () => {
+  it("keeps every observed contradiction or County-dependent unresolved identity out of ordinary matches", () => {
     expect(fixture.records).toHaveLength(90);
     for (const zip of new Set(fixture.records.map((r) => r.zip))) {
       const loaded = loadShortlistUniverse(zip); if (!loaded.ok) throw new Error(zip);

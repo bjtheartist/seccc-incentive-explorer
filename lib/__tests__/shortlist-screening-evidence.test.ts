@@ -64,6 +64,15 @@ describe("pre-screening recorded evidence", () => {
     const row = prepared.find((r) => r.address === "2715 E 83RD ST")!;
     expect(assessShortlistEvidence(row, { ...createEmptySiteMatchCriteria(), evidenceVersion: "2", buildingTypes: [], propertyType: "existing-building" }).disposition).toBe("review");
   });
+  it("allows independent land evidence without borrowing County identity or measurements", () => {
+    const source = prepared.find((r) => !r.hasVacantBuildingEvidence && r.hasVacantLandEvidence && r.screeningEvidence?.identityStatus === "unresolved")!;
+    const row = { ...source, screeningEvidence: { ...source.screeningEvidence!, conflictingPropertyEvidence: false, identityReviewReason: undefined } };
+    const criteria = { ...createEmptySiteMatchCriteria(), evidenceVersion: "2" as const, propertyType: "vacant-land" as const, buildingTypes: [] };
+    expect(assessShortlistEvidence(row, criteria).disposition).toBe("match");
+    expect(row.screeningEvidence.pin).toBeNull();
+    expect(assessShortlistEvidence(row, { ...criteria, minSquareFeet: 1000, measurementBasis: "assessor-building" }).disposition).toBe("review");
+  });
+
   it("preserves different unit addresses and flags them instead of merging them", () => {
     const source = prepared.find((r) => r.screeningEvidence?.pin)!;
     const result = consolidateScreeningRows([source, { ...source, canonicalKey: "unit:b", address: source.address + " UNIT B" }]);

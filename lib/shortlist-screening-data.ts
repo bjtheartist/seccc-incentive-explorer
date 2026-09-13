@@ -11,9 +11,11 @@ import path from "node:path";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { bbox } from "@turf/bbox";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { loadPrecomputedCountyParcelFacts, loadShortlistParcelIdentityEntries } from "./shortlist-parcel-identity";
+import { loadShortlistScreeningSidecar } from "./shortlist-parcel-identity";
 import { consolidateScreeningRows, prepareShortlistScreeningRows, type ScreeningUniverseRow } from "./shortlist-screening-evidence";
 import type { ShortlistUniverseFile } from "./shortlist-universe-schema";
+
+export class ScreeningDataUnavailable extends Error {}
 
 let communities: { feature: FeatureCollection<Polygon | MultiPolygon>["features"][number]; bounds: number[] }[] | null = null;
 function communityAt(lat: number | null, lon: number | null): string | null {
@@ -22,7 +24,7 @@ function communityAt(lat: number | null, lon: number | null): string | null {
     try {
       const data = JSON.parse(readFileSync(path.join(process.cwd(), "public/data/community-areas.geojson"), "utf8")) as FeatureCollection<Polygon | MultiPolygon>;
       communities = data.features.map((feature) => ({ feature, bounds: bbox(feature) }));
-    } catch { return null; }
+    } catch { throw new ScreeningDataUnavailable("Community boundary snapshot is unavailable"); }
   }
   const matches = communities.filter(({ feature, bounds: [west, south, east, north] }) =>
     lon >= west && lon <= east && lat >= south && lat <= north && booleanPointInPolygon([lon, lat], feature));
@@ -35,9 +37,9 @@ export function loadScreeningRows(universe: ShortlistUniverseFile): ScreeningUni
   const key = `${universe.buildId}:${universe.zip}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const rows = prepareShortlistScreeningRows(universe.rows,
-    loadShortlistParcelIdentityEntries(universe.zip, universe.buildId),
-    loadPrecomputedCountyParcelFacts(universe.buildId));
+  const sidecar = loadShortlistScreeningSidecar(universe.zip, universe.buildId);
+  if (!sidecar.ok) throw new ScreeningDataUnavailable("Screening evidence snapshot failed validation");
+  const rows = prepareShortlistScreeningRows(universe.rows, sidecar.entries, sidecar.facts);
   for (const row of rows) {
     row.screeningEvidence!.communityArea = communityAt(row.lat, row.lon);
     const conflict = exceptions.entries.find((entry) => entry.zip === universe.zip && entry.canonicalKey === row.canonicalKey);
@@ -47,6 +49,9 @@ export function loadScreeningRows(universe: ShortlistUniverseFile): ScreeningUni
         identityReviewReason: `Saved PIN and map-point parcel disagree (checked ${conflict.checkedAt}); verify parcel identity before using its facts.`,
         recordedType: "unknown", countyClass: null, sourceYear: null, checkedAt: null,
         measurements: { "assessor-building": null, lot: null, footprint: null, "available-interior": null } };
+    } else if (conflict.kind === "land-building-disagreement") {
+      row.screeningEvidence!.conflictingPropertyEvidence = true;
+      row.screeningEvidence!.identityReviewReason = `The land record location has conflicting County building evidence (checked ${conflict.checkedAt}); verify the address and parcel before relying on its type.`;
     } else {
       row.zoning = { ...row.zoning, status: "ambiguous", district: null };
       row.screeningEvidence!.identityReviewReason = `Saved zoning ${conflict.savedDistrict} disagrees with the City layer ${conflict.observedDistricts.join(" / ")} (checked ${conflict.checkedAt}); district needs verification.`;

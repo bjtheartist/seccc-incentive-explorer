@@ -1,4 +1,4 @@
-import { runShortlistEngine, zoningBadgeFor, selectedTransitNetwork, transitScoreFor, transitScreenMeters, type ShortlistEngineInputs, type RankedShortlistCandidate } from "./shortlist-engine";
+import { runShortlistEngine, zoningBadgeFor, zoningAlignmentRank, selectedTransitNetwork, transitScoreFor, transitScreenMeters, type ShortlistEngineInputs, type RankedShortlistCandidate } from "./shortlist-engine";
 import { assessShortlistEvidence, type ScreeningUniverseRow, type ShortlistScreeningEvidence } from "./shortlist-screening-evidence";
 
 export type EvidenceCandidate = RankedShortlistCandidate & {
@@ -7,8 +7,25 @@ export type EvidenceCandidate = RankedShortlistCandidate & {
   screeningDisposition: "match" | "review" | "conversion";
 };
 
+/** Five equally weighted evidence categories, independent of the brief.
+ * Count coverage, never property quality: usable identity, dated recorded type,
+ * any typed measurement, resolved zoning and resolved community membership.
+ * Multiple measurements do not multiply the bonus; unverified owner/value
+ * fields and incentive counts do not influence this order.
+ */
+function evidenceCompleteness(row: ScreeningUniverseRow): number {
+  const evidence = row.screeningEvidence;
+  const usableIdentity = evidence?.pin != null && ["saved", "resolved"].includes(evidence.identityStatus);
+  return Number(usableIdentity)
+    + Number(usableIdentity && evidence?.checkedAt != null && !["unknown", "exempt"].includes(evidence.recordedType))
+    + Number(Object.values(evidence?.measurements ?? {}).some((measurement) => measurement != null && measurement.value > 0
+      && (measurement.source !== "cook_county_assessor" || usableIdentity)))
+    + Number(row.zoning.status === "resolved")
+    + Number(Boolean(evidence?.communityArea));
+}
+
 /** Evidence requirements are applied to the full universe before ranking. The
- * existing engine retains transport scoring/order; it must not reapply legacy
+ * existing engine retains transport scoring; completeness leads the refined order. It must not reapply legacy
  * untyped size or broad zoning admission to already partitioned rows.
  */
 export function runEvidenceShortlist(inputs: ShortlistEngineInputs & { rows: readonly ScreeningUniverseRow[] }) {
@@ -59,13 +76,18 @@ export function runEvidenceShortlist(inputs: ShortlistEngineInputs & { rows: rea
   const rank = (disposition: keyof typeof buckets) => {
     const rows = buckets[disposition].map((row) => ({ ...row, pin: row.screeningEvidence ? row.screeningEvidence.pin : row.pin }));
     const byKey = new Map(rows.map((row) => [row.canonicalKey, row.screeningEvidence]));
+    const completeness = new Map(rows.map((row) => [row.canonicalKey, evidenceCompleteness(row)]));
     const result = runShortlistEngine({ ...inputs, rows, criteria: { ...inputs.criteria, minSquareFeet: null, maxSquareFeet: null, zoningAlignment: null, transportationDistance: null } });
     return { ...result, ranked: result.ranked.map((candidate): EvidenceCandidate => ({
       ...candidate,
+      recordCompletenessScore: completeness.get(candidate.key) ?? 0,
       screeningEvidence: byKey.get(candidate.key),
       screeningReasons: reasons.get(candidate.key) ?? [],
       screeningDisposition: disposition,
-    })) };
+    })).sort((a, b) => b.recordCompletenessScore - a.recordCompletenessScore
+      || b.score - a.score
+      || zoningAlignmentRank(inputs.criteria.projectUse, a.badge) - zoningAlignmentRank(inputs.criteria.projectUse, b.badge)
+      || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)) };
   };
   const matches = rank("match"), review = rank("review"), conversions = rank("conversion");
   return { ...matches, review: review.ranked, conversions: conversions.ranked, excluded,

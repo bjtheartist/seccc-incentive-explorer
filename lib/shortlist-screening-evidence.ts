@@ -129,7 +129,12 @@ export function assessShortlistEvidence(
   const failures: string[] = [];
   const unknowns: string[] = [];
   let conversion = false;
-  if (!evidence || !["saved", "resolved"].includes(evidence.identityStatus)) unknowns.push("Parcel identity needs verification; no parcel facts were inferred.");
+  const hasSize = criteria.minSquareFeet != null || criteria.maxSquareFeet != null;
+  const requestedMeasurement = criteria.measurementBasis ? evidence?.measurements[criteria.measurementBasis] : null;
+  const needsParcel = row.hasVacantBuildingEvidence || (hasSize && (
+    criteria.measurementBasis === "assessor-building" || requestedMeasurement?.source === "cook_county_assessor"));
+  const disputedIdentity = evidence?.identityStatus === "invalid" || evidence?.identityStatus === "ambiguous";
+  if (disputedIdentity || (needsParcel && (!evidence || !["saved", "resolved"].includes(evidence.identityStatus)))) unknowns.push("Parcel identity needs verification; no parcel facts were inferred.");
   if (evidence?.identityReviewReason) unknowns.push(evidence.identityReviewReason);
   if (evidence?.conflictingPropertyEvidence) unknowns.push("Land and building records conflict; verify current property type.");
   if (criteria.propertyType !== "vacant-land" && row.hasVacantBuildingEvidence && ["unknown", "exempt"].includes(evidence?.recordedType ?? "unknown")) unknowns.push("Recorded building type needs verification.");
@@ -142,7 +147,6 @@ export function assessShortlistEvidence(
       else failures.push("Recorded building type does not match the selected existing building types.");
     }
   }
-  const hasSize = criteria.minSquareFeet != null || criteria.maxSquareFeet != null;
   if (hasSize) {
     const basis = criteria.measurementBasis;
     const measurement = basis ? evidence?.measurements[basis] : null;
