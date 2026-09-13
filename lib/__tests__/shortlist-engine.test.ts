@@ -228,9 +228,9 @@ describe("selectedTransitNetwork / transitScreenMeters", () => {
   });
 
   it("maps each distance option to its metre radius, null for flexible or unset", () => {
-    expect(transitScreenMeters(criteria({ transportationDistance: "quarter-mile" }))).toBe(400);
-    expect(transitScreenMeters(criteria({ transportationDistance: "half-mile" }))).toBe(800);
-    expect(transitScreenMeters(criteria({ transportationDistance: "one-mile" }))).toBe(1600);
+    expect(transitScreenMeters(criteria({ transportationDistance: "quarter-mile" }))).toBe(402.336);
+    expect(transitScreenMeters(criteria({ transportationDistance: "half-mile" }))).toBe(804.672);
+    expect(transitScreenMeters(criteria({ transportationDistance: "one-mile" }))).toBe(1609.344);
     expect(transitScreenMeters(criteria({ transportationDistance: "flexible" }))).toBeNull();
     expect(transitScreenMeters(criteria())).toBeNull();
   });
@@ -1771,7 +1771,7 @@ describe("false-zero guard — 60621 building search (the canonical regression c
     expect(funnel.withResolvedPin).toBe(0);
     expect(funnel.withMeasuredArea).toBe(0);
     expect(funnel.insideBand).toBe(645);
-    expect(funnel.survivingTransitScreen).toBe(468);
+    expect(funnel.survivingTransitScreen).toBe(469);
 
     // The REAL screening stages narrow strictly, pairwise.
     expect(funnel.trackedEvidence).toBeGreaterThan(funnel.canonicalSites);
@@ -1785,7 +1785,7 @@ describe("false-zero guard — 60621 building search (the canonical regression c
     expect(funnel.insideBand).toBeGreaterThan(funnel.withMeasuredArea);
     expect(funnel.insideBand).toBe(funnel.canonicalSites); // unconstrained: no band selected
 
-    expect(ranked.length).toBe(468);
+    expect(ranked.length).toBe(469);
     expect(funnel.survivingTransitScreen).toBe(ranked.length);
     // No zoning-alignment screen selected in this scenario -> the true
     // final stage agrees with survivingTransitScreen exactly.

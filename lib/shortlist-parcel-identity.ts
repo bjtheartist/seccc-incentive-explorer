@@ -375,6 +375,14 @@ export function applyPrecomputedParcelIdentity(
   identityByKey: ReadonlyMap<string, ResolvedShortlistParcelIdentity>,
 ): DecoratedShortlistCandidate[] {
   return candidates.map((candidate) => {
+    const evidence = candidate.screeningEvidence;
+    if (evidence?.identityStatus === "resolved" && evidence.pin && evidence.identityCheckedAt) {
+      return { ...candidate, pin: evidence.pin, pinProvenance: {
+        source: "coordinate_exact_precomputed" as const,
+        checkedAt: evidence.identityCheckedAt,
+        countyAddress: evidence.countyAddress,
+      } };
+    }
     if (normalizePin14(candidate.pin)) {
       return { ...candidate, pinProvenance: { source: "saved_snapshot" } };
     }

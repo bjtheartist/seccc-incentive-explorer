@@ -182,7 +182,7 @@ describe("Site Shortlist parcel dossier", () => {
     }
     vi.stubGlobal("URL", TestURL);
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    fireEvent.click(screen.getByRole("button", { name: "Download the full shortlist (CSV)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export full shortlist (1) (CSV)" }));
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("resolve-parcel"))).toHaveLength(0);
     anchorClick.mockRestore();
 

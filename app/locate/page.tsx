@@ -13,9 +13,12 @@ import {
   RotateCcw,
   Ruler,
 } from "lucide-react";
+import { SITE_COMMUNITY_AREAS } from "@/lib/site-community-areas";
 import { PILOT_ZIPS } from "@/lib/pilot-zips";
 import {
   SITE_AMENITY_OPTIONS,
+  SITE_BUILDING_TYPE_OPTIONS,
+  SITE_MEASUREMENT_BASIS_OPTIONS,
   SITE_CONTEXT_OPTIONS,
   SITE_LOCATION_PRIORITY_OPTIONS,
   SITE_PROJECT_USE_OPTIONS,
@@ -30,6 +33,7 @@ import {
   isSiteMatchCriteriaReady,
   normalizeSiteMatchCriteria,
   summarizeSiteMatchCriteria,
+  siteMatchCriteriaVersionSupported,
   type SiteAmenityNeed,
   type SiteContextPreference,
   type SiteLocationPriority,
@@ -168,21 +172,24 @@ function numericInput(value: string): number | null {
 
 function SiteMatchmakerPage() {
   const searchParams = useSearchParams();
-  const [criteria, setCriteria] = useState<SiteMatchCriteria>(() =>
-    decodeSiteMatchCriteria(new URLSearchParams(searchParams.toString())),
-  );
+  const [criteria, setCriteria] = useState<SiteMatchCriteria>(() => {
+    const decoded = decodeSiteMatchCriteria(new URLSearchParams(searchParams.toString()));
+    return Array.from(searchParams.keys()).some((key) => key.startsWith("sm_")) ? decoded : { ...decoded, evidenceVersion: "2", includeConversions: false, measurementBasis: null };
+  });
   const [copied, setCopied] = useState(false);
+  const [invalidCriteria, setInvalidCriteria] = useState(() => !siteMatchCriteriaVersionSupported(new URLSearchParams(searchParams.toString())));
 
   useEffect(() => {
-    window.history.replaceState(null, "", buildSiteMatchmakerHref(criteria));
-  }, [criteria]);
+    if (!invalidCriteria) window.history.replaceState(null, "", buildSiteMatchmakerHref(criteria));
+  }, [criteria, invalidCriteria]);
 
   const summary = useMemo(() => summarizeSiteMatchCriteria(criteria), [criteria]);
   const handoffHref = useMemo(() => buildVacancyHandoffHref(criteria), [criteria]);
   const shortlistHref = useMemo(() => buildShortlistHref(criteria), [criteria]);
-  const ready = isSiteMatchCriteriaReady(criteria);
-  const requestedAreaLabel =
-    criteria.propertyType === "vacant-land"
+  const ready = !invalidCriteria && isSiteMatchCriteriaReady(criteria);
+  const requestedAreaLabel = criteria.evidenceVersion === "2"
+    ? SITE_MEASUREMENT_BASIS_OPTIONS.find((option) => option.value === criteria.measurementBasis)?.label ?? "area (choose a measurement basis)"
+    : criteria.propertyType === "vacant-land"
       ? "lot area"
       : criteria.propertyType === "existing-building"
         ? "reported available interior space"
@@ -220,7 +227,8 @@ function SiteMatchmakerPage() {
 
   function resetCriteria() {
     setCopied(false);
-    setCriteria(createEmptySiteMatchCriteria());
+    setInvalidCriteria(false);
+    setCriteria({ ...createEmptySiteMatchCriteria(), evidenceVersion: "2", includeConversions: false, measurementBasis: null });
   }
 
   async function copyBriefLink() {
@@ -268,6 +276,7 @@ function SiteMatchmakerPage() {
               title="Project and property"
               detail="Name the use you are planning and the kind of property record you want to review."
             />
+            {invalidCriteria && <p role="alert" className="mb-4 border p-3 text-sm">This link contains unsupported criteria. Reset the brief before searching; no requirement has been silently discarded.</p>}
             <fieldset>
               <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
                 What type of project are you bringing? *
@@ -302,12 +311,11 @@ function SiteMatchmakerPage() {
                 />
                 <span>
                   <span className="block text-[12px] font-semibold text-[#0C1B33]">
-                    Screen to aligned zoning families only
+                    Broadly aligned district families
                   </span>
                   <span className="mt-1 block text-[11px] leading-relaxed text-[#0C1B33]/50">
-                    Keeps only candidates whose mapped zoning district family is broadly aligned
-                    with your project use, or a site-specific Planned Development/PMD. Broad
-                    district-family screen only — not a use determination.
+                    Filters by broad district family, not the building’s recorded use or legal permission.
+                    In the refined search, PD/PMD and unresolved districts go to separate verification.
                     {!criteria.projectUse && " Select a project use above to enable this filter."}
                   </span>
                 </span>
@@ -326,6 +334,23 @@ function SiteMatchmakerPage() {
                 columns="three"
               />
             </fieldset>
+            {criteria.evidenceVersion !== "2" ? (
+              <div className="mt-5 border p-4 text-sm">
+                <p>This saved brief uses a broad building search. Select explicit recorded building types and measurements to refine it.</p>
+                <button type="button" className="mt-3 underline" onClick={() => setCriteria((current) => ({ ...current, evidenceVersion: "2", buildingTypes: undefined, measurementBasis: null, includeConversions: false }))}>Refine building and measurement criteria</button>
+              </div>
+            ) : criteria.propertyType !== "vacant-land" && (
+              <fieldset className="mt-6">
+                <legend className="font-semibold">Recorded existing building types *</legend>
+                <p className="my-2 text-sm">Filter by recorded use, separately from your proposed activity. County records may lag current conditions.</p>
+                <label className="mr-4 inline-flex gap-2 p-2"><input type="checkbox" checked={criteria.buildingTypes?.length === 0} onChange={(event) => setField("buildingTypes", event.target.checked ? [] : undefined)} />Any recorded type</label>
+                {SITE_BUILDING_TYPE_OPTIONS.map((option) => (
+                  <label key={option.value} className="mr-4 inline-flex gap-2 p-2"><input type="checkbox" checked={criteria.buildingTypes?.includes(option.value) ?? false} onChange={() => setField("buildingTypes", criteria.buildingTypes?.includes(option.value) ? (criteria.buildingTypes.length === 1 ? undefined : criteria.buildingTypes.filter((type) => type !== option.value)) : [...(criteria.buildingTypes ?? []), option.value])} />{option.label}</label>
+                ))}
+                <label className="mt-3 flex gap-2"><input type="checkbox" checked={criteria.includeConversions ?? false} onChange={(event) => setField("includeConversions", event.target.checked)} />Include different recorded types in a separate conversion-review group</label>
+                <p className="mt-2 text-xs">Conversion feasibility is not evaluated. Unknown or conflicting evidence appears separately for verification.</p>
+              </fieldset>
+            )}
           </section>
 
           <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
@@ -347,12 +372,32 @@ function SiteMatchmakerPage() {
                   <option value="">Select an area</option>
                   {PILOT_ZIPS.map((entry) => (
                     <option key={entry.zip} value={entry.zip}>
-                      {entry.primaryNeighborhood} - {entry.zip}
+                      ZIP {entry.zip} (includes {entry.primaryNeighborhood})
                     </option>
                   ))}
                 </select>
               </label>
 
+              {criteria.evidenceVersion === "2" && (
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold">Official community area within the selected ZIP</span>
+                  <select className="mt-2 block w-full border bg-white p-3" value={criteria.communityArea ?? ""} onChange={(event) => setField("communityArea", event.target.value || null)}>
+                    <option value="">Entire ZIP</option>
+                    {SITE_COMMUNITY_AREAS.map((name) => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                  <span className="mt-2 block text-xs">Uses the saved map point inside the official boundary. Boundary or missing-location cases need verification. This does not search portions outside the selected ZIP.</span>
+                </label>
+              )}
+              {criteria.evidenceVersion === "2" && (
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold">Measurement basis for size filters</span>
+                  <select className="mt-2 block w-full border bg-white p-3" value={criteria.measurementBasis ?? ""} onChange={(event) => setField("measurementBasis", SITE_MEASUREMENT_BASIS_OPTIONS.find((option) => option.value === event.target.value)?.value ?? null)}>
+                    <option value="">Choose a measurement basis</option>
+                    {SITE_MEASUREMENT_BASIS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <span className="mt-2 block text-xs">Assessor building area, lot area, ground coverage and available interior space are different facts. Missing measurements go to verification.</span>
+                </label>
+              )}
               <label className="block">
                 <span className="flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
                   <Ruler size={13} aria-hidden="true" /> Minimum {requestedAreaLabel}
@@ -409,7 +454,7 @@ function SiteMatchmakerPage() {
             <SectionHeading
               number="04"
               title="Transportation needs"
-              detail="Select the networks that should be checked near a candidate location and the proximity the project prefers."
+              detail="CTA rail and Metra can filter and rank by straight-line station distance. Bus, expressway, freight rail and bike selections are review preferences; they do not filter results."
             />
             <CheckboxOptions<SiteTransportationNeed>
               options={SITE_TRANSPORTATION_OPTIONS}
@@ -433,7 +478,7 @@ function SiteMatchmakerPage() {
             <SectionHeading
               number="05"
               title="Walkability and pedestrian activity"
-              detail="Capture how much these factors matter so each candidate can be reviewed against published and on-the-ground evidence."
+              detail="Review preferences only: these selections do not filter or rank records. Available context is shown separately; no foot-traffic measurement is inferred."
             />
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block">
@@ -494,7 +539,7 @@ function SiteMatchmakerPage() {
             <SectionHeading
               number="06"
               title="Nearby amenities"
-              detail="Choose the public-data categories that matter to the project. Proximity and operating status must be checked for each site."
+              detail="Review preferences only: these selections do not filter or rank records. Proximity and operating status still require verification."
             />
             <CheckboxOptions<SiteAmenityNeed>
               options={SITE_AMENITY_OPTIONS}
@@ -556,7 +601,7 @@ function SiteMatchmakerPage() {
                     className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 border border-white/15 px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.11em] text-white/60 transition-colors hover:border-white/35 hover:text-white"
                   >
                     <MapPinned size={14} aria-hidden="true" />
-                    Browse the full map instead
+                    {criteria.evidenceVersion === "2" ? "View filtered shortlist map" : "Browse the full map instead"}
                   </Link>
                 )}
               </>

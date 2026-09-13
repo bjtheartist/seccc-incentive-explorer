@@ -170,7 +170,7 @@ describe("site matchmaker handoff", () => {
   it("uses qualitative summaries without a rank or availability claim", () => {
     const summary = summarizeSiteMatchCriteria(completeCriteria());
     expect(summary).toEqual({
-      location: "South Chicago (60617)",
+      location: "ZIP 60617",
       projectUse: "Retail or services",
       propertyType: "Existing building",
       footprint: "1,500 - 5,000 sq ft",
@@ -289,6 +289,11 @@ describe("SITE_MATCH_CRITERIA_PARAM_KEYS — the allowlist the shortlist page an
   it("covers every sm_* key a fully-populated encoded brief emits, so no criterion is silently dropped", () => {
     const encoded = encodeSiteMatchCriteria(
       normalizeSiteMatchCriteria({
+        evidenceVersion: "2",
+        buildingTypes: ["commercial", "mixed-use"],
+        includeConversions: true,
+        measurementBasis: "assessor-building",
+        communityArea: "CHATHAM",
         zip: "60619",
         projectUse: "food-hospitality",
         propertyType: "existing-building",

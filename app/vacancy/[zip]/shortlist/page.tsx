@@ -1,3 +1,4 @@
+import ShortlistReviewGroup from "@/components/vacancy/ShortlistReviewGroup";
 /**
  * SITE SHORTLIST — the back half of the /locate Site Matchmaker.
  *
@@ -29,6 +30,7 @@
  */
 
 import Link from "next/link";
+import { loadScreeningRows, loadPreparedEvidenceShortlist } from "@/lib/shortlist-screening-data";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
@@ -104,8 +106,8 @@ export async function generateMetadata({
   const entry = getPilotZipEntry(zip);
   if (!entry) return { title: "Site Shortlist" };
   return {
-    title: `Site shortlist — ${entry.primaryNeighborhood} (ZIP ${zip})`,
-    description: `A ranked shortlist of candidate vacant records in ${entry.primaryNeighborhood} (ZIP ${zip}), screened against your project criteria. Early possibilities from public records, not availability listings.`,
+    title: `Site shortlist — ZIP ${zip}`,
+    description: `A ranked shortlist of candidate vacant records in ZIP ${zip}, screened against your project criteria. Early possibilities from public records, not availability listings.`,
   };
 }
 
@@ -304,7 +306,7 @@ export default async function SiteShortlistPage({
   const raw = await searchParams;
   const rawParams = criteriaParams(zip, raw);
   const source = firstParam(raw.source);
-  const neighborhood = pilotEntry.primaryNeighborhood;
+  const neighborhood = `ZIP ${zip}`;
 
   // ── Unknown criteriaVersion: fail closed, never a silent decode. `sm_v`
   //    governs whether the CRITERIA SHAPE itself can be trusted to decode
@@ -392,13 +394,16 @@ export default async function SiteShortlistPage({
   // ── Run the full-universe, criteria-relative engine (core pass only — no
   //    display-only geometry here, see Finding 11) ───────────────────────────
   const stations = railStations();
+  const screeningRows = criteria.evidenceVersion === "2" ? loadScreeningRows(universe.data) : null;
+  const preparedEvidence = screeningRows ? loadPreparedEvidenceShortlist(universe.data, criteria, stations) : null;
+  const evidenceResult = preparedEvidence?.result ?? null;
   const {
     ranked: allRanked,
     funnel,
     railDataUnavailable,
     scored,
     dispatchCoverageBroken,
-  } = runShortlistEngine({
+  } = evidenceResult ?? runShortlistEngine({
     rows: universe.data.rows,
     criteria,
     stations,
@@ -426,7 +431,7 @@ export default async function SiteShortlistPage({
   //    can never reorder, drop, or re-key the ranked slice. Fail-closed: an
   //    absent/stale/mismatched sidecar yields an empty map and every card
   //    behaves exactly as it did before, resolving on demand when opened.
-  const ranked = applyPrecomputedParcelIdentity(
+  const ranked = preparedEvidence?.displayed ?? applyPrecomputedParcelIdentity(
     decorateShortlistDisplayFacts(allRanked.slice(0, SHORTLIST_TOP_N), {
       stations,
       network: selectedTransitNetwork(criteria, stations),
@@ -498,7 +503,7 @@ export default async function SiteShortlistPage({
         <h1 className="mt-3 font-editorial text-[42px] leading-[0.96] sm:text-[54px]">
           {ranked.length > 0
             ? `${ranked.length} candidate ${ranked.length === 1 ? "record" : "records"} in ${neighborhood}`
-            : `No records match this brief in ${neighborhood}`}
+            : evidenceResult?.review.length ? `More evidence is needed in ${neighborhood}` : `No evaluated matches in ${neighborhood}`}
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
           Screened from this area&rsquo;s complete tracked vacant-property universe against your
@@ -557,8 +562,17 @@ export default async function SiteShortlistPage({
         )}
       </header>
 
+      {criteria.evidenceVersion !== "2" && (
+        <p className="mt-5 border p-4 text-sm">This saved brief uses the legacy broad-building search. Adjust criteria to select recorded building types and a specific measurement basis.</p>
+      )}
+      {evidenceResult && (
+        <p className="mt-5 text-sm" role="status">
+          {allRanked.length} records match evaluated filters; {evidenceResult.review.length} need verification; {evidenceResult.conversions.length} need conversion review. Unknown evidence is not a match. Counts do not establish availability or permission.
+          <span className="mt-2 block">Evidence coverage across this ZIP: {screeningRows!.filter((r) => r.screeningEvidence?.checkedAt).length} of {screeningRows!.length} consolidated records have dated County facts. {screeningRows!.filter((r) => !r.screeningEvidence?.communityArea).length} have unresolved community boundaries. Missing or unavailable evidence stays unevaluated. Saved PINs have not all been independently checked against current parcel geometry.</span>
+        </p>
+      )}
       {ranked.length === 0 ? (
-        <FunnelSection zip={zip} funnel={funnel} adjustHref={adjustHref} />
+        evidenceResult ? <section className="mt-6 border p-5"><h2 className="text-lg font-semibold">No records passed every evaluated requirement</h2><p className="mt-2">{evidenceResult.review.length} records need verification, {evidenceResult.conversions.length} need conversion review, and {evidenceResult.excluded} were excluded by recorded evidence. Unknown requested measurements are not replaced by a different area type. This is not proof that suitable properties do not exist.</p><Link className="mt-3 inline-block underline" href={adjustHref}>Adjust criteria</Link></section> : <FunnelSection zip={zip} funnel={funnel} adjustHref={adjustHref} />
       ) : hasShortlistAccess ? (
         <SiteShortlistResults
           zip={zip}
@@ -580,6 +594,18 @@ export default async function SiteShortlistPage({
         />
       )}
 
+      {hasShortlistAccess && evidenceResult && [
+        { title: "Needs verification", records: evidenceResult.review },
+        { title: "Conversion review — feasibility not evaluated", records: evidenceResult.conversions },
+      ].map(({ title, records }) => records.length > 0 && (
+        <ShortlistReviewGroup key={title} title={title} total={records.length} records={records.slice(0, 20).map((record) => ({
+          key: record.key, address: record.address, pin: record.pin,
+          identityStatus: record.screeningEvidence?.identityStatus ?? "unavailable",
+          recordedType: record.screeningEvidence?.recordedType ?? "unknown",
+          sourceYear: record.screeningEvidence?.sourceYear ?? null,
+          zoningDistrict: record.zoningDistrict, reasons: record.screeningReasons,
+        }))} />
+      ))}
       <footer className="mt-12 border-t border-[#0C1B33]/10 pt-6">
         <p className="max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/45">
           Screened from the source-aggregated vacant-property snapshot published for this area

@@ -1,3 +1,4 @@
+import { SITE_COMMUNITY_AREAS } from "./site-community-areas";
 import { PILOT_ZIPS } from "./pilot-zips";
 
 export type SiteProjectUse =
@@ -11,6 +12,24 @@ export type SiteProjectUse =
   | "other-commercial";
 
 export type SitePropertyType = "existing-building" | "vacant-land" | "either";
+
+/** Recorded existing use, independent of the proposed activity and zoning. */
+export type SiteBuildingType = "house" | "multifamily" | "commercial" | "industrial" | "mixed-use";
+export type SiteMeasurementBasis = "assessor-building" | "lot" | "available-interior" | "footprint";
+
+export const SITE_BUILDING_TYPE_OPTIONS: readonly SiteMatchOption<SiteBuildingType>[] = [
+  { value: "house", label: "House", description: "Recorded single-family residence or row house." },
+  { value: "multifamily", label: "Apartment building", description: "Recorded multifamily residential building." },
+  { value: "commercial", label: "Commercial building", description: "Recorded commercial building, separate from its zoning district." },
+  { value: "industrial", label: "Industrial building", description: "Recorded industrial building." },
+  { value: "mixed-use", label: "Mixed-use building", description: "Recorded residential and commercial uses in the same building." },
+];
+export const SITE_MEASUREMENT_BASIS_OPTIONS: readonly SiteMatchOption<SiteMeasurementBasis>[] = [
+  { value: "assessor-building", label: "Assessor total building area", description: "Assessment measurement; not space available to occupy." },
+  { value: "lot", label: "Lot area", description: "Recorded land area; not interior space." },
+  { value: "available-interior", label: "Reported available interior space", description: "Requires specific available-space evidence; unknown where it is absent." },
+  { value: "footprint", label: "Building footprint", description: "Ground coverage; not total floor area." },
+];
 
 export type SiteContextPreference =
   | "flexible"
@@ -235,6 +254,13 @@ export const SITE_AMENITY_OPTIONS: readonly SiteMatchOption<SiteAmenityNeed>[] =
 ];
 
 export interface SiteMatchCriteria {
+  /** Absent on legacy briefs. New evidence semantics must never be inferred from project use. */
+  evidenceVersion?: "2";
+  buildingTypes?: readonly SiteBuildingType[];
+  includeConversions?: boolean;
+  measurementBasis?: SiteMeasurementBasis | null;
+  /** Official community area name; absent means the entire selected ZIP. */
+  communityArea?: string | null;
   zip: string | null;
   projectUse: SiteProjectUse | null;
   propertyType: SitePropertyType | null;
@@ -268,6 +294,10 @@ const MAX_SQUARE_FEET = 2_000_000;
 
 const PARAMS = {
   version: "sm_v",
+  buildingTypes: "sm_building_types",
+  includeConversions: "sm_conversions",
+  measurementBasis: "sm_area_basis",
+  communityArea: "sm_community",
   /** Finding 5 (PR2 adversarial review): a SEPARATE version, stamped only on
    *  shortlist handoff links, for whether the RANKING SEMANTICS a bookmarked
    *  URL implies are still current — distinct from `sm_v`, which only covers
@@ -301,6 +331,10 @@ const PARAMS = {
  * `PARAMS` so it cannot drift; lib/__tests__/site-matchmaker.test.ts pins it.
  */
 export const SITE_MATCH_CRITERIA_PARAM_KEYS = [
+  PARAMS.buildingTypes,
+  PARAMS.includeConversions,
+  PARAMS.measurementBasis,
+  PARAMS.communityArea,
   PARAMS.projectUse,
   PARAMS.propertyType,
   PARAMS.minSquareFeet,
@@ -407,6 +441,13 @@ export function normalizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
   }
 
   return {
+    ...(criteria.evidenceVersion === "2" ? {
+      evidenceVersion: "2" as const,
+      buildingTypes: criteria.buildingTypes == null ? undefined : normalizedList(criteria.buildingTypes, SITE_BUILDING_TYPE_OPTIONS),
+      includeConversions: criteria.includeConversions === true,
+      measurementBasis: selectedValue(criteria.measurementBasis ?? null, SITE_MEASUREMENT_BASIS_OPTIONS),
+      communityArea: criteria.communityArea?.trim().toUpperCase() || null,
+    } : {}),
     zip: normalizedZip(criteria.zip),
     projectUse: selectedValue(criteria.projectUse, SITE_PROJECT_USE_OPTIONS),
     propertyType: selectedValue(criteria.propertyType, SITE_PROPERTY_TYPE_OPTIONS),
@@ -450,7 +491,23 @@ export const SITE_MATCH_CRITERIA_VERSION = "1";
  */
 export function siteMatchCriteriaVersionSupported(params: URLSearchParams): boolean {
   const raw = params.get(PARAMS.version);
-  return raw == null || raw === SITE_MATCH_CRITERIA_VERSION;
+  if (raw !== "2") {
+    const newKeys = [PARAMS.buildingTypes, PARAMS.includeConversions, PARAMS.measurementBasis, PARAMS.communityArea];
+    return (raw == null || raw === SITE_MATCH_CRITERIA_VERSION) && !newKeys.some((key) => params.has(key));
+  }
+  for (const key of [PARAMS.version, PARAMS.buildingTypes, PARAMS.measurementBasis, PARAMS.communityArea, PARAMS.includeConversions]) {
+    if (params.getAll(key).length > 1) return false;
+  }
+  if (params.has(PARAMS.buildingTypes) && !params.get(PARAMS.buildingTypes)?.trim()) return false;
+  const types = params.getAll(PARAMS.buildingTypes).flatMap((value) => value.split(",")).filter(Boolean);
+  if (types.some((type) => type !== "any" && !SITE_BUILDING_TYPE_OPTIONS.some((option) => option.value === type))) return false;
+  if (types.includes("any") && types.length > 1) return false;
+  const basis = params.get(PARAMS.measurementBasis);
+  if (basis != null && !SITE_MEASUREMENT_BASIS_OPTIONS.some((option) => option.value === basis)) return false;
+  const community = params.get(PARAMS.communityArea);
+  if (community != null && !SITE_COMMUNITY_AREAS.includes(community.trim().toUpperCase())) return false;
+  const conversions = params.get(PARAMS.includeConversions);
+  return conversions == null || conversions === "1" || conversions === "0";
 }
 
 /**
@@ -505,6 +562,13 @@ export function shortlistRankingModelVersionSupported(params: URLSearchParams): 
 
 export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCriteria {
   return normalizeSiteMatchCriteria({
+    ...(params.get(PARAMS.version) === "2" ? {
+      evidenceVersion: "2" as const,
+      buildingTypes: !params.has(PARAMS.buildingTypes) ? undefined : selectedValues(params, [PARAMS.buildingTypes], SITE_BUILDING_TYPE_OPTIONS),
+      includeConversions: params.get(PARAMS.includeConversions) === "1",
+      measurementBasis: selectedValue(params.get(PARAMS.measurementBasis), SITE_MEASUREMENT_BASIS_OPTIONS),
+      communityArea: params.get(PARAMS.communityArea),
+    } : {}),
     zip: params.get(PARAMS.zip),
     projectUse: selectedValue(firstValue(params, PROJECT_USE_ALIASES), SITE_PROJECT_USE_OPTIONS),
     propertyType: selectedValue(
@@ -539,6 +603,12 @@ export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCrite
 export function encodeSiteMatchCriteria(criteria: SiteMatchCriteria): URLSearchParams {
   const normalized = normalizeSiteMatchCriteria(criteria);
   const values = new URLSearchParams();
+  if (normalized.evidenceVersion === "2") {
+    if (normalized.buildingTypes != null) values.set(PARAMS.buildingTypes, normalized.buildingTypes.join(",") || "any");
+    if (normalized.includeConversions) values.set(PARAMS.includeConversions, "1");
+    if (normalized.measurementBasis) values.set(PARAMS.measurementBasis, normalized.measurementBasis);
+    if (normalized.communityArea) values.set(PARAMS.communityArea, normalized.communityArea);
+  }
   if (normalized.zip) values.set(PARAMS.zip, normalized.zip);
   if (normalized.projectUse) values.set(PARAMS.projectUse, normalized.projectUse);
   if (normalized.propertyType) values.set(PARAMS.propertyType, normalized.propertyType);
@@ -566,15 +636,19 @@ export function encodeSiteMatchCriteria(criteria: SiteMatchCriteria): URLSearchP
     values.set(PARAMS.zoningAlignment, "aligned");
   }
 
-  if (values.size === 0) return values;
-  const versioned = new URLSearchParams([[PARAMS.version, "1"]]);
+  if (values.size === 0 && normalized.evidenceVersion !== "2") return values;
+  const versioned = new URLSearchParams([[PARAMS.version, normalized.evidenceVersion ?? "1"]]);
   values.forEach((value, key) => versioned.set(key, value));
   return versioned;
 }
 
 export function isSiteMatchCriteriaReady(criteria: SiteMatchCriteria): boolean {
   const normalized = normalizeSiteMatchCriteria(criteria);
-  return Boolean(normalized.zip && normalized.projectUse && normalized.propertyType);
+  return Boolean(normalized.zip && normalized.projectUse && normalized.propertyType &&
+    (normalized.evidenceVersion !== "2" || (
+      (normalized.propertyType === "vacant-land" || normalized.buildingTypes != null) &&
+      ((normalized.minSquareFeet == null && normalized.maxSquareFeet == null) || normalized.measurementBasis != null)
+    )));
 }
 
 export function buildSiteMatchmakerHref(criteria: SiteMatchCriteria): string {
@@ -594,6 +668,10 @@ function vacancyHandoffQuery(criteria: SiteMatchCriteria): URLSearchParams {
 
 export function buildVacancyHandoffHref(criteria: SiteMatchCriteria): string | null {
   const normalized = normalizeSiteMatchCriteria(criteria);
+  if (normalized.evidenceVersion === "2") {
+    const shortlist = buildShortlistHref(normalized);
+    return shortlist ? `${shortlist}#shortlist-map` : null;
+  }
   if (!isSiteMatchCriteriaReady(normalized) || !normalized.zip) return null;
 
   return `/vacancy/${normalized.zip}/map?${vacancyHandoffQuery(normalized).toString()}`;
@@ -651,7 +729,7 @@ export function summarizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
   const normalized = normalizeSiteMatchCriteria(criteria);
   const area = PILOT_ZIPS.find((entry) => entry.zip === normalized.zip);
   return {
-    location: area ? `${area.primaryNeighborhood} (${area.zip})` : "Area not selected",
+    location: area ? `ZIP ${area.zip}${normalized.communityArea ? ` · ${normalized.communityArea} within ZIP` : ""}` : "Area not selected",
     projectUse: labelFor(
       normalized.projectUse,
       SITE_PROJECT_USE_OPTIONS,
@@ -661,8 +739,9 @@ export function summarizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
       normalized.propertyType,
       SITE_PROPERTY_TYPE_OPTIONS,
       "Property type not selected",
-    ),
-    footprint: footprintSummary(normalized.minSquareFeet, normalized.maxSquareFeet),
+    ) + (normalized.evidenceVersion === "2" && normalized.propertyType !== "vacant-land" ? ` · ${normalized.buildingTypes == null ? "Select recorded types" : labelsFor(normalized.buildingTypes, SITE_BUILDING_TYPE_OPTIONS, "Any recorded type")}${normalized.includeConversions ? " · Conversion review included" : ""}` : ""),
+    footprint: footprintSummary(normalized.minSquareFeet, normalized.maxSquareFeet) +
+      (normalized.evidenceVersion === "2" && normalized.measurementBasis ? ` · ${labelFor(normalized.measurementBasis, SITE_MEASUREMENT_BASIS_OPTIONS, "")}` : ""),
     context: labelFor(normalized.context, SITE_CONTEXT_OPTIONS, "Flexible context"),
     transportation: labelsFor(
       normalized.transportation,

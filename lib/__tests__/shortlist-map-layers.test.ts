@@ -624,8 +624,7 @@ describe("SiteShortlistResults wiring", () => {
     expect(source).not.toContain("[visible]);");
   });
 
-  it("passes the same filtered candidate keys to the map without narrowing the CSV", () => {
-    expect(source).toContain("visibleCandidateKeys={visibleCandidateKeys}");
-    expect(source).toContain("shortlistCsv(ranked, facts, resolutionStates, zip)");
-  });
+  // CSV/map membership is exercised through the rendered results component
+  // in components/vacancy/__tests__/SiteShortlistResults.test.tsx.
+
 });
