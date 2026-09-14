@@ -1,5 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { __resetPrivateDataCacheForTests, loadPrivateJson } from "./private-data";
 import type { ExemptionEavs, ExemptionUniverse } from "./vacancy-index";
 
 /**
@@ -15,9 +14,10 @@ import type { ExemptionEavs, ExemptionUniverse } from "./vacancy-index";
  * asserts the absence of the forbidden substrings before writing, mirroring the
  * public-JSON anonymization assert). The committed-private precedent is
  * data/private/owner-clusters-geo.json; this file ships and is read exactly the
- * same way — readFileSync + existsSync guard + module cache + process.cwd()
- * path, so it is bundled into the Vercel deployment via file tracing but is
- * reachable only behind the admin gate on app/vacancy/[zip]/page.tsx.
+ * same way — through lib/private-data.ts (local file in dev/tests/CI, private
+ * Vercel Blob in production; data/private/** is EXCLUDED from Next's output
+ * file tracing) — and is reachable only behind the admin gate on
+ * app/vacancy/[zip]/page.tsx.
  */
 
 /** One parcel-level referral row (private). Anonymized: NO owner name/mailing —
@@ -43,12 +43,15 @@ export interface ExemptionReferralFile {
   byZip: Record<string, ExemptionReferralRow[]>;
 }
 
-const DATA_PATH = path.join(process.cwd(), "data/private/exemption-anomalies.json");
+const DATA_FILENAME = "exemption-anomalies.json";
 
 // Module-level cache, read once per process.
-// `undefined` = not attempted yet; `null` = attempted and file is absent or
-// unparseable (a legitimate state before the export has been generated).
-let cache: ExemptionReferralFile | null | undefined = undefined;
+// `undefined` = not attempted yet; a settled promise of the packet or of `null`
+// (attempted and the file is absent or unparseable — a legitimate state before
+// the export has been generated). Cached as a promise because the read is async
+// now: lib/private-data.ts resolves the file from disk locally and from a
+// private Vercel Blob in production.
+let cache: Promise<ExemptionReferralFile | null> | undefined = undefined;
 
 function isValidFile(value: unknown): value is ExemptionReferralFile {
   if (!value || typeof value !== "object") return false;
@@ -62,30 +65,23 @@ function isValidFile(value: unknown): value is ExemptionReferralFile {
  * than throwing, so the gated page can degrade to a clean "not yet available"
  * section instead of erroring.
  */
-export function loadExemptionReferralFile(): ExemptionReferralFile | null {
+export function loadExemptionReferralFile(): Promise<ExemptionReferralFile | null> {
   if (cache !== undefined) return cache;
-  try {
-    if (!existsSync(DATA_PATH)) {
-      cache = null;
-      return cache;
-    }
-    const raw = readFileSync(DATA_PATH, "utf8");
-    const parsed = JSON.parse(raw) as unknown;
-    cache = isValidFile(parsed) ? parsed : null;
-  } catch {
-    cache = null;
-  }
+  cache = loadPrivateJson<unknown>(DATA_FILENAME)
+    .then((parsed) => (isValidFile(parsed) ? parsed : null))
+    .catch(() => null);
   return cache;
 }
 
 /** The referral rows for one ZIP, or `[]` when the packet is absent or the ZIP
  * carries no anomalies. */
-export function exemptionReferralRowsForZip(zip: string): ExemptionReferralRow[] {
-  const file = loadExemptionReferralFile();
+export async function exemptionReferralRowsForZip(zip: string): Promise<ExemptionReferralRow[]> {
+  const file = await loadExemptionReferralFile();
   return file?.byZip[zip] ?? [];
 }
 
 /** Test-only: reset the module cache so tests can re-read the file. */
 export function __resetExemptionReferralCacheForTests(): void {
   cache = undefined;
+  __resetPrivateDataCacheForTests();
 }

@@ -41,8 +41,8 @@ vi.mock("@/lib/community-investment", async (importOriginal) => ({
 
 vi.mock("@/lib/investment-analysis", () => ({
   loadInvestmentAnalysis: vi.fn(),
-  loadMajorDevelopments: vi.fn(() => ({ count: 0, totalAnnounced: 0, developments: [] })),
-  loadFlowRows: vi.fn(() => []),
+  loadMajorDevelopments: vi.fn(async () => ({ count: 0, totalAnnounced: 0, developments: [] })),
+  loadFlowRows: vi.fn(async () => []),
 }));
 
 const { notFoundMock } = vi.hoisted(() => ({
@@ -75,8 +75,8 @@ const mockLoadCommunityInvestmentResult = vi.mocked(loadCommunityInvestmentResul
  * directly.
  */
 function syncInvestmentLoaders(): void {
-  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(() => {
-    const data = mockLoadCommunityInvestment();
+  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(async () => {
+    const data = await mockLoadCommunityInvestment();
     return data ? { ok: true, data } : { ok: false, reason: "export_missing" };
   });
 }
@@ -201,7 +201,7 @@ describe("/investment/[area] page — gate", () => {
 
   it("routes an unknown community-area slug to not-found, past the gate", async () => {
     mockState.mockResolvedValue({ configured: true, hasSession: true });
-    mockLoadCommunityInvestment.mockReturnValue(FIXTURE_INVESTMENT);
+    mockLoadCommunityInvestment.mockResolvedValue(FIXTURE_INVESTMENT);
 
     await expect(renderElement("Not A Community Area")).rejects.toThrow("NEXT_NOT_FOUND");
 
@@ -214,13 +214,13 @@ describe("/investment/[area] page — gate", () => {
 describe("/investment/[area] page — StatusCards scope (Sol gate blockers 2 + 5)", () => {
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
-    mockLoadCommunityInvestment.mockReset().mockReturnValue(FIXTURE_INVESTMENT);
+    mockLoadCommunityInvestment.mockReset().mockResolvedValue(FIXTURE_INVESTMENT);
     syncInvestmentLoaders();
     mockLoadInvestmentAnalysis.mockReset();
   });
 
   it("a community WITH sited appropriation rows shows EXACTLY its own subset sum, never the citywide meta figure", async () => {
-    mockLoadInvestmentAnalysis.mockReturnValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
+    mockLoadInvestmentAnalysis.mockResolvedValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
     const html = await render();
     // StatusCards' capital-class row renders compact ("$42K" for $42,000).
     expect(html).toContain("$42K");
@@ -231,7 +231,7 @@ describe("/investment/[area] page — StatusCards scope (Sol gate blockers 2 + 5
   });
 
   it("a community with ZERO sited appropriation rows shows zero/absence, not the citywide $715.3M-style figure", async () => {
-    mockLoadInvestmentAnalysis.mockReturnValue(fixtureAnalysis(0));
+    mockLoadInvestmentAnalysis.mockResolvedValue(fixtureAnalysis(0));
     const html = await render();
     // StatusCards' CapitalClassStat renders "None on record" for a
     // non-positive value — never a fabricated $0 and never the citywide total.
@@ -242,7 +242,7 @@ describe("/investment/[area] page — StatusCards scope (Sol gate blockers 2 + 5
   });
 
   it("the disbursement card is scope 'not-applicable' — never implies the citywide recovery total belongs to this community", async () => {
-    mockLoadInvestmentAnalysis.mockReturnValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
+    mockLoadInvestmentAnalysis.mockResolvedValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
     const html = await render();
     expect(html).toContain("Not shown on this page");
     // The citywide recovery total must never render on a community page.
@@ -291,10 +291,10 @@ describe("/investment/[area] — a dataset outage is never rendered as an absenc
 
   for (const reason of failures) {
     it(`a ${reason} load renders the unavailability state, not the absence claim`, async () => {
-      mockLoadCommunityInvestmentResult.mockReset().mockReturnValue({ ok: false, reason });
+      mockLoadCommunityInvestmentResult.mockReset().mockResolvedValue({ ok: false, reason });
       // The analysis builder reads the same absent export, so it is null too —
       // which is exactly the shape that used to be indistinguishable.
-      mockLoadInvestmentAnalysis.mockReturnValue(null);
+      mockLoadInvestmentAnalysis.mockResolvedValue(null);
 
       const html = await render();
 
@@ -306,9 +306,9 @@ describe("/investment/[area] — a dataset outage is never rendered as an absenc
   }
 
   it("a LOADED dataset with no records for this community keeps the genuine absence claim", async () => {
-    mockLoadCommunityInvestment.mockReturnValue(FIXTURE_INVESTMENT);
+    mockLoadCommunityInvestment.mockResolvedValue(FIXTURE_INVESTMENT);
     syncInvestmentLoaders();
-    mockLoadInvestmentAnalysis.mockReturnValue(null);
+    mockLoadInvestmentAnalysis.mockResolvedValue(null);
 
     const html = await render();
 

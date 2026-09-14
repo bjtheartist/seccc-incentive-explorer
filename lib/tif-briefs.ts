@@ -32,8 +32,7 @@
  * No personal data of any kind travels in the committed file.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { loadPrivateJson } from "./private-data";
 
 // ── Data contract ────────────────────────────────────────────────────────────
 
@@ -844,32 +843,29 @@ function compareByBalanceDesc(a: number | null, b: number | null): number {
 
 // ── Static-only loader ─────────────────────────────────────────────────────
 
-const TIF_BRIEFS_PATH = path.join(process.cwd(), "data/private/tif-briefs.json");
+const TIF_BRIEFS_FILENAME = "tif-briefs.json";
 
-// Module-level cache, read once per process. `undefined` = not attempted;
-// `null` = attempted and the file is absent/unparseable (the expected state
-// until the first export is committed).
-let cache: TifBriefsExport | null | undefined = undefined;
+// Module-level cache, read once per process. `undefined` = not attempted; a
+// settled promise of the export or of `null` (attempted and the file is
+// absent/unparseable — the expected state until the first export is
+// committed). Cached as a promise because the read is async now:
+// lib/private-data.ts resolves the file from disk locally and from a private
+// Vercel Blob in production.
+let cache: Promise<TifBriefsExport | null> | undefined = undefined;
 
 /**
  * Read and parse the committed export once per process. Static-only (no DB
  * fallback). Returns `null` when the file has not been generated yet, so
  * callers render no section rather than throwing. Mirrors loadVacancyIndex.
  */
-export function loadTifBriefs(): TifBriefsExport | null {
+export function loadTifBriefs(): Promise<TifBriefsExport | null> {
   if (cache !== undefined) return cache;
-  try {
-    if (!existsSync(TIF_BRIEFS_PATH)) {
-      cache = null;
-      return cache;
-    }
-    const parsed = JSON.parse(readFileSync(TIF_BRIEFS_PATH, "utf8")) as unknown;
-    cache =
+  cache = loadPrivateJson<unknown>(TIF_BRIEFS_FILENAME)
+    .then((parsed) =>
       parsed && typeof parsed === "object" && "districts" in (parsed as object) && "zips" in (parsed as object)
         ? (parsed as TifBriefsExport)
-        : null;
-  } catch {
-    cache = null;
-  }
+        : null,
+    )
+    .catch(() => null);
   return cache;
 }

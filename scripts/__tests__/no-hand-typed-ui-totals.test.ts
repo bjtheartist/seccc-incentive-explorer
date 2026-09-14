@@ -131,8 +131,8 @@ describe("no hand-typed Community Investment totals — UI/print/docs (Sol gate 
     return roundedTotal === lit.value;
   }
 
-  it("no designated UI/print/doc file contains a literal that RENDERS TO a live meta/bridge/dedupe total (rounding-equivalence, not exact)", () => {
-    const data = loadCommunityInvestment()!;
+  it("no designated UI/print/doc file contains a literal that RENDERS TO a live meta/bridge/dedupe total (rounding-equivalence, not exact)", async () => {
+    const data = (await loadCommunityInvestment())!;
     const meta = data.meta;
     // Every headline the audit/consult explicitly named, plus bridge + dedupe
     // claims — the exact set finding 5 called out as escaping the old scan.

@@ -178,14 +178,19 @@ function ColumnTable({ title, nodes }: { title: string; nodes: FunderFlowNode[] 
  * otherwise it loads by community area. Renders a clean empty note when the
  * community has no dollar-valued flow since 2020.
  */
-export function FunderFlowSankey({
+export async function FunderFlowSankey({
   communityArea,
   flow: flowProp,
 }: {
   communityArea: string;
   flow?: FunderFlow | null;
 }) {
-  const flow = flowProp ?? loadFunderFlow(communityArea);
+  // ASYNC server component. loadFunderFlow is async now because the dataset it
+  // reads (data/private/community-investment.json) resolves through
+  // lib/private-data.ts — local file in dev/tests/CI, private Vercel Blob in
+  // production. `flowProp`, when the page already loaded the flow, still short-
+  // circuits the read exactly as before.
+  const flow = flowProp ?? (await loadFunderFlow(communityArea));
 
   if (!flow || flow.links.length === 0) {
     return (

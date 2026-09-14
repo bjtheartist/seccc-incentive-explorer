@@ -40,7 +40,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Build
-        run: npm run build -- --webpack
+        run: npm run build
 
   e2e:
     runs-on: ubuntu-latest
@@ -79,7 +79,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build
-        run: npm run build -- --webpack
+        run: npm run build
 
       - name: Start server
         run: npm run start &
@@ -135,7 +135,7 @@ jobs:
         run: npx playwright install --with-deps webkit firefox
 
       - name: Build
-        run: npm run build -- --webpack
+        run: npm run build
 
       - name: Start server
         run: npm run start &
