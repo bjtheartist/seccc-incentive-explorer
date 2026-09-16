@@ -30,6 +30,9 @@ const eslintConfig = defineConfig([
     "video/**",
     "**/node_modules/**",
     "next-env.d.ts",
+    // Chrome extension: plain MV3 JavaScript with `chrome` globals and its
+    // own node:test suite (extension/package.json). Not part of the Next app.
+    "extension/**",
   ]),
 ]);
 

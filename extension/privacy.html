@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chicago Incentive Explorer · Chrome extension privacy</title>
+  <style>
+    body { margin: 0; background: #FAF9F6; color: #0C1B33; font: 16px/1.65 Inter, system-ui, sans-serif; }
+    main { max-width: 760px; padding: 48px 24px; margin: auto; }
+    h1 { font: 400 34px/1.15 "Playfair Display", Georgia, serif; margin: 0 0 8px; }
+    h2 { margin-top: 32px; font-size: 20px; line-height: 1.25; }
+    a { color: #2563EB; }
+    .muted { color: #5A6478; }
+    code { background: #EFF3FB; padding: 1px 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted">Chicago Incentive Explorer · Incentive Check · Chrome extension 1.0.0</p>
+  <h1>Privacy for an address lookup.</h1>
+  <p class="muted">Effective with version 1.0.0 · Prepared September 15, 2026</p>
+  <p>Incentive Check reports which Chicago incentive zones cover an address and which programs those zones unlock. This policy covers the Chrome extension, separately from the chicagoincentiveexplorer.com website. The same policy is published at <a href="https://chicagoincentiveexplorer.com/extension/privacy">https://chicagoincentiveexplorer.com/extension/privacy</a>.</p>
+
+  <h2>What the extension sends</h2>
+  <p>The only data sent anywhere is the address text: either the address you type into the toolbar popup, or the property address the extension reads from a Cook County Assessor PIN page you have opened. That address, and the coordinates the lookup returns for it, are sent to chicagoincentiveexplorer.com to run the geocode, zone check, and program match. Nothing else about the page, your browsing, or your identity is transmitted.</p>
+  <p>The extension has no accounts, no sign-in, no advertising, no analytics, and no remote code. It loads no scripts, fonts, or trackers from any other server.</p>
+
+  <h2>Where information is stored</h2>
+  <p>Completed lookups are cached in Chrome's local extension storage under <code>cie_lookup_cache_v1</code>: at most 20 addresses, each expiring 24 hours after it was saved, with the least recently used entry evicted first. The popup's recent list is read from that same cache; there is no second record. The extension does not use Chrome Sync to upload it.</p>
+  <p>The extension writes nothing to the websites you visit. On a Cook County Assessor PIN page it reads the address, city, and PIN already shown on that page and displays its panel inside a shadow root; it stores nothing in that site's storage and sends nothing to the Assessor.</p>
+
+  <h2>Third parties</h2>
+  <p>The lookup requests reach chicagoincentiveexplorer.com, which is operated by Billy Joseph Ndizeye and uses public zone and program data. Records are not sold, rented, or used for advertising, creditworthiness, or lending decisions. When you follow a program link or the full-report link, the destination website handles that visit under its own policy. Chrome and the Chrome Web Store separately provide browser, installation, update, and distribution services.</p>
+
+  <h2>Permissions</h2>
+  <p>The <strong>storage</strong> permission holds the 24-hour lookup cache. Host access is limited to <code>https://chicagoincentiveexplorer.com/*</code>, which is where the lookup runs. The content script runs only on <code>https://www.cookcountyassessoril.gov/pin/* and cookcountyassessor.com/pin/*</code>. The extension does not request access to every website, your browsing history, your tabs, or your identity.</p>
+
+  <h2>Removing records</h2>
+  <p>Clear the cache by removing the extension, which removes its extension-owned local storage. Cached entries also expire on their own after 24 hours. We cannot recover locally deleted records.</p>
+
+  <h2>Support and changes</h2>
+  <p>Incentive Check is provided by Billy Joseph Ndizeye. Contact <a href="mailto:billyjoseph243@gmail.com">billyjoseph243@gmail.com</a> with privacy or support questions. If you contact support, we receive and use the information you choose to send to answer your request.</p>
+  <p>If a future version changes these practices, its policy and store disclosures will be updated with that release.</p>
+</main>
+</body>
+</html>
