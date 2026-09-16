@@ -1,0 +1,6 @@
+/* The only rule that touches the host page: a plain block for the shadow host.
+   Every visual style lives inside the shadow root (see PANEL_CSS in content.js). */
+.cie-host {
+  display: block;
+  margin: 12px 0 0;
+}

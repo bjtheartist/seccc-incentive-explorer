@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Incentive Check</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="shell">
+  <header class="masthead">
+    <p class="eyebrow">Chicago Incentive Explorer</p>
+    <h1>Incentive Check</h1>
+  </header>
+
+  <form id="cie-form" class="finder" autocomplete="off">
+    <label class="label" for="cie-address">Chicago address</label>
+    <div class="field">
+      <input id="cie-address" class="input" type="text" placeholder="9300 S Drexel Ave" spellcheck="false">
+      <button id="cie-submit" class="button" type="submit">Check</button>
+    </div>
+  </form>
+
+  <p id="cie-status" class="status" hidden></p>
+  <section id="cie-result" class="result" hidden></section>
+
+  <section id="cie-recent-section" class="recent-section" hidden>
+    <h2 class="section-title">Recent lookups</h2>
+    <ul id="cie-recent" class="recent"></ul>
+  </section>
+
+  <footer class="footer">
+    <a href="https://chicagoincentiveexplorer.com" target="_blank" rel="noreferrer noopener">chicagoincentiveexplorer.com</a>
+  </footer>
+</main>
+<script src="lookup.js" defer></script>
+<script src="popup.js" defer></script>
+</body>
+</html>
