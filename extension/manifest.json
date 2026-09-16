@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Chicago Incentive Explorer — Incentive Check",
   "version": "1.0.0",
-  "description": "Check which Chicago incentive zones cover an address and see the top matching programs, from the toolbar or a Cook County Assessor PIN page.",
+  "description": "See which Chicago incentive zones cover an address and the top matching programs, from the toolbar or an Assessor PIN page.",
   "minimum_chrome_version": "116",
   "permissions": [
     "storage"
