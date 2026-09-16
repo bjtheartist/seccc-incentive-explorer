@@ -1,0 +1,6 @@
+{
+  "name": "cie-incentive-check-tests",
+  "private": true,
+  "scripts": { "test": "node --test tests/*.test.cjs" },
+  "devDependencies": { "linkedom": "0.18.12" }
+}

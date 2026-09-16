@@ -796,6 +796,9 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/api/zoning/legislation/route.ts",
   "app/api/zoning/route.ts",
   "app/check/page.tsx",
+  // Static privacy policy for the Chrome extension: no zone, program, or
+  // eligibility claim is rendered here.
+  "app/extension/privacy/page.tsx",
   "app/forgot-password/page.tsx",
   "app/future-of-commerce/page.tsx",
   "app/investment/[area]/page.tsx",

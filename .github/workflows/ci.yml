@@ -36,6 +36,11 @@ jobs:
       - name: Test
         run: npm test
 
+      # The Chrome extension (extension/) has its own dependency-free test
+      # suite under node:test; it is excluded from Vitest and ESLint above.
+      - name: Extension tests
+        run: npm --prefix extension ci && npm --prefix extension test
+
       - name: Typecheck
         run: npx tsc --noEmit
 
