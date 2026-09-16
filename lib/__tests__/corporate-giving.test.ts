@@ -16,8 +16,8 @@ describe("corporate foundation classification", () => {
     expect(new Set(published.map((entry) => entry.funderName)).size).toBe(14);
   });
 
-  it("reconciles the reviewed registry to the committed export", () => {
-    const data = loadCommunityInvestment();
+  it("reconciles the reviewed registry to the committed export", async () => {
+    const data = await loadCommunityInvestment();
     expect(data).not.toBeNull();
     const corporate = data!.records.filter(isCorporateFoundationRecord);
     expect(corporate).toHaveLength(1_182);

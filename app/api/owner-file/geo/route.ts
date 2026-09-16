@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const fc = loadOwnerClusterGeoFile();
+  const fc = await loadOwnerClusterGeoFile();
   if (!fc) {
     return NextResponse.json(
       { error: "Ownership-cluster geo export has not been generated yet" },

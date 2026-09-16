@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
   // treats absence as "render nothing," never a fabricated series.
   const communityArea = ctx.localBusinessSupport?.communityArea;
   if (communityArea) {
-    const raw = loadCapitalContextForArea(communityArea);
+    const raw = await loadCapitalContextForArea(communityArea);
     if (raw.cra && raw.cra.length > 0) {
       ctx.capitalContext = { communityArea, cra: raw.cra, sources: raw.sources };
     }
