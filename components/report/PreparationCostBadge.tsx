@@ -8,9 +8,10 @@ import {
 interface PreparationCostBadgeProps {
   signal: DocumentPreparationCostSignal;
   label?: string;
+  showLabelOnMobile?: boolean;
 }
 
-export function PreparationCostBadge({ signal, label = "Preparation" }: PreparationCostBadgeProps) {
+export function PreparationCostBadge({ signal, label = "Preparation", showLabelOnMobile = false }: PreparationCostBadgeProps) {
   // The unknown tier is styled GREY, not the blue of a determined cost. A
   // reader scanning badges should be able to see at a glance which documents
   // were actually classified and which were not, without reading a tooltip.
@@ -27,7 +28,7 @@ export function PreparationCostBadge({ signal, label = "Preparation" }: Preparat
       aria-label={`${spoken}. ${signal.basis}`}
     >
       <span aria-hidden="true">{signal.tier}</span>
-      <span className="hidden sm:inline">{label}</span>
+      <span className={showLabelOnMobile ? "inline" : "hidden sm:inline"}>{label}</span>
     </span>
   );
 }

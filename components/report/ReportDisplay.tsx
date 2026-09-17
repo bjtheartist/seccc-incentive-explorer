@@ -87,6 +87,7 @@ import {
 import {
   isRealPersona,
   PersonaAlsoAtAddress,
+  PersonaGoalProgram,
   PersonaExecutiveSummary,
   PersonaGuidepostBand,
   PersonaReportFooter,
@@ -1594,6 +1595,9 @@ export function ReportDisplay({
                           const isProgramCardItem = Boolean(item.programId);
                           const isPersonaProgramSibling =
                             isPersonaProgramSection && itemIdx > 0;
+                          if (isPersonaProgramSibling && item.programId && !isRoutingProgramSection) {
+                            return <PersonaGoalProgram key={item.programId} item={item} />;
+                          }
                           // review7 S20 (MEDIUM): the itemProgram/programById
                           // fallback removed — see ReportNavigationLinks.tsx's
                           // own comment; programReportItem() already sets
@@ -1707,15 +1711,12 @@ export function ReportDisplay({
                             {isRoutingProgramSection && item.programId && (
                               <ProgramRoutingCard item={item} />
                             )}
-                            {!isSupportNetworkItem && !isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (
+                            {!isSupportNetworkItem && !(isRoutingProgramSection && item.programId) && (
                               <>
                                 <ProgramCardFace item={item} />
                                 <ReasonChips explanation={item.matchExplanation} />
                                 <ProgramCardExtras item={item} />
                               </>
-                            )}
-                            {isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (
-                              <ReasonChips explanation={item.matchExplanation} />
                             )}
 
                             {/* Genuinely supplementary detail only — the deeper
