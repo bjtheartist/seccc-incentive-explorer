@@ -6,16 +6,16 @@
     "apiUrl": "https://api.chicityclerkelms.chicago.gov",
     "publicUrl": "https://chicityclerkelms.chicago.gov",
     "coverage": "City Council records from December 1, 2010 to present. Special-use decisions are handled separately by the Zoning Board of Appeals.",
-    "sourceUpdatedThrough": "2026-09-03T17:35:07.000Z"
+    "sourceUpdatedThrough": "2026-09-16T19:50:36.000Z"
   },
   "coverage": {
-    "total": 6734,
+    "total": 6742,
     "searches": [
       {
         "query": "Zoning Reclassification",
-        "publishedCount": 6669,
-        "fetchedCount": 6669,
-        "normalizedMatches": 6665,
+        "publishedCount": 6676,
+        "fetchedCount": 6676,
+        "normalizedMatches": 6672,
         "excludedRelatedRecords": 4
       },
       {
@@ -34,12 +34,12 @@
       }
     ],
     "byKind": {
-      "map_amendment": 6660,
+      "map_amendment": 6668,
       "zoning_code_amendment": 74
     },
     "byLifecycle": {
-      "pending": 905,
-      "adopted": 5774,
+      "pending": 912,
+      "adopted": 5775,
       "withdrawn": 29,
       "failed": 23,
       "repealed": 3,
@@ -51,22 +51,162 @@
       "2011": 356,
       "2012": 332,
       "2013": 370,
-      "2014": 458,
+      "2014": 460,
       "2015": 461,
       "2016": 502,
       "2017": 508,
       "2018": 512,
       "2019": 438,
-      "2020": 314,
+      "2020": 315,
       "2021": 379,
       "2022": 421,
       "2023": 493,
-      "2024": 388,
+      "2024": 386,
       "2025": 480,
-      "2026": 256
+      "2026": 263
     }
   },
   "matters": [
+    {
+      "matterId": "BE7EF8ED-FFB1-F111-AAAC-001DD80FDA55",
+      "recordNumber": "O2026-0028406",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 12-L at 5300-5358 W 55th St, 5425-5459 S Lorel Ave and 5426-5458 S Lockwood Ave- App No. 23151",
+      "status": "4-In Committee",
+      "subStatus": "Referred",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-16T19:50:36.000Z",
+      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=BE7EF8ED-FFB1-F111-AAAC-001DD80FDA55",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "67E86441-3DB1-F111-AAAC-001DD80FDA55",
+      "recordNumber": "O2026-0028355",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map Nos. 1-H and 3-H at 1600-1760 W Chicago Ave and 1601-1759 W Chicago Ave - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-16T14:20:18.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=67E86441-3DB1-F111-AAAC-001DD80FDA55",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "EBBB228A-1EB1-F111-AAAC-001DD803894A",
+      "recordNumber": "O2026-0028350",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 16-H at 6701-6731 S Western Ave - App No. 23150",
+      "status": "4-In Committee",
+      "subStatus": "Referred",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-15T16:15:05.000Z",
+      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=EBBB228A-1EB1-F111-AAAC-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "6E25D182-1AB1-F111-AAAC-001DD803894A",
+      "recordNumber": "O2026-0028345",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 2-I at 2400 W Grenshaw St a.k.a. 1124 S Western Ave - App No. 23149T1",
+      "status": "4-In Committee",
+      "subStatus": "Referred",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-15T16:35:07.000Z",
+      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=6E25D182-1AB1-F111-AAAC-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "EA03AE95-18B1-F111-AAAC-001DD803894A",
+      "recordNumber": "O2026-0028341",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 18-E at 7353-7359 S Indiana Ave - App No. 23148T1",
+      "status": "4-In Committee",
+      "subStatus": "Referred",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-15T15:35:06.000Z",
+      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=EA03AE95-18B1-F111-AAAC-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "FA892D9D-16B1-F111-AAAC-001DD803894A",
+      "recordNumber": "O2026-0028339",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 1-H at 2156 W Warren Blvd - App No. 23147T1",
+      "status": "4-In Committee",
+      "subStatus": "Referred",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-15T15:20:05.000Z",
+      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FA892D9D-16B1-F111-AAAC-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "B9E476DF-0BAE-F111-AAAC-001DD803894A",
+      "recordNumber": "O2026-0028305",
+      "fileYear": 2026,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. No. 8-E at 3500 S Giles Ave - App No. TBD",
+      "status": "2-Submitted to Clerk",
+      "subStatus": "Accepted",
+      "introductionDate": "2026-09-23T15:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2026-09-11T19:30:01.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=B9E476DF-0BAE-F111-AAAC-001DD803894A",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
     {
       "matterId": "E546ADF3-B0A7-F111-B8DD-001DD80EFCF5",
       "recordNumber": "O2026-0027988",
@@ -3378,7 +3518,7 @@
       "subStatus": "Passed as Substitute",
       "introductionDate": "2026-03-18T15:00:00.000Z",
       "finalActionDate": "2026-06-17T15:00:00.000Z",
-      "lastPublicationDate": "2026-07-01T17:31:27.000Z",
+      "lastPublicationDate": "2026-09-14T18:35:40.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=093DE8E3-4B1E-F111-8341-001DD80C2AAC",
       "searchTerms": [
@@ -20329,26 +20469,6 @@
       "attachments": []
     },
     {
-      "matterId": "FB48379B-D1FC-EE11-A1FE-001DD804AF4C",
-      "recordNumber": "O2024-0008932",
-      "fileYear": 2024,
-      "kind": "map_amendment",
-      "lifecycle": "pending",
-      "title": "Zoning Reclassification Map No. 7-I at 3033 W Logan Blvd",
-      "status": "4-In Committee",
-      "subStatus": "Referred",
-      "introductionDate": "2024-04-17T15:00:00.000Z",
-      "finalActionDate": null,
-      "lastPublicationDate": "2024-07-05T22:58:24.000Z",
-      "controllingBody": "Committee on Zoning, Landmarks and Building Standards",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FB48379B-D1FC-EE11-A1FE-001DD804AF4C",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
       "matterId": "51EABDD8-1FFC-EE11-A1FE-001DD809669D",
       "recordNumber": "O2024-0008909",
       "fileYear": 2024,
@@ -20622,26 +20742,6 @@
       "lastPublicationDate": "2024-07-06T02:14:58.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=AEC911DB-A9F6-EE11-904B-001DD8097B33",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
-      "matterId": "0B8C09D2-A8F6-EE11-904B-001DD80685D6",
-      "recordNumber": "O2024-0008711",
-      "fileYear": 2024,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 28-E at 11853 S Michigan Ave - App No. A-8884",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2024-04-17T15:00:00.000Z",
-      "finalActionDate": "2024-06-12T15:00:00.000Z",
-      "lastPublicationDate": "2024-07-05T23:12:53.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=0B8C09D2-A8F6-EE11-904B-001DD80685D6",
       "searchTerms": [
         "Zoning Reclassification"
       ],
@@ -50229,6 +50329,26 @@
       "attachments": []
     },
     {
+      "matterId": "FF4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "recordNumber": "SO2020-4568",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 6-G at 3022 S Archer Ave - App No. 20491T1",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": "2020-10-07T10:00:00.000Z",
+      "lastPublicationDate": "2024-06-13T17:51:36.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=FF4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
       "matterId": "F64AEFF0-E10D-ED11-82E3-001DD80698CB",
       "recordNumber": "SO2020-4566",
       "fileYear": 2020,
@@ -50449,26 +50569,6 @@
       "attachments": []
     },
     {
-      "matterId": "76F293F2-E10D-ED11-82E3-001DD80693B4",
-      "recordNumber": "SO2020-4540",
-      "fileYear": 2020,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 11-M at 4416-4420 N Austin Ave - App No. 20496T1",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2020-09-09T10:00:00.000Z",
-      "finalActionDate": "2020-10-07T10:00:00.000Z",
-      "lastPublicationDate": "2024-06-13T15:43:10.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=76F293F2-E10D-ED11-82E3-001DD80693B4",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
       "matterId": "4EF293F2-E10D-ED11-82E3-001DD80693B4",
       "recordNumber": "SO2020-4494",
       "fileYear": 2020,
@@ -50482,6 +50582,26 @@
       "lastPublicationDate": "2024-06-13T15:42:01.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=4EF293F2-E10D-ED11-82E3-001DD80693B4",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "2A4AEFF0-E10D-ED11-82E3-001DD80698CB",
+      "recordNumber": "SO2020-4452",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 1-E at 50 E Huron St - App No. 20477",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": "2020-12-16T12:00:00.000Z",
+      "lastPublicationDate": "2024-06-13T17:46:25.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=2A4AEFF0-E10D-ED11-82E3-001DD80698CB",
       "searchTerms": [
         "Zoning Reclassification"
       ],
@@ -50589,6 +50709,26 @@
       "attachments": []
     },
     {
+      "matterId": "A0F293F2-E10D-ED11-82E3-001DD80693B4",
+      "recordNumber": "O2020-4555",
+      "fileYear": 2020,
+      "kind": "map_amendment",
+      "lifecycle": "pending",
+      "title": "Zoning Reclassification Map No. 8-I at 3101 S Kedzie Ave - App No. 20484",
+      "status": "3-Council Introduction",
+      "subStatus": "Council Introduction",
+      "introductionDate": "2020-09-09T10:00:00.000Z",
+      "finalActionDate": null,
+      "lastPublicationDate": "2024-06-13T15:44:30.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A0F293F2-E10D-ED11-82E3-001DD80693B4",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
       "matterId": "69F293F2-E10D-ED11-82E3-001DD80693B4",
       "recordNumber": "O2020-4547",
       "fileYear": 2020,
@@ -50622,26 +50762,6 @@
       "lastPublicationDate": "2024-06-13T15:44:35.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A3F293F2-E10D-ED11-82E3-001DD80693B4",
-      "searchTerms": [
-        "Zoning Reclassification"
-      ],
-      "actions": [],
-      "attachments": []
-    },
-    {
-      "matterId": "9BF293F2-E10D-ED11-82E3-001DD80693B4",
-      "recordNumber": "O2020-4545",
-      "fileYear": 2020,
-      "kind": "map_amendment",
-      "lifecycle": "adopted",
-      "title": "Zoning Reclassification Map No. 6-G at 3709 S Bonfield St - App No. 20503T1",
-      "status": "90-Final",
-      "subStatus": "Passed",
-      "introductionDate": "2020-09-09T10:00:00.000Z",
-      "finalActionDate": "2020-10-07T10:00:00.000Z",
-      "lastPublicationDate": "2024-06-13T15:44:19.000Z",
-      "controllingBody": "City Council",
-      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9BF293F2-E10D-ED11-82E3-001DD80693B4",
       "searchTerms": [
         "Zoning Reclassification"
       ],
@@ -110949,6 +111069,26 @@
       "attachments": []
     },
     {
+      "matterId": "2CF1FC48-E00D-ED11-82E3-001DD80693B4",
+      "recordNumber": "O2014-1515",
+      "fileYear": 2014,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 9-L at 5100-5160 W Belmont Ave",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2014-03-05T12:00:00.000Z",
+      "finalActionDate": "2014-04-30T10:00:00.000Z",
+      "lastPublicationDate": "2024-06-09T00:09:23.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=2CF1FC48-E00D-ED11-82E3-001DD80693B4",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
       "matterId": "21F1FC48-E00D-ED11-82E3-001DD80693B4",
       "recordNumber": "O2014-1514",
       "fileYear": 2014,
@@ -111082,6 +111222,26 @@
       "lastPublicationDate": "2024-06-09T01:56:57.000Z",
       "controllingBody": "City Council",
       "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=A7F4C742-E00D-ED11-82E3-001DD80698CB",
+      "searchTerms": [
+        "Zoning Reclassification"
+      ],
+      "actions": [],
+      "attachments": []
+    },
+    {
+      "matterId": "9BF4C742-E00D-ED11-82E3-001DD80698CB",
+      "recordNumber": "O2014-1446",
+      "fileYear": 2014,
+      "kind": "map_amendment",
+      "lifecycle": "adopted",
+      "title": "Zoning Reclassification Map No. 9-1 at 3700-3714 N California Ave -  App No. 17966",
+      "status": "90-Final",
+      "subStatus": "Passed",
+      "introductionDate": "2014-03-05T12:00:00.000Z",
+      "finalActionDate": "2014-04-30T10:00:00.000Z",
+      "lastPublicationDate": "2024-06-09T01:56:44.000Z",
+      "controllingBody": "City Council",
+      "sourceUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9BF4C742-E00D-ED11-82E3-001DD80698CB",
       "searchTerms": [
         "Zoning Reclassification"
       ],
