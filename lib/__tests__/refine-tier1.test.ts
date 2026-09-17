@@ -403,26 +403,8 @@ describe("the report renderer keeps the shared refine panel", () => {
     }
   });
 
-  // ─── Owner ruling 2026-08-31: routing-first supporter cards + who-to-call
-  // pointer. The render-level proof (real route, real lens) lives in
-  // app/report/__tests__/report-page-live-renderer.test.tsx; this is the
-  // fork-parity half — the workspace fork has no live-renderer harness, so
-  // the two surfaces are pinned here by source identity instead.
-  it("the renderer gates the supporter routing card, and every other lens keeps the full face", () => {
-    for (const fork of [renderer]) {
-      expect(fork).toContain("import { ProgramRoutingCard, ProgramRoutingViewNote }");
-      expect(fork).toContain(
-        'const isRoutingProgramSection =\n                  isPersonaProgramSection && boardPersona === "supporter";',
-      );
-      expect(fork).toContain("<ProgramRoutingCard item={item} />");
-      expect(fork).toContain("<ProgramRoutingViewNote />");
-      // The full blessed face still renders on every OTHER lens — the
-      // routing variant is an exclusive branch, never an addition.
-      expect(fork).toContain(
-        "{!isSupportNetworkItem && !isPersonaProgramSibling && !(isRoutingProgramSection && item.programId) && (",
-      );
-    }
-  });
+  // Supporter routing and full-record owner/developer behavior are covered
+  // through the real route in report-page-live-renderer.test.tsx.
 
   it("the renderer mounts the who-to-call pointer after the programs section, fed the lensed report", () => {
     for (const fork of [renderer]) {

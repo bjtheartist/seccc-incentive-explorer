@@ -1184,6 +1184,30 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       expect(html).not.toContain("Leaked Program Deadline");
     });
 
+    it("renders secondary goal titles as closed disclosures containing full program records through the real engine and route", async () => {
+      const state: WizardState = { ...BASE_WIZARD_STATE, projectGoals: ["rehab", "expand"] };
+      const report = generateReportData(state, catalogPrograms as Program[], {
+        zones: { enterprise: true, industrialCorridors: true, ssa: true },
+        zoneNames: { enterprise: "Enterprise Zone", industrialCorridors: "Stockyards", ssa: "SSA #13" },
+      });
+      const html = await renderReportRoute(report, state, { persona: "growing" });
+      const disclosures = [...html.matchAll(/<details[^>]*data-testid="persona-goal-program"[^>]*>/g)];
+      expect(disclosures).toHaveLength(2);
+      for (const disclosure of disclosures) {
+        expect(disclosure[0]).not.toMatch(/\bopen(?:=|\s|>)/);
+        const id = disclosure[0].match(/data-program-id="([^"]+)"/)?.[1];
+        expect(id).toBeTruthy();
+        const fragment = nestedElementFragment(html, "details", `data-testid="persona-goal-program" data-program-id="${id}"`);
+        const program = (catalogPrograms as Program[]).find((item) => item.id === id)!;
+        expect(fragment.slice(0, fragment.indexOf("</summary>"))).toContain(program.name);
+        expect(fragment).toContain('data-testid="program-card-face"');
+        expect(fragment).toContain("Verify at the source");
+      }
+      const firstDisclosure = html.indexOf('data-testid="persona-goal-program"');
+      expect(count(html.slice(0, firstDisclosure), 'data-testid="program-card-face"')).toBe(1);
+      expect(html).not.toContain('data-testid="supporter-routing-card"');
+    });
+
     it("hard-filters every catalog program name to strict cards, the summary, its document-why links, or the one disclosure through the real engine and route", async () => {
       const state: WizardState = {
         ...BASE_WIZARD_STATE,
@@ -1723,6 +1747,7 @@ describe("live report route renderer — supporter routing view (owner ruling 20
       persona: "supporter",
     });
     expect(html).toContain('data-testid="supporter-routing-card"');
+    expect(html).not.toContain('data-testid="persona-goal-program"');
     // The simplification names itself as a view — the transparency law's
     // labeling requirement, in the register the lens already uses.
     expect(html).toContain('data-testid="program-routing-view-note"');
@@ -1755,7 +1780,7 @@ describe("live report route renderer — supporter routing view (owner ruling 20
     expect(panel).toContain("What to expect");
   });
 
-  it("developer and owner lenses are untouched — full panel on the face, no routing variant", async () => {
+  it("developer and owner lenses retain full program records without the supporter routing variant", async () => {
     for (const persona of ["developer", "starting", "growing"] as const) {
       const html = await renderReportRoute(boardParityReport(), BASE_WIZARD_STATE, { persona });
       expect(html, `persona=${persona}`).not.toContain('data-testid="supporter-routing-card"');
