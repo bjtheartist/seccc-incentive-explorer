@@ -252,6 +252,28 @@ export function PersonaExecutiveSummary({
   );
 }
 
+export function PersonaGoalProgram({ item }: { item: ReportItem }) {
+  return (
+    <details data-testid="persona-goal-program" data-program-id={item.programId} className="group/goal report-item text-[#0C1B33]">
+      <summary className="flex cursor-pointer list-none items-center gap-3 py-5 select-none hover:text-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] sm:py-6">
+        <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="flex flex-wrap items-baseline gap-3 text-[13px] font-semibold sm:text-[14px]">
+            {item.label}
+            {item.level && <span className="font-mono-bureau text-[9px] font-normal uppercase tracking-[0.15em] text-[#5A6478]">{item.level}</span>}
+          </span>
+          {item.value && <span className="font-mono-bureau text-[10px] font-normal text-[#5A6478]">{item.value}</span>}
+        </span>
+        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#5A6478] transition-transform group-open/goal:rotate-90 motion-reduce:transition-none" />
+      </summary>
+      <article className="space-y-2.5 border-t border-[#D8DDE6] pb-5 pt-3">
+        <ProgramCardFace item={item} />
+        <ReasonChips explanation={item.matchExplanation} />
+        <ProgramCardExtras item={item} />
+      </article>
+    </details>
+  );
+}
+
 export function PersonaAlsoAtAddress({
   items,
 }: {

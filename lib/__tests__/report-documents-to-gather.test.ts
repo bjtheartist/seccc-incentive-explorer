@@ -114,6 +114,7 @@ describe("buildProgramLinkedDocumentsToGather", () => {
     ]);
     expect(rows.some((row) => row.title === "Hidden fourth document")).toBe(false);
     expect(rows.every((row) => row.whyLine?.includes("published program record"))).toBe(true);
+    expect(rows.every((row) => row.source === "program")).toBe(true);
   });
 
   it("labels the reusable Business File foundation honestly when surfaced programs publish no document list", () => {
@@ -122,5 +123,6 @@ describe("buildProgramLinkedDocumentsToGather", () => {
     expect(rows.some((row) => row.id === "foundation-business-identity")).toBe(true);
     expect(rows[0].programReferences).toHaveLength(3);
     expect(rows[0].whyLine).toMatch(/not a program-specific requirement/i);
+    expect(rows.every((row) => row.source === "shared")).toBe(true);
   });
 });

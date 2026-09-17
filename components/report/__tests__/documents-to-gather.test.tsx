@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { DocumentsToGather } from "@/components/report/DocumentsToGather";
 import {
   CONFIRMED_PROGRAMS_SECTION_ID,
@@ -47,6 +47,16 @@ describe("DocumentsToGather", () => {
     render(<DocumentsToGather report={report} sectionNumber="07" />);
 
     expect(screen.getByText("Two contractor bids")).toBeTruthy();
+    const packet = screen.getByTestId("document-program-packet") as HTMLDetailsElement;
+    expect(packet.open).toBe(true);
+    const row = screen.getByTestId("document-readiness-row") as HTMLDetailsElement;
+    expect(row.open).toBe(false);
+    fireEvent.click(within(row).getByText("Two contractor bids"));
+    expect(row.open).toBe(true);
+    fireEvent.click(within(row).getByText("Two contractor bids"));
+    expect(row.open).toBe(false);
+    fireEvent.click(packet.querySelector("summary")!);
+    expect(packet.open).toBe(false);
     const connection = screen.getByTestId("document-program-connection");
     expect(within(connection).getByText("Why this is here")).toBeTruthy();
     expect(within(connection).getByText("SBIF Facade Grant")).toBeTruthy();

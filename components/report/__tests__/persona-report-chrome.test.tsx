@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { PersonaAlsoAtAddress } from "@/components/report/PersonaReportChrome";
+import { PersonaAlsoAtAddress, PersonaGoalProgram } from "@/components/report/PersonaReportChrome";
 import type { ReportItem } from "@/lib/report-engine";
 
 afterEach(cleanup);
@@ -72,5 +72,25 @@ describe("PersonaAlsoAtAddress", () => {
 
     fireEvent.click(summary);
     expect(disclosure.open).toBe(false);
+  });
+});
+
+
+describe("PersonaGoalProgram", () => {
+  it("keeps titles visible and opens full secondary program records independently", () => {
+    const item = { label: "Industrial Corridor Protections", value: "Review published terms", programId: "industrialCorridors", level: "City", detail: "Protects industrial uses.", administrator: "DPD", nextStep: "Confirm the corridor boundary", verifySources: [{ label: "Official program page", url: "https://www.chicago.gov/" }] };
+    render(<><PersonaGoalProgram item={item} /><PersonaGoalProgram item={{ ...item, label: "Special Service Area (SSA)", programId: "ssa" }} /></>);
+    const menus = screen.getAllByTestId("persona-goal-program") as HTMLDetailsElement[];
+    expect(menus.every((menu) => !menu.open)).toBe(true);
+    fireEvent.click(within(menus[0]).getByText(item.label));
+    expect(menus[0].open).toBe(true);
+    expect(menus[1].open).toBe(false);
+    expect(within(menus[0]).getByText(item.detail)).toBeTruthy();
+    expect(within(menus[0]).getByText(item.nextStep)).toBeTruthy();
+    expect(within(menus[0]).getByRole("link", { name: /Official program page/ }).getAttribute("href")).toBe("https://www.chicago.gov/");
+    fireEvent.click(within(menus[1]).getByText("Special Service Area (SSA)"));
+    fireEvent.click(within(menus[0]).getByText(item.label));
+    expect(menus[0].open).toBe(false);
+    expect(menus[1].open).toBe(true);
   });
 });

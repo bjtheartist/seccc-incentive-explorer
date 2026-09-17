@@ -17,6 +17,7 @@ export interface DocumentToGatherRow {
   id: string;
   title: string;
   description: string;
+  source: "program" | "shared";
   owner?: PreparationTaskOwner;
   estimatedWeeks?: string;
   programReferences?: Array<{ programId: string; label: string }>;
@@ -65,6 +66,7 @@ function weekRange(min: number, max: number): string {
 export function buildDocumentsToGather(): DocumentToGatherRow[] {
   const tasks = buildPreparationTasks({ profile: {} });
   return tasks.map((task) => ({
+    source: "shared",
     id: task.id,
     title: task.title,
     description: task.description,
@@ -119,6 +121,7 @@ export function buildProgramLinkedDocumentsToGather(
 
   if (rowsByDocument.size > 0) {
     return Array.from(rowsByDocument.values()).map((row, index) => ({
+      source: "program",
       id: `surfaced-program-document-${index + 1}`,
       title: row.title,
       description:
