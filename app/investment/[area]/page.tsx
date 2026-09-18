@@ -208,7 +208,7 @@ export default async function InvestmentAreaPage({
       <div className="mx-auto max-w-[1440px]">
         <nav className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#0C1B33]/15 pb-4 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
           <div className="flex flex-wrap items-center gap-1.5">
-            {accessMode === "beta" ? null : (
+            {accessMode !== "admin" ? null : (
               <>
                 <Link href="/admin" className="hover:text-[#2563EB]">
                   Admin
