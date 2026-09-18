@@ -15,6 +15,11 @@ import {
   hasApprovedPublicInvestmentAccess,
   PublicInvestmentEarlyAccessStorageUnavailableError,
 } from "@/lib/public-investment-early-access-storage";
+import { INVESTMENT_SHARE_COOKIE, parseInvestmentShareSession } from "@/lib/investment-share-session";
+import {
+  InvestmentShareLinkStorageUnavailableError,
+  isInvestmentShareLinkActive,
+} from "@/lib/investment-share-links-storage";
 
 /**
  * Access gate for the Investment & Impact Analysis pages. Existing Owner Files
@@ -22,7 +27,7 @@ import {
  * may also enter through the ordinary NextAuth session after staff approval.
  */
 
-export type InvestmentAccessMode = "admin" | "beta" | null;
+export type InvestmentAccessMode = "admin" | "beta" | "partner" | null;
 
 /**
  * Result of asking storage whether a signed-in email is an approved beta user.
@@ -64,6 +69,26 @@ const probeBetaAccess = cache(async (): Promise<BetaAccessProbe> => {
   }
 });
 
+/**
+ * Partner share links (minted on the access dashboard) grant a signed cookie
+ * naming the link they came from. The signature proves the cookie is ours; the
+ * storage lookup proves the link has not since been revoked or lapsed, so a
+ * revocation takes effect on the next protected request.
+ */
+type PartnerAccessProbe = "active" | "inactive" | "storage_unavailable" | "no_session";
+
+const probePartnerAccess = cache(async (): Promise<PartnerAccessProbe> => {
+  const cookieStore = await cookies();
+  const share = parseInvestmentShareSession(cookieStore.get(INVESTMENT_SHARE_COOKIE)?.value);
+  if (!share) return "no_session";
+  try {
+    return (await isInvestmentShareLinkActive(share.linkId)) ? "active" : "inactive";
+  } catch (error) {
+    if (error instanceof InvestmentShareLinkStorageUnavailableError) return "storage_unavailable";
+    throw error;
+  }
+});
+
 /** Reads the admin cookies once and reports whether the gate is configured and
  * whether the current request carries a valid session. */
 export async function getInvestmentAdminState(): Promise<{
@@ -92,6 +117,14 @@ export async function getInvestmentAdminState(): Promise<{
     )
   ) {
     return { configured: true, hasSession: true, accessMode: "admin" };
+  }
+
+  const partner = await probePartnerAccess();
+  if (partner === "active") {
+    return { configured: true, hasSession: true, accessMode: "partner" };
+  }
+  if (partner === "storage_unavailable") {
+    return { configured: true, hasSession: false, accessMode: null, storageUnavailable: true };
   }
 
   if (betaConfigured) {
@@ -173,13 +206,25 @@ export function InvestmentTemporarilyUnavailable() {
  * password wall is still exactly the right screen: they have no beta identity
  * to check, so storage never mattered to them.
  */
+const SHARE_NOTICES: Record<string, string> = {
+  invalid:
+    "That share link is no longer valid. It may have expired or been revoked; ask whoever sent it for a fresh one.",
+  unavailable: "We could not open that share link just now. Please try it again in a few minutes.",
+};
+
 export async function InvestmentLoginForm({
   redirectTo,
   hasAuthError,
+  shareNotice,
 }: {
   redirectTo: string;
   hasAuthError: boolean;
+  /** `share` query value set by /investment/share/[token] when a link cannot be opened. */
+  shareNotice?: string | null;
 }) {
+  if ((await probePartnerAccess()) === "storage_unavailable") {
+    return <InvestmentTemporarilyUnavailable />;
+  }
   if (isPublicInvestmentAccessEmailConfigured()) {
     const probe = await probeBetaAccess();
     if (probe.state === "storage_unavailable") {
@@ -206,6 +251,14 @@ export async function InvestmentLoginForm({
           behind the map&rsquo;s community-investment layer. Access is restricted to corridor-management
           partners.
         </p>
+        {shareNotice && SHARE_NOTICES[shareNotice] ? (
+          <p
+            data-testid="investment-share-notice"
+            className="mt-4 border-l-2 border-[#B45309] bg-[#FFFBEB] px-4 py-3 text-[12px] leading-relaxed text-[#92400E]"
+          >
+            {SHARE_NOTICES[shareNotice]}
+          </p>
+        ) : null}
         <input type="hidden" name="redirectTo" value={redirectTo} />
         <input
           name="password"

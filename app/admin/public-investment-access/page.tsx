@@ -10,6 +10,16 @@ import {
   PublicInvestmentEarlyAccessStorageUnavailableError,
   type PublicInvestmentEarlyAccessRecord,
 } from "@/lib/public-investment-early-access-storage";
+import {
+  DEFAULT_INVESTMENT_SHARE_LINK_EXPIRY_DAYS,
+  INVESTMENT_SHARE_LINK_EXPIRY_OPTIONS_DAYS,
+  InvestmentShareLinkStorageUnavailableError,
+  investmentShareLinkState,
+  listInvestmentShareLinks,
+  type InvestmentShareLinkRecord,
+} from "@/lib/investment-share-links-storage";
+import { isInvestmentShareConfigured } from "@/lib/investment-share-session";
+import { ShareLinkCreator } from "@/components/admin/ShareLinkCreator";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +30,12 @@ const STATUS_LABELS: Record<PublicInvestmentEarlyAccessRecord["status"], string>
   pending_review: "Ready for review",
   approved: "Approved",
   denied: "Denied",
+  revoked: "Revoked",
+};
+
+const SHARE_LINK_STATE_LABELS: Record<ReturnType<typeof investmentShareLinkState>, string> = {
+  active: "Active",
+  expired: "Expired",
   revoked: "Revoked",
 };
 
@@ -124,6 +140,16 @@ export default async function PublicInvestmentAccessAdminPage({
   } catch (error) {
     if (!(error instanceof PublicInvestmentEarlyAccessStorageUnavailableError)) throw error;
   }
+
+  let shareLinks: InvestmentShareLinkRecord[] = [];
+  let shareLinksUnavailable = false;
+  try {
+    shareLinks = await listInvestmentShareLinks();
+  } catch (error) {
+    if (!(error instanceof InvestmentShareLinkStorageUnavailableError)) throw error;
+    shareLinksUnavailable = true;
+  }
+  const shareConfigured = isInvestmentShareConfigured();
 
   const updated = paramValue(params.updated);
   const error = paramValue(params.error);
@@ -244,6 +270,89 @@ export default async function PublicInvestmentAccessAdminPage({
             ))
           )}
         </div>
+
+        <section id="share-links" className="mt-14 border-t border-[#0C1B33]/10 pt-10">
+          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
+            Partner share links
+          </span>
+          <h2 className="mt-3 font-editorial text-[34px] leading-none sm:text-[44px]">
+            Private links for external partners
+          </h2>
+          <p className="mt-4 max-w-2xl text-[13px] leading-6 text-[#0C1B33]/48">
+            A share link opens the Investment &amp; Impact analysis for whoever has it, with no password and no
+            sign-up. Each link is labeled, expires on a date you choose, and can be revoked here; revocation takes
+            effect on the partner&rsquo;s next page request. Share links never open Owner Files or the admin
+            dashboards.
+          </p>
+
+          <div className="mt-6">
+            {shareConfigured ? (
+              <ShareLinkCreator
+                expiryOptionsDays={INVESTMENT_SHARE_LINK_EXPIRY_OPTIONS_DAYS}
+                defaultExpiryDays={DEFAULT_INVESTMENT_SHARE_LINK_EXPIRY_DAYS}
+              />
+            ) : (
+              <p className="border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/50">
+                Set <code>AUTH_SECRET</code> before creating share links.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {shareLinksUnavailable ? (
+              <p className="border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/50">
+                Share-link storage is unavailable right now, so existing links cannot be listed.
+              </p>
+            ) : shareLinks.length === 0 ? (
+              <p className="border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/50">
+                No share links yet.
+              </p>
+            ) : (
+              shareLinks.map((link) => {
+                const state = investmentShareLinkState(link);
+                return (
+                  <article
+                    key={link.id}
+                    data-testid="share-link-row"
+                    className="flex flex-col gap-4 border border-[#0C1B33]/10 bg-white p-5 sm:flex-row sm:items-start sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-editorial text-[24px]">{link.label}</h3>
+                        <span
+                          className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.12em] ${
+                            state === "active"
+                              ? "border-[#16A34A]/30 bg-[#F0FDF4] text-[#166534]"
+                              : "border-[#0C1B33]/12 bg-[#F7F8FA] text-[#0C1B33]/55"
+                          }`}
+                        >
+                          {SHARE_LINK_STATE_LABELS[state]}
+                        </span>
+                      </div>
+                      <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
+                        Created {formatDate(link.createdAt)} · Expires {formatDate(link.expiresAt)} · Opened{" "}
+                        {link.openCount} {link.openCount === 1 ? "time" : "times"}
+                        {link.lastOpenedAt ? `, last ${formatDate(link.lastOpenedAt)}` : ""}
+                        {link.revokedAt ? ` · Revoked ${formatDate(link.revokedAt)}` : ""}
+                      </p>
+                    </div>
+                    {state === "active" ? (
+                      <form
+                        method="post"
+                        action={`/api/admin/public-investment-share-links/${link.id}/revoke`}
+                        className="shrink-0"
+                      >
+                        <button className="border border-red-200 bg-white px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-red-700">
+                          Revoke
+                        </button>
+                      </form>
+                    ) : null}
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );
