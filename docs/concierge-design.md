@@ -193,3 +193,31 @@ No new dependencies were added. Additive API only; no changes to Business File /
 3. **Ownership pre-check in the executor AND the route's own \`WHERE user_id\`** — double enforcement; the executor short-circuits with friendlier copy before any handler call.
 4. **No packet-page edits for \`packetId\` context** — the model reads the packet id from the route path (\`/workspace/incentive-preparation/{id}\`) via \`getPageContext\`, so \`ConciergePageContext\` did not need new populated fields (scope fence).
 5. **HMAC \`experimental_toolApprovalSecret\` not enabled** — ownership is re-verified server-side in every executor and actions inherit the auth-gated routes, so a forged approval cannot exceed what the user could already do; the secret is available as future hardening.
+
+## Shadow decisions — Jev via AI Gateway (2026-09-21)
+
+**What.** Every model-backed concierge turn also asks a System 1 typed-decision model (TypeSafe Jev, served by Vercel AI Gateway as `typesafe-ai/jev`) four questions about the same input the guide sees: `lane` (choice over the six support lanes in the routing rubric, plus `none`), `stage` (choice over the five project stages, plus `unclear`), `wants_handoff` (noul), `off_topic` (noul). The answers are **recorded and never used**. Shadow phase only.
+
+**Boundary.** No eligibility, benefit, or fit question is asked (asserted by `tests/concierge/decisions.test.ts`). The decision never reaches the prompt, the tool map, or the reply (asserted by `tests/concierge/shadow-route.test.ts`). Probabilities stay server-side, consistent with the "never expose internal scoring" rule in the system prompt.
+
+**How it runs.** `lib/concierge/decisions.ts` posts to the Gateway's TypeSafe-compatible endpoint (`/typesafe/v1/systemone`) with the existing Gateway credential (API key, else Vercel OIDC). The route fires it **concurrently** with `streamText`, with a hard 300 ms timeout, and it fails open: any error, timeout, non-2xx, or shape mismatch yields `null` and the turn proceeds exactly as before. The `state` payload is the visitor's message, route, page label, report summary, the support lanes already surfaced, and whether a capital-support match exists — **no address, no coordinates, no organization names**. No new dependencies; the raw HTTP shape was chosen over the AI SDK's `experimental_evaluate` because that requires `ai ≥ 7.0.105` and the repo pins `7.0.22`.
+
+**Where it lands.**
+- Signed-in + DB: one audit-only row in `concierge_tool_actions` (`tool_name = 'shadow.jev.decision'`, `approval_status = 'executed'`, `result_summary` = compact JSON of the answers, probabilities, latency, input tokens, Gateway generation id). It is deliberately **not** added to the assistant message's `tool_calls_json` (new `auditOnly` field on `persistConciergeTurn`), so transcript renderers never see it.
+- Every turn (guests included): one runtime log line `[concierge.shadow] {...}` with the route, signed-in flag, a 16-hex SHA-256 prefix of the visitor text, and the same compact decision. Never the text itself.
+
+**Terminal state.** `npm run concierge:shadow-report` (`scripts/concierge-shadow-report.ts`, needs `DATABASE_URL`) writes `docs/concierge-shadow-report.md`: lane/stage distributions, off-topic and handoff rates, latency percentiles, and a per-turn table of decision vs. the guide's reply for hand review. The experiment ends when the report has ≥ 30 turns (`CONCIERGE_SHADOW_MIN_TURNS`); the decision then is whether Jev's lane agrees with the lane the guide actually routed to. Escape hatch: if signed-in volume stays near zero after a month, the remaining option is a temporary hashed guest log sink, or stop.
+
+**Phases after shadow (not built).** Phase 2: pass `lane`/`stage` into `getPageContext` as a `suggestedLane` hint. Phase 3: short-circuit high-`off_topic` turns to the deterministic fallback *before* the daily model budget is consumed.
+
+**Wire compatibility.** The open Laya model implements the same request/response shape, so `CONCIERGE_DECISIONS_ENDPOINT` + `CONCIERGE_DECISIONS_MODEL` can repoint the client to a self-hosted Laya without a code change if retention or cost ever argue for it.
+
+### New env vars (shadow)
+| Var | Required | Default | Purpose |
+|---|---|---|---|
+| `CONCIERGE_SHADOW_DECISIONS` | no | off | `"true"` turns the shadow call on. Everything else unchanged. |
+| `CONCIERGE_DECISIONS_ENDPOINT` | no | Gateway `/typesafe/v1/systemone` | Repoint (e.g. self-hosted Laya). |
+| `CONCIERGE_DECISIONS_MODEL` | no | `typesafe-ai/jev` | Model id sent in the request. |
+| `CONCIERGE_SHADOW_MIN_TURNS` | no | `30` | Report-only: turns needed to call the experiment done. |
+
+**Not verified at build time.** No AI Gateway key was available locally, so the live call was not exercised; the request/response shape is taken from Vercel's TypeSafe-on-Gateway docs and covered by mocked tests. Whether Gateway's `disallowPromptTraining` option applies to evaluation calls is not documented; TypeSafe states Jev is not trained on customer requests, and retention is not published. Verify both before Phase 2.

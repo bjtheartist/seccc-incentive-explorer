@@ -93,7 +93,8 @@
     "data:sync:zoning": "npx tsx scripts/sync-zoning-sources.ts",
     "data:archive:zoning": "npx tsx scripts/archive-zoning-snapshot.ts",
     "db:migrate:grants": "tsx scripts/grants/migrate.ts",
-    "grants:seed": "tsx scripts/grants/seed.ts"
+    "grants:seed": "tsx scripts/grants/seed.ts",
+    "concierge:shadow-report": "npx tsx scripts/concierge-shadow-report.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",
