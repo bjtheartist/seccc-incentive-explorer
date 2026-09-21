@@ -154,6 +154,12 @@ export async function persistConciergeTurn(
     assistantText: string;
     toolCalls: PersistedToolCall[];
     citations: PersistedCitation[];
+    /**
+     * Audit-only rows (e.g. shadow decisions): written to concierge_tool_actions
+     * but NOT into the assistant message's tool_calls_json, so anything that
+     * renders a transcript never sees them.
+     */
+    auditOnly?: PersistedToolCall[];
   }
 ): Promise<void> {
   try {
@@ -175,6 +181,9 @@ export async function persistConciergeTurn(
     );
 
     for (const call of turn.toolCalls) {
+      await insertToolAction(ctx, conversationId, assistantId, call);
+    }
+    for (const call of turn.auditOnly ?? []) {
       await insertToolAction(ctx, conversationId, assistantId, call);
     }
 

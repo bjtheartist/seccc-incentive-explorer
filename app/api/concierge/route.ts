@@ -52,6 +52,13 @@ import {
   type PersistedToolCall,
 } from "@/lib/concierge/persistence";
 import { validateConciergeOutput, recordConciergeValidatorHit } from "@/lib/concierge/output-validator";
+import {
+  evaluateShadowDecision,
+  isShadowDecisionsEnabled,
+  SHADOW_DECISION_TOOL_NAME,
+  summarizeShadowDecision,
+} from "@/lib/concierge/decisions";
+import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -174,6 +181,11 @@ function latestUserText(messages: UIMessage[]): string {
       .slice(0, 4000);
   }
   return "";
+}
+
+/** Stable, non-reversible id for correlating a shadow log line with nothing else. */
+function shortHash(text: string): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
 export async function POST(request: NextRequest) {
@@ -340,6 +352,14 @@ export async function POST(request: NextRequest) {
   const modelMessages = await convertToModelMessages(messages);
   const modelId = getConciergeModelId();
 
+  // 8b. SHADOW typed decisions (Jev via AI Gateway). Runs concurrently with the
+  //     guide's own call, hard 300ms timeout, fails open. The result is only
+  //     recorded (audit row for signed-in turns, hashed runtime log for every
+  //     turn) and never influences the prompt, tools, or reply.
+  const shadowDecision = isShadowDecisionsEnabled()
+    ? evaluateShadowDecision({ userText, pageContext })
+    : Promise.resolve(null);
+
   // build-spec.md 2.5 (audit "F-rail"; consult item 7, BLOCKING): buffer
   // the FULL model response, validate it, and ONLY THEN emit it — never
   // stream raw model text live to the client. `streamText`'s internal
@@ -382,6 +402,7 @@ export async function POST(request: NextRequest) {
     // Model call itself failed (timeout, provider error, abort). Fail to
     // the same resting message the rate-limit path uses — never partial
     // unvalidated text.
+    void shadowDecision.catch(() => null);
     return deterministicStreamResponse(CONCIERGE_RESTING_MESSAGE, sessionId, isNewSession);
   }
 
@@ -390,6 +411,35 @@ export async function POST(request: NextRequest) {
   if (outputValidation.hit) {
     recordConciergeValidatorHit(outputValidation.reason ?? "unknown");
   }
+
+  // Shadow decision record (all turns). Resolved AFTER the model result so it
+  // can never delay it; never throws; recorded only, never used.
+  const shadow = await shadowDecision.catch(() => null);
+  if (shadow) {
+    console.info(
+      `[concierge.shadow] ${JSON.stringify({
+        route: pageContext.route,
+        signedIn: Boolean(userId),
+        validatorHit: outputValidation.hit,
+        userTextHash: shortHash(userText),
+        decision: JSON.parse(summarizeShadowDecision(shadow)),
+      })}`
+    );
+  }
+  const shadowAuditRows: PersistedToolCall[] = shadow
+    ? [
+        {
+          toolName: SHADOW_DECISION_TOOL_NAME,
+          input: {
+            model: shadow.model,
+            questions: ["lane", "stage", "wants_handoff", "off_topic"],
+          },
+          approvalStatus: "executed",
+          resultSummary: summarizeShadowDecision(shadow),
+          needsApproval: false,
+        },
+      ]
+    : [];
 
   // Persist EXACTLY what was shown (the validated/substituted text) — never
   // the raw model text, per the consult's explicit instruction that
@@ -417,6 +467,7 @@ export async function POST(request: NextRequest) {
           assistantText: finalText,
           toolCalls: outputValidation.hit ? [] : toolCalls,
           citations,
+          auditOnly: shadowAuditRows,
         }
       );
     } catch {
