@@ -30,6 +30,8 @@ Acceptance criteria:
 
 ## P1: approve geography and measurement definitions
 
+Detailed source-to-geography mapping, verified polygon integration gaps and acceptance checks are in [Research and polygon coverage plan](research-and-polygon-coverage-plan.md). The companion workbook includes Research map, Polygon gaps, Corridor checks and Overlay inventory tabs.
+
 Draft registry: `lib/corridor-research.ts`, version `2026-09-24-draft-1`.
 
 | Corridor | Requested extent | Decision needed |
