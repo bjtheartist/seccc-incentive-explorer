@@ -1,8 +1,7 @@
 // ─── Report Wizard Configuration ────────────────────────────────────
 // Pure TypeScript config/types for the multi-step report wizard.
-// Two generated report types plus routed analysis entry points. The retired
-// Corridor Intelligence type remains decodable for old shared links, but is no
-// longer promoted in the report picker.
+// Two generated report types plus routed analysis entry points. Corridor
+// Intelligence opens its research preview; old shared wizard links remain decodable.
 
 // ─── Core Types ─────────────────────────────────────────────────────
 
@@ -112,11 +111,11 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
     id: "corridor-intelligence",
     title: "Corridor Intelligence",
     subtitle:
-      "Directional market and resilience signals for an area \u2014 ownership, vacancy, and business activity across a corridor.",
+      "Research preview: review eight priority corridor scopes, proposed measures, and the evidence needed for a baseline.",
     bestFor:
-      "Best for lenders, brokers, corridor managers, and chamber staff evaluating an area rather than one address.",
+      "Best for corridor managers and chamber staff preparing a source-backed corridor brief.",
     icon: "\uD83E\uDDED",
-    hidden: true,
+    href: "/corridors",
   },
   {
     id: "permit-activity",

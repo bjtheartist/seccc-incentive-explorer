@@ -38,6 +38,7 @@ const APPROVED_ITEMS: Array<[label: string, href: string]> = [
   ["Site Matchmaker", "/locate"],
   ["Incentive Map", "/map"],
   ["Permit Activity Analysis", "/permit-activity"],
+  ["Corridor Intelligence", "/corridors"],
   ["Public Investment Analysis", "/public-investment-analysis"],
 ];
 
@@ -67,10 +68,11 @@ describe("Header — approved Set-A structure", () => {
     expect(html).toContain('href="/public-investment-analysis"');
   });
 
-  it("does not expose the retired Corridor Signals preview", () => {
-    expect(html).not.toContain('href="/corridors"');
+  it("exposes the Corridor Intelligence research preview", () => {
+    expect(html).toContain('href="/corridors"');
     expect(html).not.toContain("Corridor Signals");
-    expect(html).not.toContain("Corridor Intelligence");
+    expect(html).toContain("Corridor Intelligence");
+    expect(html).toContain("Preview");
   });
 
   it("does not expose the retired Quick Address Check pathway", () => {
@@ -142,6 +144,13 @@ describe("Header — dropdown ARIA wiring", () => {
 });
 
 describe("Header — active group indicator", () => {
+  it("highlights Corridor Intelligence inside Neighborhood Analysis", () => {
+    const html = render("/corridors");
+    const group = html.match(/<button[^>]*id="nav-trigger-data"[^>]*>/)?.[0] ?? "";
+    const link = html.match(/<a[^>]*href="\/corridors"[^>]*>/)?.[0] ?? "";
+    expect(group).toContain("ring-[#2563EB]/30");
+    expect(link).toContain('aria-current="page"');
+  });
   it("highlights the group owning the current route", () => {
     const html = render("/programs");
     const trigger =

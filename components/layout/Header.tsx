@@ -22,8 +22,7 @@ interface NavGroup {
 
 /**
  * /neighborhoods has no index page, so it is never linked from the global nav.
- * The retired Corridor Signals preview redirects to the main map and is not
- * exposed as a navigation destination.
+ * Corridor Intelligence opens a research preview with draft street scopes.
  */
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -48,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Neighborhood Analysis",
     items: [
       { href: "/permit-activity", label: "Permit Activity Analysis" },
+      { href: "/corridors", label: "Corridor Intelligence", badge: "Preview" },
       {
         href: "/public-investment-analysis",
         label: "Public Investment Analysis",

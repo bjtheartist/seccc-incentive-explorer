@@ -18,21 +18,22 @@ import { REPORT_GENERATED_EVENTS } from "@/lib/analytics-dashboard";
 import { generatedReportEventType } from "@/lib/report-generated-event";
 import { derivePersonaLensVisible } from "@/lib/workspace";
 
-// ─── Analysis picker retirement contract ─────────────────────────────
+// ─── Analysis picker routing contract ───────────────────────────────
 
 describe("analysis picker", () => {
-  it("retires Corridor Intelligence from the visible picker while preserving legacy links", () => {
+  it("routes Corridor Intelligence to its preview while preserving legacy links", () => {
     const corridor = REPORT_TYPE_OPTIONS.find(
       (option) => option.id === "corridor-intelligence",
     );
     expect(corridor).toBeDefined();
-    expect(corridor?.hidden).toBe(true);
+    expect(corridor?.hidden).not.toBe(true);
+    expect(corridor?.href).toBe("/corridors");
 
     const steps = getStepsForReportType("corridor-intelligence").map((s) => s.id);
     expect(steps).toEqual(["report-type", "ci-corridor", "ci-review"]);
   });
 
-  it("does not expose the retired type in the report-type wizard step", () => {
+  it("keeps the routed preview out of the legacy generation wizard step", () => {
     const reportTypeStep = WIZARD_STEPS.find((step) => step.id === "report-type");
     expect(reportTypeStep?.options?.some((o) => o.id === "corridor-intelligence")).toBe(false);
   });

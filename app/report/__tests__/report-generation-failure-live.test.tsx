@@ -146,6 +146,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("Corridor Intelligence research entry point", () => {
+  it("renders the preview link in the real report picker without starting legacy generation", async () => {
+    const probe = await renderReportRouteForSearch("");
+    const link = await screen.findByRole("link", { name: /Corridor Intelligence/ });
+    expect(link.getAttribute("href")).toBe("/corridors");
+    expect(link.textContent).toContain("Research preview");
+    expect(screen.queryByRole("button", { name: /Corridor Intelligence/ })).toBeNull();
+    expect(probe.generateCalls()).toBe(0);
+  });
+});
+
 describe("instant mode: a failed generation exits the spinner into an honest retry card", () => {
   it("stops spinning and says the report was not generated", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});

@@ -156,14 +156,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/corridors",
-        destination: "/map",
-        permanent: true,
-      },
-      {
-        source: "/corridors/:path*",
-        destination: "/map",
-        permanent: true,
+        source: "/corridors/:zip",
+        destination: "/corridors",
+        permanent: false,
       },
       // The /qualify Program Fit Questions surface was sunset (owner's
       // ruling: the product boundary is discovery, not compliance) —
