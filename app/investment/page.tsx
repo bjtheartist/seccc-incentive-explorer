@@ -41,7 +41,15 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
 
   const { configured, hasSession, accessMode } = await getInvestmentAdminState();
   if (!configured) return <InvestmentNotConfigured />;
-  if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
+  if (!hasSession) {
+    return (
+      <InvestmentLoginForm
+        redirectTo="/investment"
+        hasAuthError={hasAuthError}
+        shareNotice={paramValue(sp.share)}
+      />
+    );
+  }
 
   const index = loadInvestmentIndex();
   // R1 finding 4: "has not been generated yet" is only true for a MISSING
@@ -66,7 +74,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               <Link href="/public-investment-analysis" className="hover:text-[#2563EB]">
                 Public Investment Analysis
               </Link>
-            ) : (
+            ) : accessMode === "partner" ? null : (
               <>
                 <Link href="/admin" className="hover:text-[#2563EB]">
                   Admin
@@ -80,7 +88,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
             <Link href="/map" className="hover:text-[#2563EB]">
               Map
             </Link>
-            {accessMode === "beta" ? null : (
+            {accessMode !== "admin" ? null : (
               <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
                 Owner Files
               </Link>
@@ -98,7 +106,11 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
           Grants, awards, and development sited into Chicago&rsquo;s community areas since 2020 — government,
           philanthropic, and private capital, from public records.{" "}
-          {accessMode === "beta" ? "Private beta access." : "Staff analysis access."}
+          {accessMode === "beta"
+            ? "Private beta access."
+            : accessMode === "partner"
+              ? "Partner access."
+              : "Staff analysis access."}
         </p>
 
         {datasetUnavailable ? (
