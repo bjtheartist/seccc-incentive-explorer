@@ -38,6 +38,7 @@ const nextConfig: NextConfig = {
   // route rather than guessing which ones PR2 will add — see
   // lib/__tests__/programs-internal-bundling.test.ts.
   outputFileTracingIncludes: {
+    "/research/ctc-small-business": ["./data/private/ctc-research/corridor-map.html"],
     "/vacancy/[zip]/shortlist": ["./data/exports/shortlist-universe/**", "./public/data/community-areas.geojson"],
     // The enrichment route reads the parcel-identity sidecars (precomputed
     // County parcel facts) from data/exports/ via process.cwd() — the SAME

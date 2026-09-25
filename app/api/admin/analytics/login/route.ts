@@ -7,6 +7,7 @@ import {
 } from "@/lib/analytics-admin-auth";
 
 const ALLOWED_ADMIN_REDIRECTS = new Set([
+  "/research/ctc-small-business",
   "/admin/analytics",
   "/admin/future-of-commerce",
   "/admin/zoning-changes",

@@ -117,3 +117,6 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Internal CTC research artifact: deploy locally, do not publish to the public repository.
+/data/private/ctc-research/
