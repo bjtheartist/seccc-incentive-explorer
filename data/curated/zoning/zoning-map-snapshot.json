@@ -4,7 +4,7 @@
     "id": "chicago-arcgis-zoning",
     "label": "City of Chicago ArcGIS zoning boundaries",
     "url": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
-    "sourceUpdatedThrough": "2026-09-01T21:26:09.000Z"
+    "sourceUpdatedThrough": "2026-09-16T20:50:53.000Z"
   },
   "featureCount": 14986,
   "records": [
@@ -91299,21 +91299,6 @@
       "geometryFingerprint": "06da2188e257d406bece94a437fcc2432faf61916c12617efbf31c22339164d5"
     },
     {
-      "globalId": "{67733A46-7DDE-4AC4-93EC-1DD8D75E76CE}",
-      "zoningId": 0,
-      "zoneClass": "B2-2",
-      "zoneTypeCode": 4,
-      "pdNumber": null,
-      "pmdSubArea": null,
-      "ordinanceNumber": "A8950",
-      "ordinanceDate": "2025-04-16T00:00:00.000Z",
-      "clerkDocumentNumber": "O2025-0015609",
-      "clerkUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9DCC3382-FEEE-EF11-BE20-001DD8304C00",
-      "recordUpdatedAt": "2025-06-18T18:00:04.000Z",
-      "attributeFingerprint": "34e8196dc681f66ff896465e5d09d528ee3e960ad8d6c5ca1b67082dbd30c6fe",
-      "geometryFingerprint": "bc8696b55f4dd7b6636e2d40acba1e3d8d318cb8cba872a6fe9ff409c84d8fc4"
-    },
-    {
       "globalId": "{677408C2-7DB6-4667-976F-EA694B889ECE}",
       "zoningId": 0,
       "zoneClass": "B2-2",
@@ -165457,6 +165442,21 @@
       "recordUpdatedAt": "2025-04-30T19:47:01.000Z",
       "attributeFingerprint": "10d677ed024b4546807fcfbbba8d9f01a011516ab09dff898c9d1675e78ff67f",
       "geometryFingerprint": "62711d13027fd661205a592502df52584aab2f2d0c0434cb16651af96c209190"
+    },
+    {
+      "globalId": "{BB87D177-D7CC-4ADC-96AC-29F30C358ED6}",
+      "zoningId": 0,
+      "zoneClass": "RT-4",
+      "zoneTypeCode": 4,
+      "pdNumber": null,
+      "pmdSubArea": null,
+      "ordinanceNumber": "A8950",
+      "ordinanceDate": "2025-04-16T00:00:00.000Z",
+      "clerkDocumentNumber": "O2025-0015609",
+      "clerkUrl": "https://chicityclerkelms.chicago.gov/Matter/?matterId=9DCC3382-FEEE-EF11-BE20-001DD8304C00",
+      "recordUpdatedAt": "2026-09-16T20:50:53.000Z",
+      "attributeFingerprint": "0809bb0d91dc3f034de2cb51a481210c9c85ee578f72c62feef8c2a745d3171b",
+      "geometryFingerprint": "bc8696b55f4dd7b6636e2d40acba1e3d8d318cb8cba872a6fe9ff409c84d8fc4"
     },
     {
       "globalId": "{BB8C1CD8-09A3-4DE2-9FF5-9F829F882037}",
