@@ -257,7 +257,7 @@ describe("canonical-firewall — the new loaders never touch the canonical commu
     expect(source).not.toMatch(/from ["']\.\/community-investment["']/);
   });
 
-  it("calling every new loader leaves the canonical export's own file bytes and awarded grand total byte-identical", () => {
+  it("calling every new loader leaves the canonical export's own file bytes and awarded grand total byte-identical", async () => {
     const canonicalPath = path.join(process.cwd(), "data", "private", "community-investment.json");
     if (!existsSync(canonicalPath)) {
       // Nothing to firewall-test against in this checkout; the loader-purity
@@ -266,7 +266,7 @@ describe("canonical-firewall — the new loaders never touch the canonical commu
     }
     const before = readFileSync(canonicalPath);
     const beforeHash = createHash("sha256").update(before).digest("hex");
-    const beforeData = loadCommunityInvestment();
+    const beforeData = await loadCommunityInvestment();
     const beforeTotal = beforeData ? sumAwardedDollars(beforeData.records) : null;
 
     // Exercise every new accessor.
@@ -281,7 +281,7 @@ describe("canonical-firewall — the new loaders never touch the canonical commu
     const afterHash = createHash("sha256").update(after).digest("hex");
     expect(afterHash).toBe(beforeHash);
 
-    const afterData = loadCommunityInvestment();
+    const afterData = await loadCommunityInvestment();
     const afterTotal = afterData ? sumAwardedDollars(afterData.records) : null;
     expect(afterTotal).toBe(beforeTotal);
   });

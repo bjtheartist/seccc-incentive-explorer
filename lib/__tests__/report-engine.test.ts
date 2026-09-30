@@ -2341,10 +2341,10 @@ describe("buildCorridorInvestmentContext (gate finding 5)", () => {
 
 describe("buildCorridorInvestmentContext + real capital-context.json (route-level sanity)", () => {
   // Confirms the REAL committed file still has what app/api/report/generate/
-  // route.ts's server-side loadCapitalContextForArea() call depends on —
+  // route.ts's server-side await loadCapitalContextForArea() call depends on —
   // Albany Park is one of the 77 community areas with a real CRA series.
-  it("the real file has a non-empty CRA series for Albany Park, shaped as buildCorridorInvestmentContext expects", () => {
-    const raw = loadCapitalContextForArea("Albany Park");
+  it("the real file has a non-empty CRA series for Albany Park, shaped as buildCorridorInvestmentContext expects", async () => {
+    const raw = await loadCapitalContextForArea("Albany Park");
     expect(raw.cra).not.toBeNull();
     expect(raw.cra!.length).toBeGreaterThan(0);
     expect(raw.sources.some((s) => s.includes("FFIEC"))).toBe(true);
