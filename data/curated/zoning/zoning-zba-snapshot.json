@@ -8,11 +8,11 @@
     "sourceUpdatedThrough": null,
     "freshnessNote": "The City layer does not publish a refresh timestamp. Retrieval time is not a source-update date."
   },
-  "featureCount": 18566,
+  "featureCount": 18604,
   "coverage": {
     "byCaseType": {
-      "special_use": 6425,
-      "variation": 8053,
+      "special_use": 6441,
+      "variation": 8075,
       "administrative_appeal": 4044,
       "unknown": 44
     },
@@ -1783,24 +1783,6 @@
       "publishedCaseField": "138",
       "attributeFingerprint": "cb6ef4d00dc2ce5c324896e6384f39a7a9ef6ff833ef04a3593616de1e93621f",
       "geometryFingerprint": "1e77f3d907cd2774eb27fc33327ddb6266d359f3f1e3452a26345235b3f6f001"
-    },
-    {
-      "id": "{016EF227-9C46-4810-ABA3-B55149AE71B5}",
-      "globalId": "{016EF227-9C46-4810-ABA3-B55149AE71B5}",
-      "caseReference": "286-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 286,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "1844 N. FREMONT ST.",
-      "judgment": "CONT TO SEP",
-      "description": "REDUCE SETBACKS",
-      "pin10": "1432412044",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "286",
-      "attributeFingerprint": "baad267668a564a1697be34220e62ab8161a2f958013faa0153c02c043c1c017",
-      "geometryFingerprint": "c123495e6907bfed2b2eb6f0f80ea55f5de08c5d9eadabde347f5962d7e9eef9"
     },
     {
       "id": "{016F956B-40AF-4433-800D-7F40161E7E31}",
@@ -10569,6 +10551,24 @@
       "geometryFingerprint": "13e564bd3026f01b4468089e9e1d06231584fb48b25b30c5ec321620014f0376"
     },
     {
+      "id": "{08437146-C908-4B3C-AA6A-3335F71358C9}",
+      "globalId": "{08437146-C908-4B3C-AA6A-3335F71358C9}",
+      "caseReference": "320-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 320,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "9108 S. ASHLAND AVE.",
+      "judgment": "GRANTED",
+      "description": "PUBLIC PLACE OF AMUSEMENT (PPA)",
+      "pin10": "2506409022",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "320",
+      "attributeFingerprint": "dd843d2810774a32be03590ec4f585b6148e5125d17a14f4f5a0a5f33bbc7a9b",
+      "geometryFingerprint": "7d7238794fb11aaf91846c9c21ce284d64690e29ef7640ce4ef23fd2ffc058b8"
+    },
+    {
       "id": "{084ADA08-3813-43E0-96EE-156786E9E706}",
       "globalId": "{084ADA08-3813-43E0-96EE-156786E9E706}",
       "caseReference": "237-86-A",
@@ -16257,6 +16257,24 @@
       "geometryFingerprint": "3904434996fbfaf3b1e2494b9ebd0bd12d9ebe0e72734f7d249734f7a286281d"
     },
     {
+      "id": "{0C707735-2B93-460D-A1C5-452CBBC15696}",
+      "globalId": "{0C707735-2B93-460D-A1C5-452CBBC15696}",
+      "caseReference": "325-26-S",
+      "caseYear": 2026,
+      "caseSequence": 325,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2711 W. 51ST ST.",
+      "judgment": "CONT TO NOV",
+      "description": "INDOOR EVENT VENUE",
+      "pin10": "1912401006",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "325",
+      "attributeFingerprint": "6ba608de01d7d89d57993cf24bb6546e9d8a635489075bd310af34b571dd3204",
+      "geometryFingerprint": "c8b63a0faf03436a3ab8b27bafffc4dde1adf7eb758f8a824c8ca248a7347c2e"
+    },
+    {
       "id": "{0C722E16-32D8-43F0-9A2A-713960C3DF22}",
       "globalId": "{0C722E16-32D8-43F0-9A2A-713960C3DF22}",
       "caseReference": "13-26-Z",
@@ -18721,24 +18739,6 @@
       "publishedCaseField": "135",
       "attributeFingerprint": "f8f3f7bc91dec6bd3b2a7cfa7c8e04f23bfbff839cdde1fa511200ecbd90f3a0",
       "geometryFingerprint": "cfd002d4da8aa4c16ad71fc791688704b437eeab5f201616331262ba25e01612"
-    },
-    {
-      "id": "{0E66638D-555A-4C38-95C3-8732DC1D3C5D}",
-      "globalId": "{0E66638D-555A-4C38-95C3-8732DC1D3C5D}",
-      "caseReference": "127-26-S",
-      "caseYear": 2026,
-      "caseSequence": 127,
-      "caseType": "special_use",
-      "caseTypeRaw": "S",
-      "address": "2343 W. GRAND AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "RESIDENTIAL USE BELOW THE SECOND FLOOR",
-      "pin10": "1707125051",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "127",
-      "attributeFingerprint": "410964afc99500d1113a46f6b057f8c9e9499bc0ca188fe00bf7c1a1803b2d80",
-      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
     },
     {
       "id": "{0E67F72C-16AD-42D9-A55B-6F1BFEE01512}",
@@ -22521,6 +22521,24 @@
       "geometryFingerprint": "30bc90d5118b10f71a4c554105e1e7e3b7c02c67ff549d08d5ee88b473a3887b"
     },
     {
+      "id": "{112933F0-3DA7-4E49-AE31-DCBABDC856A8}",
+      "globalId": "{112933F0-3DA7-4E49-AE31-DCBABDC856A8}",
+      "caseReference": "355-26-S",
+      "caseYear": 2026,
+      "caseSequence": 355,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5136 S. HALSTED ST.",
+      "judgment": "CONT TO NOV",
+      "description": "TRANSITIONAL RESIDENCE",
+      "pin10": "2008407035",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "355",
+      "attributeFingerprint": "81d2064cefcc035687c35c673fbd2fb1047580c8596fd12ba79860fae74405d2",
+      "geometryFingerprint": "be223a5d1c4d082bce45d4eebd31b0c790437a6deead0e45f7b249eaedea9ce4"
+    },
+    {
       "id": "{11337720-53C4-4B0F-A708-72FB13B535E0}",
       "globalId": "{11337720-53C4-4B0F-A708-72FB13B535E0}",
       "caseReference": "258-17-S",
@@ -23403,6 +23421,24 @@
       "geometryFingerprint": "098c300d7fac69f9f102f64fb6c1753fbdda88182b1c6125862b4f8da7112198"
     },
     {
+      "id": "{11EE6FEC-A0EC-450D-875B-744BC9660F72}",
+      "globalId": "{11EE6FEC-A0EC-450D-875B-744BC9660F72}",
+      "caseReference": "321-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 321,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "3007 S. CANAL ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1728325016",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "321",
+      "attributeFingerprint": "f38f8100219a595c43b82fcb050f06311cf03f23b9ce94c296659e97461c682e",
+      "geometryFingerprint": "deb452b9cc03bd58a3ed1cae5f83a1638fff86e844618ad6d7943bc1cd2e2100"
+    },
+    {
       "id": "{11EF22A7-7D12-4D16-8C12-0C03845CA1D3}",
       "globalId": "{11EF22A7-7D12-4D16-8C12-0C03845CA1D3}",
       "caseReference": "77-23-S",
@@ -24211,6 +24247,24 @@
       "publishedCaseField": "226",
       "attributeFingerprint": "2cbc93b0a6dd8a8b85686d3deeb55d4e5b615ef940c4279fc670800e7b0bc06b",
       "geometryFingerprint": "a5f39cbbba830e642b757c8e1b38129c4667a4fa5067cf4e32c81a845fdd95e0"
+    },
+    {
+      "id": "{129BDEB8-81F6-4941-9B48-1C7727CD01C8}",
+      "globalId": "{129BDEB8-81F6-4941-9B48-1C7727CD01C8}",
+      "caseReference": "254-26-S",
+      "caseYear": 2026,
+      "caseSequence": 254,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5659 S. WOODLAWN AVE.",
+      "judgment": "GRANTED",
+      "description": "COMMUNITY CENTER",
+      "pin10": "2014207039",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "254",
+      "attributeFingerprint": "6c4ffa0bc279fd5f5deb48c1e7f8e85486e68e5eae5557dd9bd2738e7e3a2f66",
+      "geometryFingerprint": "b43cf9710be1eade0c3b6101739ebd54feeebff89f610d4769b34f0aca0cf290"
     },
     {
       "id": "{12A8CB1F-4913-425D-9AA0-8AEE54148A79}",
@@ -25111,6 +25165,24 @@
       "publishedCaseField": "49",
       "attributeFingerprint": "c5094bd9a71dddbc7df74dfa22637fac64c361aed54825374ee774bffb7bee83",
       "geometryFingerprint": "c82861b386f72192cd940e50689b172d7e66085540c694d47eef3a6b91118a92"
+    },
+    {
+      "id": "{136B811E-F0D0-48B9-ABE3-2A6D29DF3A86}",
+      "globalId": "{136B811E-F0D0-48B9-ABE3-2A6D29DF3A86}",
+      "caseReference": "340-26-S",
+      "caseYear": 2026,
+      "caseSequence": 340,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "1163 N. CHERRY AVE.",
+      "judgment": "GRANTED",
+      "description": "SPORTS AND RECREATION (TENNIS/PICKLEBALL FACILITY)",
+      "pin10": "1705402041",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "340",
+      "attributeFingerprint": "383edabaffbc952a630301707d071c6b23b031c5da3fb50bad524742b4b1fc29",
+      "geometryFingerprint": "fd7cb89b7f92840e206d9e39299fedaaa7846692f4e8d73b205e50f8b91c92d3"
     },
     {
       "id": "{136FB027-8F2D-4A29-86D5-05F950C5FC47}",
@@ -35157,6 +35229,24 @@
       "geometryFingerprint": "d2d561bd13fce66030b2e0d3e323cbc752bfd2d31a2f46392e48278ffbc576ef"
     },
     {
+      "id": "{1B067D76-63A9-49F1-8EFD-A80C3777A5F7}",
+      "globalId": "{1B067D76-63A9-49F1-8EFD-A80C3777A5F7}",
+      "caseReference": "327-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 327,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "5133 S. HOMAN AVE.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1911403017",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "327",
+      "attributeFingerprint": "c5e88f96fb93cf46f492b0d34f80d9d8e91b6b02014a2d79cf5505e83a60b5d1",
+      "geometryFingerprint": "e84219f38709df5f73436c2c7e0fb01e700d20afb8bedea93861a28d5dc67547"
+    },
+    {
       "id": "{1B0AFBB3-3CC1-4803-AFF9-F4BFD2C0B4A3}",
       "globalId": "{1B0AFBB3-3CC1-4803-AFF9-F4BFD2C0B4A3}",
       "caseReference": "220-73-A",
@@ -35425,24 +35515,6 @@
       "publishedCaseField": "386",
       "attributeFingerprint": "ad1b937fe5ab42a2b979957d4f9bbd33987d7c42a969e2758096b64bc085b303",
       "geometryFingerprint": "bde1c7fc43ce9faef23c1bdfd542dc528566c1e7f49e60312c95274e898e6a4f"
-    },
-    {
-      "id": "{1B53F724-97AE-4FF5-A3E3-68C4928F91D1}",
-      "globalId": "{1B53F724-97AE-4FF5-A3E3-68C4928F91D1}",
-      "caseReference": "254-26-S",
-      "caseYear": 2026,
-      "caseSequence": 254,
-      "caseType": "special_use",
-      "caseTypeRaw": "S",
-      "address": "5659 S. WOODLAWN AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "COMMUNITY CENTER",
-      "pin10": "2014207039",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "254",
-      "attributeFingerprint": "b88cf7f01567030a797783011bec9ffc6c3f6ee989c146a310bcc46c3bd45bae",
-      "geometryFingerprint": "b43cf9710be1eade0c3b6101739ebd54feeebff89f610d4769b34f0aca0cf290"
     },
     {
       "id": "{1B58B296-27CA-418C-A866-E4AC81416D3A}",
@@ -35965,6 +36037,24 @@
       "publishedCaseField": "148",
       "attributeFingerprint": "c58120274fbcdc0f26a283a6320d94da273b505f980f61640b53077ac52c50d2",
       "geometryFingerprint": "d5c88cd9c3453d2bcd6b99326f44f7963a6dddb5b432192a3120d584091f8168"
+    },
+    {
+      "id": "{1BBAEF5B-16D6-48FE-9F2B-A4C6E8213573}",
+      "globalId": "{1BBAEF5B-16D6-48FE-9F2B-A4C6E8213573}",
+      "caseReference": "332-26-S",
+      "caseYear": 2026,
+      "caseSequence": 332,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2234-36 W. 23RD PL.",
+      "judgment": "GRANTED",
+      "description": "ALLOW RES USE WITHIN 660' OF AN EXISTING WHOLESALE USE",
+      "pin10": "1730109028",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "332",
+      "attributeFingerprint": "f4d9f682230b66949130443fb975af31a7400a21a4153370e5b52e75ca6e3a92",
+      "geometryFingerprint": "264d34fd0bbcccb8823b2584bc6a25fb98679667beb5af1d42ce99acc3ba80f4"
     },
     {
       "id": "{1BC2ACB7-CCD4-4ED6-9352-25F8D7C0941F}",
@@ -42015,24 +42105,6 @@
       "geometryFingerprint": "5980f7be6beda84c20e801fd7a6a9b82f0d3a97ae0b7d0e0c827493397b9c6c8"
     },
     {
-      "id": "{206C0655-0183-497A-ADD4-59A5D124C5E3}",
-      "globalId": "{206C0655-0183-497A-ADD4-59A5D124C5E3}",
-      "caseReference": "130-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 130,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "2343 W. GRAND AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "REDUCE REAR SETBACK",
-      "pin10": "1707125051",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "130",
-      "attributeFingerprint": "b5404603b5f2a1f882a67784ef3cefaf89d5bfe849c0b2be2ad757ac9c4a91bb",
-      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
-    },
-    {
       "id": "{2074706E-74A8-42A5-B40E-A5E1BA4F5A72}",
       "globalId": "{2074706E-74A8-42A5-B40E-A5E1BA4F5A72}",
       "caseReference": "375-09-S",
@@ -43471,24 +43543,6 @@
       "publishedCaseField": "333",
       "attributeFingerprint": "de86a66e739124a26ae5db87f184297a4662e07ca2b26c7f821adbf30adecf27",
       "geometryFingerprint": "36e9ceea421d27f403a983b0362d6a8c222a6b4c04ea84e8e91faa48d7978478"
-    },
-    {
-      "id": "{21930897-32CC-4D1D-B8DE-8A70D7D1177C}",
-      "globalId": "{21930897-32CC-4D1D-B8DE-8A70D7D1177C}",
-      "caseReference": "128-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 128,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "2343 W. GRAND AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "INCREASE BUILDING HEIGHT",
-      "pin10": "1707125051",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "128",
-      "attributeFingerprint": "dde5357392d0e8637fb2d5ad915d370f1998a6a8ade384b2fa2beac0267a8755",
-      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
     },
     {
       "id": "{2196797E-9D8D-4E5F-9D35-47401BBFF6C4}",
@@ -45469,6 +45523,24 @@
       "publishedCaseField": "363",
       "attributeFingerprint": "54d9d442211dec541ca5ed081d64494935fc1d30594b6768b1b3745f8ffd5ca7",
       "geometryFingerprint": "c5f48fe1125dbe85806cb37aba3916871a18738029e4e3649405f185921c7672"
+    },
+    {
+      "id": "{22F215EC-F155-4414-977D-E066A4561001}",
+      "globalId": "{22F215EC-F155-4414-977D-E066A4561001}",
+      "caseReference": "329-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 329,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2702 W. 25TH ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE MINIMUM LOT AREA",
+      "pin10": "1625217025",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "329",
+      "attributeFingerprint": "9e4d318e1671757c683f2c391a6b144cf12622f2cad03716fed48af094374600",
+      "geometryFingerprint": "170c71e5a61531c5d3744c27f483d501043e5063f8d2160b2a71b3721ab0333c"
     },
     {
       "id": "{22F26E6B-9DA1-458E-88AA-BC30E23FEA9B}",
@@ -58629,6 +58701,24 @@
       "geometryFingerprint": "bd770cca5e0e6691ff608f138e2d138eb067f5d1f22e14b9debede960492a521"
     },
     {
+      "id": "{2CF05014-4CD7-4136-8D59-6215648F8825}",
+      "globalId": "{2CF05014-4CD7-4136-8D59-6215648F8825}",
+      "caseReference": "322-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 322,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "3007 S. CANAL ST.",
+      "judgment": "GRANTED",
+      "description": "EXPANSION OF FLOOR AREA",
+      "pin10": "1728325016",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "322",
+      "attributeFingerprint": "953fa585798d3d5a2738318b63bb7eb672d7dc5fb8724e684c2c1f82b20e98fa",
+      "geometryFingerprint": "deb452b9cc03bd58a3ed1cae5f83a1638fff86e844618ad6d7943bc1cd2e2100"
+    },
+    {
       "id": "{2CF29AC3-6DDD-4C7A-84A9-0E17ED06ACAA}",
       "globalId": "{2CF29AC3-6DDD-4C7A-84A9-0E17ED06ACAA}",
       "caseReference": "297-98-S",
@@ -64857,6 +64947,24 @@
       "geometryFingerprint": "e73293b4201685363b0c9c832facd3063c95829e49715030da0fce5b12a92d8f"
     },
     {
+      "id": "{321868E9-BCAD-432A-A2A7-4A755E84CA16}",
+      "globalId": "{321868E9-BCAD-432A-A2A7-4A755E84CA16}",
+      "caseReference": "326-26-S",
+      "caseYear": 2026,
+      "caseSequence": 326,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2142 W. CHICAGO AVE.",
+      "judgment": "GRANTED",
+      "description": "NAIL SALON",
+      "pin10": "1706330050",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "326",
+      "attributeFingerprint": "5c7c3260e6791f4158845b4e732feadbf44298c3285232b6d886dd07de2f43f9",
+      "geometryFingerprint": "47f08682002de2a46d7b33399fbc4215db9729f51a85b9623d55f0ba31b6b291"
+    },
+    {
       "id": "{32189C00-5E3A-4593-9BA2-7BED49ACFBB6}",
       "globalId": "{32189C00-5E3A-4593-9BA2-7BED49ACFBB6}",
       "caseReference": "298-95-Z",
@@ -65899,6 +66007,24 @@
       "publishedCaseField": "384",
       "attributeFingerprint": "13bcaf60b5575f8331a7fc24e554c2390639162e546953b9b3e86f3d6e14ab99",
       "geometryFingerprint": "c83973aef9ef6f7cc9ee4f95c56fcb9072dc1b078553d995adf6f2067f30e5b4"
+    },
+    {
+      "id": "{32EF33CD-3251-480D-BF13-10C7FFB46A4D}",
+      "globalId": "{32EF33CD-3251-480D-BF13-10C7FFB46A4D}",
+      "caseReference": "348-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 348,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "1056 N. ASHLAND AVE.",
+      "judgment": "GRANTED",
+      "description": "REDUCE REAR SETBACK",
+      "pin10": "1706412025",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "348",
+      "attributeFingerprint": "7c4d761f08493ce016198a1c816ca8d2a6b325a2154ef837a3237b310f29bc1c",
+      "geometryFingerprint": "377ed187b00f2e761d3addb275609dc2749e7725cb1d31db510a90bdc7dbcb8a"
     },
     {
       "id": "{32F1505E-9A6E-42F2-A85F-DF2D1FB23419}",
@@ -73893,6 +74019,24 @@
       "geometryFingerprint": "b75e4e6515e7a64eba96325e92fcbb2bfbd2aa93c53ee1f3ac941e1911d7a0a7"
     },
     {
+      "id": "{390D6E1A-96BA-4DF1-97FB-F64D47BF20CA}",
+      "globalId": "{390D6E1A-96BA-4DF1-97FB-F64D47BF20CA}",
+      "caseReference": "129-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 129,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2343 W. GRAND AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "INCREASE OFF-STREET PARKING SPACES",
+      "pin10": "1707125051",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "129",
+      "attributeFingerprint": "e3a7c4357770599ef64448fa047c526caf26be7dd937e820378f6338bdfc7804",
+      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
+    },
+    {
       "id": "{3911197A-56EC-4B7F-B05A-85251F3841DB}",
       "globalId": "{3911197A-56EC-4B7F-B05A-85251F3841DB}",
       "caseReference": "96-82-A",
@@ -79527,6 +79671,24 @@
       "geometryFingerprint": "8261673a4cc94a681d62598f1d0381877dff80996b99220d310029fe4ffb282a"
     },
     {
+      "id": "{3D46A355-9B3B-48D0-8826-79B3647DD754}",
+      "globalId": "{3D46A355-9B3B-48D0-8826-79B3647DD754}",
+      "caseReference": "231-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 231,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2343 W. GRAND AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "ALLOW DRIVEWAY ACCESS FROM A PEDESTRIAN STREET",
+      "pin10": "1707125051",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "231",
+      "attributeFingerprint": "8a6e57c6f063af26c1dadf4fdf97d989d96a6012b699b3a34cba9beffb50d088",
+      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
+    },
+    {
       "id": "{3D5D12A4-6ECC-4803-97E9-3A29C96C7B65}",
       "globalId": "{3D5D12A4-6ECC-4803-97E9-3A29C96C7B65}",
       "caseReference": "171-26-S",
@@ -84601,6 +84763,24 @@
       "publishedCaseField": "423",
       "attributeFingerprint": "cf2a9b03b7397b595a64054c90ca29ab64abd9e76d80ccb7bc80d37833869d80",
       "geometryFingerprint": "cd5dbd1d3cf52a6b849d5a2f7f1755d24160888b27b60f1b8f76845a2e52bcb1"
+    },
+    {
+      "id": "{412AF6D2-39FE-4F6C-9D48-5D3807303160}",
+      "globalId": "{412AF6D2-39FE-4F6C-9D48-5D3807303160}",
+      "caseReference": "333-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 333,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2234-36 W. 23RD PL.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1730109028",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "333",
+      "attributeFingerprint": "16066afb061c938ebcd884d0e3f48d71e415b620cd8678bd6ce968c1915b837c",
+      "geometryFingerprint": "264d34fd0bbcccb8823b2584bc6a25fb98679667beb5af1d42ce99acc3ba80f4"
     },
     {
       "id": "{413116C3-35EC-405E-B97C-7ADA7C3AB319}",
@@ -96573,6 +96753,24 @@
       "geometryFingerprint": "6945a0c9b75c6431f7f781fcc272a56732f55e64db24035343000dd1a059e34f"
     },
     {
+      "id": "{4A08D6BF-D64D-4E80-9C0B-7C456CA676F2}",
+      "globalId": "{4A08D6BF-D64D-4E80-9C0B-7C456CA676F2}",
+      "caseReference": "319-26-S",
+      "caseYear": 2026,
+      "caseSequence": 319,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "7019 W. HIGGINS AVE",
+      "judgment": "GRANTED",
+      "description": "HAIR SALON",
+      "pin10": "1307112021",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "319",
+      "attributeFingerprint": "22f6fdd84a68fa18b6aa5d0b13f3e944b80eec7d0b1218935e6d0c98a35dc204",
+      "geometryFingerprint": "fc1645b0e5693aa7d191549e09999567bc9d80e66916fd503ab5ca18f7a64b16"
+    },
+    {
       "id": "{4A0ED5CB-80F8-4C18-8374-793C7749E8D9}",
       "globalId": "{4A0ED5CB-80F8-4C18-8374-793C7749E8D9}",
       "caseReference": "224-00-Z",
@@ -98733,6 +98931,24 @@
       "geometryFingerprint": "938a5af23d6ab5ef5135447c4ee60ef8550ef4dc071c363d927bcdcbdf0d26c1"
     },
     {
+      "id": "{4BC1FBEE-DF6E-4AD9-A25D-F3F66A5A4217}",
+      "globalId": "{4BC1FBEE-DF6E-4AD9-A25D-F3F66A5A4217}",
+      "caseReference": "127-26-S",
+      "caseYear": 2026,
+      "caseSequence": 127,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2343 W. GRAND AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "RESIDENTIAL USE BELOW THE SECOND FLOOR",
+      "pin10": "1707125051",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "127",
+      "attributeFingerprint": "ab9adcf1bc96d4dcbd76c55c57e4758caf2c031b61847be7ee5107163de580cb",
+      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
+    },
+    {
       "id": "{4BC208F3-724E-4589-92BE-A37B88646447}",
       "globalId": "{4BC208F3-724E-4589-92BE-A37B88646447}",
       "caseReference": "318-11-S",
@@ -98767,6 +98983,24 @@
       "publishedCaseField": "274",
       "attributeFingerprint": "4276c0a9ce90d2edb57b7fe4bb2f17f26d76e0589fa51848f329ac2d9fcef9b4",
       "geometryFingerprint": "f70c8731f68d29ffa586ea01bb03a748c08b384932711b6c648a4012b52633de"
+    },
+    {
+      "id": "{4BC3898F-4943-44C2-A7AF-50BE998C86BE}",
+      "globalId": "{4BC3898F-4943-44C2-A7AF-50BE998C86BE}",
+      "caseReference": "344-26-S",
+      "caseYear": 2026,
+      "caseSequence": 344,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5135 N. CLARK ST.",
+      "judgment": "GRANTED",
+      "description": "NAIL SALON",
+      "pin10": "1408301044",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "344",
+      "attributeFingerprint": "a304e000525082ff6d90b6030767759faf7e862398d07e13412297da511a9d3d",
+      "geometryFingerprint": "6546daca88de3fe07eb94412a44b182776981621d56f342f8f6e129917ef1d50"
     },
     {
       "id": "{4BC6DF53-AE5C-4708-89B6-6B24AC2C6A5C}",
@@ -101305,6 +101539,24 @@
       "publishedCaseField": "024",
       "attributeFingerprint": "946ff68edff32398432147f0c869295bc7bea205c791dcef66ddccf4a4e28cd5",
       "geometryFingerprint": "b4fd87bc97ddd8a2a31392a10b3f0f9aab4ada67c3bc9671d802e3acf6cf6d11"
+    },
+    {
+      "id": "{4E0B0B02-4AFC-429A-A219-DC47C79AE339}",
+      "globalId": "{4E0B0B02-4AFC-429A-A219-DC47C79AE339}",
+      "caseReference": "328-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 328,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2556-58 W. DIVISION ST.",
+      "judgment": "GRANTED",
+      "description": "PUBLIC PLACE OF AMUSEMENT (PPA)",
+      "pin10": "1601226048",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "328",
+      "attributeFingerprint": "601ea7ca8882ebfffadaf4bcbe50679faef0d946aa9ede540f1f9bfb8b1e80d3",
+      "geometryFingerprint": "5c5f7377acddf99b2607d55bea398a7fd9185bcb6d97c63599dba41703ac1516"
     },
     {
       "id": "{4E143CFF-DC19-40A8-AC00-E1A0EFB8AC5C}",
@@ -106003,6 +106255,24 @@
       "publishedCaseField": "419",
       "attributeFingerprint": "9f609865d0cbd43eb298263d74cb2d2bc53bfb9d01862e363519028ba5c2fb4d",
       "geometryFingerprint": "82942f43b3c7d73e3155e59f286420a8fdf84671a91408081ea80a715a9f1181"
+    },
+    {
+      "id": "{51774D1E-4443-4C52-9700-19876C143860}",
+      "globalId": "{51774D1E-4443-4C52-9700-19876C143860}",
+      "caseReference": "352-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 352,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "5955 N. KENNETH AVE.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1303307040",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "352",
+      "attributeFingerprint": "2fe45e66a6e07faf0751614fb57f52927b20f4c59c4c6f71cc54dadded1bfbbd",
+      "geometryFingerprint": "3b157a8a4dc726fbc85274d7dbf9cb27784da78998647cc879563771820742d9"
     },
     {
       "id": "{517A54C4-A10E-4006-9E57-D50979D427E6}",
@@ -126741,6 +127011,24 @@
       "geometryFingerprint": "8aa192198e75893304e6792c94f667835b27cec7c4733c3c0f1506bd59eb00c6"
     },
     {
+      "id": "{605D8488-055E-4A16-8876-DF7946BC957F}",
+      "globalId": "{605D8488-055E-4A16-8876-DF7946BC957F}",
+      "caseReference": "338-26-S",
+      "caseYear": 2026,
+      "caseSequence": 338,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "3514-22 N. HALSTED ST.",
+      "judgment": "CONT TO NOV",
+      "description": "NON-ACCESSORY PARKING LOT",
+      "pin10": "1420407032",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "338",
+      "attributeFingerprint": "534bee6664ca4e9caf8b01a740f8c418d43696adbd95fae7ba0dc8ec4989420c",
+      "geometryFingerprint": "58567cfbce6e5bb2a49b09b149990df0e5e90bd690cdae8e699dc81c6e226f21"
+    },
+    {
       "id": "{605FD3D3-9320-4169-A7E2-F33E00DE800E}",
       "globalId": "{605FD3D3-9320-4169-A7E2-F33E00DE800E}",
       "caseReference": "386-01-Z",
@@ -128341,6 +128629,24 @@
       "publishedCaseField": "353",
       "attributeFingerprint": "67bbb4e4ece07cb53d0caf57f672769db27ecba52e3938e6c63cb1d47f594b8a",
       "geometryFingerprint": "ca0f26d3460ed729b48c087d205b8703ce5ffbd48299bd0bfd71767c1a49ae6a"
+    },
+    {
+      "id": "{6160C5B5-9E1F-4B37-8254-48DB405547CE}",
+      "globalId": "{6160C5B5-9E1F-4B37-8254-48DB405547CE}",
+      "caseReference": "339-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 339,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "3259 S. EMERALD AVE.",
+      "judgment": "GRANTED",
+      "description": "ALLOW DIRECT STREET ACCESS TO OFF-STREET PARKING",
+      "pin10": "1733109014",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "339",
+      "attributeFingerprint": "c02dd6c232f7c766b66a1619de9b3aae81fa275b860be9ab7bb65dc030748d61",
+      "geometryFingerprint": "e7a16bd36b264b9a811092b15a972fcacfde85149a7840402e1a239d3e682f77"
     },
     {
       "id": "{61641D18-7482-4398-9D25-35192800071B}",
@@ -136873,24 +137179,6 @@
       "publishedCaseField": "269",
       "attributeFingerprint": "2ad8461eaac221c3e1a4f70311cc777a1db0fce403755c16550e7463279444d8",
       "geometryFingerprint": "08402bbb274bd36a7756faab1f422439f92829dfeb62eb407e711f9d8ea1ceaf"
-    },
-    {
-      "id": "{683CBC85-242E-42E0-B721-615DA8B32F38}",
-      "globalId": "{683CBC85-242E-42E0-B721-615DA8B32F38}",
-      "caseReference": "244-26-S",
-      "caseYear": 2026,
-      "caseSequence": 244,
-      "caseType": "special_use",
-      "caseTypeRaw": "S",
-      "address": "5401 N. HARLEM AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "SINGLE LANE DRIVE-THROUGH",
-      "pin10": "1307109026",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "244",
-      "attributeFingerprint": "ea0e2211cfdbea8688400002aa00cf0710957b86b79ad4cdb46e5c9937e19482",
-      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
     },
     {
       "id": "{683FE118-F348-4B89-96F0-D4540D0ED2E7}",
@@ -147225,6 +147513,24 @@
       "geometryFingerprint": "77df9ee45f8a5826d4934bdcf9b70f9cdbfaccf854ab012286bac8c7b7b4225a"
     },
     {
+      "id": "{709976F4-CDFB-4804-BA3E-242460095D02}",
+      "globalId": "{709976F4-CDFB-4804-BA3E-242460095D02}",
+      "caseReference": "349-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 349,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "1056 N. ASHLAND AVE.",
+      "judgment": "GRANTED",
+      "description": "ALLOW ALTERATIONS TO EXISTING BUILDING (RESIDENTIAL USE BELOW SECOND FLOOR)",
+      "pin10": "1706412025",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "349",
+      "attributeFingerprint": "866f547313fdc236030f72c412ad1b286b25d80a9a96937df6b46a624eb2a6e3",
+      "geometryFingerprint": "377ed187b00f2e761d3addb275609dc2749e7725cb1d31db510a90bdc7dbcb8a"
+    },
+    {
       "id": "{709A2D77-699C-4327-9E40-82E0640B463F}",
       "globalId": "{709A2D77-699C-4327-9E40-82E0640B463F}",
       "caseReference": "353-12-S",
@@ -148483,6 +148789,24 @@
       "publishedCaseField": "612",
       "attributeFingerprint": "1dad5481e864cc48a6a3ad3450f3ca718137f051d0ba6e909c80c059e1c76dd9",
       "geometryFingerprint": "da1a29eb1cf28bac8da6d8d43104cf8477b5fdbcf6fc7d76a9dfd53a2eb2e5b9"
+    },
+    {
+      "id": "{71B2C2E2-FFD4-481B-993A-B22446424DB8}",
+      "globalId": "{71B2C2E2-FFD4-481B-993A-B22446424DB8}",
+      "caseReference": "346-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 346,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2136 S. HALSTED ST.",
+      "judgment": "GRANTED",
+      "description": "INCREASE NUMBER OF OFF-STREET PARKING SPACES",
+      "pin10": "1720445029",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "346",
+      "attributeFingerprint": "4f64b53eb0fe78abf431f86717246fdbe35a20731662d4687f8227a789a842e7",
+      "geometryFingerprint": "2779efcfe3bb2bd4ca586c86febea248d1021fa565a631ffe155ccbd908902ad"
     },
     {
       "id": "{71B33315-D79C-4052-8C5A-8DA2DDC77C71}",
@@ -151723,24 +152047,6 @@
       "publishedCaseField": "105",
       "attributeFingerprint": "2627fcd2ee4404fb1b03b20b7f583600d5eedaf88e3a06ddd66a4c27bc918ed4",
       "geometryFingerprint": "0f39fae14ca405f0a8897dff030912095c2acda25a6ff35f981d00e1ef797913"
-    },
-    {
-      "id": "{745C8423-55D1-4CD1-97FE-C5C6778CB874}",
-      "globalId": "{745C8423-55D1-4CD1-97FE-C5C6778CB874}",
-      "caseReference": "247-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 247,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "2852 W. FLOURNOY ST.",
-      "judgment": "CONT TO SEP",
-      "description": "REDUCE REAR SETBACK",
-      "pin10": "1613303024",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "247",
-      "attributeFingerprint": "aea087c22bd11adb0415971083e6af908fef75bf2e67d63404a6d58dd45750ea",
-      "geometryFingerprint": "561fbbaffa4b02178449e200c5dcb3d7276102cc459fa93ae494b3965de7de0e"
     },
     {
       "id": "{7460BB27-9A0A-4A8D-B0C1-B994F703432A}",
@@ -169671,6 +169977,24 @@
       "geometryFingerprint": "9f0ca9f31a1d430ace59ee538b65ae2b4c82d58fa551adbaf75dfb3270f00ba3"
     },
     {
+      "id": "{8243309F-ED8C-4AB4-94D7-509412C24C26}",
+      "globalId": "{8243309F-ED8C-4AB4-94D7-509412C24C26}",
+      "caseReference": "345-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 345,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2643 N. MILDRED AVE.",
+      "judgment": "GRANTED",
+      "description": "EXPAND FLOOR AREA",
+      "pin10": "1429413007",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "345",
+      "attributeFingerprint": "9c6d31bf31f98b0325a7942c8cceb5b13b37ede1710616843144fc1651acec13",
+      "geometryFingerprint": "544f434008b5116913d4231a46eb330066e4d9700b08959bc8622156d5a372e5"
+    },
+    {
       "id": "{82447EC7-1B41-4533-B5DB-AE013AF63DD8}",
       "globalId": "{82447EC7-1B41-4533-B5DB-AE013AF63DD8}",
       "caseReference": "042-88-Z",
@@ -172929,6 +173253,24 @@
       "geometryFingerprint": "0c939324f02b8212a74fd76b3923db2cbcd2441c39bc2ce12438d3f6595ff033"
     },
     {
+      "id": "{84AC0675-A124-41A4-821C-73A2D4B7C29E}",
+      "globalId": "{84AC0675-A124-41A4-821C-73A2D4B7C29E}",
+      "caseReference": "245-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 245,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "5401 N. HARLEM AVE.",
+      "judgment": "CONT TO DEC",
+      "description": "REDUCE TRANSPARENCY REQUIREMENT",
+      "pin10": "1307109026",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "245",
+      "attributeFingerprint": "01fe9b20ad68662662a06e9b473dc2b9a3e654d59eff9fbe4f53df7db714012d",
+      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
+    },
+    {
       "id": "{84AFC4E6-0B37-4BEB-8FE3-688085E77BDE}",
       "globalId": "{84AFC4E6-0B37-4BEB-8FE3-688085E77BDE}",
       "caseReference": "11-76-A",
@@ -173647,6 +173989,24 @@
       "publishedCaseField": "171",
       "attributeFingerprint": "bd4b264958fc77a1a7c089ebe92508305b1130023d3bbba27f24258b7b3d4792",
       "geometryFingerprint": "a4eb27aef55bbbdedb918fa64a100825032567ab1e32be4d9f33120c38342e55"
+    },
+    {
+      "id": "{85571C89-7F29-408A-9013-4CDFDBFFDAD1}",
+      "globalId": "{85571C89-7F29-408A-9013-4CDFDBFFDAD1}",
+      "caseReference": "286-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 286,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "1844 N. FREMONT ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1432412044",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "286",
+      "attributeFingerprint": "d0b3ab186c92c8316dfc3193a8202619079406ae58cacd975d0a2cfd5bc98ed0",
+      "geometryFingerprint": "c123495e6907bfed2b2eb6f0f80ea55f5de08c5d9eadabde347f5962d7e9eef9"
     },
     {
       "id": "{855BA8D5-1B56-4560-A370-8D1F4E42C1D0}",
@@ -176275,6 +176635,24 @@
       "publishedCaseField": "254",
       "attributeFingerprint": "7248a05fc6d36f7ab8ae9882b0d4caec1727d8dea52d5ce55a0e0fc2033bdbb3",
       "geometryFingerprint": "16a4c1a6c55074461cad8ff7bbb78bbf7ed5e40dd6eea204d679f89b77f8e7ba"
+    },
+    {
+      "id": "{8752A141-DC71-446A-9629-90C8010A513D}",
+      "globalId": "{8752A141-DC71-446A-9629-90C8010A513D}",
+      "caseReference": "337-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 337,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2801 W. JACKSON BLVD.",
+      "judgment": "GRANTED",
+      "description": "ALLOW SIDE BUILDING ENTRANCE FOR THE PRIMARY ENTRANCE DOOR",
+      "pin10": "1613124010",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "337",
+      "attributeFingerprint": "08f7e0069f1e55162c682233f4baa8df267fb70294e55eff1385f3a72b01bc09",
+      "geometryFingerprint": "da8288ce31570cb48a8bee47eae7454f3eab778cd19ca6258b3f95a3085593e0"
     },
     {
       "id": "{8758DA16-CC4A-4E64-A89E-A233DAF91174}",
@@ -186933,6 +187311,24 @@
       "geometryFingerprint": "1c26a0ec43df4034a6522d703fa2b2581af0834c2d5ec5e4017e805f9ed1c3f2"
     },
     {
+      "id": "{8FB8A733-3BE6-409F-B6D4-8B9B8F12DB7D}",
+      "globalId": "{8FB8A733-3BE6-409F-B6D4-8B9B8F12DB7D}",
+      "caseReference": "128-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 128,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2343 W. GRAND AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "INCREASE BUILDING HEIGHT",
+      "pin10": "1707125051",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "128",
+      "attributeFingerprint": "e16c7bf9ce48593fa77e7a64481e6c14dddbc4523b42bd868be9190f11446d9c",
+      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
+    },
+    {
       "id": "{8FBBCDDA-36D9-46AA-B0EA-F33D00D15468}",
       "globalId": "{8FBBCDDA-36D9-46AA-B0EA-F33D00D15468}",
       "caseReference": "269-94-Z",
@@ -195195,6 +195591,24 @@
       "geometryFingerprint": "fa195e87887f22282d1d170fd5ad34f6bf5ef726d729b552807a5b126e71ec92"
     },
     {
+      "id": "{959EA3CE-7FA1-4747-9BE4-BBE3A818E2F1}",
+      "globalId": "{959EA3CE-7FA1-4747-9BE4-BBE3A818E2F1}",
+      "caseReference": "330-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 330,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "1656-60 N. BURLING ST.",
+      "judgment": "GRANTED",
+      "description": "INCREASE ALLOWABLE AREA OF ACCESSORY BUILDING",
+      "pin10": "1433313046",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "330",
+      "attributeFingerprint": "593464df638672b528c1805a5bf87039395d2402c94cf166fa4ac66113f24848",
+      "geometryFingerprint": "35defb59127033643a6087f9c44bf83893613a4f825c8f6ef7c96ee8a8b20b97"
+    },
+    {
       "id": "{95A60999-0921-48DA-B47D-2CAA019908B7}",
       "globalId": "{95A60999-0921-48DA-B47D-2CAA019908B7}",
       "caseReference": "306-93-A",
@@ -195211,6 +195625,24 @@
       "publishedCaseField": "306",
       "attributeFingerprint": "052cb8961348c6d4837eaaa822e085e7ecb6e1cef68c0b047a8f3cb5a515b2d2",
       "geometryFingerprint": "5a9e926f0027437cf4a89534ed843882e0402fa2fa9efc89703d679b9c2a08a6"
+    },
+    {
+      "id": "{95A93D13-538B-4B7F-BA2B-93CCE499E96E}",
+      "globalId": "{95A93D13-538B-4B7F-BA2B-93CCE499E96E}",
+      "caseReference": "247-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 247,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2852 W. FLOURNOY ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE REAR SETBACK",
+      "pin10": "1613303024",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "247",
+      "attributeFingerprint": "924480dfa016c32bd74bea412396338354173e19b1f8fd2c5f05e856a3059222",
+      "geometryFingerprint": "561fbbaffa4b02178449e200c5dcb3d7276102cc459fa93ae494b3965de7de0e"
     },
     {
       "id": "{95A9E49B-9B05-43AD-A083-07E258F0DC74}",
@@ -200179,6 +200611,42 @@
       "publishedCaseField": "201",
       "attributeFingerprint": "dd9d18025e10d6edff8180c208c4f17e212e32c532554000a04752db7fdbe227",
       "geometryFingerprint": "904af13f37aed15e428ee4356b9c8fd85fc828de896f72dad02181db46519fdc"
+    },
+    {
+      "id": "{9943B9D0-F83F-49B6-BD14-21AED5523539}",
+      "globalId": "{9943B9D0-F83F-49B6-BD14-21AED5523539}",
+      "caseReference": "347-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 347,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2136 S. HALSTED ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE MINIMUM LOT AREA",
+      "pin10": "1720445029",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "347",
+      "attributeFingerprint": "b25ec3bbb551173fbe10580b9799f88577b10946e52e62869ca04bc6fc877a3f",
+      "geometryFingerprint": "2779efcfe3bb2bd4ca586c86febea248d1021fa565a631ffe155ccbd908902ad"
+    },
+    {
+      "id": "{99538C77-CEB2-4FEE-9420-824B0E691005}",
+      "globalId": "{99538C77-CEB2-4FEE-9420-824B0E691005}",
+      "caseReference": "246-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 246,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "5401 N. HARLEM AVE.",
+      "judgment": "CONT TO DEC",
+      "description": "DRIVEWAY AND VEHICLE ACCESS",
+      "pin10": "1307109026",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "246",
+      "attributeFingerprint": "b7263977526aaabc5e96f5c0b72f8b8bc9a6a77724c3a4eb75a97bfe58b406a8",
+      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
     },
     {
       "id": "{9954C7C2-CE7E-498A-A517-29F9A988493D}",
@@ -210585,6 +211053,24 @@
       "geometryFingerprint": "52290319cdf440c3078804a4dd3e0105fa3897140cbb40f69da1bf2f73803cc1"
     },
     {
+      "id": "{A1240E65-3A4C-4EF3-8DC5-F0049AADF3E3}",
+      "globalId": "{A1240E65-3A4C-4EF3-8DC5-F0049AADF3E3}",
+      "caseReference": "350-26-S",
+      "caseYear": 2026,
+      "caseSequence": 350,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "4743 S. TALMAN AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "INDOOR EVENT VENUE (CHANGED TO MEDIUM VENUE)",
+      "pin10": "1912203042",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "350",
+      "attributeFingerprint": "c09ed1ef05cf913b5858b9f4d6bb888732c6f6c9386f86a050706f3fec0da639",
+      "geometryFingerprint": "17651eb4bb4fdc0740ce820dbc3fce884272e0b3ce6c110dc6e37a20fab2f34b"
+    },
+    {
       "id": "{A12598B0-628E-46B0-B8DA-93503B7D134E}",
       "globalId": "{A12598B0-628E-46B0-B8DA-93503B7D134E}",
       "caseReference": "147-87-A",
@@ -210907,6 +211393,24 @@
       "publishedCaseField": "330",
       "attributeFingerprint": "f56dce27a9ad350d8bc9684ae02aa3d3da671d23230b4013aaaca5ccbb403d63",
       "geometryFingerprint": "dd4a06a60a2c4e179481feed20dbd3fd29418ad6e156f88b32702a9113efa18c"
+    },
+    {
+      "id": "{A16BCF1E-8F8E-41AA-B9AC-4A1934582874}",
+      "globalId": "{A16BCF1E-8F8E-41AA-B9AC-4A1934582874}",
+      "caseReference": "331-26-S",
+      "caseYear": 2026,
+      "caseSequence": 331,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "1513 N. WELLS ST.",
+      "judgment": "GRANTED",
+      "description": "MASSAGE ESTABLISHMENT",
+      "pin10": "1704204057",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "331",
+      "attributeFingerprint": "afafa478bad3865f0f207f975ecaac91c998ade0579d2f43daa13c0a071f58a6",
+      "geometryFingerprint": "9916f9f9a95407fe1c152348733823ad4b079cd352878b95d33a27796e09b9a9"
     },
     {
       "id": "{A16BE3AA-2830-4C6D-949B-13FB97BBE37C}",
@@ -212689,6 +213193,24 @@
       "publishedCaseField": "354",
       "attributeFingerprint": "10ae249dd38f4c9b204475d6f5c2397f75c7c694d558611ca00a294f8714c7a5",
       "geometryFingerprint": "a1fd3c1b61eb013a70755bd5f43611ec862e940e76da9c7bb78b7156a818c7b0"
+    },
+    {
+      "id": "{A2BD27D4-EB87-4170-B33E-64B6C43B9886}",
+      "globalId": "{A2BD27D4-EB87-4170-B33E-64B6C43B9886}",
+      "caseReference": "341-26-S",
+      "caseYear": 2026,
+      "caseSequence": 341,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2034 N. DAMEN AVE.",
+      "judgment": "GRANTED",
+      "description": "HAIR SALON",
+      "pin10": "1431135042",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "341",
+      "attributeFingerprint": "d57b83cfad052358eabdae532f3b60a0cf53d69dff2a9254ab1c33ca7b3ca117",
+      "geometryFingerprint": "23d52581db6cf8fa0beb45fa5ac66b5475b9412fab234024fee165e46268a941"
     },
     {
       "id": "{A2BF763B-791B-41BF-B8E4-522357A10334}",
@@ -215569,24 +216091,6 @@
       "publishedCaseField": "72",
       "attributeFingerprint": "967a4648de4a6fba2f3d48f997bd6ec1eb71fe00c9bd54449885e189cccf7f0e",
       "geometryFingerprint": "5c8acb5b7abfaa9fb44c942e8bcaf11098b0f44c017a534f65390f8065866484"
-    },
-    {
-      "id": "{A4BE6B1B-A7A3-470F-BBC2-AA87968BE407}",
-      "globalId": "{A4BE6B1B-A7A3-470F-BBC2-AA87968BE407}",
-      "caseReference": "129-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 129,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "2343 W. GRAND AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "INCREASE OFF-STREET PARKING SPACES",
-      "pin10": "1707125051",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "129",
-      "attributeFingerprint": "07fc1a85af93dc54fe7c11d413aeb4b36dd0f5230a2ad91ba7035fa97fd43c1d",
-      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
     },
     {
       "id": "{A4C124E5-F453-4784-9A20-82D9BF555B16}",
@@ -238539,6 +239043,24 @@
       "geometryFingerprint": "e4d7138d4c2666a2ff20cf2bbe0c5ba44ba5462af03ad1cd08e8899882551960"
     },
     {
+      "id": "{B5D40C08-2AA3-48B7-8B68-13D3076537E6}",
+      "globalId": "{B5D40C08-2AA3-48B7-8B68-13D3076537E6}",
+      "caseReference": "324-26-S",
+      "caseYear": 2026,
+      "caseSequence": 324,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "6260 W. ADDISON ST.",
+      "judgment": "GRANTED",
+      "description": "HAIR SALON",
+      "pin10": "1320126017",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "324",
+      "attributeFingerprint": "fe9443f692a817bb53e930774cc74fc20b5d068e057272099ba762a87c779d51",
+      "geometryFingerprint": "10bce7935712e043ea951e2081d6b00af36dcd0c1ebc3cb19c911c18eb304c4f"
+    },
+    {
       "id": "{B5D99C24-96FF-487C-A5B3-23D48C087A77}",
       "globalId": "{B5D99C24-96FF-487C-A5B3-23D48C087A77}",
       "caseReference": "334-22-Z",
@@ -243633,6 +244155,24 @@
       "geometryFingerprint": "687cafeb5fe1442398903105cc88c463a2b16f4db3baa6c98a2f419f53fa331d"
     },
     {
+      "id": "{B99CE405-1FC4-433F-A3FA-B9769ECEE86E}",
+      "globalId": "{B99CE405-1FC4-433F-A3FA-B9769ECEE86E}",
+      "caseReference": "356-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 356,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2852 W. FLOURNOY ST.",
+      "judgment": "GRANTED",
+      "description": "REDUCE REAR SETBACK",
+      "pin10": "1613303024",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "356",
+      "attributeFingerprint": "7cac6978a785afde8c54873b0423c30beee0eaacf7cc445963194bb2d7269ba1",
+      "geometryFingerprint": "561fbbaffa4b02178449e200c5dcb3d7276102cc459fa93ae494b3965de7de0e"
+    },
+    {
       "id": "{B99F6E77-E56D-490C-9853-4CB987D2F274}",
       "globalId": "{B99F6E77-E56D-490C-9853-4CB987D2F274}",
       "caseReference": "384-18-Z",
@@ -246675,6 +247215,24 @@
       "geometryFingerprint": "4300d2207e7f1ff8c05cdb9f8ada59b19e6f325fa5bb461835c35c1f86c30ae8"
     },
     {
+      "id": "{BBFF866E-CFB9-448B-AC08-ABC9029E3770}",
+      "globalId": "{BBFF866E-CFB9-448B-AC08-ABC9029E3770}",
+      "caseReference": "323-26-S",
+      "caseYear": 2026,
+      "caseSequence": 323,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5913 W. MONTROSE AVE",
+      "judgment": "GRANTED",
+      "description": "SALON SUITES (BARBERSHOP, HAIR SALON, NAIL SALON)",
+      "pin10": "1317401005",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "323",
+      "attributeFingerprint": "d30a6c0bc57d7830bd430d9e1fa87e54350cb6953923551c63fcb18af33113ac",
+      "geometryFingerprint": "3c29f0a25385b9aa1d24adb0c062cee414f8dbfb846267edcc6ce1bbc51a8d1d"
+    },
+    {
       "id": "{BC079D53-BF4D-4CAA-864B-31754DE7312D}",
       "globalId": "{BC079D53-BF4D-4CAA-864B-31754DE7312D}",
       "caseReference": "150-11-S",
@@ -246709,6 +247267,24 @@
       "publishedCaseField": "253",
       "attributeFingerprint": "72e6ec0aeae0e919c0f918bb09dcd2e950ade0359b216271057774e8d00a8f48",
       "geometryFingerprint": "cfc8c33e4d8416ce32106ebbd4e5b259037f66432d5cfce44419e9e055e94a42"
+    },
+    {
+      "id": "{BC149ABD-0E12-4566-868C-1FC2F989AF9D}",
+      "globalId": "{BC149ABD-0E12-4566-868C-1FC2F989AF9D}",
+      "caseReference": "343-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 343,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2727 N. KENMORE AVE.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1429403096",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "343",
+      "attributeFingerprint": "c15fb2fdf36ab9cddae8c258a0db4b770ad55c3e639e31005a481c4d5e830a0e",
+      "geometryFingerprint": "b39303c5e0af39e981e5c2a80be5dc4ee9b3b815f549d16e9066233840051501"
     },
     {
       "id": "{BC154E2B-6DB1-4BB7-9147-152A0406A29A}",
@@ -258591,6 +259167,24 @@
       "geometryFingerprint": "f484e3bf44605ed9282a5405f40001e9ceeb310dba8940baed81a8bd4ae44afb"
     },
     {
+      "id": "{C558CF86-EEB0-4C9D-8E5D-F5FF9E8EB886}",
+      "globalId": "{C558CF86-EEB0-4C9D-8E5D-F5FF9E8EB886}",
+      "caseReference": "244-26-S",
+      "caseYear": 2026,
+      "caseSequence": 244,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5401 N. HARLEM AVE.",
+      "judgment": "CONT TO DEC",
+      "description": "SINGLE LANE DRIVE-THROUGH",
+      "pin10": "1307109026",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "244",
+      "attributeFingerprint": "9a7c80f03b2a8c3c3f9b8baf9807c262ac1ca3f5f49179fc007f5638bf924171",
+      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
+    },
+    {
       "id": "{C55B22BC-60F4-450E-9BD7-8D65468E20D7}",
       "globalId": "{C55B22BC-60F4-450E-9BD7-8D65468E20D7}",
       "caseReference": "45-09-A",
@@ -262135,24 +262729,6 @@
       "publishedCaseField": "464",
       "attributeFingerprint": "f5252461f37add174a8c5546ee18883b531fe7ed2a84481c9ea5cac9f11fdf74",
       "geometryFingerprint": "5b0b45e947fc57b6651a3d7913fb06c5253f0cfa73066c794024ac64d199fb22"
-    },
-    {
-      "id": "{C83E06A2-5F78-42BE-83B4-C027937358DF}",
-      "globalId": "{C83E06A2-5F78-42BE-83B4-C027937358DF}",
-      "caseReference": "231-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 231,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "2343 W. GRAND AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "ALLOW DRIVEWAY ACCESS FROM A PEDESTRIAN STREET",
-      "pin10": "1707125051",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "231",
-      "attributeFingerprint": "cb249a34227db9c8651bfa6caa2057fdd2ef44563416e0342519efd1aa786ec7",
-      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
     },
     {
       "id": "{C84075D7-A8A8-48DD-A948-8070B3809BEF}",
@@ -266007,6 +266583,24 @@
       "geometryFingerprint": "9a338d667333587f53ac31cd90880455ac6bcaae868c8e1a5a557d190631ac18"
     },
     {
+      "id": "{CB71F037-FB44-4783-9A36-2A63398F5B23}",
+      "globalId": "{CB71F037-FB44-4783-9A36-2A63398F5B23}",
+      "caseReference": "342-26-S",
+      "caseYear": 2026,
+      "caseSequence": 342,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "11200 S. NORMAL AVE.",
+      "judgment": "CONT TO NOV",
+      "description": "TRANSITIONAL RESIDENCE",
+      "pin10": "2521113015",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "342",
+      "attributeFingerprint": "4ff90ff5c02899b60fa6277002537b13c60c9dfeae081229531ff012797b6029",
+      "geometryFingerprint": "e37f33e5ae332372da0bf664a5101923ecb080a528657610e17bbf12c380aca9"
+    },
+    {
       "id": "{CB733BD7-54EC-4F3A-8EFC-B7355C4A3C5C}",
       "globalId": "{CB733BD7-54EC-4F3A-8EFC-B7355C4A3C5C}",
       "caseReference": "448-21-Z",
@@ -266257,24 +266851,6 @@
       "publishedCaseField": "258",
       "attributeFingerprint": "cb10f6de25967a1a3f04c3955a8fa449d547ee114a4bd615b868e09ef332f6b6",
       "geometryFingerprint": "a9dd7d4dda179bf75632b32e242240e49828dfacdd7ebdfba96da22530709e81"
-    },
-    {
-      "id": "{CB95FD4D-19E8-4BEC-B44E-F510572EC058}",
-      "globalId": "{CB95FD4D-19E8-4BEC-B44E-F510572EC058}",
-      "caseReference": "246-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 246,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "5401 N. HARLEM AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "DRIVEWAY AND VEHICLE ACCESS",
-      "pin10": "1307109026",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "246",
-      "attributeFingerprint": "d8c323a897c0e1ef9f7671c2fe194f8ae68f0dd354b55a7619bf9274d9ab7225",
-      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
     },
     {
       "id": "{CB978639-4FDC-4B83-B3BE-27DB337634E7}",
@@ -267445,6 +268021,24 @@
       "publishedCaseField": "240",
       "attributeFingerprint": "5798f8f07f437192d670d3a5092994f49e1348f2efc79af716e3445db2c6d6c8",
       "geometryFingerprint": "94b0eba0110205c6f4c2c6d1bf584afa6f110e392b7a978d4d36f2bddd4ac393"
+    },
+    {
+      "id": "{CC5DB2B3-E1A0-4DC5-8A2A-F9E5350B6CBE}",
+      "globalId": "{CC5DB2B3-E1A0-4DC5-8A2A-F9E5350B6CBE}",
+      "caseReference": "130-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 130,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2343 W. GRAND AVE.",
+      "judgment": "WITHDRAWN",
+      "description": "REDUCE REAR SETBACK",
+      "pin10": "1707125051",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "130",
+      "attributeFingerprint": "e5dc4ff1d97e11fb950274242dcb860b90ed9dd88144b73094e3b100e1027644",
+      "geometryFingerprint": "dc1f51801965528677f984d4b0006e656cbc17f55760385037d8aae23efae59a"
     },
     {
       "id": "{CC60D786-DA05-4F31-B78A-54692E785769}",
@@ -276123,6 +276717,24 @@
       "geometryFingerprint": "8c7b2dd2fc1fe41cbb78cb405a8f6be8601cdfd2814e36fee8a422578b8ed4bd"
     },
     {
+      "id": "{D2942490-4786-4EFE-B24A-4113E11238A1}",
+      "globalId": "{D2942490-4786-4EFE-B24A-4113E11238A1}",
+      "caseReference": "335-26-S",
+      "caseYear": 2026,
+      "caseSequence": 335,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "2801 W. JACKSON BLVD.",
+      "judgment": "GRANTED",
+      "description": "RESIDENTIAL USE BELOW THE SECOND FLOOR",
+      "pin10": "1613124010",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "335",
+      "attributeFingerprint": "48595287df6af380e14604a4308a01aa52f0b3ab88e7232815781a319c7a16fa",
+      "geometryFingerprint": "da8288ce31570cb48a8bee47eae7454f3eab778cd19ca6258b3f95a3085593e0"
+    },
+    {
       "id": "{D29CDE6E-29A6-474F-98C9-F5F01DF55CA4}",
       "globalId": "{D29CDE6E-29A6-474F-98C9-F5F01DF55CA4}",
       "caseReference": "297-26-S",
@@ -280855,6 +281467,24 @@
       "publishedCaseField": "364",
       "attributeFingerprint": "2b0c98b63fea28a0d36648812b639f7a01cf687a964aafa145902fbc0723dcf0",
       "geometryFingerprint": "c5d48c9f11fb73851cae62190511ebc2b1d4ae67ec4c36a2efe17a6dc91c6c2e"
+    },
+    {
+      "id": "{D635867B-207B-4CF2-A09E-BCDA60286D52}",
+      "globalId": "{D635867B-207B-4CF2-A09E-BCDA60286D52}",
+      "caseReference": "336-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 336,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "2801 W. JACKSON BLVD.",
+      "judgment": "GRANTED",
+      "description": "INCREASE BUILDING LOCATION STANDARDS",
+      "pin10": "1613124010",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "336",
+      "attributeFingerprint": "30024cdd5ea931b0288aea55ac5cf37c69c3513d47b785e223030ce926ca17ef",
+      "geometryFingerprint": "da8288ce31570cb48a8bee47eae7454f3eab778cd19ca6258b3f95a3085593e0"
     },
     {
       "id": "{D637A108-0F87-47EF-AC55-34B75F2DF30C}",
@@ -289945,6 +290575,24 @@
       "publishedCaseField": "633",
       "attributeFingerprint": "d8acd0041d06924d5dd70626638a6c5f986a9f609f2afc07d250fc45dd8bcf6b",
       "geometryFingerprint": "00f8526209f5ef712b22ca56f379a8fc159453377ce70ce8a278753d398f9f42"
+    },
+    {
+      "id": "{DCF3E859-2F52-40F3-B76E-269923941044}",
+      "globalId": "{DCF3E859-2F52-40F3-B76E-269923941044}",
+      "caseReference": "353-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 353,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "1842 W. WABANSIA AVE.",
+      "judgment": "GRANTED",
+      "description": "REDUCE SETBACKS",
+      "pin10": "1431418046",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "353",
+      "attributeFingerprint": "554fe991243c6121f1b78faf3c9264949dd9da5236aa6f2acaf0d04f53e655d4",
+      "geometryFingerprint": "606e734d595d9413b5d0e4a58abb0fb0f9251d3bb106372ff30f938ae72f82ac"
     },
     {
       "id": "{DCFD9939-8F11-47EC-9540-720059C96693}",
@@ -301071,6 +301719,24 @@
       "geometryFingerprint": "e50048a24efdf213ba4980a376974beed0aedbace953fbab8714559b4ab0dba1"
     },
     {
+      "id": "{E58DD0EE-0684-453B-9307-DA97C43FB804}",
+      "globalId": "{E58DD0EE-0684-453B-9307-DA97C43FB804}",
+      "caseReference": "351-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 351,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "4743 S. TALMAN AVE.",
+      "judgment": "GRANTED",
+      "description": "PUBLIC PLACE OF AMUSEMENT (PPA)",
+      "pin10": "1912203042",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "351",
+      "attributeFingerprint": "0ca5b99ac9a1199b0fc886fb6fb22a583c4ada6dae5f448e7e447bdaf5e37818",
+      "geometryFingerprint": "17651eb4bb4fdc0740ce820dbc3fce884272e0b3ce6c110dc6e37a20fab2f34b"
+    },
+    {
       "id": "{E594F29E-53DE-4D1A-9D32-E4C39803575C}",
       "globalId": "{E594F29E-53DE-4D1A-9D32-E4C39803575C}",
       "caseReference": "360-85-S",
@@ -307405,6 +308071,24 @@
       "publishedCaseField": "400",
       "attributeFingerprint": "f23dabad9d20f9979d93c93792ba682e18623f95746c752d8e9c74e8babeda50",
       "geometryFingerprint": "a56d1e208921ec8dbe81980f5cab30959fe321ae15bd8515bba7e2bbf1bfbb3b"
+    },
+    {
+      "id": "{EA4D555A-C9F4-45E9-BC31-4FD940570834}",
+      "globalId": "{EA4D555A-C9F4-45E9-BC31-4FD940570834}",
+      "caseReference": "334-26-Z",
+      "caseYear": 2026,
+      "caseSequence": 334,
+      "caseType": "variation",
+      "caseTypeRaw": "Z",
+      "address": "4403 S. OAKENWALD AVE.",
+      "judgment": "CONT TO NOV",
+      "description": "REDUCE SETBACKS",
+      "pin10": "2002401022",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "334",
+      "attributeFingerprint": "0798c75810244e7a858ec4cc8ebc12d98ab0148ecdf127606447b08d60a0b203",
+      "geometryFingerprint": "3021d25dcec04d3b31c49fba8253c6c75b63d58a27cf28bd8bc49ee9c9633a90"
     },
     {
       "id": "{EA51B98D-59BA-4037-BBB4-EB95FBEA6FF9}",
@@ -314677,24 +315361,6 @@
       "publishedCaseField": "443",
       "attributeFingerprint": "9681f911749c667c7f5d9ee5e223d8ea7d7892fab034d3bfa2fbed72cdcacea5",
       "geometryFingerprint": "906c0367270a934ade4096105abbc1271eecd3b97a0704d886474349d5bb3a22"
-    },
-    {
-      "id": "{F00E796F-2F13-47AE-AF60-378AC3C2CB73}",
-      "globalId": "{F00E796F-2F13-47AE-AF60-378AC3C2CB73}",
-      "caseReference": "245-26-Z",
-      "caseYear": 2026,
-      "caseSequence": 245,
-      "caseType": "variation",
-      "caseTypeRaw": "Z",
-      "address": "5401 N. HARLEM AVE.",
-      "judgment": "CONT TO SEP",
-      "description": "REDUCE TRANSPARENCY REQUIREMENT",
-      "pin10": "1307109026",
-      "pinAccuracy": null,
-      "publishedYearField": "2026",
-      "publishedCaseField": "245",
-      "attributeFingerprint": "4089dbd872ce5b20b564db2487a38123d9b2c30f59cc9ffa7e71b7e0febf1735",
-      "geometryFingerprint": "99e3801095098206762701503da3ab7d242b584e90f5afa93801eae2aaf2f857"
     },
     {
       "id": "{F016E93A-F9C1-4889-8D75-3DC71E6E69EF}",
@@ -322867,6 +323533,24 @@
       "publishedCaseField": "351",
       "attributeFingerprint": "6ec2cf2b5d98c7c329467ed538d83f683465f76fef8f61780bf8cb392180a682",
       "geometryFingerprint": "7a53773f7ca55fcdcf39dcbd5d691f12b1c5bc7f76456e5c276dcaecb1a80194"
+    },
+    {
+      "id": "{F6836FCD-7BFF-4902-997E-2A56E1C2149D}",
+      "globalId": "{F6836FCD-7BFF-4902-997E-2A56E1C2149D}",
+      "caseReference": "354-26-S",
+      "caseYear": 2026,
+      "caseSequence": 354,
+      "caseType": "special_use",
+      "caseTypeRaw": "S",
+      "address": "5136 S. HALSTED ST.",
+      "judgment": "CONT TO NOV",
+      "description": "TRANSITIONAL RESIDENCE",
+      "pin10": "2008407035",
+      "pinAccuracy": null,
+      "publishedYearField": "2026",
+      "publishedCaseField": "354",
+      "attributeFingerprint": "eb984ae9b7453d22b7f090a087bbb9e6742ddc34a8ce210078168f8591c7ee2a",
+      "geometryFingerprint": "be223a5d1c4d082bce45d4eebd31b0c790437a6deead0e45f7b249eaedea9ce4"
     },
     {
       "id": "{F6837545-198F-4378-ABB8-B1521DE81533}",
