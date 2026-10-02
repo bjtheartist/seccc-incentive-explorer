@@ -1,0 +1,17 @@
+{
+  "attemptedAt": "2026-10-02T14:07:31.621Z",
+  "failedSources": [
+    {
+      "id": "chicago-cares",
+      "file": "chicago_cares_program_ledger.csv",
+      "error": "fetch failed"
+    }
+  ],
+  "okSources": [
+    "nof-small",
+    "nof-large",
+    "sbif",
+    "tif",
+    "hud"
+  ]
+}
