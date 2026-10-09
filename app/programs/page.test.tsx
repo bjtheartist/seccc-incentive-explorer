@@ -112,7 +112,7 @@ describe("program catalog availability actions", () => {
   it("keeps the sourced Submittable action immediately before the cutoff", () => {
     const html = renderActions(
       ccsap,
-      resolveAvailability(ccsap, new Date("2026-08-21T16:59:59.999-05:00")),
+      resolveAvailability(ccsap, new Date("2026-11-20T16:59:59.999-06:00")),
     );
 
     expect(html).toContain("Apply via Submittable");
@@ -126,7 +126,7 @@ describe("program catalog availability actions", () => {
   it.each([
     [
       "window-closed",
-      resolveAvailability(ccsap, new Date("2026-08-21T17:00:00.001-05:00")),
+      resolveAvailability(ccsap, new Date("2026-11-20T17:00:00.001-06:00")),
     ],
     [
       "lapsed",
@@ -158,7 +158,7 @@ describe("program catalog availability actions", () => {
   ])("withholds application links when link health is %s", (_, linkHealth) => {
     const html = renderActions(
       ccsap,
-      resolveAvailability(ccsap, new Date("2026-08-21T16:59:59.999-05:00")),
+      resolveAvailability(ccsap, new Date("2026-11-20T16:59:59.999-06:00")),
       linkHealth,
     );
 
@@ -178,7 +178,7 @@ describe("program catalog availability guidance", () => {
         program={ccsap}
         availability={resolveAvailability(
           ccsap,
-          new Date("2026-08-21T16:59:59.999-05:00"),
+          new Date("2026-11-20T16:59:59.999-06:00"),
         )}
       />,
     );
@@ -190,7 +190,7 @@ describe("program catalog availability guidance", () => {
   it.each([
     [
       "window closed",
-      resolveAvailability(ccsap, new Date("2026-08-21T17:00:00.001-05:00")),
+      resolveAvailability(ccsap, new Date("2026-11-20T17:00:00.001-06:00")),
     ],
     [
       "lapsed",

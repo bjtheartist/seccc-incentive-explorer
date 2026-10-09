@@ -114,6 +114,34 @@ export function benefitQualifier(
   return `Intake status not established from published sources as of ${statusAsOf}.`;
 }
 
+/** An expected date is not necessarily a closing date. Once it passes,
+ * withdraw an old open claim until the administrator's next window is known.
+ * Date-only entries remain current through the entire Chicago calendar day.
+ */
+export function isPastProgramWindow(program: PublicProgramView, now: Date): boolean {
+  const expected = program.intake.nextWindow.expected;
+  if (!expected) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(expected)) {
+    return expected < now.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  }
+  const cutoff = Date.parse(expected);
+  return Number.isFinite(cutoff) && now.getTime() >= cutoff;
+}
+
+export function withCurrentProgramIntake(program: PublicProgramView, now: Date): PublicProgramView {
+  if (!OPEN_INTAKE_STATES.has(program.intake.status) || !isPastProgramWindow(program, now)) return program;
+  return {
+    ...program,
+    statusBadge: { ...program.statusBadge, state: "unknown" },
+    intake: { ...program.intake, status: "unknown" },
+    benefit: {
+      ...program.benefit,
+      termsStatus: "unknown",
+      qualifier: "The published window has passed. Confirm current intake and terms with the administrator.",
+    },
+  };
+}
+
 /**
  * Map one internal catalog record to its public projection. `asOf` is the
  * fallback "as of" date used only when the record itself has no
@@ -133,7 +161,7 @@ export function toPublicProgramView(record: Program, asOf: string): PublicProgra
 
   const primaryContact = record.contacts?.[0];
 
-  return {
+  const view: PublicProgramView = {
     id: record.id,
     name: record.name,
     level: record.level,
@@ -145,7 +173,9 @@ export function toPublicProgramView(record: Program, asOf: string): PublicProgra
     benefit: {
       summary: record.benefitRange ?? "",
       termsStatus: benefitTermsStatus,
-      qualifier: benefitQualifier(intakeStatus, record.benefitRange, statusAsOf),
+      qualifier: intakeStatus === "pending" && nextWindow.expected
+        ? `Announced window: ${nextWindow.expected}. Confirm opening and terms with the administrator; applications are not confirmed open.`
+        : benefitQualifier(intakeStatus, record.benefitRange, statusAsOf),
     },
     screening: { locationRelation, publishedCriteria },
     links: {
@@ -156,6 +186,7 @@ export function toPublicProgramView(record: Program, asOf: string): PublicProgra
     personas: record.personas ?? [],
     zoneKey: record.zoneKey || null,
   };
+  return withCurrentProgramIntake(view, new Date(asOf));
 }
 
 /**
@@ -175,7 +206,9 @@ export function buildPublicProgramsEnvelope(
     schemaVersion: PROGRAMS_PUBLIC_SCHEMA_VERSION,
     generatedAt,
     catalogRevision,
-    programs: records.map((record) => toPublicProgramView(record, generatedAt)),
+    // Keep the committed snapshot deterministic. Runtime consumers apply
+    // their current clock without changing the source's verification date.
+    programs: records.map((record) => toPublicProgramView(record, record.statusAsOf ?? generatedAt)),
   };
 }
 

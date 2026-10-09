@@ -17,6 +17,7 @@ export const LEVEL_COLORS: Record<ProgramLevel, string> = {
   County:  "#16a34a", // green
   City:    "#d97706", // accent amber
   Utility: "#0891b2", // teal
+  "Nonprofit / CDFI": "#475569",
 };
 
 /** Short caption used in tooltips. */
@@ -26,6 +27,7 @@ export const LEVEL_DESCRIPTIONS: Record<ProgramLevel, string> = {
   County:  "Administered by Cook County (Assessor, Bureau of Economic Development, Land Bank).",
   City:    "Administered by the City of Chicago (DPD, DOH, delegate agencies).",
   Utility: "Administered by a regulated utility (ComEd, Peoples Gas) — not a government program.",
+  "Nonprofit / CDFI": "Administered by a nonprofit lender or community development financial institution.",
 };
 
 /* ── Zone metadata ─────────────────────────── */

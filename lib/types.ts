@@ -124,7 +124,7 @@ export type ProgramStatus =
   | "closed" // intake is closed; retain the program for discovery
   | "inactive" // historical / maintenance only; exclude from recommendations
   | "lapsed"; // statutory authority lapsed but revival is realistic (e.g. WOTC)
-export type ProgramLevel = "Federal" | "State" | "County" | "City" | "Utility";
+export type ProgramLevel = "Federal" | "State" | "County" | "City" | "Utility" | "Nonprofit / CDFI";
 
 /* ── Dated application window / deadline entry on a program card ── */
 

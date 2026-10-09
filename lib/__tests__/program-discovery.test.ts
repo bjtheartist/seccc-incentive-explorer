@@ -7,6 +7,7 @@ import { resolveAvailability } from "../program-gating";
 import { runConfidenceEngine } from "../confidence-engine";
 import { buildExpectations } from "../report-engine";
 import { getProgramBySlug, programSlug } from "../programs-data";
+import nextConfig from "../../next.config";
 
 const programs = data as Program[];
 const program = (id: string) => programs.find((p) => p.id === id)!;
@@ -17,6 +18,13 @@ const eitIds = ["illinoisInvent", "advantageIllinois", "illinoisClimateBank", "a
   "illinoisApex", "cejaIncubator", "cejaAccelerator", "firstStopBic", "regulatoryFlexibility", "illinoisSbeap"];
 
 describe("program discovery", () => {
+  it("preserves the former EEC round-specific link after refreshing the program title", async () => {
+    const redirects = await nextConfig.redirects!();
+    const oldLink = redirects.find((redirect) => redirect.source === "/programs/economic-empowerment-centers-eec-grant-program-round-2");
+    expect(oldLink).toMatchObject({ destination: `/programs/${programSlug(program("economicEmpowermentCenters"))}`, permanent: true });
+    expect(getProgramBySlug(oldLink!.destination.replace("/programs/", ""))?.id).toBe("economicEmpowermentCenters");
+  });
+
   it("puts CDG first and NSF below the general catalog without mutating its source", () => {
     const original = programs.map((p) => p.id);
     const sorted = sortProgramsForDirectory(programs);

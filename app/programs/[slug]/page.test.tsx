@@ -68,15 +68,10 @@ describe("program detail document rendering", () => {
 });
 
 describe("program detail availability rendering", () => {
-  it("keeps AHSAP application guidance through its date-only deadline", () => {
-    const html = renderApplication(
-      "ahsap",
-      new Date("2026-09-05T23:59:59.999-05:00"),
-    );
-
-    expect(html).toContain("How to apply");
-    expect(html).toContain("Fastest first move");
-    expect(html).toContain("before the September 5 deadline");
+  it("shows the closed AHSAP assessment-year intake instead of expired application guidance", () => {
+    const html = renderApplication("ahsap", new Date("2026-10-09T17:00:00Z"));
+    expect(html).not.toContain("How to apply");
+    expect(html).toMatch(/closed/i);
   });
 
   it("replaces AHSAP deadline-driven application copy after September 5", () => {

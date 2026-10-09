@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-09T18:42:26.365Z",
-  "catalogRevision": "7301d76c498070b84b90ad57b36e52733c8491f49b0b7cd4646159352d8969f5",
+  "generatedAt": "2026-10-09T19:29:54.493Z",
+  "catalogRevision": "60d80637dd63a1491df2883fb4db69cbba7a8a81df9c0647560c32913e04ec92",
   "programs": [
     {
       "id": "tif",
       "name": "TIF Districts",
       "level": "City",
       "statusBadge": {
-        "state": "rolling",
-        "asOfDate": "2026-07-10"
+        "state": "unknown",
+        "asOfDate": "2026-10-09"
       },
       "intake": {
-        "status": "rolling",
+        "status": "unknown",
         "nextWindow": {
           "expected": null,
-          "note": "Accepted on a rolling basis via the Universal Financial Incentives Submittable portal for RDAs > $250K."
+          "note": "Confirm current TIF application routing directly with DPD. The former Universal Financial Incentives portal redirects to the general application directory."
         }
       },
       "benefit": {
         "summary": "Project-sized (no fixed cap)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-10"
+        "qualifier": "Intake status not established from published sources as of 2026-10-09."
       },
       "screening": {
         "locationRelation": "required",
@@ -86,7 +86,7 @@
       "level": "State",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -96,9 +96,9 @@
         }
       },
       "benefit": {
-        "summary": "DCEO grants + federal OZ stacking",
+        "summary": "Federal Opportunity Zone tax treatment; Illinois zone designation and guidance",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -123,7 +123,7 @@
       "level": "State",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -133,9 +133,9 @@
         }
       },
       "benefit": {
-        "summary": "Up to 9.25% sales tax exemption + 0.5% investment credit + utility exemptions",
+        "summary": "Building-materials sales tax exemption, 0.5% investment credit and conditional utility exemptions",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -161,19 +161,19 @@
       "level": "City",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-07-10"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
-          "expected": "2026-08-30",
-          "note": "August 2026 window open for eligible TIF districts through 2026-08-30 (July 2026 window already closed). Monthly TIF-by-TIF rollout schedule."
+          "expected": "2026-12-30T17:00:00-06:00",
+          "note": "Published October–December 2026 district windows close October 30, November 30 and December 30 at 5 p.m. Chicago time. Your district is open only during its own month."
         }
       },
       "benefit": {
         "summary": "$75K–$250K cap (property-type dependent); 30–90% reimbursement (commercial) / 50% (industrial)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-10"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -186,7 +186,7 @@
       },
       "links": {
         "url": "https://somercor.com/sbif/",
-        "sourceUrl": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+        "sourceUrl": "https://somercor.com/sbif/",
         "administeringAgency": "SomerCor 504"
       },
       "personas": [
@@ -615,19 +615,19 @@
       "level": "City",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-10"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
         "nextWindow": {
           "expected": null,
-          "note": "Most recent awards announced May 2026 ($5.5M to 11 businesses); no specific next-round date published in this record."
+          "note": "Check the DPD application directory and current NOF guidance. Prior award announcements do not establish an application deadline."
         }
       },
       "benefit": {
         "summary": "$250K @ 75% reimbursement + up to $50K TA bonus",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-10"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -692,7 +692,7 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -702,9 +702,9 @@
         }
       },
       "benefit": {
-        "summary": "130% LIHTC basis boost (30% more credits)",
+        "summary": "LIHTC eligible basis up to 130% (up to 30% increase; rules apply)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -716,7 +716,7 @@
       },
       "links": {
         "url": "https://www.huduser.gov/portal/datasets/qct.html",
-        "sourceUrl": "https://www.huduser.gov/portal/datasets/qct.html",
+        "sourceUrl": "https://www.govinfo.gov/content/pkg/FR-2026-10-06/pdf/2026-20390.pdf",
         "administeringAgency": "Illinois Housing Development Authority"
       },
       "personas": [
@@ -807,24 +807,24 @@
       "level": "City",
       "statusBadge": {
         "state": "closed",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "closed",
         "nextWindow": {
           "expected": null,
-          "note": "NHS Chicago's purchase-assistance intake is currently closed. Program migrated to Dept of Housing (CNRP): $15,000 down-payment assistance across 11 target areas, subject to fund availability."
+          "note": "NHS Chicago's purchase-assistance intake is currently closed. Program migrated to Dept of Housing (CNRP): $30,000 down-payment assistance in administrator-designated target areas, subject to fund availability."
         }
       },
       "benefit": {
-        "summary": "$15,000 down-payment assistance, subject to fund availability",
-        "termsStatus": "conditional",
-        "qualifier": "Most recently published round offered $15,000 down-payment assistance, subject to fund availability. (No round currently open as of 2026-08-09.)"
+        "summary": "$30,000 down-payment assistance, subject to fund availability",
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered $30,000 down-payment assistance, subject to fund availability. (No round currently open as of 2026-10-09.)"
       },
       "screening": {
         "locationRelation": "proxy",
         "publishedCriteria": [
-          "Property must be in one of the 11 designated CNRP target areas",
+          "Property must be in an administrator-confirmed target area",
           "Owner-occupied residential purchase"
         ]
       },
@@ -881,19 +881,19 @@
       "level": "City",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
-          "expected": "2026-08-21",
-          "note": "Quarterly round cutoff 2026-08-21 5:00 PM CT. Awards, eligible costs, and current corridor availability must be confirmed with the program administrator."
+          "expected": "2026-11-20T17:00:00-06:00",
+          "note": "Next quarterly evaluation deadline: November 20, 2026 at 5 p.m. Chicago time. Confirm corridor and project requirements with A4CB."
         }
       },
       "benefit": {
         "summary": "Grants fund up to 75% of eligible project costs; applicant must show funding for at least the remaining 25%",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -962,7 +962,7 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -972,9 +972,9 @@
         }
       },
       "benefit": {
-        "summary": "+10 points on ITC / +10% PTC",
+        "summary": "ITC: +2 or +10 percentage points; PTC: +10%",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "required",
@@ -1000,19 +1000,19 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
         "nextWindow": {
           "expected": null,
-          "note": "As of this record's last verification (2026-07-02), wind/solar facilities must begin physical construction by 2026-07-04 to remain eligible for Section 48E/45Y credits, and the Section 48E(h) Low-Income Communities Bonus Credit's 2026 window was scheduled to close 2026-08-07 -- both dates were still upcoming as of the verification date. Non-wind/solar zero-emission technologies are unaffected and continue to earn the full credit. Consult a tax advisor on construction-start documentation and to confirm current status of these dates."
+          "note": "The 2026 low-income bonus allocation window ended August 7, 2026. Underlying §48E/§45Y credit eligibility follows separate tax rules, including wind/solar construction and placed-in-service timing."
         }
       },
       "benefit": {
-        "summary": "30% base ITC + up to 20% bonuses (50% total possible)",
+        "summary": "§48E: 6% base credit, potentially 30% with qualifying increase; conditional bonuses",
         "termsStatus": "conditional",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -1023,7 +1023,7 @@
       },
       "links": {
         "url": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
-        "sourceUrl": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
+        "sourceUrl": "https://www.irs.gov/irb/2025-36_IRB",
         "administeringAgency": "Internal Revenue Service"
       },
       "personas": [
@@ -1111,19 +1111,19 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
         "nextWindow": {
           "expected": null,
-          "note": null
+          "note": "HUD’s September 28 notice announces a conditional FY2027 fee change from 0.58% to 1.05%, with an October 28, 2026 applicability date. This is a fee change, not an application deadline."
         }
       },
       "benefit": {
-        "summary": "Federally-guaranteed loan, 30-year term, 0.58% FY26 fee",
-        "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "summary": "Public-borrower loan guarantee; current fees and repayment terms require HUD confirmation",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -1134,7 +1134,7 @@
       },
       "links": {
         "url": "https://www.hud.gov/hud-partners/community-section108",
-        "sourceUrl": "https://www.hud.gov/hud-partners/community-section108",
+        "sourceUrl": "https://www.govinfo.gov/content/pkg/FR-2026-09-28/pdf/2026-19743.pdf",
         "administeringAgency": "U.S. Department of Housing and Urban Development"
       },
       "personas": [
@@ -1184,19 +1184,19 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-27"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
         "nextWindow": {
-          "expected": "2026-09-30",
-          "note": "FY2026 manufacturer fee waiver expires 2026-09-30; a 2026-07-04 policy change revised how 7(a) and 504 exposure is coordinated when both are used. No approval or financing amount is implied."
+          "expected": null,
+          "note": "Lender intake continues. The FY2026 manufacturer fee waiver ended September 30, 2026; it was not an application deadline. Ask the lender for current FY2027 fees."
         }
       },
       "benefit": {
         "summary": "Financing structure and terms vary by project and lender; no approval or amount is implied",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-27"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -1260,19 +1260,19 @@
       "level": "Federal",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
           "expected": "2027-01-25",
-          "note": "Physical damage loan applications closed ~2026-06-22; only Economic Injury Disaster Loan applications remain open, through 2027-01-25."
+          "note": "Physical damage loan applications closed 2026-06-22; only Economic Injury Disaster Loan applications remain open, through 2027-01-25."
         }
       },
       "benefit": {
-        "summary": "Up to $2M at 4% (small business) or 2.75% (nonprofit), up to 30-year term",
+        "summary": "Up to $2M at 4% (small business) or 3.625% (nonprofit), up to 30-year term",
         "termsStatus": "conditional",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -1299,7 +1299,7 @@
       "level": "Federal",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -1311,13 +1311,13 @@
       "benefit": {
         "summary": "35% federal investment tax credit (property placed in service after 2025)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
         "publishedCriteria": [
           "Semiconductor manufacturing facility or specialized equipment",
-          "Investment must be initiated by end of 2026"
+          "Construction must begin before January 1, 2027; qualified investment and other requirements apply"
         ]
       },
       "links": {
@@ -1603,23 +1603,23 @@
     },
     {
       "id": "economicEmpowermentCenters",
-      "name": "Economic Empowerment Centers (EEC) Grant Program — Round 2",
+      "name": "Economic Empowerment Centers (EEC) Grant Program",
       "level": "State",
       "statusBadge": {
-        "state": "rolling",
-        "asOfDate": "2026-06-02"
+        "state": "open",
+        "asOfDate": "2026-10-09"
       },
       "intake": {
-        "status": "rolling",
+        "status": "open",
         "nextWindow": {
-          "expected": null,
-          "note": "Round 2 accepted on a rolling basis until funding is exhausted, per DCEO."
+          "expected": "2026-11-06T17:00:00-06:00",
+          "note": "FY26-1 application deadline: November 6, 2026 at 5 p.m. Chicago time."
         }
       },
       "benefit": {
         "summary": "$250,000-$500,000",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-06-02"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -1907,7 +1907,7 @@
       "level": "County",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-08-09"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -1917,9 +1917,9 @@
         }
       },
       "benefit": {
-        "summary": "10% assessment for 5 years (renewable once)",
+        "summary": "10% assessment in years 1–3; 15% year 4; 20% year 5 (renewal conditions apply)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -2096,20 +2096,20 @@
       "name": "Affordable Housing Special Assessment Program (AHSAP)",
       "level": "County",
       "statusBadge": {
-        "state": "open",
-        "asOfDate": "2026-08-09"
+        "state": "closed",
+        "asOfDate": "2026-10-09"
       },
       "intake": {
-        "status": "open",
+        "status": "closed",
         "nextWindow": {
-          "expected": "2026-09-05",
-          "note": "2026 Part 1 + Part 2 application deadline: 2026-09-05."
+          "expected": null,
+          "note": "The 2026 filing deadline was September 5, 2026. Confirm the next assessment-year cycle with the Assessor; no next deadline is established here."
         }
       },
       "benefit": {
         "summary": "25% (Tier 15) or 35% (Tier 35) assessed-value reduction",
-        "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "termsStatus": "historical",
+        "qualifier": "Most recently published round offered 25% (Tier 15) or 35% (Tier 35) assessed-value reduction. (No round currently open as of 2026-10-09.)"
       },
       "screening": {
         "locationRelation": "none",
@@ -2342,20 +2342,20 @@
       ],
       "resourceType": "grant",
       "statusBadge": {
-        "state": "rolling",
-        "asOfDate": "2026-07-02"
+        "state": "unknown",
+        "asOfDate": "2026-10-09"
       },
       "intake": {
-        "status": "rolling",
+        "status": "unknown",
         "nextWindow": {
           "expected": null,
-          "note": "Rolling application, no deadline, per the record's own summary. Citywide, no corridor/zone gate."
+          "note": "DPD lists the Large CDG application without a closing date. Confirm current intake with DPD."
         }
       },
       "benefit": {
         "summary": "> $5M reimbursement (catalytic)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Intake status not established from published sources as of 2026-10-09."
       },
       "screening": {
         "locationRelation": "none",
@@ -2363,13 +2363,13 @@
           "Project located within Chicago city limits",
           "Catalytic capital project: large new construction, major adaptive-reuse, anchor development",
           "Developer LLC, large 501(c)(3) nonprofit, or institutional sponsor",
-          "Total project cost > $5,000,000 (Large tier)",
+          "Grant funding request greater than $5 million; DPD must confirm project requirements.",
           "Good standing with State of Illinois and City of Chicago; capacity to manage public-financing compliance"
         ]
       },
       "links": {
         "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://cocdpd.submittable.com/submit",
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
@@ -2383,26 +2383,25 @@
       "level": "City",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-07-10"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
           "expected": null,
-          "note": "Q3 2026 window opened 2026-07-01 for non-TIF businesses (no listed close date); businesses inside funded TIF districts may apply year-round."
+          "note": "Bond-funded intake: October 1–30, 2026. Eligible TIF-funded projects may apply year-round. Confirm the applicable track and any later quarterly window with E&ES."
         }
       },
       "benefit": {
-        "summary": "Up to $250K (standard) / $500K (extraordinary impact); 100% or 25–50% match depending on business size",
+        "summary": "Up to $250,000; up to 100% of eligible training expenses",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-10"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "contextual",
         "publishedCriteria": [
           "Chicago employer (citywide since Feb 1, 2026; TIF-district businesses apply year-round, non-TIF quarterly)",
-          "Commercial or industrial employer investing in employee training/onboarding",
-          "100% reimbursement up to $1.5M gross sales (commercial) or ≤40 FTE (industrial); 25–50% match above those thresholds"
+          "Commercial or industrial employer investing in employee training/onboarding"
         ]
       },
       "links": {
@@ -2458,20 +2457,20 @@
       "name": "ComEd EV Charger and Installation Rebate",
       "level": "Utility",
       "statusBadge": {
-        "state": "open",
-        "asOfDate": "2026-08-09"
+        "state": "pending",
+        "asOfDate": "2026-10-09"
       },
       "intake": {
-        "status": "open",
+        "status": "pending",
         "nextWindow": {
-          "expected": "2026-12-31",
-          "note": "Program term capped at 2026-12-31 or until funds are exhausted, whichever comes first."
+          "expected": "2027-01-01",
+          "note": "Announced residential application opening: January 1, 2027. Installations must be completed on or after that date. Confirm available funding and final terms before purchase."
         }
       },
       "benefit": {
-        "summary": "Residential up to $750 ($2,500 LI/LIC/EIEC); commercial up to $5,000/port ($7,500 LI/EIEC)",
-        "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-08-09"
+        "summary": "Announced 2027 residential rebates: up to $750; up to $2,500 for LI/LIC/EIEC",
+        "termsStatus": "conditional",
+        "qualifier": "Announced window: 2027-01-01. Confirm opening and terms with the administrator; applications are not confirmed open."
       },
       "screening": {
         "locationRelation": "none",
@@ -2495,30 +2494,30 @@
       "level": "Utility",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
         "nextWindow": {
           "expected": null,
-          "note": "Specific adder amounts require direct verification with ComEd (their pages block automated fetches, per catalog note)."
+          "note": "Request an assessment; the service provider confirms current measures, customer requirements and available funding."
         }
       },
       "benefit": {
-        "summary": "Up to 75% of eligible equipment costs (specific caps require direct ComEd verification)",
+        "summary": "Up to 75% of qualifying efficiency project costs; confirm measures and terms",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
         "publishedCriteria": [
           "ComEd service territory (Chicago and northern Illinois)",
-          "Peak demand under 500 kW for Small Business program"
+          "Non-residential customer with peak electrical demand under 500 kW; use an authorized ComEd Small Business Offering Service Provider"
         ]
       },
       "links": {
-        "url": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
-        "sourceUrl": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
+        "url": "https://www.comed.com/ways-to-save/for-your-business/incentives/small-businesses-facilities",
+        "sourceUrl": "https://www.comed.com/ways-to-save/for-your-business/incentives/small-businesses-facilities",
         "administeringAgency": "Commonwealth Edison"
       },
       "personas": [
@@ -2533,7 +2532,7 @@
       "level": "Utility",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -2543,9 +2542,9 @@
         }
       },
       "benefit": {
-        "summary": "$300/kW (≤100 kW) or $250/kW (>100 kW) upfront; stacks with IL Shines RECs + federal ITC",
-        "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "summary": "DG: $300 or $250/kW; associated storage: $300 or $250/kWh (customer-class dependent)",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "none",
@@ -2556,7 +2555,7 @@
       },
       "links": {
         "url": "https://www.comed.com/SmartEnergy/MyGreenPowerConnection/Pages/SolarRebates.aspx",
-        "sourceUrl": "https://illinoisshines.com/",
+        "sourceUrl": "https://www.comed.com/cdn/assets/v3/assets/blt3ebb3fed6084be2a/blt2810b689df2e361f/67741700adc7815acf7dba44/DGRebate_TermsConditions-2024-v2.pdf",
         "administeringAgency": "Commonwealth Edison — Distributed Generation"
       },
       "personas": [
@@ -2684,7 +2683,7 @@
       "level": "Nonprofit / CDFI",
       "statusBadge": {
         "state": "rolling",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-10-09"
       },
       "intake": {
         "status": "rolling",
@@ -2694,15 +2693,15 @@
         }
       },
       "benefit": {
-        "summary": "Term loans $500–$500K (10–12% + 3% closing); revenue-based $50K–$500K (3% fee, 1.5x max repayment)",
+        "summary": "Term loans $500–$500K (10–12% + 3% closing); revenue-based $50K–$500K (3% fee, 1.25x max repayment)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-10-09"
       },
       "screening": {
         "locationRelation": "contextual",
         "publishedCriteria": [
-          "Chicago and Cook County businesses",
-          "Most for-profit and nonprofit businesses with earned revenue; commercial corridor priority"
+          "Business located in Illinois or Indiana, or eligible resident operating a home-based or online business",
+          "Lender industry exclusions and underwriting requirements apply"
         ]
       },
       "links": {

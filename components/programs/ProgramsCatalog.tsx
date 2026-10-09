@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { PublicProgramView } from "@/lib/program-public";
+import { isPastProgramWindow, withCurrentProgramIntake } from "@/lib/program-public";
 import { ZONE_COLORS, LEVEL_COLORS } from "@/lib/constants";
 import type { ProgramLevel } from "@/lib/types";
 import { INDUSTRIES, getIndustryById } from "@/lib/industries-data";
@@ -46,7 +47,7 @@ import { useLiveNow } from "@/components/programs/useLiveNow";
 import { matchesProgramSearch, matchesProgramIndustry, sortProgramsForDirectory, RESOURCE_TYPE_LABELS } from "@/lib/program-discovery";
 import programsPublicData from "@/public/data/programs-public.json";
 
-const LEVELS = ["All", "Federal", "State", "County", "City", "Utility"] as const;
+const LEVELS = ["All", "Federal", "State", "County", "City", "Utility", "Nonprofit / CDFI"] as const;
 const INITIAL_PROGRAMS = sortProgramsForDirectory(programsPublicData.programs as unknown as PublicProgramView[]);
 
 const OPEN_INTAKE_STATES = new Set(["open", "rolling"]);
@@ -60,12 +61,7 @@ const OPEN_INTAKE_STATES = new Set(["open", "rolling"]);
  * internal catalog can), but sourced ENTIRELY from DTO fields, never from a
  * client-bundled internal record. */
 function isPastPublishedWindow(program: PublicProgramView, now: Date): boolean {
-  if (program.inactive) return true;
-  const expected = program.intake.nextWindow.expected;
-  if (!expected) return false;
-  const date = new Date(expected);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.getTime() < now.getTime();
+  return Boolean(program.inactive) || isPastProgramWindow(program, now);
 }
 
 function programHref(program: PublicProgramView): string {
@@ -99,13 +95,16 @@ export default function ProgramsCatalog({
 }
 
 function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
-  const programs = INITIAL_PROGRAMS;
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("All");
   const [industryFilter, setIndustryFilter] = useState<string>("");
   const [showUnavailable, setShowUnavailable] = useState(false);
   const now = useLiveNow(initialNowIso);
   const nowDate = useMemo(() => (now ? now : new Date(initialNowIso)), [now, initialNowIso]);
+  const programs = useMemo(
+    () => INITIAL_PROGRAMS.map((program) => withCurrentProgramIntake(program, nowDate)),
+    [nowDate],
+  );
 
   // Availability gating: a program whose published window has passed is
   // hidden by default; still-open and closed/lapsed/pending-but-not-past-
@@ -478,18 +477,18 @@ function IndustryQuerySync({
 
 /* ── Cheat-Sheet (printable at-a-glance matrix) ───────────────── */
 
-const CHEAT_LEVELS: ProgramLevel[] = ["Federal", "State", "County", "City", "Utility"];
+const CHEAT_LEVELS: ProgramLevel[] = ["Federal", "State", "County", "City", "Utility", "Nonprofit / CDFI"];
 
-/** All programs at a given gov level, open/rolling first then by name. */
+/** Directory priority, then open/rolling and name, within each level. */
 function programsByLevel(all: PublicProgramView[], level: ProgramLevel): PublicProgramView[] {
-  return all
+  return sortProgramsForDirectory(all
     .filter((p) => p.level === level)
     .sort((a, b) => {
       const aOpen = OPEN_INTAKE_STATES.has(a.intake.status) ? 0 : 1;
       const bOpen = OPEN_INTAKE_STATES.has(b.intake.status) ? 0 : 1;
       if (aOpen !== bOpen) return aOpen - bOpen;
       return a.name.localeCompare(b.name);
-    });
+    }));
 }
 
 function CheatSheetSection({
@@ -499,7 +498,7 @@ function CheatSheetSection({
   programs: PublicProgramView[];
   asOf: Date | null;
 }) {
-  // Active gov-level tab on mobile. Desktop (lg+) shows all 5 columns;
+  // Active gov-level tab on mobile. Desktop (lg+) shows all levels;
   // print mode forces all columns visible regardless of tab state.
   const [activeLevel, setActiveLevel] = useState<ProgramLevel>("City");
   if (programs.length === 0) return null;
@@ -586,8 +585,8 @@ function CheatSheetSection({
         })}
       </div>
 
-      {/* 5-column matrix (mobile: only active tab visible; desktop + print: all) */}
-      <div className="cheat-matrix grid grid-cols-1 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
+      {/* Government and lender matrix (mobile: only active tab visible; desktop + print: all) */}
+      <div className="cheat-matrix grid grid-cols-1 lg:grid-cols-3 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-3">
         {CHEAT_LEVELS.map((level, colIdx) => {
           const programsAtLevel = programsByLevel(programs, level);
           const totalAtLevel = programsAtLevel.length;

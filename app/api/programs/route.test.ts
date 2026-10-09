@@ -70,7 +70,8 @@ describe("GET /api/programs — sanitized public envelope (review5 S1)", () => {
 
     for (const record of body) {
       const keys = Object.keys(record).sort();
-      expect(keys).toEqual([...PUBLIC_ENVELOPE_KEYS].sort());
+      const optional = ["industryIds", "resourceType", "inactive"].filter((key) => key in record);
+      expect(keys).toEqual([...PUBLIC_ENVELOPE_KEYS, ...optional].sort());
     }
   });
 

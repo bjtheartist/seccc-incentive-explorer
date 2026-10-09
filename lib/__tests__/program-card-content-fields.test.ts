@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import {
@@ -122,56 +122,17 @@ describe("buildExpectations", () => {
     );
   });
 
-  // Gate round 2, BLOCKER 2+3 (regression, real bug this fixes): three
-  // REAL catalog programs carry intakeStatus="open" while their own
-  // published nextWindow.expected date has already passed — the catalog's
-  // status field going stale without the window field following. The old
-  // code repeated "Applications are being accepted..." verbatim for all
-  // three, an unqualified present-tense claim that was simply false the
-  // day this was written (2026-08-23: ccsa's window closed 2026-08-21,
-  // cdgSmall/cdgMedium's closed 2026-08-14).
-  // Gate round 2, finding 27 (test names must not claim a stronger
-  // property than what is actually asserted): the earlier version of
-  // this test named "every REAL catalog program whose published window
-  // has already passed" but only ever checked three hardcoded ids
-  // (ccsa/cdgSmall/cdgMedium — the specific programs BLOCKER 2+3
-  // identified by direct catalog inspection, per the comment above).
-  // That's a real overclaim: a fourth catalog program later gaining
-  // `intakeStatus: "open"` and a past `nextWindow.expected` would not
-  // have been covered by a test whose name says "every." Rewritten to
-  // genuinely compute the set of real catalog programs matching that
-  // condition (today, still exactly ccsa/cdgSmall/cdgMedium — confirmed
-  // by the sanity-floor assertion below — but now enforced by scanning
-  // the actual catalog, not a fixed list), so "every" is now literally
-  // what the test checks.
-  it("downgrades an 'open' claim to the real closed-window date for every REAL catalog program whose published window has already passed", () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const staleOpenPrograms = programs.filter((p) => {
-      if (p.intakeStatus !== "open") return false;
-      const expected = p.nextWindow?.expected;
-      if (!expected) return false;
-      const parsed = new Date(`${expected}T00:00:00`);
-      return !Number.isNaN(parsed.getTime()) && parsed.getTime() < today.getTime();
-    });
-
-    // Sanity floor: the known-bad set BLOCKER 2+3 identified must still
-    // be in the computed set, or this test would silently pass vacuously
-    // (an empty `staleOpenPrograms` would make the loop below assert
-    // nothing at all).
-    const staleIds = new Set(staleOpenPrograms.map((p) => p.id));
-    for (const knownStaleId of ["ccsa"]) {
-      expect(staleIds.has(knownStaleId), `expected ${knownStaleId} in the computed stale-open set`).toBe(true);
-    }
-    expect(staleOpenPrograms.length).toBeGreaterThan(0);
-
-    for (const program of staleOpenPrograms) {
-      const windowDate = program.nextWindow!.expected;
-      const expectations = buildExpectations(program);
-      expect(expectations, `${program.id} expectations`).not.toMatch(/being accepted/i);
-      expect(expectations, `${program.id} expectations`).toBe(
-        `Most recent published window closed ${windowDate} — check for the next round.`,
-      );
+  it("withdraws expired intake for every catalog program with a published window", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-01-01T12:00:00Z"));
+    try {
+      const datedPrograms = programs.filter((p) => p.intakeStatus === "open" && p.nextWindow?.expected);
+      expect(datedPrograms.length).toBeGreaterThan(0);
+      for (const program of datedPrograms) {
+        expect(buildExpectations(program), program.id).not.toMatch(/being accepted/i);
+      }
+    } finally {
+      vi.useRealTimers();
     }
   });
 

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import ProgramsCatalog from "../ProgramsCatalog";
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
-afterEach(cleanup);
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-09T17:00:00Z")); });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 function renderCatalog() {
   return render(<ProgramsCatalog initialNowIso="2026-10-09T17:00:00.000Z" />);
@@ -15,6 +16,36 @@ function cards() {
 }
 
 describe("Programs discovery through the real catalog", () => {
+  it("keeps ongoing SBA lending and current SBIF and CCSA windows discoverable", () => {
+    renderCatalog();
+    expect(cards()).toContain("Small Business Improvement Fund (SBIF)");
+    expect(cards().some((name) => name?.includes("SBA 7(a)"))).toBe(true);
+    expect(cards().some((name) => name?.includes("Commercial Corridor"))).toBe(true);
+  });
+
+  it("includes all three nonprofit lenders in their filter and printable overview", () => {
+    renderCatalog();
+    const group = screen.getByRole("group", { name: "Filter programs by government level" });
+    fireEvent.click(within(group).getByRole("button", { name: /^Nonprofit \/ CDFI 3/ }));
+    const names = cards();
+    expect(names.filter((name) => /Kiva|Greenwood|Allies/.test(name ?? ""))).toHaveLength(3);
+    const overview = document.querySelector("#cheat-sheet")!;
+    expect(within(overview as HTMLElement).getByText(/Kiva Chicago/)).toBeDefined();
+    const cityList = Array.from(overview.querySelectorAll("ul")).find((list) => list.textContent?.includes("Community Development Grant"))!;
+    expect(cityList.firstElementChild?.textContent).toContain("Community Development Grant — Small");
+    const federalList = Array.from(overview.querySelectorAll("ul")).find((list) => list.textContent?.includes("NSF America"))!;
+    expect(federalList.lastElementChild?.textContent).toContain("NSF America");
+  });
+
+  it("withdraws open/current claims after a published cutoff even when past windows are shown", () => {
+    vi.setSystemTime(new Date("2026-11-20T23:00:01Z"));
+    render(<ProgramsCatalog initialNowIso="2026-11-20T23:00:01.000Z" />);
+    expect(cards().some((name) => name?.includes("Commercial Corridor"))).toBe(false);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Show inactive programs/ }));
+    const button = screen.getByRole("button", { name: /Commercial Corridor Storefront/ });
+    expect(within(button).queryByText("Open")).toBeNull();
+    expect(within(button).getByText(/published window has passed/)).toBeDefined();
+  });
   it("renders CDG first and NSF last among the program cards", () => {
     renderCatalog();
     const names = cards().filter((name) => name !== "How well do you know Chicago incentives?");

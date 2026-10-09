@@ -153,10 +153,10 @@ describe("catalog eligibility-claims fields (every one of 89 records)", () => {
       expect(nextWindow.note).toMatch(/NOFO/i);
     });
 
-    it("microMarketRecovery (CNRP): closed, $15,000 homeownership", () => {
+    it("microMarketRecovery (CNRP): closed, $30,000 published homeownership assistance", () => {
       const p = byId.get("microMarketRecovery")!;
       expect(p.intakeStatus).toBe("closed");
-      expect(p.benefitRange).toMatch(/\$15,000/);
+      expect(p.benefitRange).toMatch(/\$30,000/);
     });
 
     it("highUnemployment (WOTC): lapsed", () => {
@@ -195,44 +195,13 @@ describe("catalog eligibility-claims fields (every one of 89 records)", () => {
     });
   });
 
-  describe("review1 R6: iraCleanElectricity — temporal wording consistent with statusAsOf (no 'passed' claim dated before the deadlines)", () => {
-    const byId = new Map(
-      (programs as Array<Record<string, unknown>>).map((p) => [p.id as string, p])
-    );
-
-    it("statusAsOf stays 2026-07-02 (no invented fresher verification)", () => {
-      const p = byId.get("iraCleanElectricity")!;
-      expect(p.statusAsOf).toBe("2026-07-02");
-      expect(p.lastVerifiedAt).toBe("2026-07-02");
-    });
-
-    it("the note never claims the 2026-07-04 / 2026-08-07 deadlines had already passed", () => {
-      const p = byId.get("iraCleanElectricity")!;
-      const nextWindow = p.nextWindow as { note: string | null };
-      expect(nextWindow.note).not.toMatch(/have (both )?passed as of today/i);
-      expect(nextWindow.note).not.toMatch(/\bclosed\b/i); // "window closed" language would misstate an upcoming date
-    });
-
-    it("the note frames both dates as upcoming as of the exact statusAsOf date", () => {
-      const p = byId.get("iraCleanElectricity")!;
-      const nextWindow = p.nextWindow as { note: string | null };
-      expect(nextWindow.note).toMatch(/2026-07-02/); // the note pins itself to statusAsOf
-      expect(nextWindow.note).toMatch(/2026-07-04/);
-      expect(nextWindow.note).toMatch(/2026-08-07/);
-      expect(nextWindow.note).toMatch(/upcoming|scheduled to close|still upcoming/i);
-    });
-
-    it("as of 2026-07-02, both deadlines were genuinely still in the future (sanity check on the underlying dates)", () => {
-      const statusAsOf = new Date("2026-07-02T00:00:00Z");
-      const constructionStart = new Date("2026-07-04T00:00:00Z");
-      const bonusWindowClose = new Date("2026-08-07T00:00:00Z");
-      expect(constructionStart.getTime()).toBeGreaterThan(statusAsOf.getTime());
-      expect(bonusWindowClose.getTime()).toBeGreaterThan(statusAsOf.getTime());
-    });
-
-    it("intakeStatus is no longer 'unknown' now that the premise (both deadlines already closed) no longer holds", () => {
-      const p = byId.get("iraCleanElectricity")!;
-      expect(p.intakeStatus).toBe("rolling");
-    });
+  it("keeps the low-income bonus window separate from underlying clean-electricity credit eligibility", () => {
+    const p = (programs as Array<Record<string, unknown>>).find((p) => p.id === "iraCleanElectricity")!;
+    expect(p.statusAsOf).toBe("2026-10-09");
+    expect(p.intakeStatus).toBe("rolling");
+    expect(p.benefitRange).toMatch(/6% base/);
+    expect(p.summary).toMatch(/December 31, 2027/);
+    expect(p.summary).not.toMatch(/must begin physical construction/);
+    expect(p.deadlines).toEqual([]);
   });
 });

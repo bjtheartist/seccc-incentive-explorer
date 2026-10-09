@@ -11,6 +11,29 @@ const programs = internalCatalog as unknown as Program[];
 const byId = new Map(programs.map((p) => [p.id, p]));
 
 describe("toPublicProgramView", () => {
+  it("keeps the announced ComEd 2027 window pending instead of claiming future terms were already offered", () => {
+    const view = toPublicProgramView(byId.get("comedEvRebate")!, "2026-10-09T17:00:00Z");
+    expect(view.intake.status).toBe("pending");
+    expect(view.benefit.qualifier).toContain("2027-01-01");
+    expect(view.benefit.qualifier).not.toContain("Most recently published round offered");
+    expect(toPublicProgramView(byId.get("comedEvRebate")!, "2027-01-02T17:00:00Z").intake.status).toBe("pending");
+  });
+  it("withdraws stale intake at the exact CCSA cutoff without changing the source review date", () => {
+    const ccsa = byId.get("ccsa")!;
+    const before = toPublicProgramView(ccsa, "2026-11-20T22:59:59.999Z");
+    const after = toPublicProgramView(ccsa, "2026-11-20T23:00:00.000Z");
+    expect(before.intake.status).toBe("open");
+    expect(after.intake.status).toBe("unknown");
+    expect(after.statusBadge.asOfDate).toBe(ccsa.statusAsOf);
+    expect(after.benefit.qualifier).not.toContain("Current published terms");
+  });
+
+  it("honors the full Chicago day for date-only windows and does not expire ongoing loans", () => {
+    const disaster = byId.get("sbaDisasterEidl")!;
+    expect(toPublicProgramView(disaster, "2027-01-26T05:59:59.999Z").intake.status).toBe("open");
+    expect(toPublicProgramView(disaster, "2027-01-26T06:00:00.000Z").intake.status).toBe("unknown");
+    expect(toPublicProgramView(byId.get("sba7a504")!, "2026-10-09T17:00:00Z").intake.status).toBe("rolling");
+  });
   it("never exposes raw whoQualifies on the DTO", () => {
     for (const program of programs) {
       const view = toPublicProgramView(program, "2026-08-13") as unknown as Record<
@@ -36,7 +59,7 @@ describe("toPublicProgramView", () => {
   });
 
   it("open/rolling programs get the 'Current published terms' qualifier", () => {
-    const tif = byId.get("tif")!;
+    const tif = byId.get("sba7a504")!;
     expect(tif.intakeStatus).toBe("rolling");
     const view = toPublicProgramView(tif, "2026-08-13");
     expect(view.benefit.qualifier).toBe(`Current published terms as of ${tif.statusAsOf}`);

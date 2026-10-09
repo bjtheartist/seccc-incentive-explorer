@@ -245,25 +245,25 @@ describe("resolveAvailability", () => {
     expect(ccsap).toBeDefined();
 
     expect(
-      resolveAvailability(ccsap!, new Date("2026-08-21T16:59:59.999-05:00")).state
+      resolveAvailability(ccsap!, new Date("2026-11-20T16:59:59.999-06:00")).state
     ).toBe("active");
     const afterDeadline = resolveAvailability(
       ccsap!,
-      new Date("2026-08-21T17:00:00.001-05:00")
+      new Date("2026-11-20T17:00:00.001-06:00")
     );
     expect(afterDeadline.state).toBe("window-closed");
     expect(afterDeadline.note).toMatch(/applications currently closed/i);
   });
 
-  it("preserves date-only Chicago-day semantics for AHSAP", () => {
+  it("preserves date-only Chicago-day semantics for an AHSAP round before its explicit closure", () => {
     const ahsap = (catalogPrograms as Program[]).find((item) => item.id === "ahsap");
     expect(ahsap).toBeDefined();
 
     expect(
-      resolveAvailability(ahsap!, new Date("2026-09-05T23:59:59.999-05:00")).state
+      resolveAvailability({ ...ahsap!, status: "active" }, new Date("2026-09-05T23:59:59.999-05:00")).state
     ).toBe("active");
     expect(
-      resolveAvailability(ahsap!, new Date("2026-09-06T00:00:00.001-05:00")).state
+      resolveAvailability({ ...ahsap!, status: "active" }, new Date("2026-09-06T00:00:00.001-05:00")).state
     ).toBe("window-closed");
   });
 

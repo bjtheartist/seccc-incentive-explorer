@@ -156,6 +156,12 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Preserve links to the former round-specific EEC program title.
+      {
+        source: "/programs/economic-empowerment-centers-eec-grant-program-round-2",
+        destination: "/programs/economic-empowerment-centers-eec-grant-program",
+        permanent: true,
+      },
       {
         source: "/corridors",
         destination: "/map",
