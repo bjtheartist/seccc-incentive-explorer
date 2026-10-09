@@ -68,6 +68,17 @@ describe("program detail document rendering", () => {
 });
 
 describe("program detail availability rendering", () => {
+  it("does not label unknown or announced intake as a confirmed closed round", async () => {
+    for (const id of ["tif", "cdgLarge", "nsfSeedFund"]) {
+      const html = await renderProgram(id);
+      expect(html).toContain("Intake status not established");
+      expect(html).not.toContain("No round currently open");
+    }
+    const announced = await renderProgram("comedEvRebate");
+    expect(announced).toContain("Opening not confirmed");
+    expect(announced).not.toContain("No round currently open");
+  });
+
   it("shows the closed AHSAP assessment-year intake instead of expired application guidance", () => {
     const html = renderApplication("ahsap", new Date("2026-10-09T17:00:00Z"));
     expect(html).not.toContain("How to apply");

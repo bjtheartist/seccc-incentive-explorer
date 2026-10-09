@@ -215,7 +215,11 @@ export default async function ProgramExplainerPage({
             )}
             {!intakeIsOpen && (
               <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 rounded-full text-amber-200/80 bg-amber-500/10">
-                No round currently open
+                {publicView.intake.status === "unknown"
+                  ? "Intake status not established"
+                  : publicView.intake.status === "pending"
+                    ? "Opening not confirmed"
+                    : "No round currently open"}
               </span>
             )}
           </div>

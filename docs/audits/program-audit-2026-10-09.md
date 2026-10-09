@@ -40,7 +40,7 @@ CDG Small, Medium and Large remain first in the directory. NSF remains included 
 
 The printable overview now respects CDG/NSF priority within categories. A Nonprofit / CDFI filter and overview section expose all three existing nonprofit lenders. The 15 current DCEO resources remain separately searchable under State; the three historical resources remain behind the inactive toggle. These categories do not imply that every resource is a cash grant.
 
-The public projection now withdraws an old Open/Current claim once its published window passes. It uses “unknown—confirm” rather than inferring a permanent closure. Date-only deadlines include the entire Chicago closing day; exact times honor their offset. The change preserves the administrator-review date and does not turn today's render time into new verification evidence.
+The public projection now withdraws an old Open/Current claim once its published window passes. It uses “unknown—confirm” rather than inferring a permanent closure. Detail-page headers also distinguish unknown intake and unconfirmed openings from a confirmed closed round. Date-only deadlines include the entire Chicago closing day; exact times honor their offset. The change preserves the administrator-review date and does not turn today's render time into new verification evidence.
 
 ## Remaining source work
 
@@ -52,7 +52,7 @@ The public projection now withdraws an old Open/Current claim once its published
 
 ## Verification and release boundary
 
-Focused catalog, public projection, deadline, API, detail-page and real catalog-component tests pass (135 tests across ten suites). Additional report/start-here/safety/persona/deadline checks passed earlier in this audit (189 tests across five other suites): 324 total. Touched-file lint, TypeScript, public-export drift and diff-whitespace checks pass. `npm run build` succeeds, generating 357 pages; the existing unrelated Mapbox named-export warning remains. An initial ad hoc Turbopack build could not follow the shared dependency symlink; the repository's prescribed Webpack build succeeded without configuration changes.
+Focused catalog, public projection, deadline, API, detail-page and real catalog-component tests pass (136 tests across ten suites, including the final detail-header regression check). Additional report/start-here/safety/persona/deadline checks passed earlier in this audit (189 tests across five other suites): 325 total. Touched-file lint, TypeScript, public-export drift and diff-whitespace checks pass. `npm run build` succeeds, generating 357 pages; the existing unrelated Mapbox named-export warning remains. An initial ad hoc Turbopack build could not follow the shared dependency symlink; the repository's prescribed Webpack build succeeded without configuration changes. The final header correction is additionally verified by the production deployment build.
 
 The built catalog was checked in a real browser, including priority placement and corrected pending/EEC copy. The former EEC route returns 308 and its destination returns 200. Local auth/analytics console errors reflect absent local production credentials and the Vercel analytics endpoint; production verification must check those separately.
 
