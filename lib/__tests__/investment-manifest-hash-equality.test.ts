@@ -21,8 +21,8 @@ describe("manifest hash equality across export / audit / docs (Sol gate finding 
   // regardless of content. See its doc comment in scripts/lib/investment-manifest.ts.
   const liveManifestHash = manifestContentHash(loadManifest());
 
-  it("the committed export's meta.sourceManifestHash matches the committed manifest.json", () => {
-    const data = loadCommunityInvestment()!;
+  it("the committed export's meta.sourceManifestHash matches the committed manifest.json", async () => {
+    const data = (await loadCommunityInvestment())!;
     expect(data.meta.sourceManifestHash).toBe(liveManifestHash);
   });
 
@@ -32,15 +32,15 @@ describe("manifest hash equality across export / audit / docs (Sol gate finding 
     expect(audit.bound_manifest_hash).toBe(liveManifestHash);
   });
 
-  it("the fresh foundation audit's bound_export_content_hash matches the committed export's exportContentHash", () => {
-    const data = loadCommunityInvestment()!;
+  it("the fresh foundation audit's bound_export_content_hash matches the committed export's exportContentHash", async () => {
+    const data = (await loadCommunityInvestment())!;
     const auditPath = join(process.cwd(), "data/curated/investment-inputs/foundation_audit_fresh.json");
     const audit = JSON.parse(readFileSync(auditPath, "utf8")) as { bound_export_content_hash: string };
     expect(audit.bound_export_content_hash).toBe(data.meta.exportContentHash);
   });
 
-  it("the exclusion ledger's boundExportContentHash matches the committed export's exportContentHash", () => {
-    const data = loadCommunityInvestment()!;
+  it("the exclusion ledger's boundExportContentHash matches the committed export's exportContentHash", async () => {
+    const data = (await loadCommunityInvestment())!;
     const ledgerPath = join(process.cwd(), "data/private/investment-exclusion-ledger.json");
     const ledger = JSON.parse(readFileSync(ledgerPath, "utf8")) as { boundExportContentHash: string };
     expect(ledger.boundExportContentHash).toBe(data.meta.exportContentHash);

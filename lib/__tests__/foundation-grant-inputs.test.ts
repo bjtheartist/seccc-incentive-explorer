@@ -143,8 +143,8 @@ describe("foundation grant inputs — three files, one mapper", () => {
     expect(stats.droppedPlaceholder).toBe(quarantined.length);
   });
 
-  it("NEVER reads either quarantine file: none of their rows reach the export", () => {
-    const data = loadCommunityInvestment();
+  it("NEVER reads either quarantine file: none of their rows reach the export", async () => {
+    const data = await loadCommunityInvestment();
     if (!data) return; // export not generated yet
     // A bare amount would false-positive against an unrelated grant of the same
     // size — and a funder really does repeat the same grant to the same
@@ -328,8 +328,8 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
    * together while a parser that eats rows — or a second file silently not being
    * read at all — trips it.
    */
-  it("PARTITIONS all foundation inputs plus Chicago Prize against the mapped records", () => {
-    const data = loadCommunityInvestment()!;
+  it("PARTITIONS all foundation inputs plus Chicago Prize against the mapped records", async () => {
+    const data = (await loadCommunityInvestment())!;
     const mapped = countBySource(data.records)["foundation"] ?? 0;
     const prizeRows = readInput(PRIZE_FILE).length;
 
@@ -344,8 +344,8 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
     expect(data.records.some((r) => r.id.startsWith("foundation-p2-"))).toBe(true);
   }, 30_000);
 
-  it("carries every funder from BOTH files, minus the one whose 990 rows are ALL placeholders", () => {
-    const data = loadCommunityInvestment()!;
+  it("carries every funder from BOTH files, minus the one whose 990 rows are ALL placeholders", async () => {
+    const data = (await loadCommunityInvestment())!;
     const inExport = new Set(
       data.records.filter((r) => r.source === "foundation").map((r) => r.funderName),
     );
@@ -385,8 +385,8 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
     expect(extras).toEqual(["Pritzker Traubert Foundation — Chicago Prize"]);
   }, 30_000);
 
-  it("record ids stay unique across the three foundation namespaces", () => {
-    const data = loadCommunityInvestment()!;
+  it("record ids stay unique across the three foundation namespaces", async () => {
+    const data = (await loadCommunityInvestment())!;
     const ids = data.records.filter((r) => r.source === "foundation").map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
   }, 30_000);

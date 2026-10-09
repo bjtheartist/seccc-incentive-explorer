@@ -1,11 +1,15 @@
-import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import nextConfig from "../../next.config";
 
 /**
  * Guards the Vercel/Next production-bundling contract for `data/private/**`
- * and `data/curated/**` — the same contract
+ * and `data/curated/**`. `data/curated/**` is INCLUDED per file; `data/private/**`
+ * is EXCLUDED wholesale and read through lib/private-data.ts instead (local file
+ * in dev/tests/CI, private Vercel Blob in production) — see the two blocks at
+ * the bottom. Same contract
  * lib/__tests__/shortlist-universe-bundling.test.ts guards for
  * `data/exports/**`, and the same one next.config.ts's own 20-line warning
  * comment was written about.
@@ -51,9 +55,6 @@ function sourceOf(relativePath: string): string {
 describe("next.config.ts outputFileTracingIncludes — data/private + data/curated bundling", () => {
   describe("the REAL readers still read the paths the config declares", () => {
     it.each([
-      ["lib/community-investment.ts", "data/private/community-investment.json"],
-      ["lib/investment-analysis.ts", "data/private/capital-context.json"],
-      ["lib/exemption-anomalies.ts", "data/private/exemption-anomalies.json"],
       ["app/api/owner-file/investment/route.ts", "data/curated/foundation-hqs.csv"],
     ])("%s reads %s through process.cwd()", (sourceFile, dataPath) => {
       const source = sourceOf(sourceFile);
@@ -74,57 +75,8 @@ describe("next.config.ts outputFileTracingIncludes — data/private + data/curat
     });
   });
 
-  /**
-   * The four Investment & Impact surfaces. `/investment` and
-   * `/investment/[area]` are distinct route ids in Next's matcher, so a
-   * `/investment/**` glob would leave the bare index page with no dataset at
-   * all — each is asserted separately for exactly that reason.
-   */
-  it.each([
-    "/investment",
-    "/investment/[area]",
-    "/investment/compare",
-    "/print/investment/[area]",
-  ])("%s traces both community-investment.json and capital-context.json", (route) => {
-    expectRouteCovers(route, "data/private/community-investment.json");
-    expectRouteCovers(route, "data/private/capital-context.json");
-  });
-
-  /**
-   * The CORE report pathway. app/api/report/generate/route.ts calls
-   * loadCapitalContextForArea() to resolve the FFIEC CRA series for the
-   * report's community area; with the file untraced, the loader's existsSync
-   * guard returns null in production and every generated report silently
-   * loses its corridor-investment chart.
-   */
-  it("/api/report/generate traces capital-context.json", () => {
-    expectRouteCovers("/api/report/generate", "data/private/capital-context.json");
-    // The route must actually be the consumer this entry exists for.
-    expect(sourceOf("app/api/report/generate/route.ts")).toContain("loadCapitalContextForArea");
-  });
-
-  /**
-   * ...and must NOT drag the 42MB community-investment.json along with it.
-   * The route reaches loadCapitalContextForArea and nothing else in
-   * lib/investment-analysis.ts that opens that file, so tracing it here would
-   * be 42MB of dead weight on the hottest function in the app, against
-   * Vercel's 250MB uncompressed function ceiling. Pinned so a future
-   * copy-paste of the /investment entry cannot quietly land here.
-   */
-  it("/api/report/generate does NOT trace the 42MB community-investment.json", () => {
-    expect(includesFor("/api/report/generate")).not.toContain(
-      "./data/private/community-investment.json",
-    );
-  });
-
-  it("/api/owner-file/investment traces the dataset and the funder HQ CSV", () => {
-    expectRouteCovers("/api/owner-file/investment", "data/private/community-investment.json");
+  it("/api/owner-file/investment traces the funder HQ CSV", () => {
     expectRouteCovers("/api/owner-file/investment", "data/curated/foundation-hqs.csv");
-  });
-
-  it("/vacancy/[zip]/report traces exemption-anomalies.json", () => {
-    expectRouteCovers("/vacancy/[zip]/report", "data/private/exemption-anomalies.json");
-    expect(sourceOf("app/vacancy/[zip]/report/page.tsx")).toContain("exemption-anomalies");
   });
 
   it("/api/site-activity traces the site-activity directory", () => {
@@ -136,13 +88,6 @@ describe("next.config.ts outputFileTracingIncludes — data/private + data/curat
    * while verifying the six above and identical in kind.
    */
   describe("the same defect elsewhere", () => {
-    it("/api/owner-file/geo traces owner-clusters-geo.json", () => {
-      expectRouteCovers("/api/owner-file/geo", "data/private/owner-clusters-geo.json");
-      expect(sourceOf("lib/owner-cluster-geo.ts")).toContain(
-        "data/private/owner-clusters-geo.json",
-      );
-    });
-
     it("/admin/zoning-changes traces all five zoning ledger files", () => {
       for (const file of [
         "zoning-legislation.json",
@@ -177,18 +122,100 @@ describe("next.config.ts outputFileTracingIncludes — data/private + data/curat
   });
 
   /**
-   * No entry may fall back on a blanket `data/private/**` or
-   * `data/curated/**`. Those trees hold 42MB (community-investment.json),
-   * 36MB (investment-inputs/) and 26MB (zoning/) of files most routes never
-   * open; a tree glob would push ~113MB of dead weight into every function
-   * that declared it.
+   * No entry may fall back on a blanket `data/curated/**`. That tree holds 36MB
+   * (investment-inputs/) and 26MB (zoning/) of files most routes never open; a
+   * tree glob would push ~62MB of dead weight into every function that declared
+   * it. `data/private/**` is covered by the stronger rule below: it may not be
+   * traced AT ALL.
    */
-  it("no route declares a blanket data/private or data/curated tree glob", () => {
+  it("no route declares a blanket data/curated tree glob", () => {
     for (const [route, globs] of Object.entries(nextConfig.outputFileTracingIncludes ?? {})) {
       for (const glob of globs) {
-        expect(glob, `${route} declares an oversized tree glob`).not.toBe("./data/private/**");
         expect(glob, `${route} declares an oversized tree glob`).not.toBe("./data/curated/**");
       }
+    }
+  });
+});
+
+/**
+ * The data/private side of the contract, INVERTED.
+ *
+ * Those five JSON files are ~48MB together (community-investment.json alone is
+ * 42MB). Traced into every route that touched them, on every deployment, they
+ * took this project's Vercel Functions Storage to 20GB — the bill this whole
+ * change exists to stop.
+ *
+ * So the rule flipped: data/private is now EXCLUDED from tracing outright, and
+ * lib/private-data.ts resolves each file from the local disk when it is there
+ * (dev, tests, CI — the files are committed) and from a PRIVATE Vercel Blob when
+ * it is not. Two-sided like the tests above: the config is pinned AND the real
+ * readers are asserted to go through the new loader rather than back to
+ * `readFileSync(process.cwd() + "data/private/…")`.
+ */
+describe("next.config.ts outputFileTracingExcludes — data/private stays OUT of the bundle", () => {
+  it('excludes ./data/private/** for every route ("*")', () => {
+    const excludes = nextConfig.outputFileTracingExcludes;
+    expect(excludes, "outputFileTracingExcludes must be declared").toBeDefined();
+    expect(excludes!["*"], 'the "*" key must exclude the private tree').toContain(
+      "./data/private/**",
+    );
+  });
+
+  it("no route re-includes anything under data/private", () => {
+    for (const [route, globs] of Object.entries(nextConfig.outputFileTracingIncludes ?? {})) {
+      for (const glob of globs) {
+        expect(
+          glob.startsWith("./data/private/"),
+          `${route} re-traces ${glob} — data/private must never enter a function bundle`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * The five loaders must read through lib/private-data.ts. A regression here
+   * would be silent in dev and in CI (the files ARE on disk there) and would
+   * only surface as a 48MB function bundle on the next deploy.
+   */
+  it.each([
+    "lib/community-investment.ts",
+    "lib/investment-analysis.ts",
+    "lib/exemption-anomalies.ts",
+    "lib/owner-cluster-geo.ts",
+    "lib/tif-briefs.ts",
+  ])("%s reads through lib/private-data.ts, not process.cwd()", (sourceFile) => {
+    const source = sourceOf(sourceFile);
+    expect(source).toMatch(/from "\.\/private-data"/);
+    expect(source).not.toContain('readFileSync(path.join(process.cwd(), "data/private');
+  });
+
+  /**
+   * The manifest is committed and is a pure function of the file contents, so
+   * it must actually describe what is on disk — a stale entry means the
+   * deployed function fetches a blob that is not the data this commit ships.
+   */
+  it("data/private-manifest.json matches the sha256 of every committed private JSON", () => {
+    const manifestPath = path.join(REPO_ROOT, "data/private-manifest.json");
+    expect(existsSync(manifestPath), "data/private-manifest.json is missing").toBe(true);
+    const files = (
+      JSON.parse(readFileSync(manifestPath, "utf8")) as {
+        files: Record<string, { pathname: string; sha256: string; bytes: number }>;
+      }
+    ).files;
+
+    const onDisk = readdirSync(path.join(REPO_ROOT, "data/private"))
+      .filter((n) => n.endsWith(".json"))
+      .sort();
+    expect(Object.keys(files).sort()).toEqual(onDisk);
+
+    for (const [filename, entry] of Object.entries(files)) {
+      const body = readFileSync(path.join(REPO_ROOT, "data/private", filename));
+      const sha256 = createHash("sha256").update(body).digest("hex");
+      expect(entry.sha256, `${filename} sha256 is stale — re-run scripts/sync-private-data.mjs`).toBe(
+        sha256,
+      );
+      expect(entry.bytes).toBe(body.byteLength);
+      expect(entry.pathname).toBe(`private-data/${sha256.slice(0, 16)}/${filename}`);
     }
   });
 });

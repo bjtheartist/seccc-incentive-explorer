@@ -20,16 +20,17 @@
  * names a received / available / remaining / unspent figure — the shape is
  * unit-tested against assertNoBannedFigureKeys from lib/community-investment.ts.
  *
- * CLIENT-SAFE SEPARATION (repo gotcha): the loaders at the bottom call
- * loadCommunityInvestment(), which touches `node:fs`, so this module is
- * server-only. The pure aggregation functions take records as input and never
- * touch fs; a client component may import the TYPES from here with `import type`
- * (erased at build time), never a value — mirroring how the fs-touching
+ * CLIENT-SAFE SEPARATION (repo gotcha): the loaders at the bottom go through
+ * lib/private-data.ts (`node:fs/promises` + @vercel/blob), so this module is
+ * server-only — and ASYNC, because a deployed function reads these datasets
+ * over the network rather than off a bundled disk. The pure aggregation
+ * functions take records as input and stay synchronous and fs-free; a client
+ * component may import the TYPES from here with `import type` (erased at build
+ * time), never a value — mirroring how the server-only
  * lib/community-investment.ts is consumed type-only by lib/community-investment-layer.ts.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { __resetPrivateDataCacheForTests, loadPrivateJson } from "./private-data";
 import {
   FUNDER_TYPES,
   INVESTMENT_SOURCES,
@@ -834,27 +835,24 @@ interface RawCapitalContext {
   illinoisArtsCouncilAwards?: IllinoisArtsCouncilAwardsContext;
 }
 
-const CAPITAL_CONTEXT_PATH = path.join(process.cwd(), "data/private/capital-context.json");
-let capitalContextCache: RawCapitalContext | null | undefined = undefined;
+const CAPITAL_CONTEXT_FILENAME = "capital-context.json";
+
+// Cached as a promise — the read is async now (lib/private-data.ts resolves the
+// file from disk locally and from a private Vercel Blob in production), and a
+// promise cache keeps the "read once per process" guarantee under concurrency.
+let capitalContextCache: Promise<RawCapitalContext | null> | undefined = undefined;
 
 /** Read + parse capital-context.json once per process (null when absent/unparseable). */
-function loadCapitalContext(): RawCapitalContext | null {
+function loadCapitalContext(): Promise<RawCapitalContext | null> {
   if (capitalContextCache !== undefined) return capitalContextCache;
-  try {
-    if (!existsSync(CAPITAL_CONTEXT_PATH)) {
-      capitalContextCache = null;
-      return capitalContextCache;
-    }
-    capitalContextCache = JSON.parse(readFileSync(CAPITAL_CONTEXT_PATH, "utf8")) as RawCapitalContext;
-  } catch {
-    capitalContextCache = null;
-  }
+  capitalContextCache = loadPrivateJson<RawCapitalContext>(CAPITAL_CONTEXT_FILENAME);
   return capitalContextCache;
 }
 
 /** Test-only: reset the capital-context cache after mutating the file. */
 export function __resetCapitalContextCacheForTests(): void {
   capitalContextCache = undefined;
+  __resetPrivateDataCacheForTests();
 }
 
 /**
@@ -862,8 +860,8 @@ export function __resetCapitalContextCacheForTests(): void {
  * series when the file is absent or has no row for that area (a clean "context
  * pending" state, never a fabricated series). Server-only (fs).
  */
-export function loadCapitalContextForArea(communityArea: string): CapitalContextForArea {
-  const ctx = loadCapitalContext();
+export async function loadCapitalContextForArea(communityArea: string): Promise<CapitalContextForArea> {
+  const ctx = await loadCapitalContext();
   const cra = ctx?.craByCommunityArea?.find((c) => c.communityArea === communityArea)?.series ?? null;
   const cdfi =
     ctx?.cdfi?.find((c) => c.geographyLevel === "community_area" && c.geography === communityArea)?.series ?? null;
@@ -877,8 +875,8 @@ export function loadCapitalContextForArea(communityArea: string): CapitalContext
 }
 
 /** Load the admin-only, city-level Illinois Arts Council historical awards. */
-export function loadIllinoisArtsCouncilAwards(): IllinoisArtsCouncilAwardsContext | null {
-  const awards = loadCapitalContext()?.illinoisArtsCouncilAwards;
+export async function loadIllinoisArtsCouncilAwards(): Promise<IllinoisArtsCouncilAwardsContext | null> {
+  const awards = (await loadCapitalContext())?.illinoisArtsCouncilAwards;
   if (!awards || !Array.isArray(awards.records) || awards.records.length === 0) {
     return null;
   }
@@ -891,8 +889,8 @@ export function loadIllinoisArtsCouncilAwards(): IllinoisArtsCouncilAwardsContex
  * Load one community's flow rows (searchable funder→program→recipient table)
  * from the committed export. Returns [] when the export is absent. Server-only.
  */
-export function loadFlowRows(communityArea: string): FlowRow[] {
-  const data = loadCommunityInvestment();
+export async function loadFlowRows(communityArea: string): Promise<FlowRow[]> {
+  const data = await loadCommunityInvestment();
   if (!data) return [];
   return buildFlowRows(data.records.filter((r) => r.communityArea === communityArea));
 }
@@ -902,8 +900,8 @@ export function loadFlowRows(communityArea: string): FlowRow[] {
  * the export has not been generated yet (loadCommunityInvestment returns null),
  * so a route degrades to a clean empty state instead of throwing. Server-only.
  */
-export function loadInvestmentIndex(): CommunityInvestmentIndex | null {
-  const data = loadCommunityInvestment();
+export async function loadInvestmentIndex(): Promise<CommunityInvestmentIndex | null> {
+  const data = await loadCommunityInvestment();
   if (!data) return null;
   return buildInvestmentIndex(data.records, data.generatedAt);
 }
@@ -913,8 +911,8 @@ export function loadInvestmentIndex(): CommunityInvestmentIndex | null {
  * when the export is absent or the community has no since-2020 record.
  * Server-only.
  */
-export function loadInvestmentAnalysis(communityArea: string): CommunityInvestmentAnalysis | null {
-  const data = loadCommunityInvestment();
+export async function loadInvestmentAnalysis(communityArea: string): Promise<CommunityInvestmentAnalysis | null> {
+  const data = await loadCommunityInvestment();
   if (!data) return null;
   const index = buildInvestmentIndex(data.records, data.generatedAt);
   return analyzeCommunityArea(data.records, communityArea, data.generatedAt, index);
@@ -927,11 +925,11 @@ export function loadInvestmentAnalysis(communityArea: string): CommunityInvestme
  * that area's developments. Returns an empty summary when the export is absent.
  * Server-only.
  */
-export function loadMajorDevelopments(opts?: {
+export async function loadMajorDevelopments(opts?: {
   communityArea?: string;
   limit?: number;
-}): MajorDevelopmentsSummary {
-  const data = loadCommunityInvestment();
+}): Promise<MajorDevelopmentsSummary> {
+  const data = await loadCommunityInvestment();
   if (!data) return { count: 0, totalAnnounced: 0, developments: [] };
   return summarizeMajorDevelopments(data.records, opts);
 }

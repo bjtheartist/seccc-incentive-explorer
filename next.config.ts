@@ -49,73 +49,34 @@ const nextConfig: NextConfig = {
     "/api/shortlist/enrich": ["./data/exports/shortlist-universe/parcel-identity/**"],
     "/**": ["./data/programs-internal.json"],
 
-    // ── data/private/** and data/curated/** (R2 finding 1) ──────────────
+    // ── data/curated/** (R2 finding 1) ──────────────────────────────────
     //
     // The warning above was written for data/exports/ and data/programs-
     // internal.json, and then the SAME server-only convention spread to
-    // data/private/ and data/curated/ without anyone extending this map.
-    // Six modules read those two trees with `readFileSync(path.join(
-    // process.cwd(), …))` at REQUEST time, none of it reachable by static
-    // import analysis, none of it declared here — so on Vercel every one of
-    // them hits the `existsSync` guard, returns null, and the surface
+    // data/curated/ without anyone extending this map. Those modules read the
+    // tree with `readFileSync(path.join(process.cwd(), …))` at REQUEST time,
+    // none of it reachable by static import analysis — so on Vercel every one
+    // of them hits the `existsSync` guard, returns null, and the surface
     // degrades silently to "no data" with nothing in the logs to notice.
     //
-    // Declared per file, not as `data/private/**` / `data/curated/**`,
-    // because these are big: community-investment.json alone is 42MB,
+    // Declared per file, not as `data/curated/**`, because these are big:
     // data/curated/investment-inputs/ is 36MB and data/curated/zoning/ is
-    // 26MB. A blanket tree glob would push ~113MB into every listed
-    // function for files it never opens, against Vercel's 250MB
-    // uncompressed function ceiling. Each entry below is the file the route
-    // can actually reach at runtime.
+    // 26MB. A blanket tree glob would push ~62MB into every listed function
+    // for files it never opens, against Vercel's 250MB uncompressed function
+    // ceiling. Each entry below is the file the route can actually reach at
+    // runtime.
+    //
+    // data/private/** is NOT here any more — see outputFileTracingExcludes
+    // below. Those five JSON files (~48MB, community-investment.json alone is
+    // 42MB) are now read through lib/private-data.ts, which falls back to a
+    // PRIVATE Vercel Blob when the file is not on disk, so they never enter a
+    // function bundle at all.
     //
     // Pinned by lib/__tests__/data-private-curated-bundling.test.ts.
 
-    // lib/community-investment.ts:1454 (community-investment.json) and
-    // lib/investment-analysis.ts:837 (capital-context.json). /investment and
-    // /investment/[area] are DISTINCT route ids in Next's matcher — a
-    // "/investment/**" glob would not cover the bare index page — so each
-    // one is spelled out. /investment/[area] also reaches
-    // community-investment.ts a second way, through
-    // components/investment/FunderFlowSankey -> lib/investment-sankey.
-    "/investment": [
-      "./data/private/community-investment.json",
-      "./data/private/capital-context.json",
-    ],
-    "/investment/[area]": [
-      "./data/private/community-investment.json",
-      "./data/private/capital-context.json",
-    ],
-    "/investment/compare": [
-      "./data/private/community-investment.json",
-      "./data/private/capital-context.json",
-    ],
-    "/print/investment/[area]": [
-      "./data/private/community-investment.json",
-      "./data/private/capital-context.json",
-    ],
-
-    // The CORE report path. app/api/report/generate/route.ts calls
-    // loadCapitalContextForArea() (lib/investment-analysis.ts:837) to
-    // resolve the FFIEC CRA series for the report's community area. Without
-    // this the file is absent in the deployed function, the loader's
-    // existsSync guard returns null, and every report silently drops its
-    // corridor-investment chart — the failure mode is a missing section, not
-    // an error. capital-context.json ONLY: the route reaches
-    // loadCapitalContextForArea and nothing else in that module that opens
-    // the 42MB community-investment.json, so shipping that file here would
-    // be 42MB of dead weight on the hottest function in the app.
-    "/api/report/generate": ["./data/private/capital-context.json"],
-
     // app/api/owner-file/investment/route.ts:265 reads foundation-hqs.csv
-    // for the 12 funder headquarters, and value-imports
-    // lib/community-investment.ts for the dataset itself.
-    "/api/owner-file/investment": [
-      "./data/private/community-investment.json",
-      "./data/curated/foundation-hqs.csv",
-    ],
-
-    // lib/exemption-anomalies.ts:46, reached from app/vacancy/[zip]/report.
-    "/vacancy/[zip]/report": ["./data/private/exemption-anomalies.json"],
+    // for the 12 funder headquarters.
+    "/api/owner-file/investment": ["./data/curated/foundation-hqs.csv"],
 
     // app/api/site-activity/route.ts:27 reads four CSVs out of the
     // site-activity directory; the whole directory is 4.4MB, small enough
@@ -127,9 +88,6 @@ const nextConfig: NextConfig = {
     // process.cwd() read of a server-only tree with no tracing entry. Left
     // out, each would keep failing silently in exactly the way this whole
     // block exists to stop.
-
-    // lib/owner-cluster-geo.ts, reached only from app/api/owner-file/geo.
-    "/api/owner-file/geo": ["./data/private/owner-clusters-geo.json"],
 
     // lib/zoning-legislation-data.ts reads five named files out of
     // data/curated/zoning/ (~26MB together). Named individually rather than
@@ -152,6 +110,27 @@ const nextConfig: NextConfig = {
     "/permit-exhibit/[pin]": ["./data/archive/zoning/index.json"],
     "/print/permit-exhibit/[pin]": ["./data/archive/zoning/index.json"],
     "/api/permit-exhibit-snapshots": ["./data/archive/zoning/index.json"],
+  },
+
+  /**
+   * data/private/** must never enter a serverless function bundle.
+   *
+   * Those five JSON files are ~48MB together (community-investment.json alone
+   * is 42MB). Traced into every route that touched them, on every deployment,
+   * they took this project's Vercel Functions Storage to 20GB. They are still
+   * committed and still server-only (data/private/README.md: never public/) —
+   * what changed is HOW a deployed function reads them: lib/private-data.ts
+   * reads the local file when it exists (dev, tests, CI) and otherwise pulls
+   * the content-addressed copy out of a PRIVATE Vercel Blob, using the
+   * committed data/private-manifest.json. scripts/sync-private-data.mjs
+   * (wired into `npm run build`) uploads anything the manifest names that the
+   * store does not have yet.
+   *
+   * The exclude is belt-and-braces with lib/private-data.ts's parameterised
+   * path — neither alone is relied on to keep the files out.
+   */
+  outputFileTracingExcludes: {
+    "*": ["./data/private/**"],
   },
   async redirects() {
     return [

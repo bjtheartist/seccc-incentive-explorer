@@ -23,21 +23,21 @@ describe("investment exclusion ledger (Sol gate finding 3)", () => {
     trueExclusions: Array<{ source: string; reason: string; count: number; dollars: number | null; evidence: string }>;
   };
 
-  it("is bound to the currently committed export's content hash", () => {
-    const data = loadCommunityInvestment()!;
+  it("is bound to the currently committed export's content hash", async () => {
+    const data = (await loadCommunityInvestment())!;
     expect(ledger.boundExportContentHash).toBe(data.meta.exportContentHash);
   });
 
-  it("EVERY citywide/zip_area-excluded-from-plotting record in the export has a locationReason claim reconciled by the ledger", () => {
-    const data = loadCommunityInvestment()!;
+  it("EVERY citywide/zip_area-excluded-from-plotting record in the export has a locationReason claim reconciled by the ledger", async () => {
+    const data = (await loadCommunityInvestment())!;
     const citywide = data.records.filter((r) => r.geometry.kind === "citywide");
     // Sol's exact complaint: 7,040 of 7,073 lacked a reason. Zero tolerance now.
     const missing = citywide.filter((r) => !r.locationReason);
     expect(missing.map((r) => r.id)).toEqual([]);
   });
 
-  it("every retained ledger group's record ids exist, match source/locationReason, and dollars reconcile", () => {
-    const data = loadCommunityInvestment()!;
+  it("every retained ledger group's record ids exist, match source/locationReason, and dollars reconcile", async () => {
+    const data = (await loadCommunityInvestment())!;
     const byId = new Map(data.records.map((r) => [r.id, r]));
     expect(ledger.retained.length).toBeGreaterThan(0);
     for (const group of ledger.retained) {
