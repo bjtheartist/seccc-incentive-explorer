@@ -1,6 +1,6 @@
 # Program catalog audit — October 9, 2026
 
-Release scope: `audit/program-catalog-2026-10-09`, based on the published CDG/NSF/DCEO release `56c7607`. Billy authorized push and publication of these audit corrections on October 9. Deployment evidence will be appended after live verification.
+Published October 9, 2026. Release branch: `audit/program-catalog-2026-10-09`, based on the prior CDG/NSF/DCEO release `56c7607`. Billy authorized push and publication of these audit corrections; application commit `eab71ffbdc82f3253d97e8c27db1fbc5bae30f78` is pushed and live. Deployment evidence is below.
 
 ## Scope and result
 
@@ -57,3 +57,16 @@ Focused catalog, public projection, deadline, API, detail-page and real catalog-
 The built catalog was checked in a real browser, including priority placement and corrected pending/EEC copy. The former EEC route returns 308 and its destination returns 200. Local auth/analytics console errors reflect absent local production credentials and the Vercel analytics endpoint; production verification must check those separately.
 
 No database migrations, external applications, communications or boundary changes. The public export remains sanitized; the raw internal catalog remains server-only. The ignored protected CTC artifact has the same SHA-256 as the previous release (`f9ca3bf5d32095e8e04252aca66f2f551cbb450ddb11a77e4093e92812016fee`) and remains outside Git and public paths.
+
+## Published release evidence
+
+- Production deployment: `dpl_Ho5bGFcCPXeFqzEsUuuLDZ3RYdYF`, [deployment URL](https://seccc-incentive-explorer-ixh5msvg4.vercel.app), promoted to [the live Programs directory](https://chicagoincentiveexplorer.com/programs).
+- Production build completed successfully. The final detail-page correction passed 46 directly relevant tests, lint and TypeScript before deployment; these overlap the 325 unique tests counted above.
+- Live public export matches the local sanitized artifact exactly: 89 records, revision `60d80637dd63a1491df2883fb4db69cbba7a8a81df9c0647560c32913e04ec92`.
+- Live API includes all 89 curated records plus the pre-existing database-only `tripleBenefit` composite (90 API records). That composite is explicitly unknown, not a separately verified grant; its database row was not changed. The directory audit and 89-record ledger refer to the curated catalog.
+- Live `/programs`, EEC detail, CDG Large detail and anonymous auth-session endpoint return 200. The previous EEC URL redirects with 308. CDG Large displays unknown intake rather than a claim of closure.
+- Live signed-out CTC research returns 401 with private/no-store caching. The raw research artifact and retired raw `/data/programs.json` both return 404. Signed-in research viewing was not re-tested; its preserved artifact and route are unchanged.
+- Live browser confirms CDG first, NSF last, the EEC title and pending ComEd notice. Recent error-level logs for this deployment returned zero records after smoke requests. This is a short post-release check, not proof of all possible application paths or long-term availability.
+- Staging required authenticated `vercel curl`; unauthenticated requests reached a Vercel login page. Initial verification-script failures were an incorrect assumption that API count must equal directory count, then a script key typo. Both were corrected; the final live verification passed. Neither indicated an application response defect.
+
+The three-month retrospective is [saved separately](explorer-three-month-lessons-2026-10-09.md). No current user-growth or funding-outcome claims are inferred from these release checks.
