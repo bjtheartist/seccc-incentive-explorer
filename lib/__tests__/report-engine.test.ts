@@ -181,6 +181,25 @@ function makeState(overrides: Partial<ReportState> = {}): ReportState {
 }
 
 describe("generateReportData", () => {
+  it.each(["site-incentives", "dev-feasibility"] as const)("surfaces CDG first outside both mapped grant areas in %s", (reportType) => {
+    const cdg = makeProgram({ id: "cdgSmall", name: "Community Development Grant — Small", zoneKey: "", eligibilityRules: [] });
+    const county = makeProgram({ id: "smallBizSource", name: "Cook County Small Business Source", level: "County", zoneKey: "", eligibilityRules: [] });
+    const other = Array.from({ length: 9 }, (_, i) => makeProgram({ id: `discovery-${i}`, name: `A Discovery ${i}`, zoneKey: "", eligibilityRules: [] }));
+    const report = generateReportData(makeState({ reportType, projectType: "rehab" }), [...other, county, cdg], { zones: { tif: false, nof: false } });
+    const first = report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0];
+    expect(first?.programId).toBe("cdgSmall");
+    expect(first?.detail).toContain("Outside the mapped SBIF/TIF and NOF areas");
+    expect(first).not.toHaveProperty("confidenceLevel");
+    expect(report.executiveSummary?.topPrograms.some((p) => p.programId === "cdgSmall")).not.toBe(true);
+  });
+
+  it.each<Record<string, boolean>>([{ tif: true, nof: false }, { tif: false, nof: true }, {}])("preserves normal discovery ranking without two negative zone checks: %j", (coverage) => {
+    const cdg = makeProgram({ id: "cdgSmall", name: "CDG Small", zoneKey: "", eligibilityRules: [] });
+    const county = makeProgram({ id: "smallBizSource", name: "County Resource", level: "County", zoneKey: "", eligibilityRules: [] });
+    const report = generateReportData(makeState(), [cdg, county], { zones: coverage });
+    expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("smallBizSource");
+  });
+
   it("attaches a source-backed financing resource to capital-shaped reports", () => {
     const report = generateReportData(
       makeState({ projectType: "equipment" }),

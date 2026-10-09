@@ -2921,13 +2921,12 @@
     "name": "SSBCI — Advantage Illinois & INVENT VCP",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "Federal Treasury allocates $354.6M to Illinois through the State Small Business Credit Initiative (SSBCI). Administered by DCEO as Advantage Illinois (loan participation/guarantee) and INVENT Venture Capital Program.",
-    "whoQualifies": "Illinois small businesses including underserved markets. State participation or guarantee runs from $10,000 up to $2,000,000, set by job creation/retention, project or loan size, and risk; equity investments through certified VC funds.",
+    "summary": "Federal SSBCI funding supports Illinois-administered lending and equity programs. See the separate State program cards for Advantage Illinois, INVENT and Climate Bank Finance.",
+    "whoQualifies": "Illinois businesses meeting the separate lender or investment-program requirements.",
     "benefits": [
-      "Loan participation and guarantee program through partner lenders",
-      "State participation or guarantee from $10,000 up to $2,000,000, set by job creation/retention, project or loan size, and risk",
-      "Equity investment through INVENT Venture Capital Program",
-      "Climate Bank Finance LPP for clean-energy projects"
+      "Loan participation or guarantees through Advantage Illinois",
+      "Equity investment through INVENT",
+      "Environmental-project loan participation through Climate Bank Finance"
     ],
     "howToApply": [
       "Identify a DCEO-approved partner lender or VC fund",
@@ -2939,14 +2938,15 @@
       "Underserved-market certification (if applicable)"
     ],
     "contact": "Illinois DCEO SSBCI",
-    "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html",
-    "sourceUrl": "https://home.treasury.gov/policy-issues/small-business-programs/state-small-business-credit-initiative-ssbci",
+    "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois.html",
+    "sourceUrl": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html",
     "status": "active",
     "contacts": [
       {
         "agency": "Illinois DCEO",
         "abbreviation": "DCEO",
-        "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html"
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois.html"
       }
     ],
     "eligibilityRules": [
@@ -2963,15 +2963,15 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-08-09",
-    "benefitRange": "State participation/guarantee $10K–$2M + equity through INVENT VCP",
+    "lastVerifiedAt": "2026-10-09",
+    "benefitRange": "See the separate Illinois financing programs",
     "fastestConfirmingStep": "Visit dceo.illinois.gov/smallbizassistance/advantageillinois for current partner lenders",
     "personas": [
       "starting",
       "growing"
     ],
     "intakeStatus": "rolling",
-    "statusAsOf": "2026-08-09",
+    "statusAsOf": "2026-10-09",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
@@ -3351,65 +3351,70 @@
     "name": "Illinois Innovation Voucher Program",
     "level": "State",
     "zoneKey": "",
-    "summary": "Rolling DCEO grants up to $75,000 (75% reimbursement) pairing Illinois small businesses with university researchers in AI, quantum, clean energy, advanced manufacturing, semiconductors, and life sciences. Round 3 announced Feb 2026 (~$2.6M available).",
-    "whoQualifies": "Illinois-based companies with 500 or fewer total employees partnering with an Illinois university or research institution on an applied R&D project. DCEO names the eligible sectors as agribusiness/agtech, energy, information technology, life sciences/healthcare, manufacturing, and transportation/logistics.",
+    "summary": "Research-engagement funding connecting Illinois businesses with qualified Illinois nonprofit higher-education institutions. Covers up to 75% of eligible research costs, capped at $75,000; general website or mobile-app development is excluded.",
+    "whoQualifies": "For-profit businesses with an Illinois principal place of business, or at least 100 full-time Illinois employees, partnering with a qualified Illinois institution. The business must remain in Illinois during the research engagement.",
     "benefits": [
-      "Up to $75,000 grant (75% reimbursement)",
-      "Connects small businesses with university research expertise",
-      "Targets innovation sectors prioritized by the state"
+      "Up to $75,000; up to 75% of eligible research costs"
     ],
     "howToApply": [
-      "Identify a university research partner",
-      "Apply through the Illinois Science & Technology Coalition portal, which administers intake and review — applications are not submitted to DCEO",
-      "Execute project and request reimbursement"
+      "Review current intake and research requirements with the program administrator.",
+      "Identify a qualified Illinois higher-education partner and define the research engagement."
     ],
     "requiredDocs": [
-      "University partnership letter / scope of work",
-      "Project budget",
-      "Small business documentation"
+      "Research scope and budget",
+      "Higher-education partnership details"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/whyillinois/innovation-vouchers.html",
-    "sourceUrl": "https://innovate-illinois.com/dceo-incentives/",
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://ilinnovoucher.istcoalition.org/",
+    "sourceUrl": "https://ilinnovoucher.istcoalition.org/",
     "status": "active",
     "contacts": [
       {
-        "agency": "Illinois DCEO",
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
-        "url": "https://innovate-illinois.com/dceo-incentives/"
+        "phone": "",
+        "url": "https://ilinnovoucher.istcoalition.org/"
       }
     ],
     "eligibilityRules": [
       {
-        "criterion": "location",
-        "description": "Illinois small business",
-        "verifiedBy": "location",
+        "criterion": "programRequirements",
+        "description": "Qualifying business and Illinois higher-education partner",
+        "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "industry",
-        "description": "AI, quantum, clean energy, advanced manufacturing, semiconductors, or life sciences",
-        "verifiedBy": "survey",
+        "criterion": "programRequirements",
+        "description": "Eligible research scope and remaining project funding",
+        "verifiedBy": "manual",
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-08-09",
-    "benefitRange": "Up to $75,000 (75% reimbursement)",
-    "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing",
+    "lastVerifiedAt": "2026-10-09",
+    "benefitRange": "Up to $75,000; up to 75% of eligible research costs",
+    "fastestConfirmingStep": "Review current intake and research requirements with the program administrator.",
     "personas": [
       "supporter",
       "starting",
       "growing"
     ],
     "intakeStatus": "rolling",
-    "statusAsOf": "2026-08-09",
+    "statusAsOf": "2026-10-09",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
       "expected": null,
-      "note": "Round 3 announced February 2026 (~$2.6M available)."
-    }
+      "note": "Confirm current intake with the Illinois Science & Technology Coalition."
+    },
+    "resourceType": "grant",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare",
+      "food"
+    ]
   },
   {
     "id": "economicEmpowermentCenters",
@@ -4708,19 +4713,17 @@
     "name": "Community Development Grant — Small (≤ $250K)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 at 75% of eligible costs. Funded by HED bond. Citywide — no corridor or zone gate. Current cycle deadline: August 14, 2026 at 11:59 p.m.",
+    "summary": "Citywide reimbursement grant for qualifying Chicago capital projects, including construction, rehabilitation and build-out. Covers up to 75% of eligible costs, with a grant cap of $250,000. No SBIF/TIF or NOF zone is required. Current application deadline: February 16, 2027.",
     "whoQualifies": "For-profit small businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a qualifying capital project (construction, rehabilitation, build-out, or equipment) at a Chicago address with documented site control. Operating expenses, working capital, and routine maintenance do not qualify.",
     "benefits": [
-      "Reimbursement grant up to $250,000",
-      "Citywide eligibility — no corridor or zone gate",
-      "Covers capital costs: construction, rehab, build-out, equipment, soft costs",
-      "Pairs with NOF, SBIF, and most state/federal incentives (subject to standard stacking limits)"
+      "Up to $250,000 in reimbursement; up to 75% of eligible project costs",
+      "Available for qualifying Chicago capital projects outside SBIF/TIF and NOF areas",
+      "DPD review of project scope, site control, financing and prior awards is required"
     ],
     "howToApply": [
-      "Apply via the DPD Submittable portal (English or Spanish) on a rolling basis",
-      "Submit a project narrative, itemized budget, timeline, and proof of site control",
-      "DPD reviews quarterly; awardees notified after review",
-      "After award, complete work and submit invoices for reimbursement under the executed grant agreement"
+      "Review the current Small CDG requirements with DPD.",
+      "Submit a scope, budget and site-control documentation through the current DPD application.",
+      "Confirm eligible costs, prior-award restrictions and reimbursement conditions before starting work."
     ],
     "requiredDocs": [
       "Project narrative + scope of work",
@@ -4733,7 +4736,7 @@
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-    "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+    "sourceUrl": "https://cocdpd.submittable.com/submit",
     "status": "current",
     "contacts": [
       {
@@ -4747,43 +4750,43 @@
       {
         "criterion": "location",
         "description": "Project located within Chicago city limits (all 77 community areas eligible)",
-        "verifiedBy": "location",
-        "required": true
-      },
-      {
-        "criterion": "propertyType",
-        "description": "Capital project: new construction, substantial rehabilitation, build-out, or equipment installation",
-        "verifiedBy": "survey",
-        "required": true
-      },
-      {
-        "criterion": "industry",
-        "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC",
-        "verifiedBy": "survey",
-        "required": true
-      },
-      {
-        "criterion": "investmentSize",
-        "description": "Total project cost up to $250,000 (Small tier)",
         "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "businessType",
+        "criterion": "capitalProject",
+        "description": "Capital project: new construction, substantial rehabilitation, build-out, or equipment installation",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "applicantType",
+        "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "grantRequest",
+        "description": "Grant request up to $250,000 and sufficient funds for costs not covered by reimbursement",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "entityStanding",
         "description": "Good standing with State of Illinois and City of Chicago",
         "verifiedBy": "manual",
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-10-09",
     "benefitRange": "Up to $250,000 (75% of eligible costs)",
-    "fastestConfirmingStep": "Start the Submittable application or call DPD at (312) 744-4190",
+    "fastestConfirmingStep": "Review the current Small CDG application and confirm project fit with DPD.",
     "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but the project address must be in Chicago.",
     "applicationPortals": [
       {
         "type": "submittable",
-        "label": "Small Community Development Grant (≤ $250K)",
-        "url": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000",
+        "label": "Small CDG — closes February 16, 2027",
+        "url": "https://cocdpd.submittable.com/submit/365163/small-community-development-grants-up-to-250-000-closes-2-16-27",
         "language": "en"
       },
       {
@@ -4796,7 +4799,7 @@
     "deadlines": [
       {
         "label": "Small CDG application deadline",
-        "date": "2026-08-14"
+        "date": "2027-02-16"
       }
     ],
     "personas": [
@@ -4804,13 +4807,17 @@
       "growing"
     ],
     "intakeStatus": "open",
-    "statusAsOf": "2026-07-02",
+    "statusAsOf": "2026-10-09",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
-      "expected": "2026-08-14",
-      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Citywide -- no corridor or zone gate."
-    }
+      "expected": "2027-02-17T05:59:59.999Z",
+      "note": "Current application deadline: February 16, 2027 (Chicago time). Review the DPD application portal and project requirements."
+    },
+    "resourceType": "grant",
+    "industryIds": [
+      "all"
+    ]
   },
   {
     "id": "cdgMedium",
@@ -4818,13 +4825,12 @@
     "name": "Community Development Grant — Medium ($300K – $5M)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD Medium-tier reimbursement grant for substantial capital projects with budgets between $300,001 and $5,000,000. Citywide. Covers 50% of eligible costs. South/Southwest/West Side location is a scoring preference factor. Current cycle deadline: August 14, 2026 at 11:59 p.m. Monthly webinars: July 8 (10 a.m.) and August 12 (10 a.m.).",
+    "summary": "Citywide reimbursement grant for qualifying real-estate development and construction projects requesting $300,001 to $5 million. DPD must confirm eligible costs and financing. Current application deadline: February 16, 2027.",
     "whoQualifies": "For-profit businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a capital project at a Chicago address with documented site control. Project must demonstrate community benefit (jobs created/retained, service expansion, or neighborhood impact).",
     "benefits": [
-      "Reimbursement grant from $300,001 to $5,000,000",
-      "Citywide eligibility — no corridor or zone gate",
-      "Covers construction, substantial rehabilitation, equipment, soft costs",
-      "Pairs with TIF RDAs, NOF, federal HTC, and most state credits (subject to standard stacking limits)"
+      "Grant requests from $300,001 to $5 million",
+      "Qualifying Chicago capital projects; no SBIF/TIF or NOF zone gate",
+      "DPD reviews financing, eligible costs and any other public assistance"
     ],
     "howToApply": [
       "Apply via the DPD Submittable portal",
@@ -4844,7 +4850,7 @@
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-    "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+    "sourceUrl": "https://cocdpd.submittable.com/submit",
     "status": "current",
     "contacts": [
       {
@@ -4858,50 +4864,50 @@
       {
         "criterion": "location",
         "description": "Project located within Chicago city limits",
-        "verifiedBy": "location",
-        "required": true
-      },
-      {
-        "criterion": "propertyType",
-        "description": "Capital project: new construction, substantial rehabilitation, or major build-out",
-        "verifiedBy": "survey",
-        "required": true
-      },
-      {
-        "criterion": "industry",
-        "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC",
-        "verifiedBy": "survey",
-        "required": true
-      },
-      {
-        "criterion": "investmentSize",
-        "description": "Total project cost $300,001 – $5,000,000 (Medium tier)",
         "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "businessType",
+        "criterion": "capitalProject",
+        "description": "Capital project: new construction, substantial rehabilitation, or major build-out",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "applicantType",
+        "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "grantRequest",
+        "description": "Grant request between $300,001 and $5 million; DPD confirms the required financing share",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "entityStanding",
         "description": "Good standing with State of Illinois and City of Chicago",
         "verifiedBy": "manual",
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-10-09",
     "benefitRange": "$300K–$5M reimbursement (50% of eligible costs)",
     "fastestConfirmingStep": "Discuss scope with DPD at (312) 744-4190 before applying via Submittable",
     "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but project must be at a Chicago address.",
     "applicationPortals": [
       {
         "type": "submittable",
-        "label": "Medium Community Development Grant",
-        "url": "https://cocdpd.submittable.com/submit/345760/medium-community-development-grant-application",
+        "label": "Medium CDG — closes February 16, 2027",
+        "url": "https://cocdpd.submittable.com/submit/366361/medium-community-development-grant-cdg-m-closes-02-16-2027",
         "language": "en"
       }
     ],
     "deadlines": [
       {
         "label": "Medium CDG application deadline",
-        "date": "2026-08-14"
+        "date": "2027-02-16"
       }
     ],
     "personas": [
@@ -4909,13 +4915,17 @@
       "developer"
     ],
     "intakeStatus": "open",
-    "statusAsOf": "2026-07-02",
+    "statusAsOf": "2026-10-09",
     "benefitTermsStatus": "current",
     "locationRelation": "preference",
     "nextWindow": {
-      "expected": "2026-08-14",
-      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Monthly webinars held 2026-07-08 and 2026-08-12."
-    }
+      "expected": "2027-02-17T05:59:59.999Z",
+      "note": "Current application deadline: February 16, 2027 (Chicago time). Review the DPD application portal and project requirements."
+    },
+    "resourceType": "grant",
+    "industryIds": [
+      "all"
+    ]
   },
   {
     "id": "cdgLarge",
@@ -4963,29 +4973,29 @@
       {
         "criterion": "location",
         "description": "Project located within Chicago city limits",
-        "verifiedBy": "location",
+        "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "propertyType",
+        "criterion": "capitalProject",
         "description": "Catalytic capital project: large new construction, major adaptive-reuse, anchor development",
-        "verifiedBy": "survey",
+        "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "industry",
+        "criterion": "applicantType",
         "description": "Developer LLC, large 501(c)(3) nonprofit, or institutional sponsor",
-        "verifiedBy": "survey",
+        "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "investmentSize",
+        "criterion": "grantRequest",
         "description": "Total project cost > $5,000,000 (Large tier)",
         "verifiedBy": "manual",
         "required": true
       },
       {
-        "criterion": "businessType",
+        "criterion": "entityStanding",
         "description": "Good standing with State of Illinois and City of Chicago; capacity to manage public-financing compliance",
         "verifiedBy": "manual",
         "required": true
@@ -5014,7 +5024,13 @@
     "nextWindow": {
       "expected": null,
       "note": "Rolling application, no deadline, per the record's own summary. Citywide, no corridor/zone gate."
-    }
+    },
+    "resourceType": "grant",
+    "industryIds": [
+      "realEstate",
+      "nonprofit",
+      "manufacturing"
+    ]
   },
   {
     "id": "workforceSolutions",
@@ -5698,6 +5714,1173 @@
     "nextWindow": {
       "expected": null,
       "note": null
+    }
+  },
+  {
+    "id": "advantageIllinois",
+    "name": "Advantage Illinois (AI)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "loan",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Lender-delivered financing supported by state loan participation or guarantees. Illinois businesses apply through an enrolled lender; this is repayable financing, not a direct DCEO grant.",
+    "whoQualifies": "Illinois businesses with fewer than 750 employees that face a financing challenge and meet lender, good-standing, tax and credit requirements.",
+    "benefits": [
+      "$10,000–$2 million in state participation or guarantees; loan terms vary"
+    ],
+    "benefitRange": "$10,000–$2 million in state participation or guarantees; loan terms vary",
+    "howToApply": [
+      "Ask an enrolled Advantage Illinois lender about financing.",
+      "Prepare a business plan and complete the lender’s application."
+    ],
+    "requiredDocs": [
+      "Business plan",
+      "Lender-requested financial and use-of-funds information"
+    ],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: CEO.SSBCI@illinois.gov",
+    "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/advantageillinois.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois.html",
+        "email": "CEO.SSBCI@illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois operations and fewer than 750 employees",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Enrolled lender approval and DCEO credit-support review",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Ask an enrolled Advantage Illinois lender about financing.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisInvent",
+    "name": "Illinois Innovation Venture Fund (INVENT)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "equity",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare"
+    ],
+    "summary": "State-administered equity investment for Illinois startups, funded through SSBCI. Investment terms involve ownership; this is not a grant. The $114 million fund total is not an individual award amount.",
+    "whoQualifies": "Illinois businesses suitable for venture investment, with emphasis on very small businesses, underserved founders and state priority sectors.",
+    "benefits": [
+      "Equity investment; terms depend on investment review"
+    ],
+    "benefitRange": "Equity investment; terms depend on investment review",
+    "howToApply": [
+      "Review INVENT’s venture-capital fit and resource guidance.",
+      "Confirm the current investment process with DCEO."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/illinoisinvent.html",
+    "sourceUrl": "https://dceo.illinois.gov/illinoisinvent.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/illinoisinvent.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois business and venture-investment fit",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Investment review and negotiated terms",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Review INVENT’s venture-capital fit and resource guidance.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisClimateBank",
+    "name": "Illinois Climate Bank Finance Loan Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "loan",
+    "industryIds": [
+      "ev",
+      "construction",
+      "manufacturing",
+      "realEstate",
+      "logistics"
+    ],
+    "summary": "Climate Bank Finance participates in lender loans for Illinois businesses with projects that benefit the environment. The low rate applies to the bank’s participation, not necessarily the entire loan.",
+    "whoQualifies": "Illinois businesses with no more than 750 employees and an eligible environmental project, subject to lender and program review.",
+    "benefits": [
+      "$25,000–$2 million participation; 1% or 2% on the participation portion"
+    ],
+    "benefitRange": "$25,000–$2 million participation; 1% or 2% on the participation portion",
+    "howToApply": [
+      "Ask your lender whether it participates in Climate Bank Finance.",
+      "Review environmental project fit and financing terms with the lender and Climate Bank."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Climate Bank: climatebank@il-fa.com",
+    "url": "https://www.illinoisclimatebank.com/financing-programs/developers-contractors/state-small-business-credit-initiative-ssbci/",
+    "sourceUrl": "https://www.illinoisclimatebank.com/financing-programs/developers-contractors/state-small-business-credit-initiative-ssbci/",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Finance Authority / Illinois Climate Bank",
+        "abbreviation": "IFA",
+        "phone": "",
+        "url": "https://www.illinoisclimatebank.com/financing-programs/developers-contractors/state-small-business-credit-initiative-ssbci/",
+        "email": "climatebank@il-fa.com"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois operations and employee limit",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Qualifying environmental project and lender approval",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Ask your lender whether it participates in Climate Bank Finance.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "angelInvestmentCredit",
+    "name": "Illinois Angel Investment Tax Credit Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "tax-credit",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare"
+    ],
+    "summary": "Tax credit for investors in certified Qualified New Business Ventures (QNBVs). The business seeks certification; the investor claims the credit. Quarterly allocations are limited.",
+    "whoQualifies": "Investors making qualifying investments in DCEO-certified innovative Illinois ventures; separate business and investor requirements apply.",
+    "benefits": [
+      "25% investor credit; 35% for designated Set-Aside QNBVs"
+    ],
+    "benefitRange": "25% investor credit; 35% for designated Set-Aside QNBVs",
+    "howToApply": [
+      "Review QNBV certification and the current allocation schedule with DCEO.",
+      "Use the separate business and investor applications before relying on a credit."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: AngelInvestment@Illinois.gov",
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/angelinvestment.html",
+    "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/angelinvestment.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/angelinvestment.html",
+        "email": "AngelInvestment@Illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Annual QNBV certification and qualifying investment",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Business location, workforce, age, sector and investment limits",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Review QNBV certification and the current allocation schedule with DCEO.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisNewMarkets",
+    "name": "Illinois New Markets Development Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "tax-credit",
+    "industryIds": [
+      "realEstate",
+      "manufacturing",
+      "retail",
+      "nonprofit"
+    ],
+    "summary": "State tax-credit financing channel through qualified community development entities (CDEs). DCEO currently lists all allocation rounds as closed. Businesses should discuss potential financing with a CDE; this is not a direct small-business grant.",
+    "whoQualifies": "Qualified CDEs seek state allocations; eligible businesses access financing through those intermediaries.",
+    "benefits": [
+      "Tax-credit-supported financing through CDEs; allocation rounds closed"
+    ],
+    "benefitRange": "Tax-credit-supported financing through CDEs; allocation rounds closed",
+    "howToApply": [
+      "Check DCEO for a new allocation round or contact the program office.",
+      "Discuss business financing eligibility with a participating CDE."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: ceo.newmarkets@illinois.gov",
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/new-markets.html",
+    "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/new-markets.html",
+    "status": "closed",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/new-markets.html",
+        "email": "ceo.newmarkets@illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "CDE qualification and allocation availability",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Separate business and project eligibility review",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Check DCEO for a new allocation round or contact the program office.",
+    "personas": [
+      "growing",
+      "developer"
+    ],
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "All allocation rounds are closed; verify future announcements."
+    }
+  },
+  {
+    "id": "illinoisSbirMatch",
+    "name": "Illinois SBIR/STTR State Matching Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "grant",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare",
+      "food"
+    ],
+    "summary": "State matching grants for Illinois recipients of federal SBIR/STTR research awards. An NSF or other participating federal award must come first; this is not funding for a startup without an award.",
+    "whoQualifies": "Illinois for-profit recipients of an active federal Phase I or Phase II award issued within 12 months of applying to DCEO. Phase I applicants must not yet have submitted their Phase II proposal.",
+    "benefits": [
+      "Up to $75,000 for Phase I; up to $250,000 for Phase II"
+    ],
+    "benefitRange": "Up to $75,000 for Phase I; up to $250,000 for Phase II",
+    "howToApply": [
+      "Confirm award timing and phase eligibility with DCEO.",
+      "Review the matching application and Illinois research commitments."
+    ],
+    "requiredDocs": [
+      "Federal award and phase documentation",
+      "DCEO application certifications"
+    ],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: CEO.SBIR@illinois.gov",
+    "url": "https://dceo.illinois.gov/whyillinois/sbir-sttr-phase1.html",
+    "sourceUrl": "https://dceo.illinois.gov/whyillinois/sbir-sttr-phase1.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/whyillinois/sbir-sttr-phase1.html",
+        "email": "CEO.SBIR@illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Active qualifying federal award within 12 months",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois principal place of business and phase-specific research commitments",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "No duplicate funding for the same purpose",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Confirm award timing and phase eligibility with DCEO.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisSbdc",
+    "name": "Illinois Small Business Development Centers (SBDCs)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Confidential business advising, planning, financial analysis and help navigating capital resources.",
+    "whoQualifies": "Illinois entrepreneurs and existing small businesses.",
+    "benefits": [
+      "No-cost business advising"
+    ],
+    "benefitRange": "No-cost business advising",
+    "howToApply": [
+      "Find a nearby SBDC through the state directory.",
+      "Register as a client with the selected center."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/sbdc.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/beginhere/sbdc.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "800-252-2923",
+        "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/sbdc.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois-based startup or existing small business seeking advising",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Find a nearby SBDC through the state directory.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisItc",
+    "name": "Illinois International Trade Centers (ITCs)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "manufacturing",
+      "food",
+      "logistics",
+      "tech",
+      "clothing",
+      "semiconductor"
+    ],
+    "summary": "Export-readiness advice, market information, documentation guidance and trade connections through the SBDC network.",
+    "whoQualifies": "Existing Illinois businesses and companies preparing to export.",
+    "benefits": [
+      "Export counseling and training"
+    ],
+    "benefitRange": "Export counseling and training",
+    "howToApply": [
+      "Find an International Trade Center through the state directory.",
+      "Discuss export markets, readiness and documentation with an advisor."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: BIC@Illinois.gov",
+    "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/itc.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/beginhere/itc.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "800-252-2923",
+        "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/itc.html",
+        "email": "BIC@Illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois company with an existing or planned export activity",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Find an International Trade Center through the state directory.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisApex",
+    "name": "Illinois APEX Accelerators",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Government-contracting counseling, bid guidance, registration assistance and training. Participation does not guarantee a contract.",
+    "whoQualifies": "Existing Illinois businesses interested in local, state or federal government customers.",
+    "benefits": [
+      "Government-contracting assistance"
+    ],
+    "benefitRange": "Government-contracting assistance",
+    "howToApply": [
+      "Use DCEO’s APEX directory to find a local center.",
+      "Discuss procurement readiness and upcoming training with the center."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/ptac.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/beginhere/ptac.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/ptac.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois business pursuing government contracts",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Use DCEO’s APEX directory to find a local center.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "cejaIncubator",
+    "name": "Clean Energy Contractor Incubator Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "ev",
+      "construction"
+    ],
+    "summary": "Training, mentoring, vendor-registration assistance and connections to projects and capital for eligible clean-energy contractors. Chicago has designated service areas.",
+    "whoQualifies": "Contractors meeting CEJA eligibility and the local hub’s intake requirements.",
+    "benefits": [
+      "Contractor training and business support"
+    ],
+    "benefitRange": "Contractor training and business support",
+    "howToApply": [
+      "Review CEJA program status and locate a contractor incubator hub.",
+      "Confirm eligibility and enrollment with the local provider."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html",
+    "sourceUrl": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Eligible clean-energy contractor and local hub intake review",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Review CEJA program status and locate a contractor incubator hub.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "cejaAccelerator",
+    "name": "Clean Energy Primes Contractor Accelerator Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "ev",
+      "construction"
+    ],
+    "summary": "Coaching, bid preparation and business-planning support for eligible clean-energy contractors. Participants may also qualify for operational support and access to capital.",
+    "whoQualifies": "Contractors meeting CEJA program and provider requirements.",
+    "benefits": [
+      "Contractor coaching; conditional operational and capital support"
+    ],
+    "benefitRange": "Contractor coaching; conditional operational and capital support",
+    "howToApply": [
+      "Check CEJA program status and the Northern Illinois provider.",
+      "Confirm participant requirements and the current intake process."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html",
+    "sourceUrl": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/ceja/ceja-contractor-programs.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Eligible contractor with growth plans that meet provider requirements",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Check CEJA program status and the Northern Illinois provider.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "firstStopBic",
+    "name": "First Stop Business Information Center (BIC)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Statewide helpline and resource portal for business registration, licensing, permitting and navigation.",
+    "whoQualifies": "Illinois entrepreneurs and businesses seeking regulatory or resource guidance.",
+    "benefits": [
+      "Business information and navigation"
+    ],
+    "benefitRange": "Business information and navigation",
+    "howToApply": [
+      "Call 800-252-2923 or email BIC@Illinois.gov.",
+      "Describe your business activity, location and the requirement you need help with."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity: BIC@Illinois.gov",
+    "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/businessinformationcenter.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/beginhere/businessinformationcenter.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "800-252-2923",
+        "url": "https://dceo.illinois.gov/smallbizassistance/beginhere/businessinformationcenter.html",
+        "email": "BIC@Illinois.gov"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois business formation, regulatory or resource question",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Call 800-252-2923 or email BIC@Illinois.gov.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "regulatoryFlexibility",
+    "name": "Illinois Regulatory Flexibility Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Small-business ombudsman and proposed-rule information service. Helps businesses raise concerns about regulatory burdens through the Business Information Center.",
+    "whoQualifies": "Illinois small businesses and business organizations affected by proposed state rules.",
+    "benefits": [
+      "Regulatory information and small-business advocacy"
+    ],
+    "benefitRange": "Regulatory information and small-business advocacy",
+    "howToApply": [
+      "Review Illinois Regulatory Alert on the official program page.",
+      "Contact the Business Information Center about the proposal affecting your business."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/smallbizassistance/lawsregsandpermitting.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/lawsregsandpermitting.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/smallbizassistance/lawsregsandpermitting.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Small-business impact of a proposed Illinois administrative rule",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Review Illinois Regulatory Alert on the official program page.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisSbeap",
+    "name": "Small Business Environmental Assistance Program (SBEAP)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "advisory",
+    "industryIds": [
+      "manufacturing",
+      "construction",
+      "autoServices",
+      "food",
+      "ev",
+      "retail",
+      "logistics"
+    ],
+    "summary": "Free, confidential assistance with environmental obligations, including air permits, emissions reporting and waste-related questions.",
+    "whoQualifies": "Illinois small businesses needing environmental compliance guidance.",
+    "benefits": [
+      "Free environmental compliance assistance"
+    ],
+    "benefitRange": "Free environmental compliance assistance",
+    "howToApply": [
+      "Review the official industry and environmental-topic resources.",
+      "Use the program’s contact options for your specific compliance question."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/smallbizassistance/environmentalassistanceprogram.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/environmentalassistanceprogram.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/smallbizassistance/environmentalassistanceprogram.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Illinois small-business environmental compliance question",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Provider confirms service fit and current availability",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Review the official industry and environmental-topic resources.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "nsfSeedFund",
+    "name": "NSF America’s Seed Fund (SBIR/STTR)",
+    "level": "Federal",
+    "zoneKey": "",
+    "resourceType": "grant",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare",
+      "food"
+    ],
+    "summary": "Competitive, non-dilutive R&D funding for startups developing deep technologies with commercial potential. NSF takes no equity. This funds technical research, not ordinary business startup costs or routine software development.",
+    "whoQualifies": "U.S. small businesses meeting NSF ownership, research-location and principal-investigator requirements. STTR additionally requires a research-institution partnership. Technical novelty and research risk need review.",
+    "benefits": [
+      "Up to $2 million across funding stages; competitive awards"
+    ],
+    "benefitRange": "Up to $2 million across funding stages; competitive awards",
+    "howToApply": [
+      "Complete NSF’s project suitability assessment and Project Pitch.",
+      "If invited, review the current solicitation, complete required registrations and submit a full proposal.",
+      "Illinois award recipients can separately explore the Illinois SBIR/STTR State Matching Program."
+    ],
+    "requiredDocs": [
+      "Project Pitch and technical research plan",
+      "SAM.gov, Research.gov and SBIR company registrations"
+    ],
+    "contact": "National Science Foundation",
+    "url": "https://seedfund.nsf.gov/",
+    "sourceUrl": "https://seedfund.nsf.gov/apply/get-started/",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "National Science Foundation",
+        "abbreviation": "NSF",
+        "phone": "",
+        "url": "https://seedfund.nsf.gov/"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Qualifying U.S. small business and ownership",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Innovative deep-technology research and development (R&D) with commercial potential",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "U.S.-based work and qualified principal investigator",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Project Pitch invitation and current solicitation requirements",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Complete NSF’s project suitability assessment and Project Pitch.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "recurring": true,
+    "deadlines": [
+      {
+        "label": "Invited NSF full proposals due (5 p.m. submitter local time)",
+        "date": "2026-11-04"
+      },
+      {
+        "label": "Invited NSF full proposals due (5 p.m. submitter local time)",
+        "date": "2027-03-04"
+      }
+    ],
+    "applicationPortals": [
+      {
+        "type": "web",
+        "label": "NSF eligibility, suitability assessment and Project Pitch",
+        "url": "https://seedfund.nsf.gov/apply/get-started/"
+      },
+      {
+        "type": "web",
+        "label": "Full proposal requirements and deadlines (invitation required)",
+        "url": "https://seedfund.nsf.gov/apply/full-proposal/"
+      }
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "unknown",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Confirm current intake and requirements with the administrator."
+    }
+  },
+  {
+    "id": "illinoisWetLab",
+    "name": "Illinois Wet Lab Capital Program",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "grant",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Inactive / maintenance only. Past capital support for wet-lab facilities.",
+    "whoQualifies": "Existing recipients seeking information about historical awards.",
+    "benefits": [
+      "No new applications"
+    ],
+    "benefitRange": "No new applications",
+    "howToApply": [
+      "Use the official source for historical information or existing-award questions."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html",
+    "sourceUrl": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html",
+    "status": "inactive",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "No current application intake verified",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": null,
+    "fastestConfirmingStep": "Use the official source for historical information or existing-award questions.",
+    "personas": [],
+    "expirationNote": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified.",
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified."
+    }
+  },
+  {
+    "id": "illinoisIivf",
+    "name": "Illinois Innovation Venture Fund (IIVF — SSBCI 1.0)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "equity",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Inactive / maintenance only. Legacy venture-capital program; distinct from the current INVENT program.",
+    "whoQualifies": "Existing recipients seeking information about historical awards.",
+    "benefits": [
+      "No new applications"
+    ],
+    "benefitRange": "No new applications",
+    "howToApply": [
+      "Use the official source for historical information or existing-award questions."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html",
+    "sourceUrl": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html",
+    "status": "inactive",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/aboutdceo/entrepreneurshipinnovationtechnology.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "No current application intake verified",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": null,
+    "fastestConfirmingStep": "Use the official source for historical information or existing-award questions.",
+    "personas": [],
+    "expirationNote": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified.",
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified."
+    }
+  },
+  {
+    "id": "illinoisEmergencyLoan",
+    "name": "Illinois Small Business Emergency Loan Fund (ISBEL)",
+    "level": "State",
+    "zoneKey": "",
+    "resourceType": "loan",
+    "industryIds": [
+      "all"
+    ],
+    "summary": "Inactive / maintenance only. Historical pandemic loan program. DCEO states that it will not support additional loans; the original program excluded Chicago businesses.",
+    "whoQualifies": "Existing recipients seeking information about historical awards.",
+    "benefits": [
+      "No new applications"
+    ],
+    "benefitRange": "No new applications",
+    "howToApply": [
+      "Use the official source for historical information or existing-award questions."
+    ],
+    "requiredDocs": [],
+    "contact": "Illinois Department of Commerce and Economic Opportunity",
+    "url": "https://dceo.illinois.gov/smallbizassistance/illinoissmallbusinessemergencyloanfund.html",
+    "sourceUrl": "https://dceo.illinois.gov/smallbizassistance/illinoissmallbusinessemergencyloanfund.html",
+    "status": "inactive",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "",
+        "url": "https://dceo.illinois.gov/smallbizassistance/illinoissmallbusinessemergencyloanfund.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "No current application intake verified",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-10-09",
+    "fastestConfirmingStep": "Use the official source for historical information or existing-award questions.",
+    "personas": [],
+    "expirationNote": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified.",
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-10-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Listed as inactive / maintenance only in the supplied DCEO EIT program guide. No new intake verified."
     }
   }
 ]

@@ -121,6 +121,8 @@ export type ProgramStatus =
   | "verify"
   | "sunset"
   | "pending"
+  | "closed" // intake is closed; retain the program for discovery
+  | "inactive" // historical / maintenance only; exclude from recommendations
   | "lapsed"; // statutory authority lapsed but revival is realistic (e.g. WOTC)
 export type ProgramLevel = "Federal" | "State" | "County" | "City" | "Utility";
 
@@ -167,6 +169,9 @@ export interface Program {
   lastVerifiedAt?: string | null;
   benefitRange?: string;
   fastestConfirmingStep?: string;
+  /** Editorial discovery tags, never an eligibility determination. */
+  industryIds?: string[];
+  resourceType?: "grant" | "loan" | "equity" | "tax-credit" | "advisory";
   // ── Phase 1 (2026-05-21) additions ─────────────────────────────
   status?: ProgramStatus;
   sourceUrl?: string;

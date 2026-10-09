@@ -35,6 +35,7 @@ import type { DrawnAreaReportScope } from "./drawn-area-report-scope";
 import { buildLocationContext, publicParcelContext } from "./location-context";
 import type { LocationContext } from "./location-context";
 import { isClass7aEligible } from "./parcel-classes";
+import { prioritizeCdg, CDG_PRIORITY_REASON } from "./program-discovery";
 import { formatMiles } from "./transport-access";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS } from "./constants";
 import { getIndustryById } from "./industries-data";
@@ -1689,8 +1690,9 @@ export function buildVerifySources(program: Program): ReportItem["verifySources"
  *  actually evaluate). */
 function isPastDate(dateIso: string | null | undefined): boolean {
   if (!dateIso) return false;
-  const parsed = new Date(`${dateIso}T00:00:00`);
+  const parsed = new Date(dateIso.includes("T") ? dateIso : `${dateIso}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return false;
+  if (dateIso.includes("T")) return parsed.getTime() < Date.now();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return parsed.getTime() < today.getTime();
@@ -1885,6 +1887,10 @@ function sortExploratoryProgramItems(
   projectFitMap?: Map<string, ProjectFit | undefined>,
 ): Program[] {
   return sortProgramItems(programs, zones, confidenceMap, projectFitMap).sort((a, b) => {
+    if (prioritizeCdg(zones)) {
+      const cdgDiff = Number(b.id === "cdgSmall") - Number(a.id === "cdgSmall");
+      if (cdgDiff !== 0) return cdgDiff;
+    }
     const fitDiff = compareProjectGoalFit(projectFitMap?.get(a.id), projectFitMap?.get(b.id));
     if (fitDiff !== 0) return fitDiff;
     const aCountyRank = countyExploratoryRank(a);
@@ -3296,15 +3302,18 @@ function generateLocationIncentives(
       id: SECTION_IDS.additionalProgramsToExplore,
       title: "Additional Programs to Explore",
       description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
-      items: exploratoryPrograms.slice(0, 8).map((program) =>
-        programReportItem(
+      items: exploratoryPrograms.slice(0, 8).map((program) => {
+        const item = programReportItem(
           program,
           confidenceMap,
           gatingOpts,
           projectFitMap.get(program.id),
           publicEvidenceForProgram(program, state, zones, zoneNames, projectFitMap.get(program.id)),
-        ),
-      ),
+        );
+        return program.id === "cdgSmall" && prioritizeCdg(zones)
+          ? { ...item, detail: `${CDG_PRIORITY_REASON}\n${item.detail}` }
+          : item;
+      }),
     });
   }
 
@@ -4021,15 +4030,18 @@ function generateBestLocation(
       id: SECTION_IDS.additionalProgramsToExplore,
       title: "Additional Programs to Explore",
       description: "Broader programs, including Cook County tools, that require project, property, and administrator review.",
-      items: exploratoryPrograms.slice(0, 8).map((program) =>
-        programReportItem(
+      items: exploratoryPrograms.slice(0, 8).map((program) => {
+        const item = programReportItem(
           program,
           confidenceMap,
           undefined,
           undefined,
           publicEvidenceForProgram(program, state, zones, zoneNames),
-        ),
-      ),
+        );
+        return program.id === "cdgSmall" && prioritizeCdg(zones)
+          ? { ...item, detail: `${CDG_PRIORITY_REASON}\n${item.detail}` }
+          : item;
+      }),
     });
   }
 

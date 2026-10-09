@@ -102,9 +102,11 @@ export const ProgramSchema = z.object({
   lastVerifiedAt: z.string().nullable().optional(),
   benefitRange: z.string().optional(),
   fastestConfirmingStep: z.string().optional(),
+  industryIds: z.array(z.string()).optional(),
+  resourceType: z.enum(["grant", "loan", "equity", "tax-credit", "advisory"]).optional(),
   // ── Phase 1 (2026-05-21) additions ─────────
   status: z.enum([
-    "active", "current", "changed", "verify", "sunset", "pending", "lapsed",
+    "active", "current", "changed", "verify", "sunset", "pending", "lapsed", "closed", "inactive",
   ]).optional(),
   sourceUrl: z.string().optional(),
   applicationPortals: z.array(ApplicationPortalSchema).optional().default([]),

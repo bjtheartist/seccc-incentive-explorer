@@ -160,7 +160,7 @@ describe("buildExpectations", () => {
     // (an empty `staleOpenPrograms` would make the loop below assert
     // nothing at all).
     const staleIds = new Set(staleOpenPrograms.map((p) => p.id));
-    for (const knownStaleId of ["ccsa", "cdgSmall", "cdgMedium"]) {
+    for (const knownStaleId of ["ccsa"]) {
       expect(staleIds.has(knownStaleId), `expected ${knownStaleId} in the computed stale-open set`).toBe(true);
     }
     expect(staleOpenPrograms.length).toBeGreaterThan(0);

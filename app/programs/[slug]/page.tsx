@@ -235,7 +235,9 @@ export default async function ProgramExplainerPage({
         <section className="py-10">
           <SnapshotCTA
             heading="Check an Address — Free Snapshot"
-            sub={`Compare the geocoded point for a Chicago address with the boundary used to screen ${p.name}. A match is a location signal; review the current program source for the boundary's role and remaining criteria.`}
+            sub={zoneLabel
+              ? `Compare the geocoded point for a Chicago address with the boundary used to screen ${p.name}. A match is a location signal; review the current program source for the boundary's role and remaining criteria.`
+              : `Explore location-based incentives alongside ${p.name}. This program requires a separate review of its business or project requirements.`}
           />
         </section>
 

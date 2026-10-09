@@ -34,6 +34,10 @@ export interface PublicProgramView {
   id: string;
   name: string;
   level: ProgramLevel;
+  /** Editorial discovery metadata, never a qualification signal. */
+  industryIds?: string[];
+  resourceType?: Program["resourceType"];
+  inactive?: boolean;
   statusBadge: {
     state: IntakeStatus;
     asOfDate: string;
@@ -133,6 +137,9 @@ export function toPublicProgramView(record: Program, asOf: string): PublicProgra
     id: record.id,
     name: record.name,
     level: record.level,
+    ...(record.industryIds ? { industryIds: record.industryIds } : {}),
+    ...(record.resourceType ? { resourceType: record.resourceType } : {}),
+    ...(record.status === "inactive" ? { inactive: true } : {}),
     statusBadge: { state: intakeStatus, asOfDate: statusAsOf },
     intake: { status: intakeStatus, nextWindow },
     benefit: {

@@ -43,10 +43,11 @@ import { useLiveNow } from "@/components/programs/useLiveNow";
 // already renders from data/programs-internal.json SERVER-SIDE only (see
 // app/programs/[slug]/page.tsx) and never ships that data to the client
 // bundle. See docs/eligibility-claims-acceptance.md's S1 resolution note.
+import { matchesProgramSearch, matchesProgramIndustry, sortProgramsForDirectory, RESOURCE_TYPE_LABELS } from "@/lib/program-discovery";
 import programsPublicData from "@/public/data/programs-public.json";
 
 const LEVELS = ["All", "Federal", "State", "County", "City", "Utility"] as const;
-const INITIAL_PROGRAMS = programsPublicData.programs as unknown as PublicProgramView[];
+const INITIAL_PROGRAMS = sortProgramsForDirectory(programsPublicData.programs as unknown as PublicProgramView[]);
 
 const OPEN_INTAKE_STATES = new Set(["open", "rolling"]);
 
@@ -59,6 +60,7 @@ const OPEN_INTAKE_STATES = new Set(["open", "rolling"]);
  * internal catalog can), but sourced ENTIRELY from DTO fields, never from a
  * client-bundled internal record. */
 function isPastPublishedWindow(program: PublicProgramView, now: Date): boolean {
+  if (program.inactive) return true;
   const expected = program.intake.nextWindow.expected;
   if (!expected) return false;
   const date = new Date(expected);
@@ -73,6 +75,7 @@ function programHref(program: PublicProgramView): string {
 function statusLabel(
   program: PublicProgramView,
 ): { text: string; tone: "open" | "caution"; icon: "calendar" | "alert" } {
+  if (program.inactive) return { text: "Inactive / maintenance only", tone: "caution", icon: "calendar" };
   const status = program.intake.status;
   if (OPEN_INTAKE_STATES.has(status)) return { text: "Open", tone: "open", icon: "alert" };
   switch (status) {
@@ -97,6 +100,7 @@ export default function ProgramsCatalog({
 
 function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
   const programs = INITIAL_PROGRAMS;
+  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("All");
   const [industryFilter, setIndustryFilter] = useState<string>("");
   const [showUnavailable, setShowUnavailable] = useState(false);
@@ -147,8 +151,8 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
   const filtered = visiblePrograms.filter((p) => {
     const matchesLevel = filter === "All" || p.level === filter;
     const matchesIndustry =
-      !selectedIndustry || selectedIndustry.topPrograms.includes(p.id);
-    return matchesLevel && matchesIndustry;
+      matchesProgramIndustry(p, industryFilter);
+    return matchesLevel && matchesIndustry && matchesProgramSearch(p, search);
   });
 
   return (
@@ -249,6 +253,15 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
         {/* Cheat-Sheet: at-a-glance program matrix, designed to print/save as PDF */}
         <CheatSheetSection programs={visiblePrograms} asOf={now} />
 
+        <div className="mb-6">
+          <label htmlFor="program-search" className="block font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/50 mb-2">
+            Search programs and resources
+          </label>
+          <input id="program-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search CDG, NSF, loans, research, advising…"
+            className="w-full rounded-lg border border-[#0C1B33]/15 bg-white px-4 py-3 text-sm text-[#0C1B33] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30" />
+        </div>
+
         {/* Industry Filter */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
@@ -295,13 +308,13 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
               className="h-3.5 w-3.5 accent-[#2563EB]"
             />
             <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/45">
-              Show programs past their published window ({unavailableCount} hidden)
+              Show inactive programs and past windows ({unavailableCount} {showUnavailable ? "included" : "hidden"})
             </span>
           </label>
         )}
 
         {/* Level Filter Tabs */}
-        <div className="flex gap-0 border border-[#0C1B33]/10 mb-8 overflow-x-auto">
+        <div role="group" aria-label="Filter programs by government level" className="flex gap-0 border border-[#0C1B33]/10 mb-8 overflow-x-auto">
           {LEVELS.map((level) => {
             const count =
               level === "All"
@@ -326,6 +339,11 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
 
         {/* Program Cards */}
         <div className="space-y-3">
+          {filtered.length === 0 && (
+            <p className="rounded-lg border border-[#0C1B33]/10 bg-white p-6 text-sm text-[#0C1B33]/60">
+              No programs match these filters. Try another search or clear the industry and level filters.
+            </p>
+          )}
           {filtered.map((program) => (
             <ProgramCard key={program.id} program={program} />
           ))}
@@ -357,6 +375,7 @@ function ProgramCard({ program }: { program: PublicProgramView }) {
           <div className="flex items-center gap-3 flex-wrap mb-1.5">
             <h2 className="text-[#0C1B33] text-base font-medium">{program.name}</h2>
             <LevelBadge level={program.level} />
+            {program.resourceType && <span className="font-mono-bureau text-[9px] tracking-wide uppercase text-[#0C1B33]/50">{RESOURCE_TYPE_LABELS[program.resourceType]}</span>}
             <span
               className={`font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full inline-flex items-center gap-1 ${
                 status.tone === "open"
@@ -416,10 +435,10 @@ function ProgramCard({ program }: { program: PublicProgramView }) {
               on the server-rendered program page, which reads the internal
               catalog server-side only — never bundled here. */}
           <Link
-            href={programHref(program)}
+            href={program.inactive ? (program.links.sourceUrl || program.links.url || "/programs") : programHref(program)}
             className="inline-flex items-center gap-2 font-mono-bureau text-[11px] text-[#2563EB] uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors"
           >
-            View full program details
+            {program.inactive ? "View historical official source" : "View full program details"}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
 

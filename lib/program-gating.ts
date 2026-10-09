@@ -135,6 +135,9 @@ export function resolveAvailability(
   today: Date,
   opts: ResolveAvailabilityOpts = {}
 ): ProgramAvailability {
+  if (program.status === "inactive") {
+    return { state: "expired", note: "Inactive / maintenance only. No new applications are available." };
+  }
   const now = today;
   const chicagoToday = chicagoDayUtc(now);
   const dated = (program.deadlines ?? []).filter(
@@ -151,6 +154,10 @@ export function resolveAvailability(
       state: "expired",
       note: `Program availability ended ${program.expiresOn}.`,
     };
+  }
+
+  if (program.status === "closed") {
+    return { state: "window-closed", note: "Applications currently closed; check the official source for the next round." };
   }
 
   // 2) Published application suspension — keep the program visible, but never

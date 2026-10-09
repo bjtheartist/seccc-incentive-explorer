@@ -4,6 +4,8 @@ import { ProgramSchema, safeParseArray } from "../schemas";
 
 const PRESERVED_FIELDS = [
   "status",
+  "industryIds",
+  "resourceType",
   "documentSpecs",
   "deadlines",
   "oneTime",
