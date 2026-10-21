@@ -43,19 +43,19 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   if (!configured) return <InvestmentNotConfigured />;
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
-  const index = loadInvestmentIndex();
+  const index = await loadInvestmentIndex();
   // R1 finding 4: "has not been generated yet" is only true for a MISSING
   // export. An unreadable or malformed one is an outage, and telling a beta
   // reader to re-run the exporter would be a claim about state we did not
   // check. The typed result keeps the two apart.
-  const investmentResult = loadCommunityInvestmentResult();
+  const investmentResult = await loadCommunityInvestmentResult();
   const investment = investmentResult.ok ? investmentResult.data : null;
   const exportNotGenerated = !investmentResult.ok && investmentResult.reason === "export_missing";
   const datasetUnavailable = !investmentResult.ok && !exportNotGenerated;
   const meta = investment?.meta;
   const coverageRows = meta ? buildSourceCoverageRows(meta) : [];
-  const topDevelopments = loadMajorDevelopments({ limit: 10 });
-  const illinoisArtsCouncilAwards = loadIllinoisArtsCouncilAwards();
+  const topDevelopments = await loadMajorDevelopments({ limit: 10 });
+  const illinoisArtsCouncilAwards = await loadIllinoisArtsCouncilAwards();
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">

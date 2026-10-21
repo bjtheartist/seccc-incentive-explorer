@@ -26,8 +26,8 @@ describe("foundation-id-map.json (stable identity, PR1 deliverable 2)", () => {
 
   const PRIZE_FUNDER = "Pritzker Traubert Foundation — Chicago Prize";
 
-  it("every committed IRS-filing foundation record's id/stableId pair matches the frozen map exactly", () => {
-    const data = loadCommunityInvestment()!;
+  it("every committed IRS-filing foundation record's id/stableId pair matches the frozen map exactly", async () => {
+    const data = (await loadCommunityInvestment())!;
     // Chicago Prize rows share the `foundation` source but are award
     // announcements, not IRS filings (consult Q3) — deliverable 2 identity
     // (filingObjectId/schedulePart/sourceRowOrdinal) never applies to them, so

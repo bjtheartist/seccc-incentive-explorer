@@ -138,16 +138,16 @@ export default async function InvestmentBriefPrintPage({
   const name = resolveArea(area);
   if (!name) notFound();
 
-  const analysis = loadInvestmentAnalysis(name);
+  const analysis = await loadInvestmentAnalysis(name);
   // R1 finding 4: an unloadable export and a community with genuinely no
   // records both reached here as a null analysis, and the packet printed the
   // "no grants … have been recorded" sentence for both — a false negative
   // finding on a document people take into meetings.
-  const investmentResult = loadCommunityInvestmentResult();
+  const investmentResult = await loadCommunityInvestmentResult();
   const datasetUnavailable = !investmentResult.ok;
   const meta = investmentResult.ok ? investmentResult.data.meta : undefined;
   const sources = meta?.sources ?? [];
-  const flowRows = loadFlowRows(name);
+  const flowRows = await loadFlowRows(name);
   const findings = analysis ? computeInvestmentFindings(analysis) : [];
   const selectedRecords = flowRows.slice(0, 15);
 
@@ -158,7 +158,7 @@ export default async function InvestmentBriefPrintPage({
   // stays within the two-page packet. The 15-row selected-records table is already
   // capped above; these are the only other unbounded page-2 lists.
   const PRINT_CONTEXT_MAX_ROWS = 6;
-  const rawContext = loadCapitalContextForArea(name);
+  const rawContext = await loadCapitalContextForArea(name);
   const capitalContext = {
     ...rawContext,
     cra: rawContext.cra ? rawContext.cra.slice(-PRINT_CONTEXT_MAX_ROWS) : null,

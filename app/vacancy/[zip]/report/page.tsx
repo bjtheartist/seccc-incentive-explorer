@@ -278,7 +278,7 @@ export default async function VacancyReportPage({
   // parcel-level referral rows are read server-side from the PRIVATE packet
   // (data/private/exemption-anomalies.json), never public — capped to 50 rows.
   const exemptionAnomalies = edition.exemptionAnomalies ?? null;
-  const referralRows = hasSession ? exemptionReferralRowsForZip(zip) : [];
+  const referralRows = hasSession ? await exemptionReferralRowsForZip(zip) : [];
   const REFERRAL_ROW_CAP = 50;
   const referralRowsShown = referralRows.slice(0, REFERRAL_ROW_CAP);
   // Present the land EAV total as an order-of-magnitude figure (2 significant

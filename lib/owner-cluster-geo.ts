@@ -1,5 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { __resetPrivateDataCacheForTests, loadPrivateJson } from "./private-data";
 import type { OwnerClusterGeoRow } from "./corridor-owners";
 
 /**
@@ -10,11 +9,12 @@ import type { OwnerClusterGeoRow } from "./corridor-owners";
  * (components/report/AdminOwnershipPanel.tsx), both served only through the
  * gated /api/owner-file/geo route.
  *
- * Loading pattern mirrors lib/corridor-citywide.ts (readFileSync +
- * existsSync guard + module-level cache + `process.cwd()`-relative path) —
- * the same convention already used in this repo for server-side JSON data
- * that lives outside public/ and must still be bundled into the Vercel
- * deployment via Next's build-time file tracing.
+ * Loaded through lib/private-data.ts: the local file when data/private is on
+ * disk (dev, tests, CI) and a PRIVATE Vercel Blob otherwise. data/private/**
+ * is deliberately EXCLUDED from Next's output file tracing — bundling these
+ * exports into every function is what took Vercel Functions Storage for this
+ * project to 20GB — so the deployed function resolves them by the
+ * content-addressed pathname in the committed data/private-manifest.json.
  */
 
 export interface OwnerClusterGeoFeatureProperties {
@@ -50,12 +50,15 @@ export interface OwnerClusterGeoFeatureCollection {
   features: OwnerClusterGeoFeature[];
 }
 
-const DATA_PATH = path.join(process.cwd(), "data/private/owner-clusters-geo.json");
+const DATA_FILENAME = "owner-clusters-geo.json";
 
 // Module-level cache, read once per process.
-// `undefined` = not attempted yet; `null` = attempted and file is absent or
-// unparseable (a legitimate state before the export has been generated).
-let cache: OwnerClusterGeoFeatureCollection | null | undefined = undefined;
+// `undefined` = not attempted yet; a settled promise of the collection or of
+// `null` (attempted and the file is absent or unparseable — a legitimate state
+// before the export has been generated). Cached as a promise because the read
+// is async now: lib/private-data.ts resolves the file from disk locally and
+// from a private Vercel Blob in production.
+let cache: Promise<OwnerClusterGeoFeatureCollection | null> | undefined = undefined;
 
 function isValidCollection(value: unknown): value is OwnerClusterGeoFeatureCollection {
   if (!value || typeof value !== "object") return false;
@@ -69,27 +72,18 @@ function isValidCollection(value: unknown): value is OwnerClusterGeoFeatureColle
  * rather than throwing, so the gated API route can degrade to a clean 503
  * instead of a 500.
  */
-export function loadOwnerClusterGeoFile(): OwnerClusterGeoFeatureCollection | null {
+export function loadOwnerClusterGeoFile(): Promise<OwnerClusterGeoFeatureCollection | null> {
   if (cache !== undefined) return cache;
-
-  try {
-    if (!existsSync(DATA_PATH)) {
-      cache = null;
-      return cache;
-    }
-    const raw = readFileSync(DATA_PATH, "utf8");
-    const parsed = JSON.parse(raw) as unknown;
-    cache = isValidCollection(parsed) ? parsed : null;
-  } catch {
-    cache = null;
-  }
-
+  cache = loadPrivateJson<unknown>(DATA_FILENAME)
+    .then((parsed) => (isValidCollection(parsed) ? parsed : null))
+    .catch(() => null);
   return cache;
 }
 
 /** Test-only: reset the module cache so tests can re-read the file after mutating it. */
 export function __resetOwnerClusterGeoCacheForTests(): void {
   cache = undefined;
+  __resetPrivateDataCacheForTests();
 }
 
 /**

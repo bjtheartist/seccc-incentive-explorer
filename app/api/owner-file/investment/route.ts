@@ -306,7 +306,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const data = loadCommunityInvestment();
+  const data = await loadCommunityInvestment();
   if (!data) {
     return NextResponse.json(
       { error: "Community Investment export has not been generated yet" },

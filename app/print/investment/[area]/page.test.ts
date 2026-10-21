@@ -54,8 +54,8 @@ vi.mock("next/navigation", async (importOriginal) => {
 
 vi.mock("@/lib/investment-analysis", () => ({
   loadInvestmentAnalysis: vi.fn(),
-  loadFlowRows: vi.fn(() => []),
-  loadCapitalContextForArea: vi.fn(() => ({
+  loadFlowRows: vi.fn(async () => []),
+  loadCapitalContextForArea: vi.fn(async () => ({
     communityArea: "South Shore",
     cra: null,
     cdfi: null,
@@ -84,8 +84,8 @@ const mockLoadCommunityInvestmentResult = vi.mocked(loadCommunityInvestmentResul
  * directly.
  */
 function syncInvestmentLoaders(): void {
-  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(() => {
-    const data = mockLoadCommunityInvestment();
+  mockLoadCommunityInvestmentResult.mockReset().mockImplementation(async () => {
+    const data = await mockLoadCommunityInvestment();
     return data ? { ok: true, data } : { ok: false, reason: "export_missing" };
   });
 }
@@ -198,13 +198,13 @@ describe("GET /print/investment/[area] — StatusCards scope (Sol gate blockers 
 
   beforeEach(() => {
     mockState.mockReset().mockResolvedValue({ configured: true, hasSession: true });
-    mockLoadCommunityInvestment.mockReset().mockReturnValue(FIXTURE_INVESTMENT);
+    mockLoadCommunityInvestment.mockReset().mockResolvedValue(FIXTURE_INVESTMENT);
     syncInvestmentLoaders();
     mockLoadInvestmentAnalysis.mockReset();
   });
 
   it("shows EXACTLY this community's own sited appropriation subset — never the citywide meta figure", async () => {
-    mockLoadInvestmentAnalysis.mockReturnValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
+    mockLoadInvestmentAnalysis.mockResolvedValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
     const el = await Page({
       params: Promise.resolve({ area: "South Shore" }),
       searchParams: Promise.resolve({}),
@@ -217,7 +217,7 @@ describe("GET /print/investment/[area] — StatusCards scope (Sol gate blockers 
   });
 
   it("the disbursement card never implies the citywide recovery total belongs to this community", async () => {
-    mockLoadInvestmentAnalysis.mockReturnValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
+    mockLoadInvestmentAnalysis.mockResolvedValue(fixtureAnalysis(COMMUNITY_SITED_APPROPRIATION));
     const el = await Page({
       params: Promise.resolve({ area: "South Shore" }),
       searchParams: Promise.resolve({}),
@@ -264,8 +264,8 @@ describe("/print/investment/[area] — a dataset outage is never printed as an a
   it("an unloadable export prints the unavailability state, not the absence claim", async () => {
     mockLoadCommunityInvestmentResult
       .mockReset()
-      .mockReturnValue({ ok: false, reason: "export_invalid_json" });
-    mockLoadInvestmentAnalysis.mockReturnValue(null);
+      .mockResolvedValue({ ok: false, reason: "export_invalid_json" });
+    mockLoadInvestmentAnalysis.mockResolvedValue(null);
 
     const html = await renderHtml();
 
@@ -275,9 +275,9 @@ describe("/print/investment/[area] — a dataset outage is never printed as an a
   });
 
   it("a LOADED dataset with no records for this community still prints the genuine absence", async () => {
-    mockLoadCommunityInvestment.mockReturnValue(LOADED_EMPTY_EXPORT);
+    mockLoadCommunityInvestment.mockResolvedValue(LOADED_EMPTY_EXPORT);
     syncInvestmentLoaders();
-    mockLoadInvestmentAnalysis.mockReturnValue(null);
+    mockLoadInvestmentAnalysis.mockResolvedValue(null);
 
     const html = await renderHtml();
 

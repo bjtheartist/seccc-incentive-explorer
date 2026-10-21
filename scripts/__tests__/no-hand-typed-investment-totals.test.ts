@@ -25,8 +25,8 @@ describe("no hand-typed Community Investment totals (PR1 designated files)", () 
     "lib/community-investment.ts",
   ];
 
-  it("the exporter/lib source never hardcodes the live headline totals as numeric literals", () => {
-    const data = loadCommunityInvestment()!;
+  it("the exporter/lib source never hardcodes the live headline totals as numeric literals", async () => {
+    const data = (await loadCommunityInvestment())!;
     // Round to whole-cent strings the way a hand-typed literal would appear.
     const liveTotals = [
       data.meta.totalDollarsAwarded.toFixed(2),

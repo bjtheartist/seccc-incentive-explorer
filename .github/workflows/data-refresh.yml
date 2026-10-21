@@ -62,6 +62,22 @@ jobs:
             echo "::warning::One or more sources failed to refresh — see the run log"
           fi
 
+      # The private JSON in data/private/ is EXCLUDED from Next's output file
+      # tracing (next.config.ts) and read at request time out of a private
+      # Vercel Blob instead (lib/private-data.ts). data/private-manifest.json is
+      # the content-addressed pointer to those blobs, and it is a pure function
+      # of the file contents — so a refresh that rewrote an export MUST commit
+      # the regenerated manifest alongside it, or the deployed function keeps
+      # fetching the previous month's bytes. Runs before "Detect changes" so the
+      # manifest lands in the same diff and the same PR.
+      #
+      # This runner has no BLOB_READ_WRITE_TOKEN, so the script only regenerates
+      # the manifest and exits 0. The upload happens on the Vercel build, which
+      # runs the same script with the token and pushes anything the manifest
+      # names that the store does not have yet.
+      - name: Regenerate the private-data blob manifest
+        run: npm run data:private:sync
+
       - name: Detect changes
         id: diff
         run: |
@@ -91,7 +107,7 @@ jobs:
             echo "### lint";       npm run lint          || status=1
             echo "### test";       npm test              || status=1
             echo "### typecheck";  npx tsc --noEmit      || status=1
-            echo "### build";      npm run build -- --webpack || status=1
+            echo "### build";      npm run build || status=1
           } 2>&1 | tee "$RUNNER_TEMP/verify.log"
           echo "verify_failed=$([ $status -eq 0 ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
           exit 0

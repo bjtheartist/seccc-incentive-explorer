@@ -42,8 +42,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+
+import { __resetPrivateDataCacheForTests, readPrivateText } from "./private-data";
 import {
   assertValidRecoveryInvestmentRecord,
   RECOVERY_INVESTMENT_SOURCE_METADATA,
@@ -1451,13 +1451,18 @@ export function buildCommunityInvestmentExport(
 
 // ── Static-only loader ───────────────────────────────────────────────────────
 
-const COMMUNITY_INVESTMENT_PATH = path.join(process.cwd(), "data/private/community-investment.json");
+const COMMUNITY_INVESTMENT_FILENAME = "community-investment.json";
 
 // Module-level cache, read once per process.
 // `undefined` = not attempted yet; a settled `CommunityInvestmentLoadResult`
 // otherwise — including the `{ ok: false }` outcomes, which are just as
 // cacheable as a success (a missing export stays missing for the process).
-let cache: CommunityInvestmentLoadResult | undefined = undefined;
+//
+// Cached as a PROMISE now that the read is async (loadPrivateJson resolves the
+// file from disk locally and from a private Vercel Blob in production — see
+// lib/private-data.ts): two concurrent requests that both miss the cache share
+// one read instead of each paying for a 42MB fetch.
+let cache: Promise<CommunityInvestmentLoadResult> | undefined = undefined;
 
 function isValidExport(value: unknown): value is CommunityInvestmentExport {
   if (!value || typeof value !== "object") return false;
@@ -1503,31 +1508,30 @@ export const COMMUNITY_INVESTMENT_UNAVAILABLE_COPY =
  * `loadCommunityInvestment` in anything that RENDERS a finding — a caller that
  * only sees `null` cannot distinguish an outage from a genuine absence.
  */
-export function loadCommunityInvestmentResult(): CommunityInvestmentLoadResult {
+export function loadCommunityInvestmentResult(): Promise<CommunityInvestmentLoadResult> {
   if (cache !== undefined) return cache;
   cache = readCommunityInvestmentUncached();
   return cache;
 }
 
-function readCommunityInvestmentUncached(): CommunityInvestmentLoadResult {
-  if (!existsSync(COMMUNITY_INVESTMENT_PATH)) {
-    return { ok: false, reason: "export_missing", detail: COMMUNITY_INVESTMENT_PATH };
-  }
-
-  let raw: string;
-  try {
-    raw = readFileSync(COMMUNITY_INVESTMENT_PATH, "utf8");
-  } catch (err) {
-    return {
-      ok: false,
-      reason: "export_unreadable",
-      detail: err instanceof Error ? err.message : String(err),
-    };
+/**
+ * The four failure reasons are preserved exactly. `readPrivateText` keeps
+ * "there is no such file, here or in the blob store" apart from "it is there
+ * but the read failed", which is the distinction `export_missing` vs
+ * `export_unreadable` carries — and the one every /investment surface branches
+ * on to decide between "run the exporter" and "this is an outage".
+ */
+async function readCommunityInvestmentUncached(): Promise<CommunityInvestmentLoadResult> {
+  const read = await readPrivateText(COMMUNITY_INVESTMENT_FILENAME);
+  if (!read.ok) {
+    return read.reason === "unreadable"
+      ? { ok: false, reason: "export_unreadable", detail: read.detail }
+      : { ok: false, reason: "export_missing", detail: COMMUNITY_INVESTMENT_FILENAME };
   }
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(read.text);
   } catch (err) {
     return {
       ok: false,
@@ -1548,14 +1552,15 @@ function readCommunityInvestmentUncached(): CommunityInvestmentLoadResult {
  * degrades to a clean 503) and the analysis builders in lib/investment-analysis.
  * Mirrors loadOwnerClusterGeoFile / loadTifBriefs.
  */
-export function loadCommunityInvestment(): CommunityInvestmentExport | null {
-  const result = loadCommunityInvestmentResult();
+export async function loadCommunityInvestment(): Promise<CommunityInvestmentExport | null> {
+  const result = await loadCommunityInvestmentResult();
   return result.ok ? result.data : null;
 }
 
 /** Test-only: reset the module cache so tests can re-read the file after mutating it. */
 export function __resetCommunityInvestmentCacheForTests(): void {
   cache = undefined;
+  __resetPrivateDataCacheForTests();
 }
 
 /**
