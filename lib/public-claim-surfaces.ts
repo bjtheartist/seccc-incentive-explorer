@@ -456,10 +456,16 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
   },
   {
     id: "public-investment-beta-access",
-    description: "The Public Investment Analysis beta request, email-verification, staff-approval, passwordless access, and private operations surfaces.",
+    description: "The Public Investment Analysis beta request, email-verification, staff-approval, passwordless access, partner share links, and private operations surfaces.",
     contracts: ["reviewed-copy"],
     files: [
       "app/public-investment-analysis",
+      "app/investment/share/[token]/route.ts",
+      "app/api/admin/public-investment-share-links/route.ts",
+      "app/api/admin/public-investment-share-links/[id]/revoke/route.ts",
+      "components/admin/ShareLinkCreator.tsx",
+      "lib/investment-share-session.ts",
+      "lib/investment-share-links-storage.ts",
       "app/api/public-investment-early-access/route.ts",
       "app/api/public-investment-early-access/verify/route.ts",
       "app/api/public-investment-early-access/sign-in/route.ts",
