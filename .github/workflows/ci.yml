@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
         run: npm run build -- --webpack
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Separate job from `verify` so unit CI speed is unaffected — this job
     # builds and boots the whole app plus a real Chromium, which is a lot
     # slower than the vitest/lint/tsc steps above. Runs in parallel with
@@ -115,7 +115,7 @@ jobs:
           retention-days: 7
 
   browser-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # A focused second engine lane: five Mobile Safari/WebKit checks and
     # three lightweight Firefox checks. It runs beside, not inside, the
     # existing 28-test Chromium gate.
