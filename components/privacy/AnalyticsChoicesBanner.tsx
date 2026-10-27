@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ANALYTICS_CHOICES_OPEN_EVENT,
   globalPrivacyControlEnabled,
@@ -113,6 +113,27 @@ export function AnalyticsChoicesBanner() {
     };
   }, []);
 
+  // The banner is fixed to the bottom of the viewport. While it is open, pad
+  // the page by its height so the footer can still scroll clear of it instead
+  // of sitting underneath, unclickable, until the visitor makes a choice.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const region = wrapperRef.current?.firstElementChild;
+    if (!open || !region) return;
+    const body = document.body;
+    const previous = body.style.paddingBottom;
+    const reserve = () => {
+      body.style.paddingBottom = `${region.getBoundingClientRect().height}px`;
+    };
+    reserve();
+    const observer = new ResizeObserver(reserve);
+    observer.observe(region);
+    return () => {
+      observer.disconnect();
+      body.style.paddingBottom = previous;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const choose = (value: AnalyticsConsent) => {
@@ -122,13 +143,15 @@ export function AnalyticsChoicesBanner() {
   };
 
   return (
-    <AnalyticsChoicesBannerView
-      current={current}
-      gpc={gpc}
-      onAccept={() => choose("on")}
-      onDecline={() => choose("off")}
-      onClose={() => setOpen(false)}
-    />
+    <div ref={wrapperRef}>
+      <AnalyticsChoicesBannerView
+        current={current}
+        gpc={gpc}
+        onAccept={() => choose("on")}
+        onDecline={() => choose("off")}
+        onClose={() => setOpen(false)}
+      />
+    </div>
   );
 }
 
