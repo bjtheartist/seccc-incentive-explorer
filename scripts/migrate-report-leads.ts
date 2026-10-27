@@ -52,8 +52,16 @@ async function main() {
     CREATE INDEX IF NOT EXISTS report_leads_notification_status_idx
     ON report_leads (notification_status)
   `;
+  // Activity identity (lib/activity-identity.ts): the signed-in user, if any,
+  // and the browser cookie that ties this lead to its earlier report_events.
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS user_id TEXT`;
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS anonymous_id TEXT`;
+  await sql`
+    CREATE INDEX IF NOT EXISTS report_leads_anonymous_id_idx
+    ON report_leads (anonymous_id)
+  `;
 
-  console.log("Report lead storage is ready (notification_status/notification_error present).");
+  console.log("Report lead storage is ready (notification and activity-identity columns present).");
 }
 
 main().catch((error) => {

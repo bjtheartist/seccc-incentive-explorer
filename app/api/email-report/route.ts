@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
+import { resolveActivityIdentity } from "@/lib/activity-identity";
 import {
   createReportLead,
   markReportEmailDelivery,
@@ -143,6 +144,8 @@ export async function POST(req: NextRequest) {
   }
 
   let reservationId: number | null = null;
+  // Ties this lead to the browser's earlier activity; never blocks the lead.
+  const identity = await resolveActivityIdentity(req);
   let leadId: number | null = null;
   try {
     const reservation = await reserveReportEmailDelivery(
@@ -173,6 +176,8 @@ export async function POST(req: NextRequest) {
       // wantsHelp: true).
       wantsHelp: false,
       source: input.source,
+      userId: identity.userId,
+      anonymousId: identity.anonymousId,
     });
 
     const resend = new Resend(process.env.RESEND_API_KEY);

@@ -38,6 +38,8 @@ async function main() {
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_created_at ON report_events (created_at DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_report_type ON report_events (report_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_user_id ON report_events (user_id)`;
+  await sql`ALTER TABLE report_events ADD COLUMN IF NOT EXISTS anonymous_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_report_events_anonymous_id ON report_events (anonymous_id)`;
 
   console.log("Analytics migration complete.");
 }

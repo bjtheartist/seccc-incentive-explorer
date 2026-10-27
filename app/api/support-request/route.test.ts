@@ -9,6 +9,10 @@ import { NextRequest } from "next/server";
 // the route's real POST handler directly.
 
 const createReportLeadMock = vi.fn();
+const getCurrentUserIdMock = vi.fn();
+vi.mock("@/lib/current-user", () => ({
+  getCurrentUserId: (...args: unknown[]) => getCurrentUserIdMock(...args),
+}));
 const markNotificationMock = vi.fn();
 
 class FakeStorageUnavailableError extends Error {}
@@ -29,10 +33,10 @@ vi.mock("resend", () => ({
 
 const { POST } = await import("./route");
 
-function supportRequest(body: Record<string, unknown>) {
+function supportRequest(body: Record<string, unknown>, cookie?: string) {
   return new NextRequest("http://localhost/api/support-request", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
     body: JSON.stringify(body),
   });
 }
@@ -42,6 +46,8 @@ const originalEnv = { ...process.env };
 beforeEach(() => {
   createReportLeadMock.mockReset();
   createReportLeadMock.mockResolvedValue(1);
+  getCurrentUserIdMock.mockReset();
+  getCurrentUserIdMock.mockResolvedValue(null);
   markNotificationMock.mockReset();
   markNotificationMock.mockResolvedValue(undefined);
   sendMock.mockReset();
@@ -96,6 +102,13 @@ describe("POST /api/support-request", () => {
       projectGoal: "Hire or train staff",
       wantsHelp: true,
     });
+  });
+
+  it("links the help request to the browser's earlier activity via the visitor cookie", async () => {
+    const res = await POST(supportRequest({ email: "owner@business.com" }, "cie_vid=3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d"));
+    expect(res.status).toBe(200);
+    const [input] = createReportLeadMock.mock.calls[0];
+    expect(input).toMatchObject({ anonymousId: "3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d", userId: null });
   });
 
   it("returns 503 when the lead store is unavailable", async () => {

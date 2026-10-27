@@ -7,13 +7,17 @@ const {
   markLeadMock,
   reserveMock,
   sendMock,
+  getCurrentUserIdMock,
 } = vi.hoisted(() => ({
   createLeadMock: vi.fn(),
   markDeliveryMock: vi.fn(),
   markLeadMock: vi.fn(),
   reserveMock: vi.fn(),
   sendMock: vi.fn(),
+  getCurrentUserIdMock: vi.fn(),
 }));
+
+vi.mock("@/lib/current-user", () => ({ getCurrentUserId: getCurrentUserIdMock }));
 
 vi.mock("@/lib/report-email-delivery", () => ({
   createReportLead: createLeadMock,
@@ -36,12 +40,13 @@ function validPdfBase64(): string {
   return Buffer.from(`%PDF-1.4\n${"report-content\n".repeat(100)}`).toString("base64");
 }
 
-function request(overrides: Record<string, unknown> = {}) {
+function request(overrides: Record<string, unknown> = {}, cookie?: string) {
   return new NextRequest("http://localhost/api/email-report", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-forwarded-for": "127.0.0.1",
+      ...(cookie ? { Cookie: cookie } : {}),
     },
     body: JSON.stringify({
       email: "owner@example.com",
@@ -66,6 +71,7 @@ beforeEach(() => {
   markDeliveryMock.mockReset().mockResolvedValue(undefined);
   markLeadMock.mockReset().mockResolvedValue(undefined);
   sendMock.mockReset().mockResolvedValue({ data: { id: "email-1" }, error: null });
+  getCurrentUserIdMock.mockReset().mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -118,6 +124,25 @@ describe("POST /api/email-report", () => {
     expect(delivery.html).not.toContain("<script>");
     expect(markDeliveryMock).toHaveBeenCalledWith(11, "sent");
     expect(markLeadMock).toHaveBeenCalledWith(22);
+  });
+
+  it("links the lead to the browser's earlier activity and the signed-in user, without issuing a cookie", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    const response = await POST(request({}, "cie_vid=3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d"));
+    expect(response.status).toBe(200);
+    expect(createLeadMock).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "user-1",
+      anonymousId: "3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d",
+    }));
+    expect(response.cookies.get("cie_vid")).toBeUndefined();
+  });
+
+  it("records the lead with null identity when there is no visitor cookie or session", async () => {
+    await POST(request());
+    expect(createLeadMock).toHaveBeenCalledWith(expect.objectContaining({
+      userId: null,
+      anonymousId: null,
+    }));
   });
 
   it("never sends a second, Chamber-inbox email — even with the help inbox configured (PR #250 follow-up: that branch was unreachable dead code and is gone)", async () => {
