@@ -95,15 +95,22 @@ export function AnalyticsChoicesBanner() {
       setCurrent(readAnalyticsConsent());
       setGpc(globalPrivacyControlEnabled());
     };
-    sync();
-    if (readAnalyticsConsent() === null && !globalPrivacyControlEnabled()) setOpen(true);
+    // Deferred like FirstVisitGuide's auto-open: cookies are only readable
+    // after hydration, and this keeps setState out of the effect body.
+    const timer = window.setTimeout(() => {
+      sync();
+      if (readAnalyticsConsent() === null && !globalPrivacyControlEnabled()) setOpen(true);
+    }, 0);
 
     const reopen = () => {
       sync();
       setOpen(true);
     };
     window.addEventListener(ANALYTICS_CHOICES_OPEN_EVENT, reopen);
-    return () => window.removeEventListener(ANALYTICS_CHOICES_OPEN_EVENT, reopen);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener(ANALYTICS_CHOICES_OPEN_EVENT, reopen);
+    };
   }, []);
 
   if (!open) return null;
