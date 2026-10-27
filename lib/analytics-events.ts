@@ -2,6 +2,7 @@ import {
   normalizePractitionerValidationCampaign,
   resolvePractitionerValidationCampaign,
 } from "./practitioner-validation";
+import { analyticsAllowed } from "@/lib/analytics-consent";
 
 export const ANALYTICS_EVENT_TYPES = [
   "site_page_viewed",
@@ -357,6 +358,8 @@ export function trackEvent(
   payload: Omit<AnalyticsEventPayload, "eventType"> = {}
 ) {
   if (typeof window === "undefined") return;
+  // Cookie banner opt-out (and Global Privacy Control): send nothing.
+  if (!analyticsAllowed()) return;
 
   const event = sanitizeAnalyticsEventPayload(eventType, {
     ...payload,

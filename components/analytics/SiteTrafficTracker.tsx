@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { analyticsAllowed } from "@/lib/analytics-consent";
 import { trackEvent } from "@/lib/analytics-events";
 import { readTrafficAttribution } from "@/lib/traffic-attribution";
 
@@ -85,6 +86,9 @@ export function SiteTrafficTracker() {
 
   useEffect(() => {
     if (!pathname || pathname.startsWith("/admin")) return;
+    // Checked before getSessionId() so an opted-out browser never gets the
+    // localStorage session id created.
+    if (!analyticsAllowed()) return;
     const observation = { pathname, campaign };
     const shouldTrack = shouldTrackSitePageView(
       previousObservation.current,

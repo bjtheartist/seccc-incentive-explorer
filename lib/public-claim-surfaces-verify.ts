@@ -808,6 +808,9 @@ export const PUBLIC_CLAIM_SURFACES_KNOWN_GAPS: readonly string[] = [
   "app/map/page.tsx",
   "app/page.tsx",
   "app/print/investment/[area]/page.tsx",
+  // Static site privacy policy: no zone, program, or eligibility claim is
+  // rendered here.
+  "app/privacy/page.tsx",
   "app/programs/page.tsx",
   "app/reset-password/page.tsx",
   "app/start/page.tsx",

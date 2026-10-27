@@ -13,6 +13,7 @@ import {
   type AreaAssessment,
   type AreaResolvers,
 } from "@/lib/watchlist-digest";
+import { secretsMatch } from "@/lib/secret-compare";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ type CronAuthResult = "ok" | "unconfigured" | "unauthorized";
 function cronAuth(req: NextRequest): CronAuthResult {
   const secret = process.env.CRON_SECRET;
   if (!secret) return "unconfigured";
-  return req.headers.get("authorization") === `Bearer ${secret}` ? "ok" : "unauthorized";
+  return secretsMatch(req.headers.get("authorization"), `Bearer ${secret}`) ? "ok" : "unauthorized";
 }
 
 async function checkZonesAtPoint(lat: number, lon: number): Promise<unknown> {

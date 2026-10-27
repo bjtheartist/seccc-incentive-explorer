@@ -17,6 +17,8 @@ export interface ReportLeadInput {
   projectGoal?: string;
   wantsHelp: boolean;
   source: string;
+  userId?: string | null;
+  anonymousId?: string | null;
 }
 
 export class ReportEmailStorageUnavailableError extends Error {}
@@ -63,6 +65,14 @@ async function migrateReportEmailStorage(sql: SqlClient): Promise<void> {
   await sql`
     CREATE INDEX IF NOT EXISTS report_leads_notification_status_idx
     ON report_leads (notification_status)
+  `;
+  // Activity identity (lib/activity-identity.ts): the signed-in user, if any,
+  // and the browser cookie that ties this lead to its earlier report_events.
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS user_id TEXT`;
+  await sql`ALTER TABLE report_leads ADD COLUMN IF NOT EXISTS anonymous_id TEXT`;
+  await sql`
+    CREATE INDEX IF NOT EXISTS report_leads_anonymous_id_idx
+    ON report_leads (anonymous_id)
   `;
 
   await sql`
@@ -147,7 +157,9 @@ export async function createReportLead(input: ReportLeadInput): Promise<number> 
       report_type,
       project_goal,
       wants_incentive_help,
-      delivery_source
+      delivery_source,
+      user_id,
+      anonymous_id
     )
     VALUES (
       ${input.name?.trim() || "Report recipient"},
@@ -158,7 +170,9 @@ export async function createReportLead(input: ReportLeadInput): Promise<number> 
       ${input.reportType?.trim() || null},
       ${input.projectGoal?.trim() || null},
       ${input.wantsHelp},
-      ${input.source}
+      ${input.source},
+      ${input.userId ?? null},
+      ${input.anonymousId ?? null}
     )
     RETURNING id
   `;

@@ -147,7 +147,9 @@ function appendSessionCookie(
   if (!isNewSession) return;
   response.headers.append(
     "Set-Cookie",
-    `${SESSION_COOKIE}=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly`
+    `${SESSION_COOKIE}=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly${
+      process.env.NODE_ENV === "production" ? "; Secure" : ""
+    }`
   );
 }
 

@@ -30,6 +30,10 @@ export async function ensureReportEventsTable() {
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_created_at ON report_events (created_at DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_report_type ON report_events (report_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_report_events_user_id ON report_events (user_id)`;
+  // Server-issued browser identifier (lib/activity-identity.ts). Lets anonymous
+  // activity be joined to a later report_leads row from the same browser.
+  await sql`ALTER TABLE report_events ADD COLUMN IF NOT EXISTS anonymous_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_report_events_anonymous_id ON report_events (anonymous_id)`;
 
   reportEventsTableReady = true;
   return sql;
@@ -37,7 +41,10 @@ export async function ensureReportEventsTable() {
 
 export async function recordReportEvent(
   eventType: AnalyticsEventType,
-  payload: Omit<AnalyticsEventPayload, "eventType"> & { userId?: string | null } = {}
+  payload: Omit<AnalyticsEventPayload, "eventType"> & {
+    userId?: string | null;
+    anonymousId?: string | null;
+  } = {}
 ) {
   try {
     const event = sanitizeAnalyticsEventPayload(eventType, payload);
@@ -48,7 +55,8 @@ export async function recordReportEvent(
 
     await sql`
       INSERT INTO report_events (
-        event_type, report_type, source, address, lat, lon, metadata_json, user_id
+        event_type, report_type, source, address, lat, lon, metadata_json, user_id,
+        anonymous_id
       )
       VALUES (
         ${event.eventType},
@@ -58,7 +66,8 @@ export async function recordReportEvent(
         ${event.lat},
         ${event.lon},
         ${JSON.stringify(event.metadata)}::jsonb,
-        ${payload.userId ?? null}
+        ${payload.userId ?? null},
+        ${payload.anonymousId ?? null}
       )
     `;
 

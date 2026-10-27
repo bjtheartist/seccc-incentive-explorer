@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
+import { resolveActivityIdentity } from "@/lib/activity-identity";
 import {
   createReportLead,
   markReportLeadNotification,
@@ -69,6 +70,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, notified: false });
   }
 
+  // Ties this lead to the browser's earlier activity; never blocks the lead.
+  const identity = await resolveActivityIdentity(req);
   let leadId: number;
   try {
     leadId = await createReportLead({
@@ -80,6 +83,8 @@ export async function POST(req: NextRequest) {
       projectGoal: input.projectGoal,
       wantsHelp: true,
       source: input.source,
+      userId: identity.userId,
+      anonymousId: identity.anonymousId,
     });
   } catch (error) {
     if (error instanceof ReportEmailStorageUnavailableError) {

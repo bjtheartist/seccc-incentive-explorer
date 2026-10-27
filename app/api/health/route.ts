@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { socrataHeaders } from "@/lib/socrata";
 import { COOK_COUNTY_CURRENT_PARCELS_QUERY_URL } from "@/lib/cook-viewer";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * System health probe — checks every external dependency.
@@ -22,7 +23,7 @@ function verifyAdminRequest(request: NextRequest): NextResponse | null {
     );
   }
 
-  if (request.headers.get("x-admin-key") !== adminSecret) {
+  if (!secretsMatch(request.headers.get("x-admin-key"), adminSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
