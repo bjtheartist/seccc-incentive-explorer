@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { runDailyPermitSync } from "@/lib/ingest/permit-daily-sync";
+import { secretsMatch } from "@/lib/secret-compare";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secretsMatch(request.headers.get("authorization"), `Bearer ${secret}`)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401, headers: { "Cache-Control": "no-store" } },

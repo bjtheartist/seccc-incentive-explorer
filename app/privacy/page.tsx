@@ -68,7 +68,8 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong>Documents.</strong> Files you upload to prepare an incentive
-                application.
+                application. If you use the option to read a document automatically,
+                its contents are sent to an AI model to pull out the details.
               </li>
               <li>
                 <strong>Concierge chat.</strong> The questions you type into the site
@@ -205,9 +206,10 @@ export default function PrivacyPage() {
           <Section title="The concierge assistant">
             <p>
               Questions you type into the concierge are sent through Vercel&apos;s AI
-              Gateway to an AI model to generate a reply, and the conversation is
-              stored so we can improve the assistant. Please do not enter sensitive
-              personal information, such as Social Security numbers or bank details.
+              Gateway to an AI model to generate a reply. If you are signed in, the
+              conversation is saved to your account. If you are not signed in, it is
+              not stored. Please do not enter sensitive personal information, such
+              as Social Security numbers or bank details.
             </p>
           </Section>
 
@@ -224,10 +226,12 @@ export default function PrivacyPage() {
           <Section title="How we protect information">
             <p>
               Information travels to and from CIE over encrypted HTTPS connections.
-              Passwords are stored only as salted hashes, and IP addresses used for
-              rate limiting are stored as one-way hashes. Uploaded documents are kept
-              in private storage that only your signed-in account can reach. Staff
-              tools require a separate sign-in. No system is perfectly secure, but we
+              Passwords are stored only as salted hashes, and sign-in and reset
+              links are single-purpose and expire. IP addresses used for rate
+              limiting are stored in hashed form, not as the address itself. Your
+              saved reports, projects, profiles, and uploaded documents can only be
+              opened from your own signed-in account, and documents are kept in
+              private storage. Staff tools require a separate sign-in. No system is perfectly secure, but we
               work to protect your information and will notify affected users if a
               breach occurs as required by Illinois law.
             </p>
@@ -238,8 +242,8 @@ export default function PrivacyPage() {
               We keep account information and saved work while your account is
               active. We keep report-delivery and help requests, and analytics
               records, for as long as they are useful for following up and improving
-              CIE. Rate-limit records are deleted after 30 days. You can ask us to
-              delete your information at any time.
+              CIE. You can ask us to delete your information at any time, including
+              your account, and we will do so unless we are required to keep it.
             </p>
           </Section>
 
@@ -248,8 +252,10 @@ export default function PrivacyPage() {
               <li>Turn analytics off using Cookie Choices.</li>
               <li>Use CIE without an account. Most lookups and reports do not require one.</li>
               <li>
-                Ask us for a copy of your information, to correct it, or to delete it,
-                by emailing us at the address below.
+                Ask us for a copy of your information, to correct it, or to delete it
+                (including your account), by emailing us at the address below. You
+                can also delete individual saved reports, documents, and watched
+                areas yourself in your workspace.
               </li>
             </ul>
           </Section>

@@ -179,6 +179,18 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Baseline hardening for every response. No CSP yet: Mapbox, deck.gl
+        // workers and Vercel scripts need an allow-list worked out and tested
+        // in report-only mode first.
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+        ],
+      },
+      {
         source: '/data/:path*.geojson',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=604800, s-maxage=604800, immutable' },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { invalidatePattern } from "@/lib/redis";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * POST /api/health/reset
@@ -20,7 +21,7 @@ function verifyAdminRequest(request: NextRequest): NextResponse | null {
     );
   }
 
-  if (request.headers.get("x-admin-key") !== adminSecret) {
+  if (!secretsMatch(request.headers.get("x-admin-key"), adminSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
