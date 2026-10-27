@@ -130,6 +130,35 @@ describe("POST /api/events — activity identity", () => {
     });
   });
 
+  it("drops the event, issues no visitor id, and expires an existing one when the visitor turned analytics off", async () => {
+    const res = await POST(
+      eventRequest(
+        { eventType: "search_performed" },
+        `${VISITOR_COOKIE}=${KNOWN_VISITOR}; cie_analytics=off`,
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, stored: false });
+    expect(recordReportEventMock).not.toHaveBeenCalled();
+    const cleared = res.cookies.get(VISITOR_COOKIE);
+    expect(cleared?.value).toBe("");
+    expect(cleared?.maxAge).toBe(0);
+  });
+
+  it("treats a Global Privacy Control signal as opted out", async () => {
+    const req = new NextRequest("http://localhost/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Sec-GPC": "1" },
+      body: JSON.stringify({ eventType: "search_performed" }),
+    });
+
+    const res = await POST(req);
+
+    expect(recordReportEventMock).not.toHaveBeenCalled();
+    expect(res.cookies.get(VISITOR_COOKIE)).toBeUndefined();
+  });
+
   it("still records the event anonymously when the session lookup throws", async () => {
     getCurrentUserIdMock.mockRejectedValue(new Error("auth backend down"));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

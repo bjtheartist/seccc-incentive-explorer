@@ -21,7 +21,8 @@ import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
 import { SiteConciergeProvider } from "@/components/concierge/SiteConciergeProvider";
 import { FirstVisitGuide } from "@/components/onboarding/FirstVisitGuide";
 import { FirstVisitSpotlight } from "@/components/onboarding/FirstVisitSpotlight";
-import { Analytics } from "@vercel/analytics/next";
+import { ConsentAwareAnalytics } from "@/components/analytics/ConsentAwareAnalytics";
+import { AnalyticsChoicesBanner } from "@/components/privacy/AnalyticsChoicesBanner";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_KEYWORDS,
@@ -92,7 +93,8 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <SiteTrafficTracker />
             </Suspense>
-            <Analytics />
+            <ConsentAwareAnalytics />
+            <AnalyticsChoicesBanner />
           </SiteConciergeProvider>
         </AuthProvider>
       </body>

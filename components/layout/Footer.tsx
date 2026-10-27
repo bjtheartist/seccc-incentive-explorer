@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SiteTourButton } from "@/components/onboarding/SiteTourButton";
+import { AnalyticsChoicesButton } from "@/components/privacy/AnalyticsChoicesBanner";
 
 export function Footer() {
   return (
@@ -76,6 +77,15 @@ export function Footer() {
         </div>
         <div className="text-center mt-4">
           <SiteTourButton />
+          <span className="mx-3 text-white/15" aria-hidden="true">&middot;</span>
+          <Link
+            href="/privacy"
+            className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 hover:text-white/60 transition-colors"
+          >
+            Privacy
+          </Link>
+          <span className="mx-3 text-white/15" aria-hidden="true">&middot;</span>
+          <AnalyticsChoicesButton />
           <span className="mx-3 text-white/15" aria-hidden="true">&middot;</span>
           <Link
             href="/login?callbackUrl=/workspace"

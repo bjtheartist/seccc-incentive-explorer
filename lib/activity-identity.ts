@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
+import { ANALYTICS_CONSENT_COOKIE } from "@/lib/analytics-consent";
 import { getCurrentUserId } from "@/lib/current-user";
 
 /**
@@ -27,6 +28,8 @@ const VISITOR_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export interface ActivityIdentity {
+  /** Visitor turned analytics off in the banner, or sent Global Privacy Control. */
+  analyticsOptedOut: boolean;
   userId: string | null;
   anonymousId: string | null;
   /** True when anonymousId was minted on this request and must be set as a cookie. */
@@ -37,6 +40,13 @@ export interface ActivityIdentity {
 export function readVisitorId(req: NextRequest): string | null {
   const value = req.cookies.get(VISITOR_COOKIE)?.value?.trim().toLowerCase();
   return value && VISITOR_ID_PATTERN.test(value) ? value : null;
+}
+
+export function analyticsOptedOut(req: NextRequest): boolean {
+  return (
+    req.cookies.get(ANALYTICS_CONSENT_COOKIE)?.value === "off" ||
+    req.headers.get("sec-gpc") === "1"
+  );
 }
 
 /** Identity lookup must never block or fail an analytics write or a lead. */
@@ -58,13 +68,20 @@ export async function resolveActivityIdentity(
   req: NextRequest,
   { mintVisitorId = false }: { mintVisitorId?: boolean } = {},
 ): Promise<ActivityIdentity> {
-  const existing = readVisitorId(req);
-  const anonymousId = existing ?? (mintVisitorId ? randomUUID() : null);
+  // An opted-out browser is never given, or linked through, a visitor id.
+  const optedOut = analyticsOptedOut(req);
+  const existing = optedOut ? null : readVisitorId(req);
+  const anonymousId = existing ?? (mintVisitorId && !optedOut ? randomUUID() : null);
   return {
+    analyticsOptedOut: optedOut,
     userId: await currentUserIdOrNull(),
     anonymousId,
     issuedVisitorId: !existing && anonymousId !== null,
   };
+}
+
+export function clearVisitorCookie(res: NextResponse) {
+  res.cookies.set(VISITOR_COOKIE, "", { path: "/", maxAge: 0 });
 }
 
 export function setVisitorCookie(res: NextResponse, anonymousId: string) {

@@ -111,6 +111,17 @@ describe("POST /api/support-request", () => {
     expect(input).toMatchObject({ anonymousId: "3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d", userId: null });
   });
 
+  it("does not link the help request to browsing activity when the visitor turned analytics off", async () => {
+    await POST(
+      supportRequest(
+        { email: "owner@business.com" },
+        "cie_vid=3f2b8c1e-9a4d-4e7b-8c21-5d6f7a8b9c0d; cie_analytics=off",
+      ),
+    );
+    const [input] = createReportLeadMock.mock.calls[0];
+    expect(input.anonymousId).toBeNull();
+  });
+
   it("returns 503 when the lead store is unavailable", async () => {
     createReportLeadMock.mockRejectedValueOnce(new FakeStorageUnavailableError("no db"));
     const res = await POST(supportRequest({ email: "owner@business.com" }));
