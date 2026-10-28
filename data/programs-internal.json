@@ -4260,15 +4260,15 @@
       "Use plan for the remediated site"
     ],
     "contact": "Cook County Assessor Incentives Department: (312) 603-7529",
-    "url": "https://www.cookcountyassessoril.gov/form-document/class-c",
-    "sourceUrl": "https://www.cookcountyassessor.com/form-document/class-c",
+    "url": "https://www.cookcountyassessoril.gov/form-document/class-c-eligibility-application",
+    "sourceUrl": "https://www.cookcountyassessoril.gov/form-document/class-c-eligibility-bulletin",
     "status": "active",
     "contacts": [
       {
         "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
-        "url": "https://www.cookcountyassessor.com/form-document/class-c"
+        "url": "https://www.cookcountyassessoril.gov/form-document/class-c-eligibility-application"
       }
     ],
     "eligibilityRules": [
