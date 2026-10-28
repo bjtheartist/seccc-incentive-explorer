@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-21T14:07:06.771Z",
-  "catalogRevision": "d4d577e59d7ba73d7a505ce8cb5063a3df101052b785548d9a2f3ae715c392c7",
+  "generatedAt": "2026-10-28T14:22:37.979Z",
+  "catalogRevision": "c2790b81b1020bba5dc8fb42ef0a5d2987ebfe8eb58c4e0dcfcfabced5de4870",
   "programs": [
     {
       "id": "tif",
@@ -2034,8 +2034,8 @@
         ]
       },
       "links": {
-        "url": "https://www.cookcountyassessoril.gov/form-document/class-c",
-        "sourceUrl": "https://www.cookcountyassessor.com/form-document/class-c",
+        "url": "https://www.cookcountyassessoril.gov/form-document/class-c-eligibility-application",
+        "sourceUrl": "https://www.cookcountyassessoril.gov/form-document/class-c-eligibility-bulletin",
         "administeringAgency": "Cook County Assessor's Office — Incentives"
       },
       "personas": [
