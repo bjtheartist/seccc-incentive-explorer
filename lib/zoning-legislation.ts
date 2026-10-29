@@ -14,6 +14,11 @@ export const ELMS_PUBLIC_BASE = "https://chicityclerkelms.chicago.gov";
 export const CHICAGO_ZONING_LAYER_URL =
   "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1";
 
+// Dozens of matters share each council-meeting introductionDate, so sorting on
+// it alone leaves ties in no fixed order and rows at the 500-row page
+// boundaries swap in and out between runs. recordNumber breaks the tie.
+export const ELMS_STABLE_SORT = "introductionDate desc, recordNumber desc";
+
 export const ELMS_ZONING_SEARCHES = [
   "Zoning Reclassification",
   "Title 17",
@@ -487,7 +492,7 @@ export async function fetchElmsZoningLedger(
       url.searchParams.set("search", `"${search}"`);
       url.searchParams.set("top", String(pageSize));
       url.searchParams.set("skip", String(skip));
-      url.searchParams.set("sort", "introductionDate desc");
+      url.searchParams.set("sort", ELMS_STABLE_SORT);
       const { response, payload } = await fetchJson(url.toString(), options);
       if (!response.ok) {
         throw new ElmsUnavailableError(`eLMS search returned HTTP ${response.status}`);
