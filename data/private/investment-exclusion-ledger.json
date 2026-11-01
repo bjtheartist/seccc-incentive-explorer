@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-13T23:56:48.198Z",
-  "boundExportContentHash": "b79c1653c7c3bd09eb080e20e74699a2219ea1269c683e54d7e0980304177761",
+  "generatedAt": "2026-10-02T14:07:26.766Z",
+  "boundExportContentHash": "e8fd6f0569d4d81f66d1322250344125a19a83f6998dd89f197649f7ef4ee64c",
   "retained": [
     {
       "source": "cdbg-home",
@@ -7168,19 +7168,14 @@
     {
       "source": "tif",
       "locationReason": "source_unlocated",
-      "count": 9,
-      "dollars": 45255000,
+      "count": 4,
+      "dollars": 2500000,
       "evidence": "The source itself publishes no usable single-site location for this row (an intermediary/regranting recipient, a multi-site description, or a program that never publishes street addresses).",
       "recordIds": [
         "tif-held-0",
         "tif-held-1",
         "tif-held-2",
-        "tif-held-3",
-        "tif-held-4",
-        "tif-held-5",
-        "tif-held-6",
-        "tif-held-7",
-        "tif-held-8"
+        "tif-held-3"
       ]
     }
   ],

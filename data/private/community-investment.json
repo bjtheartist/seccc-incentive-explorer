@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T23:56:48.198Z",
+  "generatedAt": "2026-10-02T14:07:26.766Z",
   "recoverySources": {
     "cook-source-2023": {
       "id": "cook-source-2023",
@@ -175,7 +175,7 @@
       "cdg": 362,
       "foundation": 26519,
       "development": 107,
-      "tif": 769,
+      "tif": 763,
       "cdbg-home": 6101,
       "lihtc": 611,
       "nmtc": 177,
@@ -186,9 +186,9 @@
       "sba-rrf": 1523,
       "dceo-capital": 620
     },
-    "totalRecords": 44061,
-    "pointCount": 30640,
-    "citywideCount": 7073,
+    "totalRecords": 44055,
+    "pointCount": 30639,
+    "citywideCount": 7068,
     "zipAreaCount": 6348,
     "cookSourceChicagoRecords": 1163,
     "cookSourceOutsideChicagoRecords": 1840,
@@ -211,7 +211,7 @@
     "dceoMultiSiteHeldCitywide": 5,
     "totalDollarsAwarded": 3179794477.6600003,
     "announcedCapitalTotal": 74906800000,
-    "totalAuthorizedTif": 6480351232.67,
+    "totalAuthorizedTif": 6647835362.67,
     "totalFederalProgram": 1529947953.4599984,
     "totalCreditCapital": 1880010076.43,
     "subsetExcluded": 1,
@@ -259,8 +259,8 @@
     "totalRecoveryHistorical": 923413575.6899987,
     "heldAdministrativeOutsideCityRecords": 19,
     "heldAdministrativeOutsideCityDollars": 3458240.5700000003,
-    "heldTifUnlocatedRecords": 9,
-    "heldTifUnlocatedDollars": 45255000,
+    "heldTifUnlocatedRecords": 4,
+    "heldTifUnlocatedDollars": 2500000,
     "heldLihtcUnlocatedRecords": 5,
     "heldLihtcUnlocatedDollars": 5630788,
     "bridgeFullAwardedDollars": 3179794477.6600003,
@@ -279,8 +279,8 @@
     "dedupeKeptFlaggedDollars": 23204034,
     "foundationIdentityResolved": 26501,
     "foundationIdentityUnresolved": 0,
-    "sourceManifestHash": "1ee06e08a0ed512d895fe44e683e58621d20f9f6af43923164d78f0e64798446",
-    "exportContentHash": "b79c1653c7c3bd09eb080e20e74699a2219ea1269c683e54d7e0980304177761"
+    "sourceManifestHash": "6971c706faaf56b07619a836859aa73b0a29a5caf04b0b0d445002593863a606",
+    "exportContentHash": "e8fd6f0569d4d81f66d1322250344125a19a83f6998dd89f197649f7ef4ee64c"
   },
   "records": [
     {
@@ -3209,29 +3209,6 @@
       "source": "nof-large",
       "funderType": "government",
       "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
-      "recipient": "The Kehrein Center for the Arts",
-      "capitalClass": "grant",
-      "amountAwarded": 1000000,
-      "logLine": "Rehab a vacant auditorium into a Performing Arts Center with 1,000 seat theater.  Expand educational and recreational offerings.",
-      "year": 2019,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.882512989,
-        "lng": -87.765422961
-      },
-      "address": "5608-5628 W Washington Blvd",
-      "communityArea": "Austin",
-      "status": "completed",
-      "recordDate": "2019-09-01T00:00:00.000",
-      "recordProvenance": "official",
-      "links": [],
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "nof-large-2",
-      "source": "nof-large",
-      "funderType": "government",
-      "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
       "recipient": "North Lawndale Employment Network",
       "capitalClass": "grant",
       "amountAwarded": 2500000,
@@ -3251,7 +3228,7 @@
       "governmentFundingPurpose": "capital_project"
     },
     {
-      "id": "nof-large-3",
+      "id": "nof-large-2",
       "source": "nof-large",
       "funderType": "government",
       "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
@@ -3269,6 +3246,29 @@
       "communityArea": "Calumet Heights",
       "status": "awarded",
       "recordDate": "2021-05-28T00:00:00.000",
+      "recordProvenance": "official",
+      "links": [],
+      "governmentFundingPurpose": "capital_project"
+    },
+    {
+      "id": "nof-large-3",
+      "source": "nof-large",
+      "funderType": "government",
+      "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
+      "recipient": "The Kehrein Center for the Arts",
+      "capitalClass": "grant",
+      "amountAwarded": 1000000,
+      "logLine": "Rehab a vacant auditorium into a Performing Arts Center with 1,000 seat theater.  Expand educational and recreational offerings.",
+      "year": 2019,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.882512989,
+        "lng": -87.765422961
+      },
+      "address": "5608-5628 W Washington Blvd",
+      "communityArea": "Austin",
+      "status": "completed",
+      "recordDate": "2019-09-01T00:00:00.000",
       "recordProvenance": "official",
       "links": [],
       "governmentFundingPurpose": "capital_project"
@@ -836600,7 +836600,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 2501821,
-      "logLine": "TIF district: Central West · Total project cost $17,295,471 · CDC approved 2007-06-12",
+      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $17,295,471 · CDC approved 2007-06-12",
       "year": 2007,
       "geometry": {
         "kind": "point",
@@ -836696,6 +836696,31 @@
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "Trippe Manufacturing",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 1600000,
+      "logLine": "TIF district: 35th/Halsted · Total project cost $8,399,000 · CDC approved 1998-07-29",
+      "year": 1998,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.8305362396,
+        "lng": -87.6538679998
+      },
+      "address": "1111 W 35th St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "Bridgeport"
+    },
+    {
+      "id": "tif-114",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
       "recipient": "Merlin Coke",
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
@@ -836717,7 +836742,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-114",
+      "id": "tif-115",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836742,7 +836767,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-115",
+      "id": "tif-116",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836767,7 +836792,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-116",
+      "id": "tif-117",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836792,7 +836817,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-117",
+      "id": "tif-118",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836817,7 +836842,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-118",
+      "id": "tif-119",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836842,7 +836867,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-119",
+      "id": "tif-120",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836867,7 +836892,7 @@
       "communityArea": "Dunning"
     },
     {
-      "id": "tif-120",
+      "id": "tif-121",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836892,7 +836917,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-121",
+      "id": "tif-122",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836917,7 +836942,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-122",
+      "id": "tif-123",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836942,7 +836967,7 @@
       "communityArea": "Avondale"
     },
     {
-      "id": "tif-123",
+      "id": "tif-124",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836967,7 +836992,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-124",
+      "id": "tif-125",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -836992,7 +837017,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-125",
+      "id": "tif-126",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837017,7 +837042,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-126",
+      "id": "tif-127",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837042,7 +837067,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-127",
+      "id": "tif-128",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837067,7 +837092,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-128",
+      "id": "tif-129",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837092,7 +837117,7 @@
       "communityArea": "Rogers Park"
     },
     {
-      "id": "tif-129",
+      "id": "tif-130",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837117,7 +837142,7 @@
       "communityArea": "Ashburn"
     },
     {
-      "id": "tif-130",
+      "id": "tif-131",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837142,7 +837167,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-131",
+      "id": "tif-132",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837167,7 +837192,7 @@
       "communityArea": "McKinley Park"
     },
     {
-      "id": "tif-132",
+      "id": "tif-133",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837192,7 +837217,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-133",
+      "id": "tif-134",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837217,7 +837242,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-134",
+      "id": "tif-135",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837242,7 +837267,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-135",
+      "id": "tif-136",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837267,7 +837292,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-136",
+      "id": "tif-137",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837291,7 +837316,7 @@
       "governmentFundingPurpose": "capital_project"
     },
     {
-      "id": "tif-137",
+      "id": "tif-138",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837316,7 +837341,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-138",
+      "id": "tif-139",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837341,7 +837366,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-139",
+      "id": "tif-140",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837366,7 +837391,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-140",
+      "id": "tif-141",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837391,7 +837416,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-141",
+      "id": "tif-142",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837416,7 +837441,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-142",
+      "id": "tif-143",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837441,7 +837466,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-143",
+      "id": "tif-144",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837466,7 +837491,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-144",
+      "id": "tif-145",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837491,7 +837516,7 @@
       "communityArea": "Chatham"
     },
     {
-      "id": "tif-145",
+      "id": "tif-146",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837516,7 +837541,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-146",
+      "id": "tif-147",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837541,7 +837566,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-147",
+      "id": "tif-148",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837566,7 +837591,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-148",
+      "id": "tif-149",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837591,7 +837616,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-149",
+      "id": "tif-150",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837616,7 +837641,32 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-150",
+      "id": "tif-151",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "55th Dan Ryan Shopping Center",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 3755000,
+      "logLine": "TIF district: 47th/Halsted,Ryan Garfield · Total project cost $8,455,000 · CDC approved 1987-09-09",
+      "year": 1987,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.7983058612,
+        "lng": -87.6307475151
+      },
+      "address": "5258 S Wentworth Av",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "Fuller Park"
+    },
+    {
+      "id": "tif-152",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837641,7 +837691,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-151",
+      "id": "tif-153",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837666,7 +837716,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-152",
+      "id": "tif-154",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837691,7 +837741,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-153",
+      "id": "tif-155",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837716,7 +837766,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-154",
+      "id": "tif-156",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837741,7 +837791,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-155",
+      "id": "tif-157",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837766,7 +837816,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-156",
+      "id": "tif-158",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837791,7 +837841,7 @@
       "communityArea": "Gage Park"
     },
     {
-      "id": "tif-157",
+      "id": "tif-159",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837816,7 +837866,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-158",
+      "id": "tif-160",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837841,7 +837891,7 @@
       "communityArea": "Lake View"
     },
     {
-      "id": "tif-159",
+      "id": "tif-161",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837866,7 +837916,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-160",
+      "id": "tif-162",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837891,7 +837941,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-161",
+      "id": "tif-163",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837916,7 +837966,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-162",
+      "id": "tif-164",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837941,7 +837991,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-163",
+      "id": "tif-165",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837966,7 +838016,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-164",
+      "id": "tif-166",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -837991,7 +838041,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-165",
+      "id": "tif-167",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838016,7 +838066,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-166",
+      "id": "tif-168",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838041,7 +838091,7 @@
       "communityArea": "Dunning"
     },
     {
-      "id": "tif-167",
+      "id": "tif-169",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838066,7 +838116,7 @@
       "communityArea": "Dunning"
     },
     {
-      "id": "tif-168",
+      "id": "tif-170",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838091,7 +838141,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-169",
+      "id": "tif-171",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838116,7 +838166,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-170",
+      "id": "tif-172",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838141,7 +838191,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-171",
+      "id": "tif-173",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838166,7 +838216,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-172",
+      "id": "tif-174",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838191,7 +838241,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-173",
+      "id": "tif-175",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838216,7 +838266,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-174",
+      "id": "tif-176",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838241,7 +838291,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-175",
+      "id": "tif-177",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838266,7 +838316,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-176",
+      "id": "tif-178",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838291,7 +838341,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-177",
+      "id": "tif-179",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838316,7 +838366,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-178",
+      "id": "tif-180",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838341,7 +838391,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-179",
+      "id": "tif-181",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838366,7 +838416,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-180",
+      "id": "tif-182",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838391,7 +838441,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-181",
+      "id": "tif-183",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838416,7 +838466,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-182",
+      "id": "tif-184",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838441,7 +838491,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-183",
+      "id": "tif-185",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838466,7 +838516,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-184",
+      "id": "tif-186",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838491,7 +838541,7 @@
       "communityArea": "Dunning"
     },
     {
-      "id": "tif-185",
+      "id": "tif-187",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838516,7 +838566,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-186",
+      "id": "tif-188",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838541,7 +838591,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-187",
+      "id": "tif-189",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838566,7 +838616,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-188",
+      "id": "tif-190",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838591,7 +838641,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-189",
+      "id": "tif-191",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838616,7 +838666,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-190",
+      "id": "tif-192",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838641,7 +838691,7 @@
       "communityArea": "Rogers Park"
     },
     {
-      "id": "tif-191",
+      "id": "tif-193",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838666,7 +838716,7 @@
       "communityArea": "Calumet Heights"
     },
     {
-      "id": "tif-192",
+      "id": "tif-194",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838691,7 +838741,7 @@
       "communityArea": "Auburn Gresham"
     },
     {
-      "id": "tif-193",
+      "id": "tif-195",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838716,7 +838766,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-194",
+      "id": "tif-196",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838741,7 +838791,7 @@
       "communityArea": "Mount Greenwood"
     },
     {
-      "id": "tif-195",
+      "id": "tif-197",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838766,7 +838816,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-196",
+      "id": "tif-198",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838791,7 +838841,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-197",
+      "id": "tif-199",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838816,7 +838866,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-198",
+      "id": "tif-200",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838841,7 +838891,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-199",
+      "id": "tif-201",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838866,7 +838916,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-200",
+      "id": "tif-202",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838891,7 +838941,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-201",
+      "id": "tif-203",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838916,7 +838966,7 @@
       "communityArea": "West Pullman"
     },
     {
-      "id": "tif-202",
+      "id": "tif-204",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838941,7 +838991,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-203",
+      "id": "tif-205",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838966,7 +839016,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-204",
+      "id": "tif-206",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -838991,7 +839041,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-205",
+      "id": "tif-207",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839016,7 +839066,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-206",
+      "id": "tif-208",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839041,7 +839091,32 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-207",
+      "id": "tif-209",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "NAVTEQ",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 5000000,
+      "logLine": "TIF district: LaSalle Central · Total project cost $28,583,483 · CDC approved 2009-03-18",
+      "year": 2009,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.8832658529,
+        "lng": -87.6387608213
+      },
+      "address": "100 N Riverside Pz",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "Near West Side"
+    },
+    {
+      "id": "tif-210",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839066,7 +839141,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-208",
+      "id": "tif-211",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839091,7 +839166,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-209",
+      "id": "tif-212",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839116,7 +839191,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-210",
+      "id": "tif-213",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839141,7 +839216,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-211",
+      "id": "tif-214",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839166,7 +839241,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-212",
+      "id": "tif-215",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839191,7 +839266,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-213",
+      "id": "tif-216",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839216,7 +839291,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-214",
+      "id": "tif-217",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839224,7 +839299,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 2900000,
-      "logLine": "TIF district: Madden/Wells · Total project cost $57,569,913 · CDC approved 2007-09-05; COC issued 2010-11-01",
+      "logLine": "TIF district: 43rd Street/Cottage Grove Avenue,Madden/Wells · Total project cost $57,569,913 · CDC approved 2007-09-05; COC issued 2010-11-01",
       "year": 2007,
       "geometry": {
         "kind": "point",
@@ -839241,7 +839316,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-215",
+      "id": "tif-218",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839266,7 +839341,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-216",
+      "id": "tif-219",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839291,7 +839366,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-217",
+      "id": "tif-220",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839316,7 +839391,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-218",
+      "id": "tif-221",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839341,7 +839416,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-219",
+      "id": "tif-222",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839366,7 +839441,7 @@
       "communityArea": "Kenwood"
     },
     {
-      "id": "tif-220",
+      "id": "tif-223",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839391,7 +839466,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-221",
+      "id": "tif-224",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839416,7 +839491,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-222",
+      "id": "tif-225",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839441,7 +839516,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-223",
+      "id": "tif-226",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839466,7 +839541,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-224",
+      "id": "tif-227",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839491,7 +839566,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-225",
+      "id": "tif-228",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839516,7 +839591,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-226",
+      "id": "tif-229",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839541,7 +839616,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-227",
+      "id": "tif-230",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839566,7 +839641,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-228",
+      "id": "tif-231",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839591,7 +839666,7 @@
       "communityArea": "Garfield Ridge"
     },
     {
-      "id": "tif-229",
+      "id": "tif-232",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839616,7 +839691,7 @@
       "communityArea": "Kenwood"
     },
     {
-      "id": "tif-230",
+      "id": "tif-233",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839641,7 +839716,7 @@
       "communityArea": "Fuller Park"
     },
     {
-      "id": "tif-231",
+      "id": "tif-234",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839666,7 +839741,7 @@
       "communityArea": "Chatham"
     },
     {
-      "id": "tif-232",
+      "id": "tif-235",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839691,7 +839766,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-233",
+      "id": "tif-236",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839716,7 +839791,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-234",
+      "id": "tif-237",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839741,7 +839816,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-235",
+      "id": "tif-238",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839766,7 +839841,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-236",
+      "id": "tif-239",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839791,7 +839866,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-237",
+      "id": "tif-240",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839816,7 +839891,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-238",
+      "id": "tif-241",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839841,7 +839916,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-239",
+      "id": "tif-242",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839866,7 +839941,7 @@
       "communityArea": "Hyde Park"
     },
     {
-      "id": "tif-240",
+      "id": "tif-243",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839891,7 +839966,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-241",
+      "id": "tif-244",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839916,7 +839991,7 @@
       "communityArea": "Avondale"
     },
     {
-      "id": "tif-242",
+      "id": "tif-245",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839941,7 +840016,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-243",
+      "id": "tif-246",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839966,7 +840041,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-244",
+      "id": "tif-247",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -839991,7 +840066,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-245",
+      "id": "tif-248",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840016,7 +840091,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-246",
+      "id": "tif-249",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840041,7 +840116,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-247",
+      "id": "tif-250",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840066,7 +840141,7 @@
       "communityArea": "Avondale"
     },
     {
-      "id": "tif-248",
+      "id": "tif-251",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840091,7 +840166,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-249",
+      "id": "tif-252",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840116,7 +840191,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-250",
+      "id": "tif-253",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840141,7 +840216,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-251",
+      "id": "tif-254",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840166,7 +840241,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-252",
+      "id": "tif-255",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840191,7 +840266,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-253",
+      "id": "tif-256",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840216,7 +840291,7 @@
       "communityArea": "Montclare"
     },
     {
-      "id": "tif-254",
+      "id": "tif-257",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840241,7 +840316,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-255",
+      "id": "tif-258",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840266,7 +840341,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-256",
+      "id": "tif-259",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840291,7 +840366,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-257",
+      "id": "tif-260",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840316,7 +840391,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-258",
+      "id": "tif-261",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840341,7 +840416,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-259",
+      "id": "tif-262",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840366,7 +840441,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-260",
+      "id": "tif-263",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840391,7 +840466,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-261",
+      "id": "tif-264",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840416,7 +840491,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-262",
+      "id": "tif-265",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840441,7 +840516,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-263",
+      "id": "tif-266",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840466,7 +840541,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-264",
+      "id": "tif-267",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840491,7 +840566,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-265",
+      "id": "tif-268",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840499,7 +840574,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 2250000,
-      "logLine": "TIF district: Stockyards Industrial-Commercial · Total project cost $12,956,698 · CDC approved 2012-10-03; COC issued 2014-06-01",
+      "logLine": "TIF district: Stockyards Industrial-Commercial,Stockyards Southeast Quadrant Industrial · Total project cost $12,956,698 · CDC approved 2012-10-03; COC issued 2014-06-01",
       "year": 2012,
       "geometry": {
         "kind": "point",
@@ -840516,7 +840591,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-266",
+      "id": "tif-269",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840541,7 +840616,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-267",
+      "id": "tif-270",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840566,7 +840641,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-268",
+      "id": "tif-271",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840591,7 +840666,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-269",
+      "id": "tif-272",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840616,7 +840691,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-270",
+      "id": "tif-273",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840641,7 +840716,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-271",
+      "id": "tif-274",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840666,7 +840741,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-272",
+      "id": "tif-275",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840691,7 +840766,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-273",
+      "id": "tif-276",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840716,7 +840791,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-274",
+      "id": "tif-277",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840724,7 +840799,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 700000,
-      "logLine": "TIF district: Central West · Total project cost $700,000 · CDC approved 2011-11-16",
+      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $700,000 · CDC approved 2011-11-16",
       "year": 2011,
       "geometry": {
         "kind": "point",
@@ -840741,7 +840816,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-275",
+      "id": "tif-278",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840766,7 +840841,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-276",
+      "id": "tif-279",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840791,7 +840866,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-277",
+      "id": "tif-280",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840816,7 +840891,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-278",
+      "id": "tif-281",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840841,7 +840916,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-279",
+      "id": "tif-282",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840866,7 +840941,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-280",
+      "id": "tif-283",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840891,7 +840966,7 @@
       "communityArea": "Greater Grand Crossing"
     },
     {
-      "id": "tif-281",
+      "id": "tif-284",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840916,7 +840991,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-282",
+      "id": "tif-285",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840941,7 +841016,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-283",
+      "id": "tif-286",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840966,7 +841041,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-284",
+      "id": "tif-287",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -840991,7 +841066,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-285",
+      "id": "tif-288",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841016,7 +841091,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-286",
+      "id": "tif-289",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841041,7 +841116,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-287",
+      "id": "tif-290",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841066,7 +841141,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-288",
+      "id": "tif-291",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841091,7 +841166,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-289",
+      "id": "tif-292",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841116,7 +841191,7 @@
       "communityArea": "Kenwood"
     },
     {
-      "id": "tif-290",
+      "id": "tif-293",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841141,7 +841216,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-291",
+      "id": "tif-294",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841166,7 +841241,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-292",
+      "id": "tif-295",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841191,7 +841266,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-293",
+      "id": "tif-296",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841216,7 +841291,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-294",
+      "id": "tif-297",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841241,7 +841316,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-295",
+      "id": "tif-298",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841266,7 +841341,7 @@
       "communityArea": "Garfield Ridge"
     },
     {
-      "id": "tif-296",
+      "id": "tif-299",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841291,7 +841366,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-297",
+      "id": "tif-300",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841316,7 +841391,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-298",
+      "id": "tif-301",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841341,7 +841416,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-299",
+      "id": "tif-302",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841366,7 +841441,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-300",
+      "id": "tif-303",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841391,7 +841466,7 @@
       "communityArea": "Irving Park"
     },
     {
-      "id": "tif-301",
+      "id": "tif-304",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841416,7 +841491,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-302",
+      "id": "tif-305",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841441,7 +841516,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-303",
+      "id": "tif-306",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841466,7 +841541,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-304",
+      "id": "tif-307",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841491,7 +841566,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-305",
+      "id": "tif-308",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841516,7 +841591,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-306",
+      "id": "tif-309",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841541,7 +841616,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-307",
+      "id": "tif-310",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841566,7 +841641,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-308",
+      "id": "tif-311",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841591,7 +841666,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-309",
+      "id": "tif-312",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841616,7 +841691,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-310",
+      "id": "tif-313",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841641,7 +841716,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-311",
+      "id": "tif-314",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841666,7 +841741,7 @@
       "communityArea": "Pullman"
     },
     {
-      "id": "tif-312",
+      "id": "tif-315",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841691,7 +841766,7 @@
       "communityArea": "Clearing"
     },
     {
-      "id": "tif-313",
+      "id": "tif-316",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841716,7 +841791,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-314",
+      "id": "tif-317",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841741,7 +841816,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-315",
+      "id": "tif-318",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841766,7 +841841,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-316",
+      "id": "tif-319",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841791,7 +841866,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-317",
+      "id": "tif-320",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841816,7 +841891,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-318",
+      "id": "tif-321",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841841,7 +841916,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-319",
+      "id": "tif-322",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841866,7 +841941,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-320",
+      "id": "tif-323",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841891,7 +841966,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-321",
+      "id": "tif-324",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841916,7 +841991,7 @@
       "communityArea": "Jefferson Park"
     },
     {
-      "id": "tif-322",
+      "id": "tif-325",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841941,7 +842016,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-323",
+      "id": "tif-326",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841953,20 +842028,20 @@
       "year": 2009,
       "geometry": {
         "kind": "point",
-        "lat": 41.7710553254,
-        "lng": -87.7396706961
+        "lat": 41.7712748211,
+        "lng": -87.739676508
       },
-      "address": "4701 W 67th St",
+      "address": "4700 W Marquette Rd",
       "status": "awarded",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
       "locationReason": null,
       "governmentFundingPurpose": "capital_project",
-      "communityArea": "West Lawn"
+      "communityArea": "Clearing"
     },
     {
-      "id": "tif-324",
+      "id": "tif-327",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -841991,7 +842066,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-325",
+      "id": "tif-328",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842016,7 +842091,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-326",
+      "id": "tif-329",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842041,7 +842116,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-327",
+      "id": "tif-330",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842066,7 +842141,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-328",
+      "id": "tif-331",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842091,7 +842166,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-329",
+      "id": "tif-332",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842116,7 +842191,7 @@
       "communityArea": "Montclare"
     },
     {
-      "id": "tif-330",
+      "id": "tif-333",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842141,7 +842216,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-331",
+      "id": "tif-334",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842166,7 +842241,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-332",
+      "id": "tif-335",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842191,7 +842266,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-333",
+      "id": "tif-336",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842216,7 +842291,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-334",
+      "id": "tif-337",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842241,7 +842316,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-335",
+      "id": "tif-338",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842266,7 +842341,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-336",
+      "id": "tif-339",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842291,7 +842366,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-337",
+      "id": "tif-340",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842316,7 +842391,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-338",
+      "id": "tif-341",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842341,7 +842416,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-339",
+      "id": "tif-342",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842366,7 +842441,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-340",
+      "id": "tif-343",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842391,7 +842466,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-341",
+      "id": "tif-344",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842416,7 +842491,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-342",
+      "id": "tif-345",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842441,7 +842516,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-343",
+      "id": "tif-346",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842466,7 +842541,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-344",
+      "id": "tif-347",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842491,7 +842566,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-345",
+      "id": "tif-348",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842516,7 +842591,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-346",
+      "id": "tif-349",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842541,7 +842616,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-347",
+      "id": "tif-350",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842566,7 +842641,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-348",
+      "id": "tif-351",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842591,7 +842666,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-349",
+      "id": "tif-352",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842616,7 +842691,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-350",
+      "id": "tif-353",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842641,7 +842716,7 @@
       "communityArea": "Chicago Lawn"
     },
     {
-      "id": "tif-351",
+      "id": "tif-354",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842666,7 +842741,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-352",
+      "id": "tif-355",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842691,7 +842766,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-353",
+      "id": "tif-356",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842716,7 +842791,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-354",
+      "id": "tif-357",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842741,7 +842816,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-355",
+      "id": "tif-358",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842766,7 +842841,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-356",
+      "id": "tif-359",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842791,7 +842866,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-357",
+      "id": "tif-360",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842816,7 +842891,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-358",
+      "id": "tif-361",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842841,7 +842916,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-359",
+      "id": "tif-362",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842866,7 +842941,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-360",
+      "id": "tif-363",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842891,7 +842966,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-361",
+      "id": "tif-364",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842916,7 +842991,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-362",
+      "id": "tif-365",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842924,7 +842999,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 67000000,
-      "logLine": "TIF district: Near South · Total project cost $67,179,286 · CDC approved 2013-04-10",
+      "logLine": "Total project cost $67,179,286 · CDC approved 2013-04-10",
       "year": 2013,
       "geometry": {
         "kind": "point",
@@ -842941,7 +843016,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-363",
+      "id": "tif-366",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842966,7 +843041,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-364",
+      "id": "tif-367",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -842991,7 +843066,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-365",
+      "id": "tif-368",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843016,7 +843091,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-366",
+      "id": "tif-369",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843024,7 +843099,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 54228391.89,
-      "logLine": "TIF district: Wilson Yard · Total project cost $162,752,711 · CDC approved 2005-05-11; COC issued 2011-01-24",
+      "logLine": "TIF district: Red and Purple Modernization Phase One Project,Wilson Yard · Total project cost $162,752,711 · CDC approved 2005-05-11; COC issued 2011-01-24",
       "year": 2005,
       "geometry": {
         "kind": "point",
@@ -843041,7 +843116,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-367",
+      "id": "tif-370",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843066,7 +843141,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-368",
+      "id": "tif-371",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843091,7 +843166,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-369",
+      "id": "tif-372",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843116,7 +843191,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-370",
+      "id": "tif-373",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843141,7 +843216,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-371",
+      "id": "tif-374",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843166,7 +843241,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-372",
+      "id": "tif-375",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843191,7 +843266,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-373",
+      "id": "tif-376",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843216,7 +843291,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-374",
+      "id": "tif-377",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843241,7 +843316,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-375",
+      "id": "tif-378",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843266,7 +843341,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-376",
+      "id": "tif-379",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843291,7 +843366,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-377",
+      "id": "tif-380",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843316,7 +843391,7 @@
       "communityArea": "West Garfield Park"
     },
     {
-      "id": "tif-378",
+      "id": "tif-381",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843341,7 +843416,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-379",
+      "id": "tif-382",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843366,7 +843441,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-380",
+      "id": "tif-383",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843391,7 +843466,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-381",
+      "id": "tif-384",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843416,7 +843491,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-382",
+      "id": "tif-385",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843441,7 +843516,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-383",
+      "id": "tif-386",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843466,7 +843541,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-384",
+      "id": "tif-387",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843491,7 +843566,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-385",
+      "id": "tif-388",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843516,7 +843591,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-386",
+      "id": "tif-389",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843541,7 +843616,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-387",
+      "id": "tif-390",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843566,7 +843641,7 @@
       "communityArea": "Jefferson Park"
     },
     {
-      "id": "tif-388",
+      "id": "tif-391",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843591,7 +843666,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-389",
+      "id": "tif-392",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843616,7 +843691,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-390",
+      "id": "tif-393",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843641,7 +843716,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-391",
+      "id": "tif-394",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843666,7 +843741,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-392",
+      "id": "tif-395",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843691,7 +843766,7 @@
       "communityArea": "Garfield Ridge"
     },
     {
-      "id": "tif-393",
+      "id": "tif-396",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843716,7 +843791,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-394",
+      "id": "tif-397",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843741,7 +843816,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-395",
+      "id": "tif-398",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843766,7 +843841,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-396",
+      "id": "tif-399",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843791,7 +843866,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-397",
+      "id": "tif-400",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843816,7 +843891,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-398",
+      "id": "tif-401",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843841,7 +843916,7 @@
       "communityArea": "Hyde Park"
     },
     {
-      "id": "tif-399",
+      "id": "tif-402",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843866,7 +843941,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-400",
+      "id": "tif-403",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843891,7 +843966,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-401",
+      "id": "tif-404",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843916,7 +843991,7 @@
       "communityArea": "West Garfield Park"
     },
     {
-      "id": "tif-402",
+      "id": "tif-405",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843941,7 +844016,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-403",
+      "id": "tif-406",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843966,7 +844041,7 @@
       "communityArea": "West Garfield Park"
     },
     {
-      "id": "tif-404",
+      "id": "tif-407",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -843991,7 +844066,7 @@
       "communityArea": "East Side"
     },
     {
-      "id": "tif-405",
+      "id": "tif-408",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844016,7 +844091,7 @@
       "communityArea": "East Side"
     },
     {
-      "id": "tif-406",
+      "id": "tif-409",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844041,7 +844116,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-407",
+      "id": "tif-410",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844066,7 +844141,7 @@
       "communityArea": "Woodlawn"
     },
     {
-      "id": "tif-408",
+      "id": "tif-411",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844091,7 +844166,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-409",
+      "id": "tif-412",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844116,7 +844191,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-410",
+      "id": "tif-413",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844141,7 +844216,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-411",
+      "id": "tif-414",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844166,7 +844241,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-412",
+      "id": "tif-415",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844191,7 +844266,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-413",
+      "id": "tif-416",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844216,7 +844291,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-414",
+      "id": "tif-417",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844241,7 +844316,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-415",
+      "id": "tif-418",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844266,7 +844341,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-416",
+      "id": "tif-419",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844291,7 +844366,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-417",
+      "id": "tif-420",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844316,7 +844391,7 @@
       "communityArea": "South Deering"
     },
     {
-      "id": "tif-418",
+      "id": "tif-421",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844341,7 +844416,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-419",
+      "id": "tif-422",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844366,7 +844441,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-420",
+      "id": "tif-423",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844391,7 +844466,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-421",
+      "id": "tif-424",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844416,7 +844491,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-422",
+      "id": "tif-425",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844441,7 +844516,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-423",
+      "id": "tif-426",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844466,7 +844541,7 @@
       "communityArea": "West Pullman"
     },
     {
-      "id": "tif-424",
+      "id": "tif-427",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844491,7 +844566,7 @@
       "communityArea": "Pullman"
     },
     {
-      "id": "tif-425",
+      "id": "tif-428",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844516,7 +844591,7 @@
       "communityArea": "Hyde Park"
     },
     {
-      "id": "tif-426",
+      "id": "tif-429",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844541,7 +844616,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-427",
+      "id": "tif-430",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844566,7 +844641,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-428",
+      "id": "tif-431",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844591,7 +844666,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-429",
+      "id": "tif-432",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844616,7 +844691,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-430",
+      "id": "tif-433",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844641,7 +844716,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-431",
+      "id": "tif-434",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844666,7 +844741,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-432",
+      "id": "tif-435",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844691,7 +844766,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-433",
+      "id": "tif-436",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844716,7 +844791,7 @@
       "communityArea": "Burnside"
     },
     {
-      "id": "tif-434",
+      "id": "tif-437",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844741,7 +844816,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-435",
+      "id": "tif-438",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844766,7 +844841,7 @@
       "communityArea": "Beverly"
     },
     {
-      "id": "tif-436",
+      "id": "tif-439",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844791,7 +844866,7 @@
       "communityArea": "South Deering"
     },
     {
-      "id": "tif-437",
+      "id": "tif-440",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844816,7 +844891,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-438",
+      "id": "tif-441",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844841,7 +844916,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-439",
+      "id": "tif-442",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844866,7 +844941,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-440",
+      "id": "tif-443",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844891,7 +844966,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-441",
+      "id": "tif-444",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844916,7 +844991,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-442",
+      "id": "tif-445",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844941,7 +845016,7 @@
       "communityArea": "Irving Park"
     },
     {
-      "id": "tif-443",
+      "id": "tif-446",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844966,7 +845041,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-444",
+      "id": "tif-447",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -844991,7 +845066,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-445",
+      "id": "tif-448",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845016,7 +845091,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-446",
+      "id": "tif-449",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845041,7 +845116,7 @@
       "communityArea": "Jefferson Park"
     },
     {
-      "id": "tif-447",
+      "id": "tif-450",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845066,7 +845141,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-448",
+      "id": "tif-451",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845091,7 +845166,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-449",
+      "id": "tif-452",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845116,7 +845191,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-450",
+      "id": "tif-453",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845141,7 +845216,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-451",
+      "id": "tif-454",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845166,7 +845241,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-452",
+      "id": "tif-455",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845191,7 +845266,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-453",
+      "id": "tif-456",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845216,7 +845291,7 @@
       "communityArea": "Garfield Ridge"
     },
     {
-      "id": "tif-454",
+      "id": "tif-457",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845241,7 +845316,7 @@
       "communityArea": "Avalon Park"
     },
     {
-      "id": "tif-455",
+      "id": "tif-458",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845266,7 +845341,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-456",
+      "id": "tif-459",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845291,7 +845366,7 @@
       "communityArea": "Irving Park"
     },
     {
-      "id": "tif-457",
+      "id": "tif-460",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845316,7 +845391,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-458",
+      "id": "tif-461",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845341,7 +845416,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-459",
+      "id": "tif-462",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845366,7 +845441,7 @@
       "communityArea": "Pullman"
     },
     {
-      "id": "tif-460",
+      "id": "tif-463",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845391,7 +845466,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-461",
+      "id": "tif-464",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845416,7 +845491,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-462",
+      "id": "tif-465",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845441,7 +845516,7 @@
       "communityArea": "Calumet Heights"
     },
     {
-      "id": "tif-463",
+      "id": "tif-466",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845466,7 +845541,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-464",
+      "id": "tif-467",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845491,7 +845566,7 @@
       "communityArea": "South Deering"
     },
     {
-      "id": "tif-465",
+      "id": "tif-468",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845516,7 +845591,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-466",
+      "id": "tif-469",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845541,7 +845616,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-467",
+      "id": "tif-470",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845566,7 +845641,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-468",
+      "id": "tif-471",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845591,7 +845666,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-469",
+      "id": "tif-472",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845616,7 +845691,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-470",
+      "id": "tif-473",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845641,7 +845716,7 @@
       "communityArea": "Hegewisch"
     },
     {
-      "id": "tif-471",
+      "id": "tif-474",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845666,7 +845741,7 @@
       "communityArea": "South Shore"
     },
     {
-      "id": "tif-472",
+      "id": "tif-475",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845691,7 +845766,7 @@
       "communityArea": "Auburn Gresham"
     },
     {
-      "id": "tif-473",
+      "id": "tif-476",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845716,7 +845791,7 @@
       "communityArea": "South Deering"
     },
     {
-      "id": "tif-474",
+      "id": "tif-477",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845741,7 +845816,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-475",
+      "id": "tif-478",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845766,7 +845841,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-476",
+      "id": "tif-479",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845791,7 +845866,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-477",
+      "id": "tif-480",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845816,7 +845891,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-478",
+      "id": "tif-481",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845841,7 +845916,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-479",
+      "id": "tif-482",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845866,7 +845941,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-480",
+      "id": "tif-483",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845891,7 +845966,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-481",
+      "id": "tif-484",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845916,7 +845991,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-482",
+      "id": "tif-485",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845941,7 +846016,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-483",
+      "id": "tif-486",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845966,7 +846041,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-484",
+      "id": "tif-487",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -845991,7 +846066,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-485",
+      "id": "tif-488",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846016,7 +846091,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-486",
+      "id": "tif-489",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846041,7 +846116,7 @@
       "communityArea": "Pullman"
     },
     {
-      "id": "tif-487",
+      "id": "tif-490",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846066,7 +846141,7 @@
       "communityArea": "McKinley Park"
     },
     {
-      "id": "tif-488",
+      "id": "tif-491",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846091,7 +846166,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-489",
+      "id": "tif-492",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846116,7 +846191,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-490",
+      "id": "tif-493",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846141,7 +846216,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-491",
+      "id": "tif-494",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846166,7 +846241,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-492",
+      "id": "tif-495",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846191,7 +846266,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-493",
+      "id": "tif-496",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846216,7 +846291,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-494",
+      "id": "tif-497",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846231,7 +846306,7 @@
         "lat": 41.9703626744,
         "lng": -87.7103621405
       },
-      "address": "3244 N Ainslie St",
+      "address": "3244 W Ainslie St",
       "status": "awarded",
       "recordDate": null,
       "recordProvenance": "official",
@@ -846241,7 +846316,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-495",
+      "id": "tif-498",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846266,7 +846341,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-496",
+      "id": "tif-499",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846291,7 +846366,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-497",
+      "id": "tif-500",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846316,7 +846391,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-498",
+      "id": "tif-501",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846341,7 +846416,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-499",
+      "id": "tif-502",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846366,7 +846441,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-500",
+      "id": "tif-503",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846391,7 +846466,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-501",
+      "id": "tif-504",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846416,7 +846491,7 @@
       "communityArea": "Woodlawn"
     },
     {
-      "id": "tif-502",
+      "id": "tif-505",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846441,7 +846516,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-503",
+      "id": "tif-506",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846466,7 +846541,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-504",
+      "id": "tif-507",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846491,7 +846566,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-505",
+      "id": "tif-508",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846516,7 +846591,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-506",
+      "id": "tif-509",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846541,7 +846616,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-507",
+      "id": "tif-510",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846566,7 +846641,7 @@
       "communityArea": "West Pullman"
     },
     {
-      "id": "tif-508",
+      "id": "tif-511",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846591,7 +846666,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-509",
+      "id": "tif-512",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846599,7 +846674,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 8000000,
-      "logLine": "TIF district: West Woodlawn · Total project cost $37,420,843 · CDC approved 2020-11-20",
+      "logLine": "TIF district: West Woodlawn,Woodlawn · Total project cost $37,420,843 · CDC approved 2020-11-20",
       "year": 2020,
       "geometry": {
         "kind": "point",
@@ -846616,7 +846691,7 @@
       "communityArea": "Woodlawn"
     },
     {
-      "id": "tif-510",
+      "id": "tif-513",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846641,7 +846716,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-511",
+      "id": "tif-514",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846666,7 +846741,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-512",
+      "id": "tif-515",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846691,7 +846766,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-513",
+      "id": "tif-516",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846716,7 +846791,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-514",
+      "id": "tif-517",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846741,7 +846816,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-515",
+      "id": "tif-518",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846766,32 +846841,7 @@
       "communityArea": "Kenwood"
     },
     {
-      "id": "tif-516",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Chicago Market",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 5800000,
-      "logLine": "TIF district: Wilson Yard · Total project cost $11,718,789 · CDC approved 2022-12-14",
-      "year": 2022,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.9659199471,
-        "lng": -87.6579688369
-      },
-      "address": "4620 N Broadway",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "Uptown"
-    },
-    {
-      "id": "tif-517",
+      "id": "tif-519",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846816,7 +846866,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-518",
+      "id": "tif-520",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846841,7 +846891,7 @@
       "communityArea": "Kenwood"
     },
     {
-      "id": "tif-519",
+      "id": "tif-521",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846866,7 +846916,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-520",
+      "id": "tif-522",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846874,7 +846924,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 3500000,
-      "logLine": "TIF district: Chicago/Central Park · Total project cost $13,268,179 · CDC approved 2021-11-17",
+      "logLine": "TIF district: Chicago/Central Park · Total project cost $13,268,179 · CDC approved 2021-11-17; COC issued 2025-08-15",
       "year": 2021,
       "geometry": {
         "kind": "point",
@@ -846882,7 +846932,7 @@
         "lng": -87.7167162871
       },
       "address": "414 N Central Park Av",
-      "status": "awarded",
+      "status": "completed",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
@@ -846891,7 +846941,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-521",
+      "id": "tif-523",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846916,7 +846966,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-522",
+      "id": "tif-524",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846941,7 +846991,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-523",
+      "id": "tif-525",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846966,7 +847016,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-524",
+      "id": "tif-526",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -846991,7 +847041,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-525",
+      "id": "tif-527",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847016,7 +847066,7 @@
       "communityArea": "Calumet Heights"
     },
     {
-      "id": "tif-526",
+      "id": "tif-528",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847041,7 +847091,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-527",
+      "id": "tif-529",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847066,7 +847116,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-528",
+      "id": "tif-530",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847074,7 +847124,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 950000,
-      "logLine": "TIF district: Foster and California · Total project cost $950,000 · CDC approved 2021-06-25",
+      "logLine": "TIF district: Foster and California · Total project cost $950,000 · CDC approved 2021-06-25; COC issued 2026-07-01",
       "year": 2021,
       "geometry": {
         "kind": "point",
@@ -847082,7 +847132,7 @@
         "lng": -87.701448853
       },
       "address": "5100 N Francisco Av",
-      "status": "awarded",
+      "status": "completed",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
@@ -847091,7 +847141,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-529",
+      "id": "tif-531",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847116,7 +847166,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-530",
+      "id": "tif-532",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847124,7 +847174,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 5000000,
-      "logLine": "TIF district: 47th and King Drive · Total project cost $38,385,381 · CDC approved 2021-09-14; COC issued 2023-05-16",
+      "logLine": "TIF district: 47th and King Drive · Total project cost $38,385,381 · CDC approved 2021-09-14; COC issued 2024-03-14",
       "year": 2021,
       "geometry": {
         "kind": "point",
@@ -847141,7 +847191,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-531",
+      "id": "tif-533",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847166,7 +847216,7 @@
       "communityArea": "South Lawndale"
     },
     {
-      "id": "tif-532",
+      "id": "tif-534",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847191,7 +847241,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-533",
+      "id": "tif-535",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847216,7 +847266,7 @@
       "communityArea": "Jefferson Park"
     },
     {
-      "id": "tif-534",
+      "id": "tif-536",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847241,7 +847291,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-535",
+      "id": "tif-537",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847266,7 +847316,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-536",
+      "id": "tif-538",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847291,7 +847341,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-537",
+      "id": "tif-539",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847316,7 +847366,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-538",
+      "id": "tif-540",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847341,7 +847391,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-539",
+      "id": "tif-541",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847366,7 +847416,7 @@
       "communityArea": "Hermosa"
     },
     {
-      "id": "tif-540",
+      "id": "tif-542",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847391,7 +847441,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-541",
+      "id": "tif-543",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847416,7 +847466,7 @@
       "communityArea": "Portage Park"
     },
     {
-      "id": "tif-542",
+      "id": "tif-544",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847441,7 +847491,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-543",
+      "id": "tif-545",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847466,7 +847516,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-544",
+      "id": "tif-546",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847491,7 +847541,7 @@
       "communityArea": "Burnside"
     },
     {
-      "id": "tif-545",
+      "id": "tif-547",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847516,7 +847566,7 @@
       "communityArea": "Roseland"
     },
     {
-      "id": "tif-546",
+      "id": "tif-548",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847541,7 +847591,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-547",
+      "id": "tif-549",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847549,7 +847599,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 18000000,
-      "logLine": "TIF district: 79th Street Corridor · Total project cost $48,128,370 · CDC approved 2022-07-20",
+      "logLine": "TIF district: 79th Street Corridor · Total project cost $48,128,370 · CDC approved 2022-07-20; COC issued 2025-11-14",
       "year": 2022,
       "geometry": {
         "kind": "point",
@@ -847557,7 +847607,7 @@
         "lng": -87.6455710336
       },
       "address": "838 W 79th St",
-      "status": "awarded",
+      "status": "completed",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
@@ -847566,15 +847616,15 @@
       "communityArea": "Auburn Gresham"
     },
     {
-      "id": "tif-548",
+      "id": "tif-550",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
       "recipient": "Congress Theater (2021)",
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
-      "authorizedAmount": 27000000,
-      "logLine": "TIF district: Fullerton/Milwaukee · Total project cost $87,807,235 · CDC approved 2023-07-19",
+      "authorizedAmount": 27250000,
+      "logLine": "TIF district: Fullerton/Milwaukee · Total project cost $89,378,018 · CDC approved 2023-07-19",
       "year": 2023,
       "geometry": {
         "kind": "point",
@@ -847591,7 +847641,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-549",
+      "id": "tif-551",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847616,7 +847666,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-550",
+      "id": "tif-552",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847641,7 +847691,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-551",
+      "id": "tif-553",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847666,7 +847716,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-552",
+      "id": "tif-554",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847691,7 +847741,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-553",
+      "id": "tif-555",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847716,7 +847766,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-554",
+      "id": "tif-556",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847741,7 +847791,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-555",
+      "id": "tif-557",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847766,7 +847816,7 @@
       "communityArea": "Avondale"
     },
     {
-      "id": "tif-556",
+      "id": "tif-558",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847774,7 +847824,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 8900000,
-      "logLine": "TIF district: Kinzie Industrial Conservation Area · Total project cost $8,900,000 · CDC approved 2022-03-23",
+      "logLine": "TIF district: Kinzie Industrial Conservation Area,Midwest · Total project cost $8,900,000 · CDC approved 2022-03-23",
       "year": 2022,
       "geometry": {
         "kind": "point",
@@ -847791,7 +847841,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-557",
+      "id": "tif-559",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847816,7 +847866,7 @@
       "communityArea": "West Town"
     },
     {
-      "id": "tif-558",
+      "id": "tif-560",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847841,7 +847891,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-559",
+      "id": "tif-561",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847866,7 +847916,7 @@
       "communityArea": "Gage Park"
     },
     {
-      "id": "tif-560",
+      "id": "tif-562",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847891,7 +847941,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-561",
+      "id": "tif-563",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847916,32 +847966,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-562",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "2222 S Michigan",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 10000000,
-      "logLine": "TIF district: Michigan/Cermak · Total project cost $81,339,022 · CDC approved 2023-07-19",
-      "year": 2023,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.8521777328,
-        "lng": -87.6239329905
-      },
-      "address": "2222 S Michigan Av",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "Near South Side"
-    },
-    {
-      "id": "tif-563",
+      "id": "tif-564",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847966,7 +847991,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-564",
+      "id": "tif-565",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -847991,7 +848016,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-565",
+      "id": "tif-566",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848016,7 +848041,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-566",
+      "id": "tif-567",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848041,7 +848066,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-567",
+      "id": "tif-568",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848066,7 +848091,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-568",
+      "id": "tif-569",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848091,7 +848116,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-569",
+      "id": "tif-570",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848116,7 +848141,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-570",
+      "id": "tif-571",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848141,7 +848166,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-571",
+      "id": "tif-572",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848166,7 +848191,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-572",
+      "id": "tif-573",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848191,7 +848216,7 @@
       "communityArea": "Garfield Ridge"
     },
     {
-      "id": "tif-573",
+      "id": "tif-574",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848216,7 +848241,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-574",
+      "id": "tif-575",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848224,7 +848249,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 10000000,
-      "logLine": "TIF district: 47th and King Drive · Total project cost $30,995,989 · CDC approved 2023-09-13; COC issued 2024-05-22",
+      "logLine": "TIF district: 47th and King Drive · Total project cost $30,995,989 · CDC approved 2023-09-13; COC issued 2025-04-23",
       "year": 2023,
       "geometry": {
         "kind": "point",
@@ -848241,7 +848266,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-575",
+      "id": "tif-576",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848266,7 +848291,7 @@
       "communityArea": "Pullman"
     },
     {
-      "id": "tif-576",
+      "id": "tif-577",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848291,7 +848316,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-577",
+      "id": "tif-578",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848316,7 +848341,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-578",
+      "id": "tif-579",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848341,7 +848366,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-579",
+      "id": "tif-580",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848366,7 +848391,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-580",
+      "id": "tif-581",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848391,7 +848416,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-581",
+      "id": "tif-582",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848416,7 +848441,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-582",
+      "id": "tif-583",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848441,7 +848466,7 @@
       "communityArea": "Jefferson Park"
     },
     {
-      "id": "tif-583",
+      "id": "tif-584",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848466,7 +848491,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-584",
+      "id": "tif-585",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848491,7 +848516,7 @@
       "communityArea": "Douglas"
     },
     {
-      "id": "tif-585",
+      "id": "tif-586",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848516,7 +848541,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-586",
+      "id": "tif-587",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848541,7 +848566,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-587",
+      "id": "tif-588",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848566,7 +848591,7 @@
       "communityArea": "West Lawn"
     },
     {
-      "id": "tif-588",
+      "id": "tif-589",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848591,7 +848616,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-589",
+      "id": "tif-590",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848616,7 +848641,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-590",
+      "id": "tif-591",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848641,7 +848666,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-591",
+      "id": "tif-592",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848666,7 +848691,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-592",
+      "id": "tif-593",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848691,7 +848716,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-593",
+      "id": "tif-594",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848716,7 +848741,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-594",
+      "id": "tif-595",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848741,7 +848766,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-595",
+      "id": "tif-596",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848766,7 +848791,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-596",
+      "id": "tif-597",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848791,7 +848816,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-597",
+      "id": "tif-598",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848816,7 +848841,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-598",
+      "id": "tif-599",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848841,7 +848866,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-599",
+      "id": "tif-600",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848866,7 +848891,7 @@
       "communityArea": "Irving Park"
     },
     {
-      "id": "tif-600",
+      "id": "tif-601",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848891,7 +848916,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-601",
+      "id": "tif-602",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848899,7 +848924,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 10000000,
-      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $50,074,041 · CDC approved 2022-06-22",
+      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $50,074,041 · CDC approved 2022-06-22; COC issued 2026-05-11",
       "year": 2022,
       "geometry": {
         "kind": "point",
@@ -848907,7 +848932,7 @@
         "lng": -87.6765720411
       },
       "address": "135 N Damen Av",
-      "status": "awarded",
+      "status": "completed",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
@@ -848916,7 +848941,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-602",
+      "id": "tif-603",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848941,7 +848966,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-603",
+      "id": "tif-604",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848966,7 +848991,7 @@
       "communityArea": "Beverly"
     },
     {
-      "id": "tif-604",
+      "id": "tif-605",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -848991,7 +849016,7 @@
       "communityArea": "Mount Greenwood"
     },
     {
-      "id": "tif-605",
+      "id": "tif-606",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849016,7 +849041,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-606",
+      "id": "tif-607",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849041,7 +849066,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-607",
+      "id": "tif-608",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849066,7 +849091,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-608",
+      "id": "tif-609",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849091,7 +849116,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-609",
+      "id": "tif-610",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849116,7 +849141,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-610",
+      "id": "tif-611",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849141,7 +849166,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-611",
+      "id": "tif-612",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849166,7 +849191,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-612",
+      "id": "tif-613",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849191,7 +849216,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-613",
+      "id": "tif-614",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849216,7 +849241,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-614",
+      "id": "tif-615",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849241,7 +849266,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-615",
+      "id": "tif-616",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849266,7 +849291,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-616",
+      "id": "tif-617",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849291,7 +849316,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-617",
+      "id": "tif-618",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849316,7 +849341,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-618",
+      "id": "tif-619",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849341,7 +849366,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-619",
+      "id": "tif-620",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849366,7 +849391,7 @@
       "communityArea": "North Park"
     },
     {
-      "id": "tif-620",
+      "id": "tif-621",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849391,7 +849416,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-621",
+      "id": "tif-622",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849416,7 +849441,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-622",
+      "id": "tif-623",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849441,7 +849466,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-623",
+      "id": "tif-624",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849466,7 +849491,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-624",
+      "id": "tif-625",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849474,14 +849499,14 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 1660000,
-      "logLine": "TIF district: Belmont/Central · Total project cost $1,660,000 · CDC approved 2022-07-20",
+      "logLine": "TIF district: Galewood/Armitage Industrial · Total project cost $1,660,000 · CDC approved 2022-07-20",
       "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.9239277052,
         "lng": -87.7615209447
       },
-      "address": "5411 E Fullerton Av",
+      "address": "5411 W Fullerton Av",
       "status": "awarded",
       "recordDate": null,
       "recordProvenance": "official",
@@ -849491,7 +849516,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-625",
+      "id": "tif-626",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849516,7 +849541,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-626",
+      "id": "tif-627",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849541,7 +849566,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-627",
+      "id": "tif-628",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849566,7 +849591,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-628",
+      "id": "tif-629",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849591,7 +849616,7 @@
       "communityArea": "West Garfield Park"
     },
     {
-      "id": "tif-629",
+      "id": "tif-630",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849616,7 +849641,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-630",
+      "id": "tif-631",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849641,7 +849666,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-631",
+      "id": "tif-632",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849666,7 +849691,7 @@
       "communityArea": "Morgan Park"
     },
     {
-      "id": "tif-632",
+      "id": "tif-633",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849691,7 +849716,7 @@
       "communityArea": "South Shore"
     },
     {
-      "id": "tif-633",
+      "id": "tif-634",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849716,7 +849741,7 @@
       "communityArea": "Auburn Gresham"
     },
     {
-      "id": "tif-634",
+      "id": "tif-635",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849741,7 +849766,7 @@
       "communityArea": "West Lawn"
     },
     {
-      "id": "tif-635",
+      "id": "tif-636",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849766,7 +849791,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-636",
+      "id": "tif-637",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849791,7 +849816,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-637",
+      "id": "tif-638",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849816,7 +849841,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-638",
+      "id": "tif-639",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849841,7 +849866,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-639",
+      "id": "tif-640",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849866,7 +849891,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-640",
+      "id": "tif-641",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849891,7 +849916,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-641",
+      "id": "tif-642",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849916,7 +849941,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-642",
+      "id": "tif-643",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849941,7 +849966,7 @@
       "communityArea": "Austin"
     },
     {
-      "id": "tif-643",
+      "id": "tif-644",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849966,7 +849991,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-644",
+      "id": "tif-645",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -849991,7 +850016,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "tif-645",
+      "id": "tif-646",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850016,7 +850041,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-646",
+      "id": "tif-647",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850041,7 +850066,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-647",
+      "id": "tif-648",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850066,7 +850091,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-648",
+      "id": "tif-649",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850091,7 +850116,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-649",
+      "id": "tif-650",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850116,7 +850141,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-650",
+      "id": "tif-651",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850124,7 +850149,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 600000,
-      "logLine": "TIF district: Chicago/Central Park · Total project cost $600,000 · CDC approved 2023-03-15",
+      "logLine": "TIF district: Chicago/Central Park,Kinzie Industrial Conservation Area · Total project cost $600,000 · CDC approved 2023-03-15",
       "year": 2023,
       "geometry": {
         "kind": "point",
@@ -850141,7 +850166,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-651",
+      "id": "tif-652",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850166,7 +850191,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-652",
+      "id": "tif-653",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850191,7 +850216,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-653",
+      "id": "tif-654",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850216,7 +850241,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-654",
+      "id": "tif-655",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850239,31 +850264,6 @@
       "locationReason": null,
       "governmentFundingPurpose": "capital_project",
       "communityArea": "North Lawndale"
-    },
-    {
-      "id": "tif-655",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Blackhawk Park TIF IGA Amendment",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 2755266,
-      "logLine": "TIF district: Belmont/Central · Total project cost $2,755,266 · CDC approved 2023-06-21",
-      "year": 2023,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.9229342087,
-        "lng": -87.7513378982
-      },
-      "address": "2318 N Lavergne Av",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "Belmont Cragin"
     },
     {
       "id": "tif-656",
@@ -850399,7 +850399,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 14500000,
-      "logLine": "TIF district: 47th/Ashland · Total project cost $46,054,108 · CDC approved 2023-12-13; COC issued 2026-03-10",
+      "logLine": "TIF district: 47th/Ashland · Total project cost $46,054,108 · CDC approved 2023-12-13; COC issued 2026-06-11",
       "year": 2023,
       "geometry": {
         "kind": "point",
@@ -850795,31 +850795,6 @@
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Chalmers ES - MEP & Roof Replacement",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 3750000,
-      "logLine": "TIF district: Midwest · Total project cost $5,100,000 · CDC approved 2024-10-09",
-      "year": 2024,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.8664077996,
-        "lng": -87.6952607932
-      },
-      "address": "2745 W Roosevelt Rd",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "North Lawndale"
-    },
-    {
-      "id": "tif-678",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
       "recipient": "Park 598 Additional Funding Request",
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
@@ -850841,32 +850816,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-679",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Park 599 - Additional Funding Request",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 450000,
-      "logLine": "TIF district: Edgewater/Ashland · Total project cost $450,000 · CDC approved 2024-03-20; COC issued 2026-02-27",
-      "year": 2024,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.9858127358,
-        "lng": -87.6708438694
-      },
-      "address": "1623 W Edgewater Av",
-      "status": "completed",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "Edgewater"
-    },
-    {
-      "id": "tif-680",
+      "id": "tif-678",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850891,7 +850841,7 @@
       "communityArea": "Avalon Park"
     },
     {
-      "id": "tif-681",
+      "id": "tif-679",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850916,7 +850866,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-682",
+      "id": "tif-680",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850941,7 +850891,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-683",
+      "id": "tif-681",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850966,7 +850916,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-684",
+      "id": "tif-682",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850981,7 +850931,7 @@
         "lat": 41.7327340985,
         "lng": -87.5556147715
       },
-      "address": "8930 N Muskegon Av",
+      "address": "8930 S Muskegon Av",
       "status": "awarded",
       "recordDate": null,
       "recordProvenance": "official",
@@ -850991,7 +850941,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-685",
+      "id": "tif-683",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -850999,7 +850949,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 5770000,
-      "logLine": "TIF district: Archer/Western · Total project cost $5,770,000 · CDC approved 2024-03-20",
+      "logLine": "TIF district: Archer/Western,Pilsen · Total project cost $5,770,000 · CDC approved 2024-03-20",
       "year": 2024,
       "geometry": {
         "kind": "point",
@@ -851016,7 +850966,7 @@
       "communityArea": "Bridgeport"
     },
     {
-      "id": "tif-686",
+      "id": "tif-684",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851041,7 +850991,7 @@
       "communityArea": "Lincoln Park"
     },
     {
-      "id": "tif-687",
+      "id": "tif-685",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851049,7 +850999,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 3714519,
-      "logLine": "TIF district: Chicago/Central Park · Total project cost $4,952,693 · CDC approved 2024-10-30",
+      "logLine": "TIF district: Chicago/Central Park,Midwest · Total project cost $4,952,693 · CDC approved 2024-10-30",
       "year": 2024,
       "geometry": {
         "kind": "point",
@@ -851066,7 +851016,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-688",
+      "id": "tif-686",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851074,7 +851024,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 1000000,
-      "logLine": "TIF district: Central West · Total project cost $1,000,000 · CDC approved 2024-06-12",
+      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $1,000,000 · CDC approved 2024-06-12",
       "year": 2024,
       "geometry": {
         "kind": "point",
@@ -851091,7 +851041,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-689",
+      "id": "tif-687",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851116,7 +851066,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-690",
+      "id": "tif-688",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851141,7 +851091,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-691",
+      "id": "tif-689",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851149,7 +851099,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 16400000,
-      "logLine": "TIF district: Chicago/Central Park · Total project cost $16,400,000 · CDC approved 2024-09-18",
+      "logLine": "TIF district: Chicago/Central Park,Kinzie Industrial Conservation Area · Total project cost $16,400,000 · CDC approved 2024-09-18",
       "year": 2024,
       "geometry": {
         "kind": "point",
@@ -851166,7 +851116,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-692",
+      "id": "tif-690",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851191,7 +851141,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-693",
+      "id": "tif-691",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851216,7 +851166,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-694",
+      "id": "tif-692",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851241,7 +851191,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-695",
+      "id": "tif-693",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851266,7 +851216,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-696",
+      "id": "tif-694",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851291,32 +851241,7 @@
       "communityArea": "South Lawndale"
     },
     {
-      "id": "tif-697",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Douglass Park Lower Level Renovation",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 4700000,
-      "logLine": "TIF district: Midwest · Total project cost $5,700,000 · CDC approved 2025-04-16",
-      "year": 2025,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.8629040013,
-        "lng": -87.7018665447
-      },
-      "address": "1401 S Sacramento Dr",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "North Lawndale"
-    },
-    {
-      "id": "tif-698",
+      "id": "tif-695",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851341,32 +851266,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-699",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Piotrowski Park Pool Enclosure",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 8000000,
-      "logLine": "TIF district: Little Village Industrial Corridor · Total project cost $9,000,000 · CDC approved 2025-04-16",
-      "year": 2025,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.8366967838,
-        "lng": -87.7310726928
-      },
-      "address": "4247 W 31st St",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": null,
-      "governmentFundingPurpose": "capital_project",
-      "communityArea": "South Lawndale"
-    },
-    {
-      "id": "tif-700",
+      "id": "tif-696",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851391,7 +851291,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-701",
+      "id": "tif-697",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851416,7 +851316,7 @@
       "communityArea": "North Lawndale"
     },
     {
-      "id": "tif-702",
+      "id": "tif-698",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851441,7 +851341,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-703",
+      "id": "tif-699",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851466,7 +851366,7 @@
       "communityArea": "Washington Park"
     },
     {
-      "id": "tif-704",
+      "id": "tif-700",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851491,7 +851391,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-705",
+      "id": "tif-701",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851499,7 +851399,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 50000000,
-      "logLine": "TIF district: LaSalle Central · Total project cost $13,300,000 · CDC approved 2026-05-12",
+      "logLine": "TIF district: LaSalle Central · Total project cost $166,515,200 · CDC approved 2026-09-23",
       "year": 2026,
       "geometry": {
         "kind": "point",
@@ -851516,7 +851416,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-706",
+      "id": "tif-702",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851541,7 +851441,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-707",
+      "id": "tif-703",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851566,7 +851466,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-708",
+      "id": "tif-704",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851591,7 +851491,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-709",
+      "id": "tif-705",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851616,7 +851516,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-710",
+      "id": "tif-706",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851641,7 +851541,7 @@
       "communityArea": "Oakland"
     },
     {
-      "id": "tif-711",
+      "id": "tif-707",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851666,7 +851566,7 @@
       "communityArea": "Washington Heights"
     },
     {
-      "id": "tif-712",
+      "id": "tif-708",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851691,7 +851591,7 @@
       "communityArea": "Roseland"
     },
     {
-      "id": "tif-713",
+      "id": "tif-709",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851716,7 +851616,7 @@
       "communityArea": "Washington Heights"
     },
     {
-      "id": "tif-714",
+      "id": "tif-710",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851741,7 +851641,7 @@
       "communityArea": "West Ridge"
     },
     {
-      "id": "tif-715",
+      "id": "tif-711",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851766,7 +851666,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-716",
+      "id": "tif-712",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851791,7 +851691,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-717",
+      "id": "tif-713",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851816,7 +851716,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-718",
+      "id": "tif-714",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851841,7 +851741,7 @@
       "communityArea": "Rogers Park"
     },
     {
-      "id": "tif-719",
+      "id": "tif-715",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851866,7 +851766,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-720",
+      "id": "tif-716",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851891,7 +851791,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-721",
+      "id": "tif-717",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851916,7 +851816,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "tif-722",
+      "id": "tif-718",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851941,7 +851841,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-723",
+      "id": "tif-719",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851966,7 +851866,7 @@
       "communityArea": "South Deering"
     },
     {
-      "id": "tif-724",
+      "id": "tif-720",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -851991,7 +851891,7 @@
       "communityArea": "Edgewater"
     },
     {
-      "id": "tif-725",
+      "id": "tif-721",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852016,7 +851916,7 @@
       "communityArea": "Uptown"
     },
     {
-      "id": "tif-726",
+      "id": "tif-722",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852041,7 +851941,7 @@
       "communityArea": "Near South Side"
     },
     {
-      "id": "tif-727",
+      "id": "tif-723",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852066,7 +851966,7 @@
       "communityArea": "Armour Square"
     },
     {
-      "id": "tif-728",
+      "id": "tif-724",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852091,7 +851991,7 @@
       "communityArea": "Loop"
     },
     {
-      "id": "tif-729",
+      "id": "tif-725",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852116,7 +852016,7 @@
       "communityArea": "South Chicago"
     },
     {
-      "id": "tif-730",
+      "id": "tif-726",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852141,7 +852041,57 @@
       "communityArea": "Hermosa"
     },
     {
-      "id": "tif-731",
+      "id": "tif-727",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "Foundry Park",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 201589396,
+      "logLine": "TIF district: Cortland and Chicago River · Total project cost $234,889,834 · CDC approved 2026-09-23",
+      "year": 2026,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.9178240257,
+        "lng": -87.6629112282
+      },
+      "address": "2001 N Southport Av",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "Lincoln Park"
+    },
+    {
+      "id": "tif-728",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "Roosevelt High School - Gym Renovation",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 2500000,
+      "logLine": "TIF district: Lawrence/Kedzie · Total project cost $2,500,000 · CDC approved 2026-08-25",
+      "year": 2026,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.9648552184,
+        "lng": -87.7148305063
+      },
+      "address": "3436 W Wilson Av",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "Albany Park"
+    },
+    {
+      "id": "tif-729",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852166,7 +852116,7 @@
       "communityArea": "Englewood"
     },
     {
-      "id": "tif-732",
+      "id": "tif-730",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852191,7 +852141,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-733",
+      "id": "tif-731",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852216,7 +852166,7 @@
       "communityArea": "Woodlawn"
     },
     {
-      "id": "tif-734",
+      "id": "tif-732",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852241,7 +852191,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-735",
+      "id": "tif-733",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852266,7 +852216,7 @@
       "communityArea": "Grand Boulevard"
     },
     {
-      "id": "tif-736",
+      "id": "tif-734",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852291,7 +852241,7 @@
       "communityArea": "West Pullman"
     },
     {
-      "id": "tif-737",
+      "id": "tif-735",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852316,7 +852266,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-738",
+      "id": "tif-736",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852341,7 +852291,7 @@
       "communityArea": "Belmont Cragin"
     },
     {
-      "id": "tif-739",
+      "id": "tif-737",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852366,7 +852316,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-740",
+      "id": "tif-738",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852391,7 +852341,7 @@
       "communityArea": "Avondale"
     },
     {
-      "id": "tif-741",
+      "id": "tif-739",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852416,7 +852366,7 @@
       "communityArea": "Lower West Side"
     },
     {
-      "id": "tif-742",
+      "id": "tif-740",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852441,7 +852391,7 @@
       "communityArea": "Chatham"
     },
     {
-      "id": "tif-743",
+      "id": "tif-741",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852466,7 +852416,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-744",
+      "id": "tif-742",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852491,7 +852441,7 @@
       "communityArea": "Albany Park"
     },
     {
-      "id": "tif-745",
+      "id": "tif-743",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852516,7 +852466,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "tif-746",
+      "id": "tif-744",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852541,7 +852491,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-747",
+      "id": "tif-745",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852566,7 +852516,7 @@
       "communityArea": "Irving Park"
     },
     {
-      "id": "tif-748",
+      "id": "tif-746",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852581,7 +852531,7 @@
         "lat": 41.7712748211,
         "lng": -87.739676508
       },
-      "address": "4700 W 67th St",
+      "address": "4700 W Marquette Rd",
       "status": "awarded",
       "recordDate": null,
       "recordProvenance": "official",
@@ -852591,7 +852541,7 @@
       "communityArea": "Clearing"
     },
     {
-      "id": "tif-749",
+      "id": "tif-747",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852616,7 +852566,7 @@
       "communityArea": "West Englewood"
     },
     {
-      "id": "tif-750",
+      "id": "tif-748",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852641,7 +852591,7 @@
       "communityArea": "East Garfield Park"
     },
     {
-      "id": "tif-751",
+      "id": "tif-749",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852666,7 +852616,7 @@
       "communityArea": "Lincoln Square"
     },
     {
-      "id": "tif-752",
+      "id": "tif-750",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852691,7 +852641,7 @@
       "communityArea": "Humboldt Park"
     },
     {
-      "id": "tif-753",
+      "id": "tif-751",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852716,7 +852666,7 @@
       "communityArea": "Woodlawn"
     },
     {
-      "id": "tif-754",
+      "id": "tif-752",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852741,7 +852691,7 @@
       "communityArea": "North Center"
     },
     {
-      "id": "tif-755",
+      "id": "tif-753",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852766,7 +852716,7 @@
       "communityArea": "New City"
     },
     {
-      "id": "tif-756",
+      "id": "tif-754",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852791,7 +852741,7 @@
       "communityArea": "Dunning"
     },
     {
-      "id": "tif-757",
+      "id": "tif-755",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852799,7 +852749,7 @@
       "capitalClass": "tif_subsidy",
       "amountAwarded": null,
       "authorizedAmount": 2050000,
-      "logLine": "TIF district: Central West · Total project cost $2,050,000 · CDC approved 2013-10-16",
+      "logLine": "TIF district: Central West,Kinzie Industrial Conservation Area · Total project cost $2,050,000 · CDC approved 2013-10-16",
       "year": 2013,
       "geometry": {
         "kind": "point",
@@ -852816,7 +852766,7 @@
       "communityArea": "Near West Side"
     },
     {
-      "id": "tif-758",
+      "id": "tif-756",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852841,7 +852791,7 @@
       "communityArea": "Beverly"
     },
     {
-      "id": "tif-759",
+      "id": "tif-757",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852866,51 +852816,32 @@
       "communityArea": "Lincoln Square"
     },
     {
+      "id": "tif-758",
+      "source": "tif",
+      "funderType": "government",
+      "funderName": "Tax Increment Financing (City of Chicago)",
+      "recipient": "Sinai Tomorrow",
+      "capitalClass": "tif_subsidy",
+      "amountAwarded": null,
+      "authorizedAmount": 31000000,
+      "logLine": "TIF district: Midwest · Total project cost $100,000,000 · CDC approved 2014-10-08; COC issued 2019-02-08",
+      "year": 2014,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.8610552113,
+        "lng": -87.6945596339
+      },
+      "address": "1500 S Fairfield Av",
+      "status": "completed",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [],
+      "locationReason": null,
+      "governmentFundingPurpose": "capital_project",
+      "communityArea": "North Lawndale"
+    },
+    {
       "id": "tif-held-0",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Trippe Manufacturing",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 1600000,
-      "logLine": "TIF district: 35th/Halsted · Total project cost $8,399,000 · CDC approved 1998-07-29",
-      "year": 1998,
-      "geometry": {
-        "kind": "citywide"
-      },
-      "address": "1111 W 35th Pl",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": "source_unlocated",
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "tif-held-1",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "55th Dan Ryan Shopping Center",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 3755000,
-      "logLine": "TIF district: Ryan Garfield · Total project cost $8,455,000 · CDC approved 1987-09-09",
-      "year": 1987,
-      "geometry": {
-        "kind": "citywide"
-      },
-      "address": "5300 S Wentworth Av",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": "source_unlocated",
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "tif-held-2",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852932,29 +852863,7 @@
       "governmentFundingPurpose": "capital_project"
     },
     {
-      "id": "tif-held-3",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "NAVTEQ",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 5000000,
-      "logLine": "TIF district: LaSalle Central · Total project cost $28,583,483 · CDC approved 2009-03-18",
-      "year": 2009,
-      "geometry": {
-        "kind": "citywide"
-      },
-      "address": "100 E Riverside Pz",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": "source_unlocated",
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "tif-held-4",
+      "id": "tif-held-1",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852976,7 +852885,7 @@
       "governmentFundingPurpose": "capital_project"
     },
     {
-      "id": "tif-held-5",
+      "id": "tif-held-2",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -852998,7 +852907,7 @@
       "governmentFundingPurpose": "capital_project"
     },
     {
-      "id": "tif-held-6",
+      "id": "tif-held-3",
       "source": "tif",
       "funderType": "government",
       "funderName": "Tax Increment Financing (City of Chicago)",
@@ -853013,50 +852922,6 @@
       },
       "address": null,
       "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": "source_unlocated",
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "tif-held-7",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "IGA - CPS - Jose de Diego Community Academy Playground",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 1400000,
-      "logLine": "TIF district: Humboldt Park Commercial · Total project cost $1,400,000 · CDC approved 2024-07-17",
-      "year": 2024,
-      "geometry": {
-        "kind": "citywide"
-      },
-      "address": "2301 W Potomac Av",
-      "status": "awarded",
-      "recordDate": null,
-      "recordProvenance": "official",
-      "links": [],
-      "locationReason": "source_unlocated",
-      "governmentFundingPurpose": "capital_project"
-    },
-    {
-      "id": "tif-held-8",
-      "source": "tif",
-      "funderType": "government",
-      "funderName": "Tax Increment Financing (City of Chicago)",
-      "recipient": "Sinai Tomorrow",
-      "capitalClass": "tif_subsidy",
-      "amountAwarded": null,
-      "authorizedAmount": 31000000,
-      "logLine": "TIF district: Midwest · Total project cost $100,000,000 · CDC approved 2014-10-08; COC issued 2019-02-08",
-      "year": 2014,
-      "geometry": {
-        "kind": "citywide"
-      },
-      "address": "1500 S California Av",
-      "status": "completed",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [],
