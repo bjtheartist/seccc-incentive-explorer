@@ -10,7 +10,8 @@ import { describe, expect, it } from "vitest";
 describe("investment docs clean-diff gate", () => {
   it("README.md/REFRESH.md GENERATED blocks match scripts/generate-investment-docs.ts's output", () => {
     expect(() => {
-      execFileSync("npx", ["tsx", "scripts/generate-investment-docs.ts", "--check"], {
+      // Run the same check without requiring tsx CLI's local IPC listener.
+      execFileSync(process.execPath, ["--import", "tsx", "scripts/generate-investment-docs.ts", "--check"], {
         cwd: process.cwd(),
         stdio: "pipe",
       });

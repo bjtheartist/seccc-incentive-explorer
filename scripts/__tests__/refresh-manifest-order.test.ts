@@ -207,6 +207,83 @@ describe("refresh pipeline order: refresh -> regenerate manifest -> export", () 
     expect(entry?.valueField).toBe("amount");
   });
 
+  it.each([true, false])("binds a failure artifact before export even when another source changed=%s", async (otherChanged) => {
+    const { runRefresh } = await import("../refresh/refresh-live-sources");
+    const good = makeFixtureSource();
+    if (!otherChanged) good.build = async () => BEFORE_CONTENT;
+    const bad: RefreshSource = {
+      ...makeFixtureSource(), id: "hud", file: "hud_cpd_activities.csv",
+      async build() { throw new Error("fixture upstream outage"); },
+    };
+    const ok = await runRefresh(
+      { dryRun: false, skipExport: false, only: null, summaryOut: null }, [good, bad],
+    );
+    expect(ok).toBe(false);
+    const artifact = readFileSync(join(tempInputDir, "refresh-attempt.json"), "utf8");
+    expect(JSON.parse(artifact).failedSources).toEqual([
+      { id: "hud", file: "hud_cpd_activities.csv", error: "fixture upstream outage" },
+    ]);
+    expect(hoisted.spawnCalls).toHaveLength(1);
+    expect(contentHashFor(hoisted.spawnCalls[0].manifestAtSpawn!, "refresh-attempt.json"))
+      .toBe(sha256(artifact));
+  });
+
+  it("removes a recovered failure artifact BEFORE manifest/export even when source bytes are unchanged", async () => {
+    const { runRefresh } = await import("../refresh/refresh-live-sources");
+    writeFileSync(join(tempInputDir, "refresh-attempt.json"), '{"failedSources":[],"okSources":[]}\n');
+    const good = makeFixtureSource();
+    good.build = async () => BEFORE_CONTENT;
+    expect(await runRefresh(
+      { dryRun: false, skipExport: false, only: null, summaryOut: null }, [good],
+    )).toBe(true);
+    expect(existsSync(join(tempInputDir, "refresh-attempt.json"))).toBe(false);
+    expect(hoisted.spawnCalls).toHaveLength(1);
+    expect(contentHashFor(hoisted.spawnCalls[0].manifestAtSpawn!, "refresh-attempt.json"))
+      .toBe("");
+  });
+
+  it("a dry-run failure neither creates its artifact nor changes manifest/export", async () => {
+    const { runRefresh } = await import("../refresh/refresh-live-sources");
+    const bad = makeFixtureSource();
+    bad.build = async () => { throw new Error("fixture upstream outage"); };
+    expect(await runRefresh(
+      { dryRun: true, skipExport: false, only: null, summaryOut: null }, [bad],
+    )).toBe(false);
+    expect(existsSync(join(tempInputDir, "refresh-attempt.json"))).toBe(false);
+    expect(readFileSync(join(tempInputDir, "manifest.json"), "utf8")).toBe(STALE_MANIFEST_TEXT);
+    expect(hoisted.spawnCalls).toHaveLength(0);
+  });
+
+  it("a successful no-op through the real runner stays silent on disk", async () => {
+    const { runRefresh } = await import("../refresh/refresh-live-sources");
+    const good = makeFixtureSource();
+    good.build = async () => BEFORE_CONTENT;
+    expect(await runRefresh(
+      { dryRun: false, skipExport: false, only: null, summaryOut: null }, [good],
+    )).toBe(true);
+    expect(existsSync(join(tempInputDir, "refresh-attempt.json"))).toBe(false);
+    expect(readFileSync(join(tempInputDir, "manifest.json"), "utf8")).toBe(STALE_MANIFEST_TEXT);
+    expect(hoisted.spawnCalls).toHaveLength(0);
+  });
+
+  it("a successful targeted retry does not clear an unrelated unresolved source failure", async () => {
+    const { runRefresh } = await import("../refresh/refresh-live-sources");
+    writeFileSync(join(tempInputDir, "refresh-attempt.json"), JSON.stringify({
+      attemptedAt: "2026-11-02T17:26:00Z", okSources: [],
+      failedSources: [{ id: "tif", file: "tif_projects.csv", error: "historical projects disappeared" }],
+    }));
+    const good = makeFixtureSource();
+    good.build = async () => BEFORE_CONTENT;
+    expect(await runRefresh(
+      { dryRun: false, skipExport: false, only: [good.id], summaryOut: null }, [good],
+    )).toBe(false);
+    const artifact = JSON.parse(readFileSync(join(tempInputDir, "refresh-attempt.json"), "utf8"));
+    expect(artifact.failedSources).toEqual([
+      { id: "tif", file: "tif_projects.csv", error: "historical projects disappeared" },
+    ]);
+    expect(artifact.okSources).toContain(good.id);
+  });
+
   it("--dry-run does NOT touch manifest.json and does not spawn the export", async () => {
     const { refreshOne, regenerateManifestThenExport } = await import(
       "../refresh/refresh-live-sources"
