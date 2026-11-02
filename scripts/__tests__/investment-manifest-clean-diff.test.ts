@@ -12,7 +12,9 @@ import { describe, expect, it } from "vitest";
 describe("investment manifest clean-diff gate", () => {
   it("data/curated/investment-inputs/manifest.json matches scripts/generate-investment-manifest.ts's output", () => {
     expect(() => {
-      execFileSync("npx", ["tsx", "scripts/generate-investment-manifest.ts", "--check"], {
+      // Run the same TypeScript CLI without tsx's unrelated watch/IPC server;
+      // hermetic runners may forbid listening on a local Unix socket.
+      execFileSync(process.execPath, ["--import", "tsx", "scripts/generate-investment-manifest.ts", "--check"], {
         cwd: process.cwd(),
         stdio: "pipe",
       });

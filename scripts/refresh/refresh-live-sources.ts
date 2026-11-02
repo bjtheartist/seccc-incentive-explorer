@@ -108,6 +108,8 @@ import {
 } from "../import-chicago-cares-program-ledger";
 import { buildChicagoCaresProgramLedger } from "../../lib/chicago-cares-program-ledger";
 import { loadManifest, writeManifest, type DecreasePolicy } from "../lib/investment-manifest";
+import { tifSourceKey } from "../lib/capital-record-ids";
+import { normalizeCompletionRefresh } from "./normalize-completion-refresh";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -369,6 +371,10 @@ export interface RefreshSource {
   build(): Promise<string>;
   /** Measure a serialized file (used for BOTH the before and after snapshot). */
   measure(content: string): Metrics;
+  /** Preserve proven legacy ordering without inventing or carrying forward rows. */
+  normalize?(before: string | null, next: string): string;
+  /** Source-specific integrity checks, run before any refreshed bytes are written. */
+  validate?(before: string | null, next: string): void;
 }
 
 // ── Socrata: NOF Small / NOF Large / SBIF ────────────────────────────────────
@@ -417,6 +423,7 @@ function socrataCompletionSource(
     label,
     file,
     dollarLabel: "incentive_amount",
+    normalize: normalizeCompletionRefresh,
     async build() {
       const rows = await socrataFetchAll(datasetId);
       rows.sort((a, b) => socrataSortKey(a).localeCompare(socrataSortKey(b)));
@@ -594,11 +601,51 @@ function buildTifAnnualReportRows(rows: Row[]): string[][] {
   });
 }
 
+/** Net growth can hide disappeared historical authorizations. A disappearance
+ * is review-required, not evidence of cancellation. Likewise an upstream
+ * spreadsheet error must never become a district in the published context. */
+export function validateTifRefresh(before: string | null, next: string): void {
+  const nextRows = parseCsv(next);
+  const errors: string[] = [];
+  const badDistricts = nextRows.filter((row) => {
+    const district = trimmed(row.tif_district);
+    return (row.dataset === "annual-report" && !district) ||
+      /^(?:ERROR\b|#(?:N\/A|REF!|VALUE!|DIV\/0!|NAME\?|NUM!|NULL!))/i.test(district);
+  });
+  if (badDistricts.length) {
+    errors.push(`${badDistricts.length} invalid district label(s): ${badDistricts.slice(0, 5)
+      .map((row) => `${row.source_row_id}=${JSON.stringify(row.tif_district)}`).join(", ")}`);
+  }
+  const keys = (rows: Record<string, string>[]) => {
+    const result = new Set<string>();
+    for (const row of rows) {
+      if (row.dataset !== "rda-iga" && row.dataset !== "annual-report") {
+        throw new Error(`TIF refresh has unknown dataset ${JSON.stringify(row.dataset)}; refusing to write.`);
+      }
+      if (row.dataset !== "rda-iga") continue;
+      const key = tifSourceKey(row);
+      if (result.has(key)) throw new Error(`TIF refresh has duplicate source identity ${key}; refusing to write.`);
+      result.add(key);
+    }
+    return result;
+  };
+  const nextKeys = keys(nextRows);
+  if (before !== null) {
+    const removed = [...keys(parseCsv(before))].filter((key) => !nextKeys.has(key));
+    if (removed.length) {
+      errors.push(`${removed.length} existing RDA/IGA source identity/identities disappeared (${removed.join(", ")}); ` +
+        "human review is required before accepting historical-record removals, even if the net count grew");
+    }
+  }
+  if (errors.length) throw new Error(`TIF refresh rejected: ${errors.join("; ")}. Committed TIF input retained.`);
+}
+
 const tifSource: RefreshSource = {
   id: "tif",
   label: "TIF projects (RDA/IGA + Annual Report)",
   file: "tif_projects.csv",
   dollarLabel: "authorized_tif_assistance (rda-iga)",
+  validate: validateTifRefresh,
   async build() {
     const [rdaIga, annualReport] = await Promise.all([
       socrataFetchAll(TIF_RDA_IGA_DATASET),
@@ -921,14 +968,40 @@ export function checkDecreasePolicy(sourceId: string, before: Metrics | null, af
  */
 export function buildRefreshAttemptArtifact(
   outcomes: readonly Outcome[],
-): { attemptedAt: string; failedSources: Array<{ id: string; file: string; error?: string }>; okSources: string[] } | null {
-  const failed = outcomes.filter((o) => !o.ok);
+  previous: RefreshAttemptArtifact | null = null,
+): RefreshAttemptArtifact | null {
+  const retried = new Set(outcomes.map((o) => o.id));
+  const failed = [
+    ...(previous?.failedSources ?? []).filter((source) => !retried.has(source.id)),
+    ...outcomes.filter((o) => !o.ok).map(({ id, file, error }) => ({ id, file, error })),
+  ];
   if (failed.length === 0) return null;
   return {
     attemptedAt: new Date().toISOString(),
     failedSources: failed.map((f) => ({ id: f.id, file: f.file, error: f.error })),
-    okSources: outcomes.filter((o) => o.ok).map((o) => o.id),
+    okSources: [...new Set([
+      ...(previous?.okSources ?? []).filter((id) => !retried.has(id)),
+      ...outcomes.filter((o) => o.ok).map((o) => o.id),
+    ])],
   };
+}
+
+interface RefreshAttemptArtifact {
+  attemptedAt: string;
+  failedSources: Array<{ id: string; file: string; error?: string }>;
+  okSources: string[];
+}
+
+function previousRefreshAttempt(): RefreshAttemptArtifact | null {
+  if (!existsSync(REFRESH_ATTEMPT_PATH)) return null;
+  const value = JSON.parse(readFileSync(REFRESH_ATTEMPT_PATH, "utf8")) as RefreshAttemptArtifact;
+  if (!value || !Array.isArray(value.failedSources) || !Array.isArray(value.okSources) ||
+    !value.okSources.every((id) => typeof id === "string") ||
+    !value.failedSources.every((source) => source && typeof source.id === "string" &&
+      typeof source.file === "string" && (source.error === undefined || typeof source.error === "string"))) {
+    throw new Error("Invalid refresh-attempt.json — refusing to erase unresolved source failures.");
+  }
+  return value;
 }
 
 /**
@@ -959,8 +1032,10 @@ export async function refreshOne(source: RefreshSource, options: CliOptions): Pr
     // importer wrote atomically, before refreshOne could measure or enforce
     // anything) — eliminated entirely, not just guarded, so a future source
     // cannot reintroduce the same bypass.
-    const nextContent = await source.build();
+    const fetchedContent = await source.build();
+    const nextContent = source.normalize?.(beforeContent, fetchedContent) ?? fetchedContent;
     base.after = source.measure(nextContent);
+    source.validate?.(beforeContent, nextContent);
     base.changed = nextContent !== beforeContent;
     if (base.changed) {
       // Sol gate finding 7 — enforce the manifest's decreasePolicy BEFORE
@@ -1097,12 +1172,19 @@ export function regenerateManifestThenExport(options: CliOptions, changed: boole
   return true;
 }
 
-async function main(): Promise<void> {
-  const options = parseRefreshCliArgs(process.argv.slice(2));
+/** The real orchestration path; injectable sources let tests prove failure-
+ * artifact ordering without live network calls or writing the committed data. */
+export async function runRefresh(
+  options: CliOptions,
+  sources: readonly RefreshSource[] = SOURCES,
+): Promise<boolean> {
   const selected = options.only
-    ? SOURCES.filter((s) => options.only!.includes(s.id))
-    : SOURCES;
+    ? sources.filter((s) => options.only!.includes(s.id))
+    : sources;
   if (selected.length === 0) throw new Error("No sources selected");
+  // Read before touching any sources. A targeted retry cannot clear failures
+  // from sources it never checked, nor silently discard an unreadable artifact.
+  const previousAttempt = previousRefreshAttempt();
 
   const outcomes: Outcome[] = [];
   for (const source of selected) {
@@ -1125,12 +1207,8 @@ async function main(): Promise<void> {
   if (options.summaryOut) writeFileSync(options.summaryOut, summary, "utf8");
 
   const failed = outcomes.filter((o) => !o.ok);
-  const changed = outcomes.some((o) => o.changed);
-
-  if (!regenerateManifestThenExport(options, changed)) {
-    process.exitCode = 1;
-    return;
-  }
+  let changed = outcomes.some((o) => o.changed);
+  const attempt = buildRefreshAttemptArtifact(outcomes, previousAttempt);
 
   // Deliverable 7 (consult F9) — "always commit a refresh-attempt artifact on
   // failure so a failure-only run has a diff and can open a PR." Without this,
@@ -1142,20 +1220,36 @@ async function main(): Promise<void> {
   // must stay silent) and removed once every source is healthy again, so it
   // never lingers as permanent no-op diff noise.
   if (!options.dryRun) {
-    const attempt = buildRefreshAttemptArtifact(outcomes);
     if (attempt) {
       writeFileSync(REFRESH_ATTEMPT_PATH, JSON.stringify(attempt, null, 2) + "\n", "utf8");
+      changed = true;
       process.stdout.write(`\n(wrote ${REFRESH_ATTEMPT_PATH} — failure artifact for the delta PR)\n`);
     } else if (existsSync(REFRESH_ATTEMPT_PATH)) {
       unlinkSync(REFRESH_ATTEMPT_PATH);
+      changed = true;
       process.stdout.write(`\n(removed ${REFRESH_ATTEMPT_PATH} — every source is healthy again)\n`);
     }
   }
+
+  // The attempt artifact is itself a manifest entry. Create/remove it FIRST,
+  // even on a failure-only run or unchanged recovery, then bind every artifact
+  // to those exact bytes. #417 wrote it after export and immediately went stale.
+  const exported = regenerateManifestThenExport(options, changed);
 
   if (failed.length > 0) {
     process.stdout.write(
       `\n✖ ${failed.length} of ${outcomes.length} source(s) failed: ${failed.map((f) => f.id).join(", ")}\n`,
     );
+  }
+  const notRetried = attempt?.failedSources.filter((source) => !outcomes.some((o) => o.id === source.id)) ?? [];
+  if (notRetried.length) {
+    process.stdout.write(`\n✖ Previously failed source(s) not retried: ${notRetried.map((source) => source.id).join(", ")}\n`);
+  }
+  return exported && attempt === null;
+}
+
+async function main(): Promise<void> {
+  if (!await runRefresh(parseRefreshCliArgs(process.argv.slice(2)))) {
     process.exitCode = 1;
   }
 }

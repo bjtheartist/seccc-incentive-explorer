@@ -270,23 +270,90 @@ export function readChicagoCaresProgramLedgerFixture(
   return parseChicagoCaresProgramLedgerFixture(parsed);
 }
 
+const SOCRATA_FETCH_ATTEMPTS = 3;
+const SOCRATA_FETCH_TIMEOUT_MS = 20_000;
+
+class SocrataResponseError extends Error {
+  constructor(message: string, readonly retryable: boolean) {
+    super(message);
+  }
+}
+
+function describeFetchFailure(error: unknown): string {
+  // Native fetch commonly says only "fetch failed"; the useful DNS, socket,
+  // or TLS code lives on cause. Keep it in the message because refreshOne
+  // intentionally serializes Error.message, not the whole exception object.
+  const details: string[] = [];
+  let current = error;
+  for (let depth = 0; depth < 4 && current != null; depth++) {
+    if (!(current instanceof Error)) {
+      details.push(String(current));
+      break;
+    }
+    const code = "code" in current ? ` [${String(current.code)}]` : "";
+    details.push(`${current.name}: ${current.message}${code}`);
+    current = current.cause;
+  }
+  return details.join("; caused by ");
+}
+
 async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "Chicago-Incentive-Explorer-CARES-Ledger-Importer/1.0",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Socrata request failed (${response.status} ${response.statusText}): ${url}`,
-    );
+  for (let attempt = 1; attempt <= SOCRATA_FETCH_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SOCRATA_FETCH_TIMEOUT_MS);
+    let retryDelayMs = attempt * 500;
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Chicago-Incentive-Explorer-CARES-Ledger-Importer/1.0",
+        },
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const retryAfter = response.headers.get("retry-after");
+        const retryAfterMs = retryAfter == null
+          ? NaN
+          : /^\d+$/.test(retryAfter)
+            ? Number(retryAfter) * 1_000
+            : Date.parse(retryAfter) - Date.now();
+        // Honor a short Retry-After. A longer rate-limit asks for a later run,
+        // not an early retry that ignores the server's requested backoff.
+        const retryable = (response.status === 408 || response.status === 429 || response.status >= 500)
+          && !(retryAfterMs > 30_000);
+        if (retryAfterMs > 0 && retryable) retryDelayMs = Math.max(retryDelayMs, retryAfterMs);
+        await response.body?.cancel();
+        throw new SocrataResponseError(
+          `HTTP ${response.status} ${response.statusText}${retryAfter ? ` (Retry-After: ${retryAfter})` : ""}`,
+          retryable,
+        );
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.toLowerCase().includes("json")) {
+        await response.body?.cancel();
+        throw new SocrataResponseError(`non-JSON content: ${contentType}`, false);
+      }
+      // Keep the deadline active while reading the body, not just headers.
+      return await response.json();
+    } catch (error) {
+      const retryable = error instanceof SocrataResponseError
+        ? error.retryable
+        : !(error instanceof SyntaxError);
+      if (!retryable || attempt === SOCRATA_FETCH_ATTEMPTS) {
+        const timeoutDetail = controller.signal.aborted
+          ? `request timed out after ${SOCRATA_FETCH_TIMEOUT_MS}ms; `
+          : "";
+        throw new Error(
+          `Chicago CARES Socrata fetch failed after ${attempt} attempt(s): ${url} — ${timeoutDetail}${describeFetchFailure(error)}`,
+          { cause: error },
+        );
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
   }
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().includes("json")) {
-    throw new Error(`Socrata returned non-JSON content for ${url}: ${contentType}`);
-  }
-  return response.json();
+  throw new Error(`Chicago CARES Socrata fetch exhausted attempts: ${url}`);
 }
 
 async function fetchBoundedRows(url: string, label: string): Promise<unknown[]> {
