@@ -291,6 +291,9 @@ export const GOAL_RULES: Record<string, GoalRule> = {
 };
 
 export const SPECIALIZED_INDUSTRY_PROGRAM_IDS = ids([
+  // Deep-technology R&D with phase-specific invitation/prior-award rules,
+  // not general startup capital. No generic goal or industry establishes fit.
+  "nsfSeedFund",
   "rev",
   "micro",
   "dataCenter",
@@ -405,6 +408,13 @@ export function projectGoalFit(
       ? industryProfile.topPrograms.includes(program.id)
       : false;
     if (!industry || !industrySupportsProgram) {
+      if (program.id === "nsfSeedFund") {
+        return {
+          level: "industry-check",
+          label: "Technical R&D requirements to confirm",
+          reason: "A business goal, industry or address does not establish NSF eligibility. Confirm innovative, high-risk technology R&D and the current phase-specific invitation or prior-award requirements; this is not general startup funding.",
+        };
+      }
       return {
         level: "industry-check",
         label: "Industry requirements to confirm",

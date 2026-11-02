@@ -142,6 +142,8 @@ export const PROGRAM_PERSONA_TAGS: Record<string, PersonaId[]> = {
   quantumEZ: ["developer"],
   hib: ["developer"],
   innovationVoucher: ["supporter", "starting", "growing"],
+  // Discovery lens only: technical R&D and phase-specific NSF requirements still apply.
+  nsfSeedFund: ["starting", "growing"],
   economicEmpowermentCenters: ["supporter", "starting"],
   filmCredit: ["growing"],
   liveTheaterCredit: ["growing"],

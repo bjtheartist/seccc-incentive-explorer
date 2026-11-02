@@ -112,7 +112,7 @@ describe("GET /api/cron/watchlist-digest", () => {
       userId: "user-1",
       email: "user1@example.com",
     });
-    expect(payload.wouldSend[0].subject).toContain("upcoming deadline");
+    expect(payload.wouldSend[0].subject).toContain("TIF expiration");
     expect(payload.wouldSend[0].areas[0]).toMatchObject({
       areaId: "41.7355,-87.5512",
       areaLabel: "Commercial Ave corridor",
