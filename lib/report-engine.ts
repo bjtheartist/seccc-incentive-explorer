@@ -1824,7 +1824,7 @@ function programReportItem(
   // 'window-closed' and 'lapsed-notice' render with their note.
   const availability = resolveAvailability(program, new Date(), gatingOpts);
   const availabilityNote =
-    availability.state === "window-closed" || availability.state === "lapsed-notice"
+    availability.state === "window-closed" || availability.state === "lapsed-notice" || availability.state === "unverified"
       ? availability.note
       : undefined;
   return {
@@ -3017,7 +3017,9 @@ function buildDeadlinesSection(
 
   // Flatten programs with deadlines[] arrays into ProgramCardSlim entries.
   // Each deadline entry in a program gets its own item so sorting is by date.
-  const cardSlims = programs.flatMap((p) => {
+  // SBIF catalog months belong to different districts. Only the matched
+  // district rollout below can supply an address-specific SBIF deadline.
+  const cardSlims = programs.filter((p) => p.id !== "sbif").flatMap((p) => {
     // Support both the older flat `deadline` string field and the new `deadlines[]` array.
     const deadlineArr: Array<{ label?: string; date: string }> =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

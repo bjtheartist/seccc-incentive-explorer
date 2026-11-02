@@ -980,6 +980,24 @@ describe("generateReportData", () => {
     expect(item?.detail).toContain(suspensionNote);
   });
 
+  it("keeps unknown SBIF district timing visible rather than presenting an ordinary open incentive", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-02T13:00:00Z"));
+    try {
+      const report = generateReportData(makeState({ projectGoals: ["rehab"] }), catalogPrograms as Program[], {
+        zones: { tif: true }, zoneNames: { tif: "Stockyards Annex" },
+        neighborhoodEconomics: { tifFinance: { districtId: "unknown-stockyards-annex", districtName: "Stockyards Annex" } },
+      });
+      const item = report.sections.flatMap((section) => section.items).find((candidate) => candidate.programId === "sbif");
+      expect(item).toBeDefined();
+      expect(item?.availability).toBe("unverified");
+      expect(item?.availabilityNote).toBeTruthy();
+      expect(item?.detail).toContain(item?.availabilityNote);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("maps a real T-NNN district id through the committed financials into the real SBIF rollout and funding chart", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-02-20T12:00:00-06:00"));

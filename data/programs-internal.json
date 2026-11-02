@@ -389,7 +389,7 @@
     "name": "Small Business Improvement Fund (SBIF)",
     "level": "City",
     "zoneKey": "tif",
-    "summary": "TIF-funded reimbursement grant for permanent building improvements to commercial and industrial properties. Open on a monthly TIF-by-TIF rollout schedule (July 1-30 and August 1-30 windows open for eligible districts in those months). Administered by SomerCor.",
+    "summary": "SomerCor administers TIF-funded reimbursement grants for permanent commercial and industrial building improvements. Applications follow district-specific monthly windows; confirm the current district calendar before applying.",
     "whoQualifies": "Small businesses and property owners in eligible TIF districts. Tenants need a lease with at least 5 years remaining. Property type determines which cap applies: commercial (1-4 story multi-tenant or single-tenant) or industrial (single-tenant or multi-tenant). Gross sales or net worth determines the reimbursement percentage.",
     "benefits": [
       "Multi-tenant commercial: up to $75,000 per tenant",
@@ -463,7 +463,7 @@
     ],
     "contact": "SomerCor (SBIF Administrator): (312) 360-3384",
     "url": "https://somercor.com/sbif/",
-    "sourceUrl": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+    "sourceUrl": "https://somercor.com/sbif/",
     "status": "current",
     "contacts": [
       {
@@ -506,25 +506,17 @@
         "required": false
       }
     ],
-    "lastVerifiedAt": "2026-07-10",
+    "lastVerifiedAt": "2026-11-02",
     "benefitRange": "$75K–$250K cap (property-type dependent); 30–90% reimbursement (commercial) / 50% (industrial)",
-    "fastestConfirmingStep": "Check the SBIF rollout calendar at chicago.gov/sbif for your TIF's enrollment month, then contact SomerCor at (312) 360-3384",
+    "fastestConfirmingStep": "Check your district in the current rollout calendar at somercor.com/sbif/ and confirm timing with SomerCor at (312) 360-3300 before preparing an application.",
     "deadlines": [
       {
-        "label": "July 2026 window opens (eligible districts)",
-        "date": "2026-07-01"
+        "label": "November 2026 window closes for that month’s listed TIF districts only — 5 p.m.; confirm time zone with SomerCor",
+        "date": "2026-11-30"
       },
       {
-        "label": "July 2026 window closes",
-        "date": "2026-07-30"
-      },
-      {
-        "label": "August 2026 window opens (eligible districts)",
-        "date": "2026-08-01"
-      },
-      {
-        "label": "August 2026 window closes",
-        "date": "2026-08-30"
+        "label": "December 2026 window closes for that month’s listed TIF districts only — 5 p.m.; confirm time zone with SomerCor",
+        "date": "2026-12-30"
       }
     ],
     "applicationPortals": [
@@ -535,7 +527,7 @@
         "language": "en"
       }
     ],
-    "boundaryDisclaimer": "The rollout calendar is TIF-district-specific. Not every TIF district is open in the July or August window. Check the rollout calendar at chicago.gov/city/en/sites/small-business-improvement-fund/home/rollout-calendar.html for your specific district's enrollment month.",
+    "boundaryDisclaimer": "The rollout calendar is TIF-district-specific; these dates do not apply to every TIF district. Check https://somercor.com/sbif/ for your property’s district and acceptance period.",
     "verificationSteps": [
       {
         "label": "Confirm your TIF district's current application window",
@@ -567,12 +559,12 @@
       "growing"
     ],
     "intakeStatus": "open",
-    "statusAsOf": "2026-07-10",
+    "statusAsOf": "2026-11-02",
     "benefitTermsStatus": "current",
     "locationRelation": "required",
     "nextWindow": {
-      "expected": "2026-08-30",
-      "note": "August 2026 window open for eligible TIF districts through 2026-08-30 (July 2026 window already closed). Monthly TIF-by-TIF rollout schedule."
+      "expected": "2026-11-30",
+      "note": "November districts: Lawrence/Broadway, Little Village East, Midwest, Pulaski Corridor, Stockyards Southeast Quadrant (November 1–30). December districts: 111th/Kedzie, Austin Commercial, Bronzeville, Division/Homan, Touhy/Western (December 1–30). Published closing time is 5 p.m.; the source does not specify a time zone. Confirm with SomerCor. Your property’s district must be in the applicable month."
     }
   },
   {
@@ -3413,21 +3405,21 @@
   },
   {
     "id": "economicEmpowermentCenters",
-    "name": "Economic Empowerment Centers (EEC) Grant Program — Round 2",
+    "name": "Economic Empowerment Centers (EEC) Grant Program — FY26-1",
     "level": "State",
     "zoneKey": "",
-    "summary": "DCEO Office of Economic Equity & Empowerment grant program supporting organizations that deliver tailored business training, mentorship, outreach, and enterprise-building services for underserved businesses and entrepreneurs. Round 2 is open on a rolling basis until funding is exhausted.",
-    "whoQualifies": "Career education agencies and nonprofit organizations, including local development corporations, chambers of commerce, community-based outreach centers, and organizations serving underserved businesses and entrepreneurs.",
+    "summary": "DCEO grants to eligible organizations delivering business training and advising to underserved Illinois entrepreneurs. FY26-1 (NOFO 3226-4281) applications close November 6, 2026 at 5 p.m.; confirm the time zone with DCEO. This is not a direct grant to individual entrepreneurs.",
+    "whoQualifies": "Eligible career education agencies and nonprofit organizations serving underserved Illinois businesses and entrepreneurs. Each center must be incorporated as a nonprofit, have a designated program director and representative board, and be accessible to eligible participants. Required matching funds equal 100% of the grant, including at least 50% of the grant amount in cash.",
     "benefits": [
       "$250,000-$500,000 grant awards",
       "Supports business advising, cohort training, mentorship, outreach, and other enterprise-building services",
       "Designed to strengthen inclusive business ecosystems in communities facing systemic barriers to entry and growth"
     ],
     "howToApply": [
-      "Review the DCEO EEC Round 2 NOFO and application documents",
-      "Confirm the applicant organization is pre-qualified through the State of Illinois grant process",
-      "Prepare organizational documents, project narrative, budget, and required supporting materials",
-      "Submit the application through the DCEO application submission form while funds remain available"
+      "Review the DCEO EEC FY26-1 NOFO and application documents",
+      "Confirm organizational eligibility and State of Illinois grant pre-qualification",
+      "Prepare the project narrative, budget, required organizational documents and committed cash/in-kind matching-fund evidence",
+      "Submit through the DCEO application submission form by November 6, 2026 at 5 p.m.; confirm the time zone with DCEO"
     ],
     "requiredDocs": [
       "Mission statement",
@@ -3435,7 +3427,8 @@
       "Organizational chart",
       "Project location photo and CDFI Map Area documentation, if applicable",
       "Uniform application and uniform budget",
-      "Mandatory disclosure and conflict of interest disclosure"
+      "Mandatory disclosure and conflict of interest disclosure",
+      "Evidence of committed matching funds: 100% of grant amount overall, including at least 50% of grant amount in cash"
     ],
     "contact": "DCEO EEC Program: CEO.EECProgram@illinois.gov",
     "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
@@ -3459,19 +3452,25 @@
       },
       {
         "criterion": "industry",
-        "description": "Applicant must be a career education agency or nonprofit organization delivering business-support services",
+        "description": "Eligible career education agency or nonprofit delivering business-support services; each center must be nonprofit-incorporated with a program director and representative board",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Matching funds equal to 100% of the grant amount, including at least 50% of the grant amount in cash",
         "verifiedBy": "manual",
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-06-02",
+    "lastVerifiedAt": "2026-11-02",
     "benefitRange": "$250,000-$500,000",
     "fastestConfirmingStep": "Review DCEO Grant Opportunity 3226-4281 and email CEO.EECProgram@illinois.gov with program questions",
-    "expirationNote": "Round 2 applications are accepted on a rolling basis until funding is exhausted.",
+    "expirationNote": "FY26-1 applications close November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified.",
     "applicationPortals": [
       {
         "type": "web",
-        "label": "DCEO EEC Round 2 application submission form",
+        "label": "DCEO EEC FY26-1 application submission form",
         "url": "https://app.smartsheet.com/b/form/2ba62593649141b284a59825d3cb957e",
         "language": "en",
         "notes": "DCEO Grant Opportunity 3226-4281"
@@ -3491,14 +3490,21 @@
       "supporter",
       "starting"
     ],
-    "intakeStatus": "rolling",
-    "statusAsOf": "2026-06-02",
+    "intakeStatus": "open",
+    "statusAsOf": "2026-11-02",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
-      "expected": null,
-      "note": "Round 2 accepted on a rolling basis until funding is exhausted, per DCEO."
-    }
+      "expected": "2026-11-06",
+      "note": "FY26-1 applications close November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified."
+    },
+    "oneTime": true,
+    "deadlines": [
+      {
+        "label": "FY26-1 organizational grant applications due — 5 p.m.; confirm time zone with DCEO",
+        "date": "2026-11-06"
+      }
+    ]
   },
   {
     "id": "filmCredit",
@@ -5698,6 +5704,111 @@
     "nextWindow": {
       "expected": null,
       "note": null
+    }
+  },
+  {
+    "id": "nsfSeedFund",
+    "name": "NSF America’s Seed Fund (SBIR/STTR)",
+    "level": "Federal",
+    "zoneKey": "",
+    "resourceType": "grant",
+    "industryIds": [
+      "tech",
+      "semiconductor",
+      "ev",
+      "manufacturing",
+      "healthcare",
+      "food"
+    ],
+    "summary": "Competitive, non-dilutive R&D funding for startups developing deep technologies with commercial potential. NSF takes no equity. This funds technical research, not ordinary business startup costs or routine software development.",
+    "whoQualifies": "Qualifying U.S. small businesses pursuing innovative, high-risk technology R&D, with U.S.-based funded work and a qualified principal investigator. Phase I requires a valid Project Pitch invitation; Phase II is limited to qualifying NSF Phase I awardees. STTR additionally requires a research-institution partner. Review the current solicitation for phase-specific requirements.",
+    "benefits": [
+      "Up to $2 million across funding stages; competitive awards"
+    ],
+    "benefitRange": "Up to $2 million across funding stages; competitive awards",
+    "howToApply": [
+      "Complete NSF’s project suitability assessment and Project Pitch.",
+      "If invited, review the current solicitation, complete required registrations and submit a full proposal.",
+      "Illinois award recipients can separately explore the Illinois SBIR/STTR State Matching Program."
+    ],
+    "requiredDocs": [
+      "Project Pitch and technical research plan",
+      "SAM.gov, Research.gov and SBIR company registrations"
+    ],
+    "contact": "National Science Foundation",
+    "url": "https://seedfund.nsf.gov/",
+    "sourceUrl": "https://www.nsf.gov/funding/opportunities/small-business-innovation-research-small-business-technology/nsf26-510/solicitation",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "National Science Foundation",
+        "abbreviation": "NSF",
+        "phone": "",
+        "url": "https://seedfund.nsf.gov/"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "programRequirements",
+        "description": "Qualifying U.S. small business and ownership",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Innovative deep-technology research and development (R&D) with commercial potential",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "U.S.-based work and qualified principal investigator",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "programRequirements",
+        "description": "Valid Project Pitch invitation for Phase I or Fast-Track; qualifying NSF Phase I award for Phase II; phase-specific solicitation requirements apply",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-11-02",
+    "fastestConfirmingStep": "Complete NSF’s project suitability assessment and Project Pitch.",
+    "personas": [
+      "starting",
+      "growing"
+    ],
+    "recurring": true,
+    "deadlines": [
+      {
+        "label": "NSF full proposals due — eligible invited applicants / qualifying awardees; 5 p.m. submitting organization’s local time",
+        "date": "2026-11-04"
+      },
+      {
+        "label": "NSF full proposals due — eligible invited applicants / qualifying awardees; 5 p.m. submitting organization’s local time",
+        "date": "2027-03-04"
+      }
+    ],
+    "applicationPortals": [
+      {
+        "type": "web",
+        "label": "NSF eligibility, suitability assessment and Project Pitch",
+        "url": "https://seedfund.nsf.gov/apply/get-started/"
+      },
+      {
+        "type": "web",
+        "label": "Full proposal requirements and deadlines (invitation required)",
+        "url": "https://seedfund.nsf.gov/apply/full-proposal/"
+      }
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-11-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-11-04",
+      "note": "Full-proposal deadlines: November 4, 2026 and March 4, 2027, at 5 p.m. submitting organization’s local time. Phase I requires a valid Project Pitch invitation; Phase II requires a qualifying prior award. Project Pitches have separate rolling intake; these are not deadlines for first-time pitches."
     }
   }
 ]
