@@ -8,6 +8,7 @@ import {
   classifyZoningLegislation,
   classifyZoningLifecycle,
   diffZoningMapSnapshots,
+  ELMS_STABLE_SORT,
   MAX_ZONING_MAP_CHURN_RATIO,
   fetchAllElmsZoningMatters,
   fetchElmsMatter,
@@ -223,6 +224,9 @@ describe("official eLMS search paging", () => {
       "Zoning Reclassification",
     ]);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
+    for (const [input] of fetchImpl.mock.calls) {
+      expect(new URL(String(input)).searchParams.get("sort")).toBe(ELMS_STABLE_SORT);
+    }
   });
 
   it("fails closed when eLMS publishes malformed paging metadata", async () => {
