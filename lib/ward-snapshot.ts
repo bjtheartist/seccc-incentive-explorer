@@ -114,6 +114,37 @@ export interface WardRanking {
   tier: WardTier;
 }
 
+export const NEED_INDEX_METHOD =
+  "The Need index averages each ward’s position on three measures: more vacant lots, a lower property tax base, and higher youth poverty all count toward need. Each measure is weighted equally. TIF spending is left out because it is public spending, not a sign of need. The index ranks wards against each other; it is not a score of any kind of eligibility.";
+
+/**
+ * Combined need ranking. Each component contributes a 0–1 position (1 = the
+ * neediest ward on that measure); the index is their mean. Wards missing any
+ * component are left unranked.
+ */
+export function needIndex(wards: readonly WardSnapshotWard[]): Map<number, WardRanking & { score: number }> {
+  const components: { key: WardMetricKey; needWhenHigh: boolean }[] = [
+    { key: "vacantLots", needWhenHigh: true },
+    { key: "avPerResident", needWhenHigh: false },
+    { key: "youthPovertyRate", needWhenHigh: true },
+  ];
+  const ranked = components.map((c) => ({ ...c, ranks: rankWards(wards, c.key) }));
+  const scored: { ward: number; score: number }[] = [];
+  for (const w of wards) {
+    const parts = ranked.map(({ ranks, needWhenHigh }) => {
+      const r = ranks.get(w.ward);
+      if (!r) return null;
+      const highness = r.of > 1 ? 1 - (r.rank - 1) / (r.of - 1) : 1;
+      return needWhenHigh ? highness : 1 - highness;
+    });
+    if (parts.some((p) => p == null)) continue;
+    const score = (parts as number[]).reduce((s, p) => s + p, 0) / parts.length;
+    scored.push({ ward: w.ward, score: Math.round(score * 1000) / 1000 });
+  }
+  const ranks = rankValues(scored.map((s) => ({ ward: s.ward, value: s.score })));
+  return new Map(scored.map((s) => [s.ward, { ...ranks.get(s.ward)!, score: s.score }]));
+}
+
 /**
  * Ranks every ward with a value on one measure, highest first, and assigns a
  * quintile tier. Ties share the better rank. Wards with a null value are
@@ -123,16 +154,76 @@ export function rankWards(
   wards: readonly WardSnapshotWard[],
   key: WardMetricKey,
 ): Map<number, WardRanking> {
-  const valued = wards
-    .filter((w) => w.values[key] != null)
-    .sort((a, b) => (b.values[key] as number) - (a.values[key] as number));
+  return rankValues(wards.map((w) => ({ ward: w.ward, value: w.values[key] })));
+}
+
+function rankValues(entries: readonly { ward: number; value: number | null }[]): Map<number, WardRanking> {
+  const valued = entries
+    .filter((e): e is { ward: number; value: number } => e.value != null)
+    .sort((a, b) => b.value - a.value);
   const of = valued.length;
   const out = new Map<number, WardRanking>();
-  valued.forEach((w, i) => {
+  valued.forEach((e, i) => {
     const prev = i > 0 ? valued[i - 1] : null;
-    const rank = prev && prev.values[key] === w.values[key] ? out.get(prev.ward)!.rank : i + 1;
+    const rank = prev && prev.value === e.value ? out.get(prev.ward)!.rank : i + 1;
     const tier = WARD_TIERS[Math.min(4, Math.floor(((rank - 1) / of) * 5))];
-    out.set(w.ward, { rank, of, tier });
+    out.set(e.ward, { rank, of, tier });
   });
   return out;
+}
+
+// ── Filtering ─────────────────────────────────────────────────────────────
+
+export type WardRankKey = WardMetricKey | "needIndex";
+
+/** "top" = Very High or High; "bottom" = Low or Very Low. */
+export type WardTierFilter = "any" | "top" | "bottom" | WardTier;
+
+export interface WardFilters {
+  query: string;
+  tiers: Partial<Record<WardRankKey, WardTierFilter>>;
+}
+
+export const EMPTY_WARD_FILTERS: WardFilters = { query: "", tiers: {} };
+
+/** Quick views that reproduce the high-need / high-wealth split. */
+export const WARD_FILTER_PRESETS: readonly { id: string; label: string; description: string; filters: WardFilters }[] = [
+  {
+    id: "high-need",
+    label: "High-need wards",
+    description: "Youth poverty High or Very High and property tax base Low or Very Low",
+    filters: { query: "", tiers: { youthPovertyRate: "top", avPerResident: "bottom" } },
+  },
+  {
+    id: "high-wealth",
+    label: "High-wealth wards",
+    description: "Property tax base High or Very High and youth poverty Low or Very Low",
+    filters: { query: "", tiers: { avPerResident: "top", youthPovertyRate: "bottom" } },
+  },
+];
+
+export function tierMatches(tier: WardTier | undefined, filter: WardTierFilter | undefined): boolean {
+  if (!filter || filter === "any") return true;
+  if (!tier) return false;
+  if (filter === "top") return tier === "Very High" || tier === "High";
+  if (filter === "bottom") return tier === "Low" || tier === "Very Low";
+  return tier === filter;
+}
+
+export function filterWards(
+  wards: readonly WardSnapshotWard[],
+  rankings: Record<WardRankKey, Map<number, WardRanking>>,
+  filters: WardFilters,
+): WardSnapshotWard[] {
+  const q = filters.query.trim().toLowerCase();
+  return wards.filter((w) => {
+    if (q) {
+      const byNumber = /^\d+$/.test(q) && String(w.ward) === q;
+      const byName = w.areas.some((a) => a.toLowerCase().includes(q));
+      if (!byNumber && !byName) return false;
+    }
+    return (Object.entries(filters.tiers) as [WardRankKey, WardTierFilter][]).every(([key, f]) =>
+      tierMatches(rankings[key].get(w.ward)?.tier, f),
+    );
+  });
 }

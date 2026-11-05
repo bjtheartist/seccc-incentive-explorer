@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import WardSnapshotTable from "@/components/wards/WardSnapshotTable";
-import { WARD_METRICS, type WardSnapshotFile } from "@/lib/ward-snapshot";
+import { NEED_INDEX_METHOD, WARD_METRICS, type WardSnapshotFile } from "@/lib/ward-snapshot";
 import snapshotJson from "@/public/data/ward-snapshot.json";
 
 export const metadata: Metadata = {
@@ -48,7 +48,7 @@ export default function WardSnapshotPage() {
 
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 py-10 bg-[#FAF9F6]">
         <p className="text-sm text-[#0C1B33]/55 mb-4">
-          Select a column heading to sort. Darker labels mean a higher value; whether higher is better depends on the
+          Filter and rank with the controls below, or select a column heading to sort. Darker labels mean a higher value; whether higher is better depends on the
           measure.
         </p>
 
@@ -62,6 +62,10 @@ export default function WardSnapshotPage() {
             </h2>
           </div>
           <dl className="space-y-6">
+            <div>
+              <dt className="text-sm font-medium text-[#0C1B33]">Need index</dt>
+              <dd className="mt-1 text-sm text-[#0C1B33]/65 leading-relaxed">{NEED_INDEX_METHOD}</dd>
+            </div>
             {WARD_METRICS.map((m) => (
               <div key={m.key}>
                 <dt className="text-sm font-medium text-[#0C1B33]">
