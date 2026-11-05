@@ -1,0 +1,1076 @@
+{
+  "generatedAt": "2026-11-05T19:00:32.354Z",
+  "wardMap": "2023",
+  "vintages": {
+    "parcels": "2025",
+    "assessedValues": "2025",
+    "acs": "2020–2024",
+    "tifReportYear": "2025"
+  },
+  "coverage": {
+    "parcels": 880000,
+    "parcelsWithAssessedValue": 879987,
+    "tractsAllocated": 789,
+    "cityOwnedUnplaced": 186,
+    "tifExpenditureTotal": 1246929951,
+    "tifExpenditureAllocated": 1243511078,
+    "tifDistrictsUnallocated": [
+      "T-185 Cicero/Stevenson"
+    ],
+    "tifTransitExcluded": 57191567,
+    "tifTransitDistricts": [
+      "T-180 Red Purple Modernization Phase One (Transit TIF)"
+    ],
+    "clerkTifAgenciesUnmatched": [
+      "030210569 TIF - CHICAGO - MIDWAY IND CORRIDOR",
+      "030210553 TIF - CHICAGO - GREATER SW WEST (INDUSTRIAL)",
+      "030210512 TIF - CHICAGO - 60TH ST / WESTERN AVE"
+    ]
+  },
+  "wards": [
+    {
+      "ward": 1,
+      "areas": [
+        "West Town",
+        "Logan Square"
+      ],
+      "population": 58899,
+      "values": {
+        "vacantLots": 229,
+        "avPerResident": 19966,
+        "youthPovertyRate": 7.8,
+        "tifSpending": 18209221
+      },
+      "detail": {
+        "vacantPrivate": 190,
+        "vacantCityOwned": 39,
+        "assessedValue": 1175963385,
+        "youthInPoverty": 571,
+        "youthPopulation": 7365
+      }
+    },
+    {
+      "ward": 2,
+      "areas": [
+        "Near North Side"
+      ],
+      "population": 55126,
+      "values": {
+        "vacantLots": 78,
+        "avPerResident": 43207,
+        "youthPovertyRate": 6.7,
+        "tifSpending": 11718545
+      },
+      "detail": {
+        "vacantPrivate": 76,
+        "vacantCityOwned": 2,
+        "assessedValue": 2381822884,
+        "youthInPoverty": 291,
+        "youthPopulation": 4353
+      }
+    },
+    {
+      "ward": 3,
+      "areas": [
+        "Near South Side"
+      ],
+      "population": 55260,
+      "values": {
+        "vacantLots": 1558,
+        "avPerResident": 19210,
+        "youthPovertyRate": 24.8,
+        "tifSpending": 84303451
+      },
+      "detail": {
+        "vacantPrivate": 877,
+        "vacantCityOwned": 681,
+        "assessedValue": 1061567319,
+        "youthInPoverty": 2143,
+        "youthPopulation": 8651
+      }
+    },
+    {
+      "ward": 4,
+      "areas": [
+        "Loop"
+      ],
+      "population": 53515,
+      "values": {
+        "vacantLots": 891,
+        "avPerResident": 18606,
+        "youthPovertyRate": 33.1,
+        "tifSpending": 37208570
+      },
+      "detail": {
+        "vacantPrivate": 469,
+        "vacantCityOwned": 422,
+        "assessedValue": 995717330,
+        "youthInPoverty": 2832,
+        "youthPopulation": 8553
+      }
+    },
+    {
+      "ward": 5,
+      "areas": [
+        "Hyde Park",
+        "South Shore"
+      ],
+      "population": 56117,
+      "values": {
+        "vacantLots": 468,
+        "avPerResident": 8770,
+        "youthPovertyRate": 24.1,
+        "tifSpending": 18916273
+      },
+      "detail": {
+        "vacantPrivate": 315,
+        "vacantCityOwned": 153,
+        "assessedValue": 492165148,
+        "youthInPoverty": 2235,
+        "youthPopulation": 9276
+      }
+    },
+    {
+      "ward": 6,
+      "areas": [
+        "Greater Grand Crossing",
+        "Chatham"
+      ],
+      "population": 53041,
+      "values": {
+        "vacantLots": 1896,
+        "avPerResident": 5334,
+        "youthPovertyRate": 32.3,
+        "tifSpending": 1346461
+      },
+      "detail": {
+        "vacantPrivate": 1356,
+        "vacantCityOwned": 540,
+        "assessedValue": 282894535,
+        "youthInPoverty": 3470,
+        "youthPopulation": 10749
+      }
+    },
+    {
+      "ward": 7,
+      "areas": [
+        "South Chicago",
+        "South Shore",
+        "South Deering"
+      ],
+      "population": 50402,
+      "values": {
+        "vacantLots": 937,
+        "avPerResident": 5056,
+        "youthPovertyRate": 40,
+        "tifSpending": 6650296
+      },
+      "detail": {
+        "vacantPrivate": 777,
+        "vacantCityOwned": 160,
+        "assessedValue": 254827153,
+        "youthInPoverty": 3922,
+        "youthPopulation": 9807
+      }
+    },
+    {
+      "ward": 8,
+      "areas": [
+        "Avalon Park"
+      ],
+      "population": 48879,
+      "values": {
+        "vacantLots": 1256,
+        "avPerResident": 7371,
+        "youthPovertyRate": 31.4,
+        "tifSpending": 15420622
+      },
+      "detail": {
+        "vacantPrivate": 1055,
+        "vacantCityOwned": 201,
+        "assessedValue": 360278274,
+        "youthInPoverty": 2753,
+        "youthPopulation": 8777
+      }
+    },
+    {
+      "ward": 9,
+      "areas": [
+        "Roseland",
+        "West Pullman"
+      ],
+      "population": 49320,
+      "values": {
+        "vacantLots": 2457,
+        "avPerResident": 5699,
+        "youthPovertyRate": 37.9,
+        "tifSpending": 8014517
+      },
+      "detail": {
+        "vacantPrivate": 1881,
+        "vacantCityOwned": 576,
+        "assessedValue": 281096791,
+        "youthInPoverty": 4232,
+        "youthPopulation": 11167
+      }
+    },
+    {
+      "ward": 10,
+      "areas": [
+        "East Side",
+        "Hegewisch"
+      ],
+      "population": 51787,
+      "values": {
+        "vacantLots": 3351,
+        "avPerResident": 6442,
+        "youthPovertyRate": 37.6,
+        "tifSpending": 6844807
+      },
+      "detail": {
+        "vacantPrivate": 2410,
+        "vacantCityOwned": 941,
+        "assessedValue": 333603495,
+        "youthInPoverty": 5403,
+        "youthPopulation": 14365
+      }
+    },
+    {
+      "ward": 11,
+      "areas": [
+        "Bridgeport",
+        "Armour Square"
+      ],
+      "population": 52009,
+      "values": {
+        "vacantLots": 626,
+        "avPerResident": 15449,
+        "youthPovertyRate": 20.2,
+        "tifSpending": 24536172
+      },
+      "detail": {
+        "vacantPrivate": 521,
+        "vacantCityOwned": 105,
+        "assessedValue": 803465579,
+        "youthInPoverty": 1745,
+        "youthPopulation": 8624
+      }
+    },
+    {
+      "ward": 12,
+      "areas": [
+        "Brighton Park",
+        "Mckinley Park"
+      ],
+      "population": 51801,
+      "values": {
+        "vacantLots": 327,
+        "avPerResident": 8713,
+        "youthPovertyRate": 26.1,
+        "tifSpending": 13176675
+      },
+      "detail": {
+        "vacantPrivate": 276,
+        "vacantCityOwned": 51,
+        "assessedValue": 451342262,
+        "youthInPoverty": 2890,
+        "youthPopulation": 11090
+      }
+    },
+    {
+      "ward": 13,
+      "areas": [
+        "Clearing",
+        "Garfield Ridge"
+      ],
+      "population": 52516,
+      "values": {
+        "vacantLots": 169,
+        "avPerResident": 9377,
+        "youthPovertyRate": 10.3,
+        "tifSpending": 876026
+      },
+      "detail": {
+        "vacantPrivate": 151,
+        "vacantCityOwned": 18,
+        "assessedValue": 492434729,
+        "youthInPoverty": 1242,
+        "youthPopulation": 12084
+      }
+    },
+    {
+      "ward": 14,
+      "areas": [
+        "Gage Park",
+        "Archer Heights",
+        "Chicago Lawn"
+      ],
+      "population": 49210,
+      "values": {
+        "vacantLots": 300,
+        "avPerResident": 7935,
+        "youthPovertyRate": 17.6,
+        "tifSpending": 9778808
+      },
+      "detail": {
+        "vacantPrivate": 237,
+        "vacantCityOwned": 63,
+        "assessedValue": 390471034,
+        "youthInPoverty": 1997,
+        "youthPopulation": 11326
+      }
+    },
+    {
+      "ward": 15,
+      "areas": [
+        "New City",
+        "Gage Park"
+      ],
+      "population": 47208,
+      "values": {
+        "vacantLots": 1270,
+        "avPerResident": 4812,
+        "youthPovertyRate": 32.5,
+        "tifSpending": 5773950
+      },
+      "detail": {
+        "vacantPrivate": 972,
+        "vacantCityOwned": 298,
+        "assessedValue": 227149385,
+        "youthInPoverty": 4145,
+        "youthPopulation": 12771
+      }
+    },
+    {
+      "ward": 16,
+      "areas": [
+        "West Englewood",
+        "Chicago Lawn",
+        "Englewood"
+      ],
+      "population": 48592,
+      "values": {
+        "vacantLots": 5510,
+        "avPerResident": 4529,
+        "youthPovertyRate": 36.9,
+        "tifSpending": 15740076
+      },
+      "detail": {
+        "vacantPrivate": 3862,
+        "vacantCityOwned": 1648,
+        "assessedValue": 220086252,
+        "youthInPoverty": 4329,
+        "youthPopulation": 11733
+      }
+    },
+    {
+      "ward": 17,
+      "areas": [
+        "Auburn Gresham",
+        "West Englewood"
+      ],
+      "population": 50010,
+      "values": {
+        "vacantLots": 2082,
+        "avPerResident": 4558,
+        "youthPovertyRate": 41.9,
+        "tifSpending": 14098029
+      },
+      "detail": {
+        "vacantPrivate": 1603,
+        "vacantCityOwned": 479,
+        "assessedValue": 227922181,
+        "youthInPoverty": 4893,
+        "youthPopulation": 11669
+      }
+    },
+    {
+      "ward": 18,
+      "areas": [
+        "Ashburn"
+      ],
+      "population": 58157,
+      "values": {
+        "vacantLots": 385,
+        "avPerResident": 7844,
+        "youthPovertyRate": 15.5,
+        "tifSpending": 16529525
+      },
+      "detail": {
+        "vacantPrivate": 355,
+        "vacantCityOwned": 30,
+        "assessedValue": 456194005,
+        "youthInPoverty": 2102,
+        "youthPopulation": 13530
+      }
+    },
+    {
+      "ward": 19,
+      "areas": [
+        "Beverly",
+        "Mount Greenwood",
+        "Morgan Park"
+      ],
+      "population": 52252,
+      "values": {
+        "vacantLots": 483,
+        "avPerResident": 12370,
+        "youthPovertyRate": 7.3,
+        "tifSpending": 5167383
+      },
+      "detail": {
+        "vacantPrivate": 373,
+        "vacantCityOwned": 110,
+        "assessedValue": 646360351,
+        "youthInPoverty": 883,
+        "youthPopulation": 12110
+      }
+    },
+    {
+      "ward": 20,
+      "areas": [
+        "Woodlawn",
+        "New City"
+      ],
+      "population": 48052,
+      "values": {
+        "vacantLots": 3782,
+        "avPerResident": 6395,
+        "youthPovertyRate": 50,
+        "tifSpending": 14466194
+      },
+      "detail": {
+        "vacantPrivate": 2355,
+        "vacantCityOwned": 1427,
+        "assessedValue": 307275500,
+        "youthInPoverty": 6016,
+        "youthPopulation": 12030
+      }
+    },
+    {
+      "ward": 21,
+      "areas": [
+        "Washington Heights",
+        "West Pullman"
+      ],
+      "population": 54236,
+      "values": {
+        "vacantLots": 2535,
+        "avPerResident": 6801,
+        "youthPovertyRate": 33.7,
+        "tifSpending": 17288798
+      },
+      "detail": {
+        "vacantPrivate": 2051,
+        "vacantCityOwned": 484,
+        "assessedValue": 368854686,
+        "youthInPoverty": 4026,
+        "youthPopulation": 11943
+      }
+    },
+    {
+      "ward": 22,
+      "areas": [
+        "South Lawndale",
+        "Garfield Ridge"
+      ],
+      "population": 48277,
+      "values": {
+        "vacantLots": 481,
+        "avPerResident": 6544,
+        "youthPovertyRate": 24.5,
+        "tifSpending": 2417798
+      },
+      "detail": {
+        "vacantPrivate": 446,
+        "vacantCityOwned": 35,
+        "assessedValue": 315911223,
+        "youthInPoverty": 2616,
+        "youthPopulation": 10693
+      }
+    },
+    {
+      "ward": 23,
+      "areas": [
+        "Garfield Ridge",
+        "West Lawn"
+      ],
+      "population": 52298,
+      "values": {
+        "vacantLots": 206,
+        "avPerResident": 8311,
+        "youthPovertyRate": 21.5,
+        "tifSpending": 1288829
+      },
+      "detail": {
+        "vacantPrivate": 189,
+        "vacantCityOwned": 17,
+        "assessedValue": 434639779,
+        "youthInPoverty": 2842,
+        "youthPopulation": 13230
+      }
+    },
+    {
+      "ward": 24,
+      "areas": [
+        "North Lawndale"
+      ],
+      "population": 44531,
+      "values": {
+        "vacantLots": 2726,
+        "avPerResident": 6136,
+        "youthPovertyRate": 44.2,
+        "tifSpending": 8988652
+      },
+      "detail": {
+        "vacantPrivate": 1881,
+        "vacantCityOwned": 845,
+        "assessedValue": 273228972,
+        "youthInPoverty": 4760,
+        "youthPopulation": 10764
+      }
+    },
+    {
+      "ward": 25,
+      "areas": [
+        "Lower West Side",
+        "Near West Side"
+      ],
+      "population": 62680,
+      "values": {
+        "vacantLots": 528,
+        "avPerResident": 9656,
+        "youthPovertyRate": 32.1,
+        "tifSpending": 11015203
+      },
+      "detail": {
+        "vacantPrivate": 440,
+        "vacantCityOwned": 88,
+        "assessedValue": 605218689,
+        "youthInPoverty": 3144,
+        "youthPopulation": 9788
+      }
+    },
+    {
+      "ward": 26,
+      "areas": [
+        "Humboldt Park",
+        "West Town"
+      ],
+      "population": 53959,
+      "values": {
+        "vacantLots": 261,
+        "avPerResident": 9551,
+        "youthPovertyRate": 28.3,
+        "tifSpending": 40239959
+      },
+      "detail": {
+        "vacantPrivate": 203,
+        "vacantCityOwned": 58,
+        "assessedValue": 515378460,
+        "youthInPoverty": 3154,
+        "youthPopulation": 11161
+      }
+    },
+    {
+      "ward": 27,
+      "areas": [
+        "Near West Side",
+        "West Town",
+        "Near North Side"
+      ],
+      "population": 52378,
+      "values": {
+        "vacantLots": 2042,
+        "avPerResident": 40626,
+        "youthPovertyRate": 32.2,
+        "tifSpending": 266147162
+      },
+      "detail": {
+        "vacantPrivate": 1467,
+        "vacantCityOwned": 575,
+        "assessedValue": 2127896890,
+        "youthInPoverty": 3333,
+        "youthPopulation": 10347
+      }
+    },
+    {
+      "ward": 28,
+      "areas": [
+        "Near West Side",
+        "West Garfield Park"
+      ],
+      "population": 47845,
+      "values": {
+        "vacantLots": 2645,
+        "avPerResident": 15630,
+        "youthPovertyRate": 42.4,
+        "tifSpending": 77994289
+      },
+      "detail": {
+        "vacantPrivate": 1800,
+        "vacantCityOwned": 845,
+        "assessedValue": 747824807,
+        "youthInPoverty": 4328,
+        "youthPopulation": 10202
+      }
+    },
+    {
+      "ward": 29,
+      "areas": [
+        "Austin"
+      ],
+      "population": 51744,
+      "values": {
+        "vacantLots": 365,
+        "avPerResident": 8926,
+        "youthPovertyRate": 23.4,
+        "tifSpending": 10376380
+      },
+      "detail": {
+        "vacantPrivate": 259,
+        "vacantCityOwned": 106,
+        "assessedValue": 461847384,
+        "youthInPoverty": 2653,
+        "youthPopulation": 11326
+      }
+    },
+    {
+      "ward": 30,
+      "areas": [
+        "Portage Park",
+        "Belmont Cragin",
+        "Irving Park"
+      ],
+      "population": 55802,
+      "values": {
+        "vacantLots": 61,
+        "avPerResident": 10825,
+        "youthPovertyRate": 18,
+        "tifSpending": 6192438
+      },
+      "detail": {
+        "vacantPrivate": 56,
+        "vacantCityOwned": 5,
+        "assessedValue": 604051363,
+        "youthInPoverty": 2114,
+        "youthPopulation": 11755
+      }
+    },
+    {
+      "ward": 31,
+      "areas": [
+        "Belmont Cragin"
+      ],
+      "population": 54430,
+      "values": {
+        "vacantLots": 66,
+        "avPerResident": 8863,
+        "youthPovertyRate": 25.4,
+        "tifSpending": 13614300
+      },
+      "detail": {
+        "vacantPrivate": 48,
+        "vacantCityOwned": 18,
+        "assessedValue": 482392797,
+        "youthInPoverty": 3045,
+        "youthPopulation": 11997
+      }
+    },
+    {
+      "ward": 32,
+      "areas": [
+        "Logan Square",
+        "North Center"
+      ],
+      "population": 58926,
+      "values": {
+        "vacantLots": 347,
+        "avPerResident": 31328,
+        "youthPovertyRate": 3.9,
+        "tifSpending": 8529168
+      },
+      "detail": {
+        "vacantPrivate": 323,
+        "vacantCityOwned": 24,
+        "assessedValue": 1846028989,
+        "youthInPoverty": 467,
+        "youthPopulation": 12012
+      }
+    },
+    {
+      "ward": 33,
+      "areas": [
+        "Irving Park",
+        "Albany Park"
+      ],
+      "population": 56041,
+      "values": {
+        "vacantLots": 45,
+        "avPerResident": 10321,
+        "youthPovertyRate": 14.2,
+        "tifSpending": 8132517
+      },
+      "detail": {
+        "vacantPrivate": 38,
+        "vacantCityOwned": 7,
+        "assessedValue": 578370207,
+        "youthInPoverty": 1504,
+        "youthPopulation": 10612
+      }
+    },
+    {
+      "ward": 34,
+      "areas": [
+        "Near West Side",
+        "Loop"
+      ],
+      "population": 55043,
+      "values": {
+        "vacantLots": 153,
+        "avPerResident": 66390,
+        "youthPovertyRate": 6,
+        "tifSpending": 203264374
+      },
+      "detail": {
+        "vacantPrivate": 128,
+        "vacantCityOwned": 25,
+        "assessedValue": 3654298392,
+        "youthInPoverty": 227,
+        "youthPopulation": 3799
+      }
+    },
+    {
+      "ward": 35,
+      "areas": [
+        "Logan Square",
+        "Avondale"
+      ],
+      "population": 56760,
+      "values": {
+        "vacantLots": 123,
+        "avPerResident": 12704,
+        "youthPovertyRate": 14.1,
+        "tifSpending": 10875944
+      },
+      "detail": {
+        "vacantPrivate": 100,
+        "vacantCityOwned": 23,
+        "assessedValue": 721104250,
+        "youthInPoverty": 1424,
+        "youthPopulation": 10098
+      }
+    },
+    {
+      "ward": 36,
+      "areas": [
+        "West Town",
+        "Belmont Cragin"
+      ],
+      "population": 57131,
+      "values": {
+        "vacantLots": 175,
+        "avPerResident": 12524,
+        "youthPovertyRate": 18.1,
+        "tifSpending": 13509235
+      },
+      "detail": {
+        "vacantPrivate": 159,
+        "vacantCityOwned": 16,
+        "assessedValue": 715513575,
+        "youthInPoverty": 2217,
+        "youthPopulation": 12279
+      }
+    },
+    {
+      "ward": 37,
+      "areas": [
+        "Austin",
+        "Humboldt Park"
+      ],
+      "population": 58471,
+      "values": {
+        "vacantLots": 1112,
+        "avPerResident": 6282,
+        "youthPovertyRate": 31.7,
+        "tifSpending": 23676018
+      },
+      "detail": {
+        "vacantPrivate": 827,
+        "vacantCityOwned": 285,
+        "assessedValue": 367300134,
+        "youthInPoverty": 4713,
+        "youthPopulation": 14847
+      }
+    },
+    {
+      "ward": 38,
+      "areas": [
+        "Dunning",
+        "Portage Park"
+      ],
+      "population": 56867,
+      "values": {
+        "vacantLots": 57,
+        "avPerResident": 11570,
+        "youthPovertyRate": 8.1,
+        "tifSpending": 532112
+      },
+      "detail": {
+        "vacantPrivate": 43,
+        "vacantCityOwned": 14,
+        "assessedValue": 657976102,
+        "youthInPoverty": 946,
+        "youthPopulation": 11730
+      }
+    },
+    {
+      "ward": 39,
+      "areas": [
+        "Forest Glen",
+        "North Park",
+        "Albany Park"
+      ],
+      "population": 57361,
+      "values": {
+        "vacantLots": 136,
+        "avPerResident": 14272,
+        "youthPovertyRate": 15.7,
+        "tifSpending": 5541342
+      },
+      "detail": {
+        "vacantPrivate": 90,
+        "vacantCityOwned": 46,
+        "assessedValue": 818674424,
+        "youthInPoverty": 1961,
+        "youthPopulation": 12488
+      }
+    },
+    {
+      "ward": 40,
+      "areas": [
+        "Lincoln Square",
+        "West Ridge"
+      ],
+      "population": 58806,
+      "values": {
+        "vacantLots": 115,
+        "avPerResident": 12875,
+        "youthPovertyRate": 19.5,
+        "tifSpending": 3806368
+      },
+      "detail": {
+        "vacantPrivate": 67,
+        "vacantCityOwned": 48,
+        "assessedValue": 757132639,
+        "youthInPoverty": 2194,
+        "youthPopulation": 11240
+      }
+    },
+    {
+      "ward": 41,
+      "areas": [
+        "Norwood Park",
+        "Edison Park"
+      ],
+      "population": 57839,
+      "values": {
+        "vacantLots": 69,
+        "avPerResident": 17978,
+        "youthPovertyRate": 7.2,
+        "tifSpending": 0
+      },
+      "detail": {
+        "vacantPrivate": 62,
+        "vacantCityOwned": 7,
+        "assessedValue": 1039842507,
+        "youthInPoverty": 930,
+        "youthPopulation": 12857
+      }
+    },
+    {
+      "ward": 42,
+      "areas": [
+        "Near North Side",
+        "Loop"
+      ],
+      "population": 57085,
+      "values": {
+        "vacantLots": 51,
+        "avPerResident": 129318,
+        "youthPovertyRate": 4.6,
+        "tifSpending": 74306882
+      },
+      "detail": {
+        "vacantPrivate": 35,
+        "vacantCityOwned": 16,
+        "assessedValue": 7382157956,
+        "youthInPoverty": 150,
+        "youthPopulation": 3260
+      }
+    },
+    {
+      "ward": 43,
+      "areas": [
+        "Lincoln Park"
+      ],
+      "population": 55706,
+      "values": {
+        "vacantLots": 143,
+        "avPerResident": 33834,
+        "youthPovertyRate": 3.2,
+        "tifSpending": 0
+      },
+      "detail": {
+        "vacantPrivate": 135,
+        "vacantCityOwned": 8,
+        "assessedValue": 1884792656,
+        "youthInPoverty": 206,
+        "youthPopulation": 6421
+      }
+    },
+    {
+      "ward": 44,
+      "areas": [
+        "Lake View"
+      ],
+      "population": 56697,
+      "values": {
+        "vacantLots": 68,
+        "avPerResident": 22946,
+        "youthPovertyRate": 2.3,
+        "tifSpending": 0
+      },
+      "detail": {
+        "vacantPrivate": 46,
+        "vacantCityOwned": 22,
+        "assessedValue": 1300985148,
+        "youthInPoverty": 122,
+        "youthPopulation": 5210
+      }
+    },
+    {
+      "ward": 45,
+      "areas": [
+        "Jefferson Park",
+        "Portage Park"
+      ],
+      "population": 56897,
+      "values": {
+        "vacantLots": 118,
+        "avPerResident": 14493,
+        "youthPovertyRate": 7.6,
+        "tifSpending": 139270
+      },
+      "detail": {
+        "vacantPrivate": 98,
+        "vacantCityOwned": 20,
+        "assessedValue": 824617289,
+        "youthInPoverty": 862,
+        "youthPopulation": 11299
+      }
+    },
+    {
+      "ward": 46,
+      "areas": [
+        "Lake View",
+        "Uptown"
+      ],
+      "population": 57971,
+      "values": {
+        "vacantLots": 78,
+        "avPerResident": 14670,
+        "youthPovertyRate": 29.1,
+        "tifSpending": 87364869
+      },
+      "detail": {
+        "vacantPrivate": 66,
+        "vacantCityOwned": 12,
+        "assessedValue": 850417619,
+        "youthInPoverty": 1677,
+        "youthPopulation": 5773
+      }
+    },
+    {
+      "ward": 47,
+      "areas": [
+        "North Center",
+        "Lincoln Square"
+      ],
+      "population": 58586,
+      "values": {
+        "vacantLots": 127,
+        "avPerResident": 22250,
+        "youthPovertyRate": 3.7,
+        "tifSpending": 7153340
+      },
+      "detail": {
+        "vacantPrivate": 82,
+        "vacantCityOwned": 45,
+        "assessedValue": 1303533577,
+        "youthInPoverty": 369,
+        "youthPopulation": 9977
+      }
+    },
+    {
+      "ward": 48,
+      "areas": [
+        "Edgewater"
+      ],
+      "population": 55963,
+      "values": {
+        "vacantLots": 29,
+        "avPerResident": 12931,
+        "youthPovertyRate": 19.7,
+        "tifSpending": 5934153
+      },
+      "detail": {
+        "vacantPrivate": 19,
+        "vacantCityOwned": 10,
+        "assessedValue": 723647358,
+        "youthInPoverty": 981,
+        "youthPopulation": 4982
+      }
+    },
+    {
+      "ward": 49,
+      "areas": [
+        "Rogers Park"
+      ],
+      "population": 56382,
+      "values": {
+        "vacantLots": 53,
+        "avPerResident": 8928,
+        "youthPovertyRate": 24.3,
+        "tifSpending": 2472411
+      },
+      "detail": {
+        "vacantPrivate": 41,
+        "vacantCityOwned": 12,
+        "assessedValue": 503371957,
+        "youthInPoverty": 1737,
+        "youthPopulation": 7137
+      }
+    },
+    {
+      "ward": 50,
+      "areas": [
+        "West Ridge"
+      ],
+      "population": 56871,
+      "values": {
+        "vacantLots": 70,
+        "avPerResident": 9503,
+        "youthPovertyRate": 25.7,
+        "tifSpending": 3933666
+      },
+      "detail": {
+        "vacantPrivate": 63,
+        "vacantCityOwned": 7,
+        "assessedValue": 540450191,
+        "youthInPoverty": 4296,
+        "youthPopulation": 16729
+      }
+    }
+  ]
+}
