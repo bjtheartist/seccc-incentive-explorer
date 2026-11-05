@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import WardSnapshotPage from "./page";
+import WardSnapshotPage, { metadata } from "./page";
 import snapshot from "@/public/data/ward-snapshot.json";
 
 describe("Ward Snapshot page", () => {
@@ -31,5 +31,9 @@ describe("Ward Snapshot page", () => {
     expect(html).toContain("data.census.gov");
     expect(html).toContain("qm7s-3ctt");
     expect(html).toContain("not program eligibility determinations");
+  });
+
+  it("stays hidden from search engines", () => {
+    expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 });

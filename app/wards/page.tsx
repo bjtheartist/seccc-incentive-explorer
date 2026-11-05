@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Ward Snapshot",
   description:
     "Vacant lots, property tax base, youth poverty, and TIF spending for all 50 Chicago wards, ranked against each other from public data.",
+  // Hidden page: reachable by direct link only, not linked in nav or sitemap.
+  robots: { index: false, follow: false },
 };
 
 const snapshot = snapshotJson as WardSnapshotFile;
