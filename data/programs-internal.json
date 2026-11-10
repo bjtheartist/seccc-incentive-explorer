@@ -3408,7 +3408,7 @@
     "name": "Economic Empowerment Centers (EEC) Grant Program — FY26-1",
     "level": "State",
     "zoneKey": "",
-    "summary": "DCEO grants to eligible organizations delivering business training and advising to underserved Illinois entrepreneurs. FY26-1 (NOFO 3226-4281) applications close November 6, 2026 at 5 p.m.; confirm the time zone with DCEO. This is not a direct grant to individual entrepreneurs.",
+    "summary": "DCEO grants to eligible organizations delivering business training and advising to underserved Illinois entrepreneurs. FY26-1 (NOFO 3226-4281) applications closed November 6, 2026 at 5 p.m.; confirm the time zone with DCEO. This is not a direct grant to individual entrepreneurs. The closed provider-grant round does not mean EEC business-support services ended.",
     "whoQualifies": "Eligible career education agencies and nonprofit organizations serving underserved Illinois businesses and entrepreneurs. Each center must be incorporated as a nonprofit, have a designated program director and representative board, and be accessible to eligible participants. Required matching funds equal 100% of the grant, including at least 50% of the grant amount in cash.",
     "benefits": [
       "$250,000-$500,000 grant awards",
@@ -3416,10 +3416,8 @@
       "Designed to strengthen inclusive business ecosystems in communities facing systemic barriers to entry and growth"
     ],
     "howToApply": [
-      "Review the DCEO EEC FY26-1 NOFO and application documents",
-      "Confirm organizational eligibility and State of Illinois grant pre-qualification",
-      "Prepare the project narrative, budget, required organizational documents and committed cash/in-kind matching-fund evidence",
-      "Submit through the DCEO application submission form by November 6, 2026 at 5 p.m.; confirm the time zone with DCEO"
+      "This FY26-1 provider-grant application round is closed.",
+      "Contact DCEO for future organizational funding rounds or current entrepreneur-support services."
     ],
     "requiredDocs": [
       "Mission statement",
@@ -3433,7 +3431,7 @@
     "contact": "DCEO EEC Program: CEO.EECProgram@illinois.gov",
     "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
     "sourceUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
-    "status": "active",
+    "status": "lapsed",
     "contacts": [
       {
         "agency": "Illinois DCEO Office of Economic Equity & Empowerment",
@@ -3463,17 +3461,17 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-11-02",
+    "lastVerifiedAt": "2026-11-09",
     "benefitRange": "$250,000-$500,000",
     "fastestConfirmingStep": "Review DCEO Grant Opportunity 3226-4281 and email CEO.EECProgram@illinois.gov with program questions",
-    "expirationNote": "FY26-1 applications close November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified.",
+    "expirationNote": "FY26-1 applications closed November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified.",
     "applicationPortals": [
       {
         "type": "web",
         "label": "DCEO EEC FY26-1 application submission form",
         "url": "https://app.smartsheet.com/b/form/2ba62593649141b284a59825d3cb957e",
         "language": "en",
-        "notes": "DCEO Grant Opportunity 3226-4281"
+        "notes": "Closed FY26-1 round; retained for reference only."
       }
     ],
     "verificationSteps": [
@@ -3490,13 +3488,13 @@
       "supporter",
       "starting"
     ],
-    "intakeStatus": "open",
-    "statusAsOf": "2026-11-02",
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-11-10",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
-      "expected": "2026-11-06",
-      "note": "FY26-1 applications close November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified."
+      "expected": null,
+      "note": "FY26-1 closed November 6, 2026 at 5 p.m.; no subsequent provider-grant round verified. EEC business-support services are separate."
     },
     "oneTime": true,
     "deadlines": [
@@ -4714,7 +4712,7 @@
     "name": "Community Development Grant — Small (≤ $250K)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 at 75% of eligible costs. Funded by HED bond. Citywide — no corridor or zone gate. Current cycle deadline: August 14, 2026 at 11:59 p.m.",
+    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 at 75% of eligible costs. Funded by HED bond. Citywide — no corridor or zone gate. Current cycle deadline: February 16, 2027. Opening date not specified.",
     "whoQualifies": "For-profit small businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a qualifying capital project (construction, rehabilitation, build-out, or equipment) at a Chicago address with documented site control. Operating expenses, working capital, and routine maintenance do not qualify.",
     "benefits": [
       "Reimbursement grant up to $250,000",
@@ -4739,7 +4737,7 @@
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-    "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+    "sourceUrl": "https://cocdpd.submittable.com/submit",
     "status": "current",
     "contacts": [
       {
@@ -4781,7 +4779,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-11-10",
     "benefitRange": "Up to $250,000 (75% of eligible costs)",
     "fastestConfirmingStep": "Start the Submittable application or call DPD at (312) 744-4190",
     "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but the project address must be in Chicago.",
@@ -4789,20 +4787,20 @@
       {
         "type": "submittable",
         "label": "Small Community Development Grant (≤ $250K)",
-        "url": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000",
+        "url": "https://cocdpd.submittable.com/submit",
         "language": "en"
       },
       {
         "type": "submittable",
         "label": "Subvención de Desarrollo Comunitario (hasta $250,000)",
-        "url": "https://cocdpd.submittable.com/submit/354576/subvencion-de-desarrollo-comunitario-hasta-250-000-2026",
+        "url": "https://cocdpd.submittable.com/submit",
         "language": "es"
       }
     ],
     "deadlines": [
       {
-        "label": "Small CDG application deadline",
-        "date": "2026-08-14"
+        "label": "Current CDG application deadline",
+        "date": "2027-02-16"
       }
     ],
     "personas": [
@@ -4810,12 +4808,12 @@
       "growing"
     ],
     "intakeStatus": "open",
-    "statusAsOf": "2026-07-02",
+    "statusAsOf": "2026-11-10",
     "benefitTermsStatus": "current",
     "locationRelation": "none",
     "nextWindow": {
-      "expected": "2026-08-14",
-      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Citywide -- no corridor or zone gate."
+      "expected": "2027-02-16",
+      "note": "Current round closes February 16, 2027. Opening date and cutoff time not verified; consult DPD."
     }
   },
   {
@@ -4824,7 +4822,7 @@
     "name": "Community Development Grant — Medium ($300K – $5M)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD Medium-tier reimbursement grant for substantial capital projects with budgets between $300,001 and $5,000,000. Citywide. Covers 50% of eligible costs. South/Southwest/West Side location is a scoring preference factor. Current cycle deadline: August 14, 2026 at 11:59 p.m. Monthly webinars: July 8 (10 a.m.) and August 12 (10 a.m.).",
+    "summary": "DPD Medium-tier reimbursement grant for substantial capital projects requesting grants between $300,001 and $5,000,000. Citywide. Covers 50% of eligible costs. South/Southwest/West Side location is a scoring preference factor. Current cycle deadline: February 16, 2027. Opening date not specified.",
     "whoQualifies": "For-profit businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a capital project at a Chicago address with documented site control. Project must demonstrate community benefit (jobs created/retained, service expansion, or neighborhood impact).",
     "benefits": [
       "Reimbursement grant from $300,001 to $5,000,000",
@@ -4850,7 +4848,7 @@
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-    "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+    "sourceUrl": "https://cocdpd.submittable.com/submit",
     "status": "current",
     "contacts": [
       {
@@ -4881,7 +4879,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "Total project cost $300,001 – $5,000,000 (Medium tier)",
+        "description": "Grant request $300,001 to $5,000,000 (Medium tier); this is not a total project cost ceiling",
         "verifiedBy": "manual",
         "required": true
       },
@@ -4892,7 +4890,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-11-10",
     "benefitRange": "$300K–$5M reimbursement (50% of eligible costs)",
     "fastestConfirmingStep": "Discuss scope with DPD at (312) 744-4190 before applying via Submittable",
     "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but project must be at a Chicago address.",
@@ -4900,14 +4898,14 @@
       {
         "type": "submittable",
         "label": "Medium Community Development Grant",
-        "url": "https://cocdpd.submittable.com/submit/345760/medium-community-development-grant-application",
+        "url": "https://cocdpd.submittable.com/submit",
         "language": "en"
       }
     ],
     "deadlines": [
       {
-        "label": "Medium CDG application deadline",
-        "date": "2026-08-14"
+        "label": "Current CDG application deadline",
+        "date": "2027-02-16"
       }
     ],
     "personas": [
@@ -4915,12 +4913,12 @@
       "developer"
     ],
     "intakeStatus": "open",
-    "statusAsOf": "2026-07-02",
+    "statusAsOf": "2026-11-10",
     "benefitTermsStatus": "current",
     "locationRelation": "preference",
     "nextWindow": {
-      "expected": "2026-08-14",
-      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Monthly webinars held 2026-07-08 and 2026-08-12."
+      "expected": "2027-02-16",
+      "note": "Current round closes February 16, 2027. Opening date and cutoff time not verified; consult DPD."
     }
   },
   {
@@ -5809,6 +5807,85 @@
     "nextWindow": {
       "expected": "2026-11-04",
       "note": "Full-proposal deadlines: November 4, 2026 and March 4, 2027, at 5 p.m. submitting organization’s local time. Phase I requires a valid Project Pitch invitation; Phase II requires a qualifying prior award. Project Pitches have separate rolling intake; these are not deadlines for first-time pitches."
+    }
+  },
+  {
+    "id": "illinoisDeraCleanTrucks",
+    "name": "Illinois DERA Clean Trucks Grants",
+    "level": "State",
+    "zoneKey": "",
+    "summary": "Illinois EPA NOFO 27-2086-01 supports replacement of eligible diesel Class 5–8 trucks with new battery-electric trucks. Applications are first-come until funding is exhausted or October 1, 2027. EPA’s current-opportunities table lists this round as open, but the same page still says no DERA NOFO is open. Confirm remaining funding and intake with Illinois EPA before committing costs.",
+    "whoQualifies": "Eligible Illinois fleet applicants, including for-profit organizations, replacing qualifying operational diesel trucks. Vehicle ownership, use, remaining-life and scrappage conditions require agency review.",
+    "benefits": [
+      "Up to 45% of eligible replacement costs; 55% cash match required",
+      "$935,220 available across this round, not per applicant",
+      "One eligible charger per replacement vehicle may qualify; make-ready infrastructure is excluded"
+    ],
+    "howToApply": [
+      "Confirm current intake and remaining funding with Illinois EPA because its overview contains conflicting status language.",
+      "Review NOFO 27-2086-01, grant pre-qualification and vehicle requirements in the official application portal.",
+      "Submit a complete application through the official portal; funding is first-come and may end before October 1, 2027."
+    ],
+    "requiredDocs": [
+      "Vehicle ownership, operating history and scrappage documentation required by the NOFO",
+      "Application, budget and cash-match documentation"
+    ],
+    "contact": "Illinois EPA DERA: epa.deragrants@illinois.gov",
+    "url": "https://epa.illinois.gov/topics/air-quality/driving-a-cleaner-illinois.html",
+    "sourceUrl": "https://il.amplifund.com/Public/Opportunities/Details/5db15f52-59fa-4091-94cd-3d3850d0368e",
+    "status": "verify",
+    "contacts": [
+      {
+        "agency": "Illinois Environmental Protection Agency",
+        "abbreviation": "Illinois EPA",
+        "email": "epa.deragrants@illinois.gov",
+        "url": "https://epa.illinois.gov/topics/air-quality/driving-a-cleaner-illinois.html"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "vehicle",
+        "description": "Replace an operational diesel Class 5–8 truck owned and operated for two full calendar years; minimum 7,000 miles/year in those years, with agency-approved hours alternative for qualifying nonroad use. Old truck must have at least three years of remaining life and be scrapped. Replacement must be new, model year 2021 or newer, fully battery-electric, same weight class and similar function, and Illinois commercially plated.",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "55% cash match. No combination with Illinois VW, Illinois EPA Climate Pollution Reduction Grants, or other state or federal funding; total assistance cannot exceed project costs.",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-11-10",
+    "benefitRange": "Up to 45% of eligible costs; 55% cash match",
+    "fastestConfirmingStep": "Email epa.deragrants@illinois.gov to confirm intake and vehicle eligibility.",
+    "expirationNote": "October 1, 2027 cutoff, or earlier funding exhaustion. Cutoff time and effective date of the deadline update are not specified. First verified November 10, 2026.",
+    "suspensionNote": "EPA’s current-opportunities table lists this round as open, but the same page still says no DERA NOFO is open. Confirm remaining funding and intake with Illinois EPA before committing costs.",
+    "applicationPortals": [
+      {
+        "type": "web",
+        "label": "Illinois EPA DERA NOFO 27-2086-01",
+        "url": "https://il.amplifund.com/Public/Opportunities/Details/5db15f52-59fa-4091-94cd-3d3850d0368e",
+        "language": "en",
+        "notes": "EPA’s current-opportunities table lists this round as open, but the same page still says no DERA NOFO is open. Confirm remaining funding and intake with Illinois EPA before committing costs."
+      }
+    ],
+    "deadlines": [
+      {
+        "label": "Applications close, unless funding is exhausted sooner",
+        "date": "2027-10-01"
+      }
+    ],
+    "personas": [
+      "growing"
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-11-10",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2027-10-01",
+      "note": "Earlier cutoff if funds are depleted. Confirm availability with Illinois EPA due to contradictory overview language."
     }
   }
 ]

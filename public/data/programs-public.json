@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-02T13:56:45.311Z",
-  "catalogRevision": "4214908d196d52366367b01c44de4466ec30d292df9627b2ce82bc346eea76de",
+  "generatedAt": "2026-11-10T13:57:49.669Z",
+  "catalogRevision": "f0bdbd939b0a2e35fded0d6a1b151fe7cd8287f73668d26bf789f57e38d0b7d2",
   "programs": [
     {
       "id": "tif",
@@ -1597,20 +1597,20 @@
       "name": "Economic Empowerment Centers (EEC) Grant Program — FY26-1",
       "level": "State",
       "statusBadge": {
-        "state": "open",
-        "asOfDate": "2026-11-02"
+        "state": "closed",
+        "asOfDate": "2026-11-10"
       },
       "intake": {
-        "status": "open",
+        "status": "closed",
         "nextWindow": {
-          "expected": "2026-11-06",
-          "note": "FY26-1 applications close November 6, 2026 at 5 p.m. The source does not specify a time zone; confirm with DCEO. No later round is verified."
+          "expected": null,
+          "note": "FY26-1 closed November 6, 2026 at 5 p.m.; no subsequent provider-grant round verified. EEC business-support services are separate."
         }
       },
       "benefit": {
         "summary": "$250,000-$500,000",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-11-02"
+        "qualifier": "Most recently published round offered $250,000-$500,000. (No round currently open as of 2026-11-10.)"
       },
       "screening": {
         "locationRelation": "none",
@@ -2239,19 +2239,19 @@
       "level": "City",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-11-10"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
-          "expected": "2026-08-14",
-          "note": "Current cycle deadline: 2026-08-14 11:59 PM. Citywide -- no corridor or zone gate."
+          "expected": "2027-02-16",
+          "note": "Current round closes February 16, 2027. Opening date and cutoff time not verified; consult DPD."
         }
       },
       "benefit": {
         "summary": "Up to $250,000 (75% of eligible costs)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-11-10"
       },
       "screening": {
         "locationRelation": "none",
@@ -2265,7 +2265,7 @@
       },
       "links": {
         "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://cocdpd.submittable.com/submit",
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
@@ -2280,19 +2280,19 @@
       "level": "City",
       "statusBadge": {
         "state": "open",
-        "asOfDate": "2026-07-02"
+        "asOfDate": "2026-11-10"
       },
       "intake": {
         "status": "open",
         "nextWindow": {
-          "expected": "2026-08-14",
-          "note": "Current cycle deadline: 2026-08-14 11:59 PM. Monthly webinars held 2026-07-08 and 2026-08-12."
+          "expected": "2027-02-16",
+          "note": "Current round closes February 16, 2027. Opening date and cutoff time not verified; consult DPD."
         }
       },
       "benefit": {
         "summary": "$300K–$5M reimbursement (50% of eligible costs)",
         "termsStatus": "current",
-        "qualifier": "Current published terms as of 2026-07-02"
+        "qualifier": "Current published terms as of 2026-11-10"
       },
       "screening": {
         "locationRelation": "preference",
@@ -2300,13 +2300,13 @@
           "Project located within Chicago city limits",
           "Capital project: new construction, substantial rehabilitation, or major build-out",
           "For-profit business, 501(c)(3) nonprofit, or developer LLC",
-          "Total project cost $300,001 – $5,000,000 (Medium tier)",
+          "Grant request $300,001 to $5,000,000 (Medium tier); this is not a total project cost ceiling",
           "Good standing with State of Illinois and City of Chicago"
         ]
       },
       "links": {
         "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
-        "sourceUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+        "sourceUrl": "https://cocdpd.submittable.com/submit",
         "administeringAgency": "City of Chicago Department of Planning and Development"
       },
       "personas": [
@@ -2731,6 +2731,43 @@
       },
       "personas": [
         "starting",
+        "growing"
+      ],
+      "zoneKey": null
+    },
+    {
+      "id": "illinoisDeraCleanTrucks",
+      "name": "Illinois DERA Clean Trucks Grants",
+      "level": "State",
+      "statusBadge": {
+        "state": "open",
+        "asOfDate": "2026-11-10"
+      },
+      "intake": {
+        "status": "open",
+        "nextWindow": {
+          "expected": "2027-10-01",
+          "note": "Earlier cutoff if funds are depleted. Confirm availability with Illinois EPA due to contradictory overview language."
+        }
+      },
+      "benefit": {
+        "summary": "Up to 45% of eligible costs; 55% cash match",
+        "termsStatus": "conditional",
+        "qualifier": "Current published terms as of 2026-11-10"
+      },
+      "screening": {
+        "locationRelation": "required",
+        "publishedCriteria": [
+          "Replace an operational diesel Class 5–8 truck owned and operated for two full calendar years; minimum 7,000 miles/year in those years, with agency-approved hours alternative for qualifying nonroad use. Old truck must have at least three years of remaining life and be scrapped. Replacement must be new, model year 2021 or newer, fully battery-electric, same weight class and similar function, and Illinois commercially plated.",
+          "55% cash match. No combination with Illinois VW, Illinois EPA Climate Pollution Reduction Grants, or other state or federal funding; total assistance cannot exceed project costs."
+        ]
+      },
+      "links": {
+        "url": "https://epa.illinois.gov/topics/air-quality/driving-a-cleaner-illinois.html",
+        "sourceUrl": "https://il.amplifund.com/Public/Opportunities/Details/5db15f52-59fa-4091-94cd-3d3850d0368e",
+        "administeringAgency": "Illinois Environmental Protection Agency"
+      },
+      "personas": [
         "growing"
       ],
       "zoneKey": null

@@ -214,9 +214,9 @@ describe("public artifact regen + diff (CI check, in-process)", () => {
     expect(regenerated.programs).not.toEqual(publicArtifact.programs);
   });
 
-  it("committed artifact has schemaVersion 1 and 72 programs", () => {
+  it("committed artifact has schemaVersion 1 and 73 programs", () => {
     expect(publicArtifact.schemaVersion).toBe(1);
-    expect(publicArtifact.programs).toHaveLength(72);
+    expect(publicArtifact.programs).toHaveLength(73);
   });
 });
 
