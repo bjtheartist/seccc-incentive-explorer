@@ -1,12 +1,12 @@
 name: Zoning source refresh
 
 # City Clerk eLMS, the current ArcGIS zoning map, and the City ZBA case layer
-# are checked daily. A source change opens a review PR; it never merges directly
-# into production.
+# are checked weekly (Mondays). A source change opens a review PR; it never
+# merges directly into production.
 
 on:
   schedule:
-    - cron: "20 8 * * *"
+    - cron: "20 8 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -82,7 +82,7 @@ jobs:
           git push --force origin "$BRANCH"
 
           {
-            echo "Daily review snapshot from the Chicago City Clerk eLMS, City ArcGIS zoning layer, and City ZBA case layer."
+            echo "Weekly review snapshot from the Chicago City Clerk eLMS, City ArcGIS zoning layer, and City ZBA case layer."
             echo
             echo "This PR does not merge itself. Review the legislative lifecycle and map-delta files before accepting the source change."
             echo
