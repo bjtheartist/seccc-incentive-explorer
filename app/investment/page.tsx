@@ -41,7 +41,40 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
 
   const { configured, hasSession, accessMode } = await getInvestmentAdminState();
   if (!configured) return <InvestmentNotConfigured />;
-  if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
+  if (!hasSession) {
+    // WP3 PUBLIC TEASER (governance-gated; this branch ships as a DRAFT PR and
+    // must not merge until Billy + Ellen make the exposure call). What it shows
+    // is ONLY the dataset's headline aggregates, read server-side from meta —
+    // no per-area figures, no funder names, no records. The gate below is
+    // unchanged.
+    const teaserMeta = loadCommunityInvestment()?.meta;
+    return (
+      <>
+        {teaserMeta && (
+          <section className="bg-[#0C1B33] px-6 py-12 text-white">
+            <div className="mx-auto max-w-[850px]">
+              <p className="font-mono-bureau text-[10px] uppercase tracking-[0.3em] text-white/50">
+                Community Investment
+              </p>
+              <h1 className="mt-3 font-serif text-[34px] leading-tight sm:text-[42px]">
+                {formatFullDollars(teaserMeta.totalDollarsAwarded)} in tracked community capital
+              </h1>
+              <p className="mt-3 max-w-[600px] text-[15px] leading-relaxed text-white/75">
+                {formatCount(teaserMeta.totalRecords)} records across Chicago&apos;s 77 community
+                areas — grants, TIF assistance, federal programs, and tax-credit capital, every
+                figure tied to a public record and reconciled to its own source. Recipient-level
+                detail is available to chamber partners.
+              </p>
+              <p className="mt-4 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white/45">
+                Partner access below · Contact the Southeast Chicago Chamber to become a partner
+              </p>
+            </div>
+          </section>
+        )}
+        <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />
+      </>
+    );
+  }
 
   const index = loadInvestmentIndex();
   // R1 finding 4: "has not been generated yet" is only true for a MISSING
