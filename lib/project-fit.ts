@@ -145,6 +145,9 @@ export const GOAL_RULES: Record<string, GoalRule> = {
       "comedEvRebate",
     ]),
     relatedProgramIds: ids([
+      // Diesel truck replacement/scrappage cost-share; agency wording on
+      // availability is contradictory, so related rather than strong.
+      "illinoisDeraCleanTrucks",
       "edge",
       "aim",
       "innovationVoucher",

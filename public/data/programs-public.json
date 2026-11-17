@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-10T13:57:49.669Z",
-  "catalogRevision": "f0bdbd939b0a2e35fded0d6a1b151fe7cd8287f73668d26bf789f57e38d0b7d2",
+  "generatedAt": "2026-11-17T20:19:28.706Z",
+  "catalogRevision": "7b6059d38cc0164ad7d13f3b2ef3b92846b7bb5a8c02a55376c2a6af08f212d6",
   "programs": [
     {
       "id": "tif",
@@ -1609,7 +1609,7 @@
       },
       "benefit": {
         "summary": "$250,000-$500,000",
-        "termsStatus": "current",
+        "termsStatus": "historical",
         "qualifier": "Most recently published round offered $250,000-$500,000. (No round currently open as of 2026-11-10.)"
       },
       "screening": {
@@ -1622,7 +1622,7 @@
       },
       "links": {
         "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
-        "sourceUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+        "sourceUrl": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
         "administeringAgency": "Illinois DCEO Office of Economic Equity & Empowerment"
       },
       "personas": [

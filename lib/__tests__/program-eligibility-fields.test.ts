@@ -38,9 +38,9 @@ const VALID_LOCATION_RELATION = new Set([
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-describe("catalog eligibility-claims fields (every one of 72 records)", () => {
-  it("has exactly 72 records", () => {
-    expect(programs).toHaveLength(72);
+describe("catalog eligibility-claims fields (every one of 73 records)", () => {
+  it("has exactly 73 records", () => {
+    expect(programs).toHaveLength(73);
   });
 
   it("every record has all five new fields with valid enum values", () => {

@@ -145,6 +145,7 @@ export const PROGRAM_PERSONA_TAGS: Record<string, PersonaId[]> = {
   // Discovery lens only: technical R&D and phase-specific NSF requirements still apply.
   nsfSeedFund: ["starting", "growing"],
   economicEmpowermentCenters: ["supporter", "starting"],
+  illinoisDeraCleanTrucks: ["growing"],
   filmCredit: ["growing"],
   liveTheaterCredit: ["growing"],
   cannabisR3: ["starting"],

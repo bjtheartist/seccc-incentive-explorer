@@ -3430,7 +3430,7 @@
     ],
     "contact": "DCEO EEC Program: CEO.EECProgram@illinois.gov",
     "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
-    "sourceUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+    "sourceUrl": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
     "status": "lapsed",
     "contacts": [
       {
@@ -3490,7 +3490,7 @@
     ],
     "intakeStatus": "closed",
     "statusAsOf": "2026-11-10",
-    "benefitTermsStatus": "current",
+    "benefitTermsStatus": "historical",
     "locationRelation": "none",
     "nextWindow": {
       "expected": null,
