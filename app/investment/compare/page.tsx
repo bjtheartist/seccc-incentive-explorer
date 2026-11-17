@@ -76,7 +76,7 @@ export default async function InvestmentComparePage({ searchParams }: { searchPa
       <div className="mx-auto max-w-6xl">
         <nav className="mb-6 flex items-center justify-between gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
           <div className="flex items-center gap-1.5">
-            {accessMode === "beta" ? null : (
+            {accessMode !== "admin" ? null : (
               <>
                 <Link href="/admin" className="hover:text-[#2563EB]">
                   Admin
