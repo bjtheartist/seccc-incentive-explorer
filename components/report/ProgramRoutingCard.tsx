@@ -42,6 +42,7 @@ import type { ReportItem } from "@/lib/report-engine";
 
 const STATUS_LABEL: Record<AvailabilityState, string> = {
   active: "Active",
+  unverified: "Timing unverified",
   "window-closed": "Window closed",
   "lapsed-notice": "Lapsed — confirm status",
   expired: "Expired",

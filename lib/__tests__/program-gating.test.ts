@@ -169,14 +169,29 @@ describe("resolveAvailability", () => {
       expect(result.nextWindow?.endDate).toBe("2026-07-30");
     });
 
-    it("falls back to generic card dates when the district is not in the rollout", () => {
+    it("requires verification rather than borrowing generic dates when the district is not in the rollout", () => {
       const result = resolveAvailability(sbif, TODAY, {
         sbifRollout: SBIF_ROLLOUT,
         tifDistrict: "Nonexistent District",
       });
-      // Generic path: future July 30 close date exists → active.
-      expect(result.state).toBe("active");
-      expect(result.nextWindow?.date).toBe("2026-07-30");
+      expect(result.state).toBe("unverified");
+      expect(result.nextWindow).toBeUndefined();
+    });
+
+    it("does not infer an open or closed Stockyards Annex window from the neighboring SEQ schedule", () => {
+      const result = resolveAvailability(
+        { ...sbif, deadlines: [{ label: "November district close", date: "2026-11-30" }] },
+        new Date("2026-11-02T13:00:00Z"),
+        { sbifRollout: [{ tifDistrict: "Stockyards SEQ", windowStart: "2026-11-01", windowEnd: "2026-11-30" }], tifDistrict: "Stockyards Annex" },
+      );
+      expect(result.state).toBe("unverified");
+      expect(result.nextWindow).toBeUndefined();
+    });
+
+    it.each([{ sbifRollout: null }, { sbifRollout: [] }])("requires verification for a known district with unavailable rollout ($sbifRollout)", ({ sbifRollout }) => {
+      const result = resolveAvailability(sbif, TODAY, { sbifRollout, tifDistrict: "Archer/Western" });
+      expect(result.state).toBe("unverified");
+      expect(result.nextWindow).toBeUndefined();
     });
   });
 

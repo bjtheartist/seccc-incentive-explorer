@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ProgramCardFace } from "@/components/report/ProgramCardFace";
+import { ProgramRoutingCard } from "@/components/report/ProgramRoutingCard";
 import type { ReportItem } from "@/lib/report-engine";
 
 function baseItem(overrides: Partial<ReportItem> = {}): ReportItem {
@@ -8,6 +9,15 @@ function baseItem(overrides: Partial<ReportItem> = {}): ReportItem {
 }
 
 describe("ProgramCardFace (gate finding 11)", () => {
+  it("renders unverified timing and its explanation in both full and routing cards", () => {
+    const item = baseItem({ programId: "sbif", availability: "unverified", availabilityNote: "Confirm district timing with SomerCor.", detail: "Confirm district timing with SomerCor." });
+    for (const html of [renderToStaticMarkup(<ProgramCardFace item={item} />), renderToStaticMarkup(<ProgramRoutingCard item={item} />)]) {
+      expect(html).toContain("Timing unverified");
+      expect(html).toContain("Confirm district timing with SomerCor.");
+      expect(html).not.toMatch(/>Active</);
+    }
+  });
+
   it("renders nothing when the item carries none of the face fields — never an empty shell", () => {
     expect(renderToStaticMarkup(<ProgramCardFace item={baseItem()} />)).toBe("");
   });

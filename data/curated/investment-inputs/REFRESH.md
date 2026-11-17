@@ -20,7 +20,8 @@ before it reaches the map.
 The run is three steps, in this order, and the order is load-bearing:
 
 1. **refresh** — re-pull each live source, rewrite the input only if its bytes
-   changed;
+   changed and its integrity checks pass; write/remove the failure-attempt
+   artifact before generating any downstream artifact;
 2. **regenerate the manifest** — `manifest.json`'s `contentHash` per file;
 3. **export** — `npm run data:export:investment`.
 
@@ -31,6 +32,26 @@ mismatch. (Skipping step 2 is what broke the 2026-09-02 run: the first month a
 source actually moved, the export died on `nof_large.json`.) All three files —
 the changed inputs *and* the regenerated `manifest.json` — land in the same
 review PR, which is the only state in which that PR's test job can pass.
+
+The workflow's verification step returns a real failure if **any** manifest,
+lint, test, typecheck, or build gate fails. The review PR is still opened with
+the failure excerpt; a successful preview build does not override failed data
+checks. Do not accept a refresh merely because its net row count grew.
+
+TIF refreshes reject invalid district labels (including upstream spreadsheet
+errors such as `ERROR: #N/A`), missing/duplicate native project identities, and
+the disappearance of any previously recorded RDA/IGA project. Such a rejection
+leaves the prior TIF CSV untouched and records the failed source explicitly;
+other sources may still produce a **partial, review-required** refresh. A
+missing upstream historical project is not proof of cancellation. Investigate
+and adjudicate removals separately; never silently carry forward a corrected
+label, discard history, or disable the guard to make the scheduled run green.
+
+Changed exports also require the foundation audit to be validly regenerated
+and bound to the final manifest/export, and snapshot count assertions to be
+reviewed against actual accepted additions/removals. Do not replace audit
+hashes or loosen identity assertions just to silence failures. A code repair
+does not itself authorize accepting or publishing a refreshed dataset.
 
 | File | Upstream | Dataset |
 | --- | --- | --- |

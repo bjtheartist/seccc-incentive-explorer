@@ -88,6 +88,7 @@ import {
   manifestContentHash,
   verifyManifestInputBytes,
 } from "./lib/investment-manifest";
+import { capitalRecordIdResolver, hudSourceKey, tifSourceKey } from "./lib/capital-record-ids";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -776,7 +777,7 @@ export function buildOfficialAwardDuplicateFacts(
  * when their (completion or approval) year predates `minYear`, or when they
  * carry no usable coordinates — both counted in `drops`.
  */
-function mapSocrata(
+export function mapSocrata(
   rows: SocrataRow[],
   source: "nof-small" | "nof-large" | "sbif",
   funderName: string,
@@ -1510,21 +1511,18 @@ interface TifDrops {
  * rda-iga selection criterion, so a coordinate gap is not grounds to erase real
  * authorized dollars. Deterministic.
  */
-function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
-  // Sol gate finding 8 — the id NUMBERING must be IDENTICAL to the pre-held-rows
-  // baseline for every record that already existed. `idx` therefore increments
-  // ONLY on the exact condition that used to gate `push` at all (hasCoords) — a
-  // held (no-coords) row NEVER consumes a `tif-N` slot and NEVER shifts a later
-  // row's id. Held rows are collected separately and get their own
-  // never-renumbering `tif-held-N` namespace, APPENDED after every point record
-  // — never interleaved into the original sequence.
+export function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
+  // IDs belong to native source identities, never to row order or geometry.
+  // A formerly held project that gains coordinates keeps its old held ID;
+  // new projects use a separate source-key namespace and cannot shift old IDs.
   const out: CommunityInvestmentRecordDraft[] = [];
   const held: CommunityInvestmentRecordDraft[] = [];
   const drops: TifDrops = { noCoords: 0, heldUnlocated: 0 };
-  let idx = 0;
-  let heldIdx = 0;
+  const resolveId = capitalRecordIdResolver("tif");
   for (const r of rows) {
     if ((r.dataset || "").trim() !== "rda-iga") continue; // annual-report rows are context, not records
+    const sourceKey = tifSourceKey(r);
+    const id = resolveId(sourceKey);
     const lat = Number(r.lat);
     const lng = Number(r.lng);
     const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
@@ -1538,7 +1536,8 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       statusText,
     ].filter(Boolean);
     const record: CommunityInvestmentRecordDraft = {
-      id: hasCoords ? `tif-${idx++}` : `tif-held-${heldIdx++}`,
+      id,
+      sourceRecordId: sourceKey,
       source: "tif",
       funderType: SOURCE_FUNDER_TYPE.tif,
       funderName: TIF_FUNDER,
@@ -1589,21 +1588,19 @@ interface HudDrops {
  * (consult Q5) — never silently deleted, never plotted at the misleading
  * suburban/foreign point either. Deterministic.
  */
-function mapHud(
+export function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
 ): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
-  // Sol gate finding 8 — same append-only discipline as mapTif: `idx` increments
-  // ONLY on the exact old gating condition (inBounds), so every previously
-  // existing `cdbg-home-N` id is reproduced exactly. Held (administrative
-  // outside-city) rows get their own `cdbg-home-held-N` namespace, appended
-  // after every point record.
+  // Same permanent source-key identity as mapTif. Changes in coordinates or
+  // administrative-address classification must not create a different ID.
   const out: CommunityInvestmentRecordDraft[] = [];
   const held: CommunityInvestmentRecordDraft[] = [];
   const drops: HudDrops = { outOfBbox: 0, heldAdministrativeOutsideCity: 0 };
-  let idx = 0;
-  let heldIdx = 0;
+  const resolveId = capitalRecordIdResolver("cdbg-home");
   for (const r of rows) {
+    const sourceKey = hudSourceKey(r);
+    const id = resolveId(sourceKey);
     const lat = Number(r.lat);
     const lng = Number(r.lng);
     const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
@@ -1618,7 +1615,8 @@ function mapHud(
     const group = nullableStr(r.activity_group);
     const logParts = [program ? `${program} activity` : null, group, objective].filter(Boolean);
     const record: CommunityInvestmentRecordDraft = {
-      id: inBounds ? `cdbg-home-${idx++}` : `cdbg-home-held-${heldIdx++}`,
+      id,
+      sourceRecordId: sourceKey,
       source: "cdbg-home",
       funderType: SOURCE_FUNDER_TYPE["cdbg-home"],
       funderName: HUD_FUNDER,

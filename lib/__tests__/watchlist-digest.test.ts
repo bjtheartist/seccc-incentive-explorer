@@ -11,7 +11,7 @@ import {
 import type { TifBoundaryContext } from "../tif-boundary";
 import type { Program } from "../types";
 
-const TODAY = new Date("2026-07-08T00:00:00Z");
+const TODAY = new Date("2026-07-08T12:00:00Z");
 
 function isoInDays(days: number): string {
   return new Date(TODAY.getTime() + days * 86_400_000)
@@ -321,9 +321,9 @@ describe("buildDigestEmailHtml", () => {
       TODAY
     );
 
-    const { subject, html } = buildDigestEmailHtml("Billy", [assessment!]);
+    const { subject, html } = buildDigestEmailHtml("Billy", [assessment!], TODAY);
 
-    expect(subject).toContain("1 upcoming deadline");
+    expect(subject).toContain("1 TIF expiration");
     expect(html).toContain("Commercial Ave");
     expect(html).toContain("Urgent");
     expect(html).toContain("/workspace");
@@ -366,7 +366,7 @@ describe("buildDigestEmailHtml", () => {
       TODAY,
     );
 
-    const { html } = buildDigestEmailHtml("Billy", [assessment!]);
+    const { html } = buildDigestEmailHtml("Billy", [assessment!], TODAY);
     expect(html).toContain("Mixed Ave");
     expect(html).toContain("TIF Improvement Fund");
     expect(html).toContain(CAVEAT_TEXT);
@@ -385,7 +385,7 @@ describe("buildDigestEmailHtml", () => {
       TODAY,
     );
 
-    const { html } = buildDigestEmailHtml("Billy", [assessment!]);
+    const { html } = buildDigestEmailHtml("Billy", [assessment!], TODAY);
     // The exact regression this finding is about: this area must NOT be
     // absent from the email just because it has no confirmed findings.
     expect(html).toContain("Unresolved Ave");
@@ -405,7 +405,7 @@ describe("buildDigestEmailHtml", () => {
       TODAY,
     );
 
-    const { html } = buildDigestEmailHtml("Billy", [assessment!]);
+    const { html } = buildDigestEmailHtml("Billy", [assessment!], TODAY);
     expect(html).toContain("Commercial Ave");
     expect(html).not.toContain(CAVEAT_TEXT);
   });
@@ -434,7 +434,7 @@ describe("buildDigestEmailHtml", () => {
       TODAY,
     );
 
-    const { html } = buildDigestEmailHtml("Billy", [resolved!, incomplete!]);
+    const { html } = buildDigestEmailHtml("Billy", [resolved!, incomplete!], TODAY);
     expect(html).toContain("Resolved Ave");
     expect(html).toContain("Incomplete Ave");
     expect((html.match(new RegExp(CAVEAT_TEXT, "g")) ?? []).length).toBe(1);

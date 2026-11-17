@@ -90,6 +90,8 @@ export interface SbifWindow {
   tifDistrict: string;
   windowStart: string;
   windowEnd: string;
+  /** Published cutoff context; do not infer a UTC offset from a date alone. */
+  note?: string;
 }
 
 /**
@@ -103,10 +105,16 @@ export function findSbifWindow(
   rollout: SbifWindow[],
   tifDistrict: string
 ): SbifWindow | null {
-  const normalizedDistrict = tifDistrict.toUpperCase();
+  // Published rollout shorthand versus the financial catalog's formal names.
+  const aliases: Record<string, string> = {
+    "STOCKYARDS SOUTHEAST QUADRANT INDUSTRIAL": "STOCKYARDS SEQ",
+    "STOCKYARDS SOUTHEAST QUADRANT": "STOCKYARDS SEQ",
+    "111TH STREET/KEDZIE AVENUE BUSINESS DISTRICT": "111TH/KEDZIE",
+  };
+  const normalizedDistrict = aliases[tifDistrict.toUpperCase()] ?? tifDistrict.toUpperCase();
   return (
     rollout.find((w) => {
-      const wName = w.tifDistrict.toUpperCase();
+      const wName = aliases[w.tifDistrict.toUpperCase()] ?? w.tifDistrict.toUpperCase();
       // Exact key match (T-141) or name substring match.
       return (
         wName === normalizedDistrict ||
@@ -252,7 +260,7 @@ export function deadlinesForAddress(
   // ── Program card deadlines ────────────────────────────────────────────────
   const upcomingProgramDeadlines = collectUpcomingDeadlines(
     matchedPrograms,
-    today,
+    opts.today, // collectUpcomingDeadlines normalizes Chicago day itself; do not normalize twice.
     deadlineWindowDays
   );
 
@@ -264,7 +272,7 @@ export function deadlinesForAddress(
     // the financials map before matching so production addresses can reach
     // their real rollout window.
     const rolloutDistrict = tifFinancials?.[tifDistrict]?.tifName || tifDistrict;
-    const match = findSbifWindow(sbifRollout, rolloutDistrict);
+    const match = findSbifWindow(sbifRollout, tifDistrict) ?? findSbifWindow(sbifRollout, rolloutDistrict);
 
     if (match) {
       const startDate = parseDate(match.windowStart);
@@ -289,6 +297,7 @@ export function deadlinesForAddress(
             ? `Window closed ${match.windowEnd}`
             : `Window opens ${match.windowStart}, runs through ${match.windowEnd}`,
         };
+        if (match.note) sbifWindow.note += `. ${match.note}`;
       }
     }
   }

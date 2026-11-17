@@ -65,6 +65,12 @@ export const PUBLIC_CLAIM_SURFACES: readonly PublicClaimSurface[] = [
       "components/grants",
     ],
   },
+  {
+    id: "ward-snapshot",
+    description: "Public /wards page: vacant lots, assessed value per resident, youth poverty, and TIF spending for all 50 wards, ranked into quintile tiers with per-measure method and source copy. Public-record comparison only; no eligibility claim.",
+    contracts: ["reviewed-copy"],
+    files: ["app/wards/page.tsx", "components/wards/WardSnapshotTable.tsx"],
+  },
   // ── Address report (both forks) ──────────────────────────────────────
   {
     id: "report-live-route",

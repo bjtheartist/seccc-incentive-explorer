@@ -3,7 +3,10 @@
  *
  * Time-lapsed grants and incentives should stop showing automatically, but
  * "lapsed" is not one thing. resolveAvailability(program, today) returns one
- * of four states:
+ * of five states:
+ *
+ *   'unverified'     — district-specific SBIF timing could not be confirmed;
+ *                      never substitute another district's generic deadlines.
  *
  *   'active'         — no gating info on the card, or a future deadline /
  *                      application window exists (the next one is surfaced
@@ -41,6 +44,7 @@ import { findSbifWindow, type SbifWindow } from "./deadlines";
 
 export type AvailabilityState =
   | "active"
+  | "unverified"
   | "window-closed"
   | "lapsed-notice"
   | "expired";
@@ -236,7 +240,12 @@ export function resolveAvailability(
         };
       }
     }
-    // District not in the rollout — fall through to the generic date logic.
+    // Missing/invalid district evidence is not proof that its window is closed.
+    return { state: "unverified", note: "No current application window could be confirmed for this TIF district in the available SBIF rollout. Confirm district timing with SomerCor; other districts’ deadlines do not apply." };
+  }
+
+  if (program.id === "sbif" && opts.tifDistrict && !opts.sbifRollout?.length) {
+    return { state: "unverified", note: "The SBIF rollout calendar is unavailable. Confirm this district’s application window with SomerCor; generic dates are not a confirmed window for this property." };
   }
 
   // 6) A future deadline / window exists — active; surface the next one.

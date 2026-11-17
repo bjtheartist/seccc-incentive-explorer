@@ -323,71 +323,64 @@
    "tifDistrict": "Lawrence/Broadway",
    "windowStart": "2026-11-01",
    "windowEnd": "2026-11-30",
-   "opensAt": "2026-11-01T09:00:00-05:00",
-   "closesAt": "2026-11-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Little Village East",
    "windowStart": "2026-11-01",
    "windowEnd": "2026-11-30",
-   "opensAt": "2026-11-01T09:00:00-05:00",
-   "closesAt": "2026-11-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Midwest",
    "windowStart": "2026-11-01",
    "windowEnd": "2026-11-30",
-   "opensAt": "2026-11-01T09:00:00-05:00",
-   "closesAt": "2026-11-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Pulaski Corridor",
    "windowStart": "2026-11-01",
    "windowEnd": "2026-11-30",
-   "opensAt": "2026-11-01T09:00:00-05:00",
-   "closesAt": "2026-11-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Stockyards SEQ",
    "windowStart": "2026-11-01",
    "windowEnd": "2026-11-30",
-   "opensAt": "2026-11-01T09:00:00-05:00",
-   "closesAt": "2026-11-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "111th/Kedzie",
    "windowStart": "2026-12-01",
    "windowEnd": "2026-12-30",
-   "opensAt": "2026-12-01T09:00:00-05:00",
-   "closesAt": "2026-12-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Austin Commercial",
    "windowStart": "2026-12-01",
    "windowEnd": "2026-12-30",
-   "opensAt": "2026-12-01T09:00:00-05:00",
-   "closesAt": "2026-12-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Bronzeville",
    "windowStart": "2026-12-01",
    "windowEnd": "2026-12-30",
-   "opensAt": "2026-12-01T09:00:00-05:00",
-   "closesAt": "2026-12-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Division/Homan",
    "windowStart": "2026-12-01",
    "windowEnd": "2026-12-30",
-   "opensAt": "2026-12-01T09:00:00-05:00",
-   "closesAt": "2026-12-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   },
   {
    "tifDistrict": "Touhy/Western",
    "windowStart": "2026-12-01",
    "windowEnd": "2026-12-30",
-   "opensAt": "2026-12-01T09:00:00-05:00",
-   "closesAt": "2026-12-30T17:00:00-05:00"
+   "note": "Published opening time: 9 a.m.; closing time: 5 p.m. Source does not specify time zone; confirm with SomerCor."
   }
- ]
+ ],
+ "currentWindowsVerifiedAt": "2026-11-02",
+ "currentWindowsSource": "https://somercor.com/sbif/",
+ "currentWindowsVerificationNote": "Only November and December 2026 windows reverified. SomerCor publishes opening at 9 a.m. and closing at 5 p.m. without an explicit time zone; confirm with SomerCor. Earlier windows retain their original source metadata and have not been reverified. Stockyards SEQ is the existing local key for the source’s Stockyards Southeast Quadrant."
 }

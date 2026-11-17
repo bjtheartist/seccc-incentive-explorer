@@ -208,7 +208,7 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    const { subject, html } = buildDigestEmailHtml(user.name, notable);
+    const { subject, html } = buildDigestEmailHtml(user.name, notable, today);
     outbox.push({ userId: user.userId, email: user.email, subject, html, areas: notable });
   }
 

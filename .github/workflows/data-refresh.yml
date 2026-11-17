@@ -80,24 +80,12 @@ jobs:
       - name: Verify (lint, test, typecheck, build)
         id: verify
         if: steps.diff.outputs.changed == 'true'
-        run: |
-          set -o pipefail
-          status=0
-          {
-            # FIRST: a refresh that rewrote an input without regenerating the
-            # manifest fails right here, in the refresh run's own PR, instead
-            # of reaching main and blocking the next export (2026-09-02; #260).
-            echo "### manifest";  npm run data:manifest:verify || status=1
-            echo "### lint";       npm run lint          || status=1
-            echo "### test";       npm test              || status=1
-            echo "### typecheck";  npx tsc --noEmit      || status=1
-            echo "### build";      npm run build -- --webpack || status=1
-          } 2>&1 | tee "$RUNNER_TEMP/verify.log"
-          echo "verify_failed=$([ $status -eq 0 ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
-          exit 0
+        run: bash scripts/refresh/verify-refresh.sh
 
       - name: Open the review PR
-        if: steps.diff.outputs.changed == 'true'
+        # Verification must stay red, but a rejected refresh still needs its
+        # review PR and failure excerpt. Do not publish after cancellation.
+        if: ${{ !cancelled() && steps.diff.outputs.changed == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REFRESH_FAILED: ${{ steps.refresh.outputs.refresh_failed }}
@@ -114,7 +102,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add -A
+          # Never sweep test/compiler by-products into a data-review PR.
+          git add -A -- data/curated/investment-inputs data/private
           git commit -m "chore(data): monthly refresh of the live investment sources ($DATE)"
           # Force is right here, not dangerous: the branch name is machine-owned
           # and date-scoped, so the only thing it can overwrite is an earlier
@@ -177,8 +166,8 @@ jobs:
             echo "- Sources **not** refreshed here are frozen snapshots by design; see"
             echo "  \`data/curated/investment-inputs/REFRESH.md\` for the cadence per source."
             echo "- If \`data/curated/investment-inputs/refresh-attempt.json\` is in this diff, a"
-            echo "  source failed with NO other file change — this PR exists ONLY to surface that"
-            echo "  failure (see \"Needs attention\" above). It is removed automatically once every"
+            echo "  source failed, even if other sources updated successfully. This artifact keeps"
+            echo "  failure-only runs visible too. It is removed automatically once every"
             echo "  source refreshes cleanly again; do not hand-edit it."
             echo
             echo "<details><summary>Full refresh log</summary>"
@@ -209,7 +198,7 @@ jobs:
       # Last: if the refresh itself reported a failed source, end the run red so
       # it shows up in the Actions list even when the PR was opened successfully.
       - name: Fail the run if any source failed
-        if: steps.refresh.outputs.refresh_failed == 'true'
+        if: ${{ !cancelled() && steps.refresh.outputs.refresh_failed == 'true' }}
         run: |
           echo "::error::At least one source failed to refresh — see the PR titled [NEEDS ATTENTION]"
           exit 1

@@ -65,7 +65,7 @@ describe("export id baseline regression (Sol gate finding 8)", () => {
     },
   );
 
-  it("held rows (new in PR1) are APPENDED with a distinct -held- namespace, never interleaved into the old sequence", () => {
+  it("legacy held and new native-source IDs never consume a pre-PR1 numeric ID", () => {
     const data = loadCommunityInvestment()!;
     for (const source of ["tif", "cdbg-home", "lihtc"] as const) {
       const records = data.records.filter((r) => r.source === source);
@@ -73,9 +73,16 @@ describe("export id baseline regression (Sol gate finding 8)", () => {
       const newRecords = records.filter((r) => !baselineIds.has(r.id));
       expect(newRecords.length).toBeGreaterThan(0);
       for (const r of newRecords) {
-        expect(r.id).toMatch(/-held-\d+$/);
-        expect(r.geometry.kind).toBe("citywide");
-        expect(r.locationReason).not.toBeNull();
+        // A live refresh may add a genuine POINT project, and a historically
+        // held project may gain coordinates while keeping its permanent ID.
+        // Neither fact permits reassigning a previously published numeric ID.
+        const allowed = source === "lihtc"
+          ? /^lihtc-held-\d+$/
+          : source === "tif"
+            ? /^tif-(?:held-\d+|source-rda-iga-\d+)$/
+            : /^cdbg-home-(?:held-\d+|source-(?:cdbg|home)-\d+)$/;
+        expect(r.id).toMatch(allowed);
+        if (r.geometry.kind === "citywide") expect(r.locationReason).not.toBeNull();
       }
       // Every held id is genuinely NEW — never collides with (renumbers over) a
       // baseline id.
