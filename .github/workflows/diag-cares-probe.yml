@@ -1,0 +1,29 @@
+name: Diag CARES fetch probe (temporary)
+on:
+  push:
+    branches: [diag/cares-fetch-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: curl each Socrata URL
+        run: |
+          while read -r u; do
+            echo "== $u"
+            curl -sS -o /tmp/body -w "http=%{http_code} time=%{time_total}s size=%{size_download}B ip=%{remote_ip}\n" --max-time 120 -H 'Accept: application/json' "$u" || echo "curl exit $?"
+            head -c 300 /tmp/body; echo
+          done < .github/diag-urls.txt
+      - name: node fetch, same as the importer (parallel, 20s timeout)
+        run: |
+          node -e "
+          const urls=require('fs').readFileSync('.github/diag-urls.txt','utf8').trim().split('\n');
+          (async()=>{await Promise.all(urls.map(async u=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),20000);const s=Date.now();
+          try{const r=await fetch(u,{headers:{Accept:'application/json','User-Agent':'Chicago-Incentive-Explorer-CARES-Ledger-Importer/1.0'},signal:c.signal});const b=await r.text();console.log(r.status,Date.now()-s+'ms',b.length,r.headers.get('content-type'),u.slice(0,90))}
+          catch(e){let m=[],x=e;for(let i=0;i<4&&x;i++){m.push(x.name+': '+x.message+(x.code?' ['+x.code+']':''));x=x.cause}console.log('ERR',Date.now()-s+'ms',m.join(' <- '),u.slice(0,90))}finally{clearTimeout(t)}}))})()"

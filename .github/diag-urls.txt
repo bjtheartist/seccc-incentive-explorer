@@ -1,0 +1,7 @@
+https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000
+https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271215482%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000
+https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=purchase_order_contract_number%3D%27144242%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000
+https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000
+https://data.cityofchicago.org/resource/iyu8-jkf8.json?%24where=grant_project_code+in%28%27CARES20CD%27%2C%27CARES20DB%27%29&%24order=grant_project_code%2Cdepartment_code%2Cparent_cost_center_code%2Crecord_id&%24limit=5000
+https://data.cityofchicago.org/api/views/rsxa-ify5
+https://data.cityofchicago.org/api/views/iyu8-jkf8
