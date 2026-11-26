@@ -121,7 +121,7 @@ describe("Chicago CARES source fetching", () => {
     const pending = fetchChicagoCaresProgramLedgerSources().catch(error => error);
     await vi.runAllTimersAsync();
     const error = await pending;
-    expect(error.message).toContain("timed out after 20000ms");
+    expect(error.message).toContain("timed out after 60000ms");
     expect(error.message).toContain(TARGET);
     expect(counts.get(TARGET)).toBe(3);
     expect(vi.getTimerCount()).toBe(0);
@@ -140,7 +140,7 @@ describe("Chicago CARES source fetching", () => {
     });
     const pending = fetchChicagoCaresProgramLedgerSources().catch(error => error);
     await vi.runAllTimersAsync();
-    expect((await pending).message).toContain("timed out after 20000ms");
+    expect((await pending).message).toContain("timed out after 60000ms");
     expect(counts.get(TARGET)).toBe(3);
   });
 

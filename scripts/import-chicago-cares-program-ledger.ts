@@ -271,7 +271,11 @@ export function readChicagoCaresProgramLedgerFixture(
 }
 
 const SOCRATA_FETCH_ATTEMPTS = 3;
-const SOCRATA_FETCH_TIMEOUT_MS = 20_000;
+// Measured from a GitHub-hosted runner on 2026-11-25 with the importer's own
+// seven requests in parallel: the slowest answered in 13.4s, the `TOGETHER NOW`
+// full-text scan alone in 8-10s. 20s left too little headroom on a slow portal
+// day, and a timeout on every attempt fails the whole monthly refresh.
+const SOCRATA_FETCH_TIMEOUT_MS = 60_000;
 
 class SocrataResponseError extends Error {
   constructor(message: string, readonly retryable: boolean) {
